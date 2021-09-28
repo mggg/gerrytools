@@ -1,5 +1,5 @@
 
-from .map_districts import map_districts
-from .colors import COLORS
+from .mapping import plan
+from .colors import districtr, redblue
 
-__all__ = ["map_districts", "COLORS"]
+__all__ = ["plan", "districtr", "redblue"]

@@ -2,9 +2,9 @@
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import math
-from .colors import COLORS
+from ..colors import districtr
 
-def map_districts(
+def districtingplan(
         districts:gpd.GeoDataFrame, assignment:str, overlay=None, colors=None,
         numbers=False
     ) -> plt.Axes:
@@ -30,8 +30,8 @@ def map_districts(
     districts["colorindex"] = list(range(N))
 
     # Assign colors.
-    repeats = math.ceil(N/len(COLORS))
-    repeatedcolors = (COLORS*repeats)[:N]
+    repeats = math.ceil(N/len(districtr))
+    repeatedcolors = (districtr*repeats)[:N]
     districts["color"] = repeatedcolors
 
     # Plot the districts.
