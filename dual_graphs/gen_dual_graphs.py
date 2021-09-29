@@ -3,26 +3,18 @@ import geopandas as gpd
 import networkx as nx
 import matplotlib.pyplot as plt
 
-columns_to_drop = ['STATEFP20', 'VTDST20', 'VTDI20', 'NAME20', 'NAMELSAD20', 'LSAD20', 'MTFCC20',
-                   'FUNCSTAT20', 'ALAND20', 'AWATER20', 'TOTPOP',
-                   'WHITE', 'BLACK', 'AMIN', 'ASIAN', 'NHPI', 'OTHER', '2MORE', 'HISP', 'VAP',
-                   'WVAP', 'BVAP', 'AMINVAP', 'ASIANVAP', 'NHPIVAP', 'OTHERVAP', '2MOREVAP',
-                   'HVAP', 'LOGRECNO', 'GEOCODE', 'SUMLEV']
 
-for st in ["mi"]:
+for st in ["mi", "wi", "va"]:
     shapes = gpd.read_file("../data/shapes_no_water_vtds/{}_vtds_overlay_water.shp".format(st))
     shapes = shapes.set_index("GEOID20").rename(columns={"COUNTYFP20": "COUNTY"})
-    shapes = shapes.drop(columns=list(filter(lambda c: c in columns_to_drop or "VAP" in c 
-                                                       or "POP" in c or "CVA" in c or "CPO" in c, 
-                                             shapes.columns)))
     shapes.geometry = shapes.buffer(0)
     graph = Graph.from_geodataframe(shapes)
     graph.to_json("../dual_graphs/{}_vtds.json".format(st))
 
 
-mi_g = Graph.from_json("../dual_graphs/mi_vtds.json")
-wi_g = Graph.from_json("../dual_graphs/wi_vtds.json")
-va_g = Graph.from_json("../dual_graphs/va_vtds.json")
+mi_g = Graph.from_json("../dual_graphs/michigan_vtds20.json")
+wi_g = Graph.from_json("../dual_graphs/wiconsin_vtds20.json")
+va_g = Graph.from_json("../dual_graphs/virginia_vtds20.json")
 
 pos = lambda g: {n: (float(g.nodes()[n]["INTPTLON20"]), float(g.nodes()[n]["INTPTLAT20"])) for n in g.nodes()}
 
