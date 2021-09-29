@@ -12,9 +12,9 @@ for st in ["mi", "wi", "va"]:
     graph.to_json("../dual_graphs/{}_vtds.json".format(st))
 
 
-mi_g = Graph.from_json("../dual_graphs/michigan_vtds20.json")
-wi_g = Graph.from_json("../dual_graphs/wiconsin_vtds20.json")
-va_g = Graph.from_json("../dual_graphs/virginia_vtds20.json")
+mi_g = Graph.from_json("../dual_graphs/mi_vtds.json")
+wi_g = Graph.from_json("../dual_graphs/wi_vtds.json")
+va_g = Graph.from_json("../dual_graphs/va_vtds.json")
 
 pos = lambda g: {n: (float(g.nodes()[n]["INTPTLON20"]), float(g.nodes()[n]["INTPTLAT20"])) for n in g.nodes()}
 
@@ -43,4 +43,4 @@ mi_g.add_edge("26029029018", "26029029006")
 
 nx.draw(mi_g, pos=pos(mi_g), node_size=1)
 plt.savefig("mi_dual_graph.png", dpi=200)
-mi_g.to_json("../dual_graphs/mi_vtds_connected.json")
+mi_g.to_json("../dual_graphs/mi_vtds.json")
