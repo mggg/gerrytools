@@ -4,16 +4,18 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from gerrychain.graph import Graph
 import networkx as nx
-from typing import Union, Tuple, Optional, TypedDict, List
+from typing import Union, Optional, TypedDict, List, Tuple
 
 
 def drawgraph(
         G: Graph, ax: Optional[Axes]= None, x: Optional[str]="INTPTLON20",
         y: Optional[str]="INTPTLAT20", components: Optional[bool]=False,
         node_size: Optional[float]=1, **kwargs: Optional[TypedDict]
-    ) -> Union[Tuple[Figure, Axes], Tuple[List[Figure], List[Axes]]]:
+    ) -> Union[Axes,List[Tuple[Figure, Axes]]]:
     """
-    Draws a gerrychain Graph object.
+    Draws a gerrychain Graph object. Returns a single Axes object (for dual
+    graphs drawn whole) and lists of `(Figure, Axes)` pairs for graphs drawn
+    component-wise.
 
     :param G: The dual graph to draw.
     :param ax: Optional; `matplotlib.axes.Axes` object. If not passed, one is
@@ -22,8 +24,9 @@ def drawgraph(
     :param y: Optional; vertex property used as the vertical (N-S) coordinate.
     :param components: Optional; if `True`, the graph is assumed to have more
     than one connected component (e.g. Michigan) and is drawn component-wise and
-    rather than return a single (`Figure`, `Axes`) pair, return a pair of *lists*
-    of `Figure`s and `Axes`.
+    rather than return a single `Axes` object, return a list of `(Figure, Axes)`
+    pairs. If something is passed to `ax`, the same Axes instance is used for
+    each new Figure.
     :param node_size: Optional; specifies the default size of a vertex.
     :param kwargs: Optional; arguments to be passed to `nx.draw()`.
     """
@@ -37,24 +40,28 @@ def drawgraph(
     # normally. First, set some properties common to both graphs.
     properties = {"pos": positions, "node_size": node_size }
 
-    if components:
-        figures, axes = plt.figure(), plt.axes()
+    # Initialize `pairs` to None.
+    pairs = None
+
+    if not components:
+        if not ax: axes = plt.axes()
+        else: axes = ax
         nx.draw(G, ax=axes, **properties, **kwargs)
     else:
         # Create lists for figures and axes.
-        figures, axes = [], []
+        pairs = []
 
         connected_components = [c for c in nx.connected_components(G)]
         for component in connected_components:
-            # Create new Figure and Axes objects.
-            fig, ax = plt.figure(), plt.axes()
+            # Create a new Figure object for each component.
+            fig = plt.figure()
+            if not ax: ax = plt.axes()
 
             # Plot the graph.
             subgraph = G.subgraph(component)
             nx.draw(subgraph, ax=ax, **properties, **kwargs)
 
             # Add them to their respective lists.
-            figures.append(fig)
-            axes.append(ax)
+            pairs.append((fig, ax))
 
-    return figures, axes
+    return pairs if pairs else axes
