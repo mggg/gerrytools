@@ -1,5 +1,9 @@
 
-from .map_districts import map_districts
-from .colors import COLORS
+from .mapping import drawplan, drawgraph
+from .colors import districtr, redblue
+from .geography import dissolve, dualgraph
 
-__all__ = ["map_districts", "COLORS"]
+__all__ = [
+    "plan", "districtr", "redblue", "drawplan", "dualgraph", "dissolve",
+    "drawgraph"
+]
