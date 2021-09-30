@@ -2,11 +2,18 @@
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import math
+from random import shuffle
+from typing import Optional
+
 from ..colors import districtr
 
-def districtingplan(
-        districts:gpd.GeoDataFrame, assignment:str, overlay=None, colors=None,
-        numbers=False
+def _riffle(l):
+    shuffle(l)
+    return l
+
+def drawplan(
+        districts:gpd.GeoDataFrame, assignment:str, overlay: Optional[gpd.GeoDataFrame]=None,
+        colors: Optional[str]=None, numbers: Optional[bool]=False
     ) -> plt.Axes:
     """
     Visualizes the districting plan defined by `assignment`.
@@ -31,7 +38,8 @@ def districtingplan(
 
     # Assign colors.
     repeats = math.ceil(N/len(districtr))
-    repeatedcolors = (districtr*repeats)[:N]
+    tail = districtr*(repeats-1)
+    repeatedcolors = (districtr + (_riffle(tail) if tail else []))[:N]
     districts["color"] = repeatedcolors
 
     # Plot the districts.

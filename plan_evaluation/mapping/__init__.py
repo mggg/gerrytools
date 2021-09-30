@@ -1,2 +1,3 @@
 
-from .districtingplan import districtingplan as plan
+from .drawplan import drawplan
+from .drawgraph import drawgraph
