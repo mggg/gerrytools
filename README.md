@@ -8,7 +8,7 @@ When installing, it's important to determine your use case: if you want to use
 create plots, dissolve geometries, etc.) instead of using it as a _data repository_
 (for storing plan evaluation materials).
 
-## Instructions
+### Instructions
 If you want to use this code _as an `import`-able package_, the recommended way
 to install is by running
 ```
