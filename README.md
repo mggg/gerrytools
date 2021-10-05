@@ -11,7 +11,7 @@ _evaluation data_, then [head to this repo](https://github.com/mggg/plan-evaluat
 If you want to use this package to evaluate districting plans, the recommended
 way to install is by running
 ```
-$ pip install git+https://github.com/mggg/plan-evaluation
+$ pip install git+https://github.com/mggg/plan-evaluation-tools
 ```
 in your favorite CLI. 
 
