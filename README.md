@@ -24,7 +24,7 @@ if we wish to overlay additional shapes (e.g counties) on the districting plan,
 we should have geometric data for those as well.
 
 ```python
-from plan_evaluation.mapping import drawplan
+from evaltools.mapping import drawplan
 import geopandas as gpd
 import matplotlib.pyplot as plt
 
