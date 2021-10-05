@@ -7,11 +7,11 @@ requirements = [
 ]
 
 setup(
-    name="plan_evaluation",
+    name="evaltools",
     author="MGGG Redistricting Lab",
-    author_email="contact@mggg.org",
-    description="Evaluate and visualize districting plans.",
-    url="https://github.com/mggg/plan-evaluation",
+    author_email="engineering@mggg.org",
+    description="Tools for evaluating and visualizing districting plans.",
+    url="https://github.com/mggg/plan-evaluation-tools",
     packages=["evaltools"],
     install_requires=requirements
 )
