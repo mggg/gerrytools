@@ -1,24 +1,24 @@
 
-from plan_evaluation.mapping import drawgraph, drawplan
+from evaltools.mapping import drawgraph, drawplan
 from gerrychain.graph import Graph
 from pathlib import Path
 import matplotlib.pyplot as plt
 import geopandas as gpd
 import os
 
-root = Path(os.getcwd()) / Path("tests/test_resources/")
+root = Path(os.getcwd()) / Path("tests/test-resources/")
 
 def test_drawgraph():
     # Read in the graph and the districts.
-    graph = Graph.from_json(root / "test-dualgraph.json")
+    graph = Graph.from_json(root / "test-graph.json")
     districts = gpd.read_file(root / "test-districts")
 
     # Plot districts on the same axes.
     ax = districts.plot(column="district")
 
     # Draw it twice!
-    single_axes = drawgraph(graph, ax=ax, x="x", y="y")
-    multiple_axes = drawgraph(graph, components=True, x="x", y="y")
+    single_axes = drawgraph(graph, ax=ax)
+    multiple_axes = drawgraph(graph, components=True)
 
     # Assert that single_axes is a single object, and that multiple_axes is a
     # list of objects.
@@ -37,5 +37,5 @@ def test_drawplan():
 
 
 if __name__ == "__main__":
-    root = Path(os.getcwd()) / Path("test_resources/")
+    root = Path(os.getcwd()) / Path("test-resources/")
     test_drawplan()

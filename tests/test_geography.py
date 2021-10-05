@@ -1,10 +1,11 @@
 
-from plan_evaluation.geography import dissolve, dualgraph
+from evaltools.geography import dissolve, dualgraph
+from evaltools import Graph
 import geopandas as gpd
 from pathlib import Path
 import os
 
-root = Path(os.getcwd()) / Path("tests/test_resources/")
+root = Path(os.getcwd()) / Path("tests/test-resources/")
 
 def test_dissolve():
     # Read in geometric data.
@@ -54,6 +55,6 @@ def test_dualgraph():
     assert set(default.nodes()) != set(nameadjusted.nodes())
     for _, data in nameadjusted.nodes(data=True): assert data.get("BIDEN", False)
 
+
 if __name__ == "__main__":
-    root = Path(os.getcwd()) / Path("test_resources/")
-    test_dualgraph()
+    root = Path(os.getcwd()) / Path("test-resources/")
