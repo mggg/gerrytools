@@ -31,13 +31,14 @@ from .colors import districtr, redblue
 from .geography import dissolve, dualgraph
 from .auxiliary import Graph, Partition
 from .evaluation import (
-    splits, pieces, deviations, ensemble_schema, assignment_schema
+    splits, pieces, deviations, ensemble_schema, assignment_schema,
+    contiguous, unassigned
 )
 
 __all__ = [
     &#34;districtr&#34;, &#34;redblue&#34;, &#34;drawplan&#34;, &#34;dualgraph&#34;, &#34;dissolve&#34;,
     &#34;drawgraph&#34;, &#34;Graph&#34;, &#34;Partition&#34;, &#34;splits&#34;, &#34;pieces&#34;, &#34;deviations&#34;,
-    &#34;ensemble_schema&#34;, &#34;assignment_schema&#34;
+    &#34;ensemble_schema&#34;, &#34;assignment_schema&#34;, &#34;contiguous&#34;, &#34;unassigned&#34;
 ]</code></pre>
 </details>
 </section>
@@ -71,6 +72,31 @@ __all__ = [
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
+<dt id="evaltools.contiguous"><code class="name flex">
+<span>def <span class="ident">contiguous</span></span>(<span>partition)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Check if the parts of a partition are connected using :func:<code>networkx.is_connected</code>.</p>
+<p>:param partition: The proposed next :class:<code>~gerrychain.partition.Partition</code></p>
+<p>:return: whether the partition is contiguous
+:rtype: bool</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def contiguous(partition):
+    &#34;&#34;&#34;Check if the parts of a partition are connected using :func:`networkx.is_connected`.
+
+    :param partition: The proposed next :class:`~gerrychain.partition.Partition`
+
+    :return: whether the partition is contiguous
+    :rtype: bool
+    &#34;&#34;&#34;
+    return all(
+        nx.is_connected(partition.subgraphs[part]) for part in affected_parts(partition)
+    )</code></pre>
+</details>
+</dd>
 <dt id="evaltools.deviations"><code class="name flex">
 <span>def <span class="ident">deviations</span></span>(<span>P: gerrychain.partition.partition.Partition, popcolumn: str) ‑> dict</span>
 </code></dt>
@@ -581,6 +607,55 @@ these units are counties, VTDs, precincts, etc.</dd>
     }
 
     return geometrysplits</code></pre>
+</details>
+</dd>
+<dt id="evaltools.unassigned"><code class="name flex">
+<span>def <span class="ident">unassigned</span></span>(<span>P, raw=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Determines the proportion (or raw number) of units without a district
+assignment. An unassigned unit is a unit with a</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>P</code></strong></dt>
+<dd><code><a title="evaltools.Partition" href="#evaltools.Partition">Partition</a></code> object.</dd>
+<dt><strong><code>raw</code></strong></dt>
+<dd>Optional; if <code>True</code>, report the raw number of unassigned units.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p><code>float</code> representing the proportion of units that are unassigned (or
+the whole number of unassigned units).</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def unassigned(P, raw=False):
+    &#34;&#34;&#34;
+    Determines the proportion (or raw number) of units without a district
+    assignment. An unassigned unit is a unit with a
+
+    Args:
+        P: `Partition` object.
+        raw: Optional; if `True`, report the raw number of unassigned units.
+    
+    Returns:
+        `float` representing the proportion of units that are unassigned (or
+        the whole number of unassigned units).
+    &#34;&#34;&#34;
+    assignment = P.assignment
+
+    # Retrive the length of the assignment; this corresponds to the number of
+    # units which have an assignment key.
+    total = len(P.graph.nodes())
+
+    # Next, check for &#34;bad&#34; assignments for units: this includes empty strings
+    # and NaNs, for now.
+    units_assigned_well = len({
+        k: v
+        for k, v in assignment.items() if v not in [&#34;nan&#34;, &#34;NaN&#34;, &#34;&#34;]
+    })
+
+    return 1-(units_assigned_well/total) if not raw else (total-units_assigned_well)</code></pre>
 </details>
 </dd>
 </dl>
@@ -1760,6 +1835,7 @@ to adjust the plot.</p></div>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="two-column">
+<li><code><a title="evaltools.contiguous" href="#evaltools.contiguous">contiguous</a></code></li>
 <li><code><a title="evaltools.deviations" href="#evaltools.deviations">deviations</a></code></li>
 <li><code><a title="evaltools.dissolve" href="#evaltools.dissolve">dissolve</a></code></li>
 <li><code><a title="evaltools.drawgraph" href="#evaltools.drawgraph">drawgraph</a></code></li>
@@ -1768,6 +1844,7 @@ to adjust the plot.</p></div>
 <li><code><a title="evaltools.pieces" href="#evaltools.pieces">pieces</a></code></li>
 <li><code><a title="evaltools.redblue" href="#evaltools.redblue">redblue</a></code></li>
 <li><code><a title="evaltools.splits" href="#evaltools.splits">splits</a></code></li>
+<li><code><a title="evaltools.unassigned" href="#evaltools.unassigned">unassigned</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
