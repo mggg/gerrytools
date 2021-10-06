@@ -1,10 +1,10 @@
 
 from gerrychain.updaters import county_splits
-from typing import List, Union
-from ..geography import Graph, Partition
+from typing import List
+from ..auxiliary import Partition
 
 
-def splits(G:Graph, assignment:Union[str,dict], units:List[str]) -> dict:
+def splits(P:Partition, units:List[str]) -> dict:
     """
     Determines the number of units split by the districting plan.
     
@@ -14,23 +14,56 @@ def splits(G:Graph, assignment:Union[str,dict], units:List[str]) -> dict:
     cut twice), while the latter would report one split (as there is one county 
     being split).
 
-    :param G: `Graph` object.
-    :param assignment: Column name or dictionary (keyed by vertex IDs) which
-    assigns vertices to districts.
+    :param P: `Partition` object.
     :param units: List of data columns; each assigns a vertex to a unit. Generally,
     these units are counties, VTDs, precincts, etc.
     :returns: A dictionary mapping column names to the number of splits.
     """
-    # Create the partition and get the function for calculating splits.
-    partition = Partition(graph=G, assignment=assignment)
-    geometrysplits = {}
-
-    # For each of the unit columns, get the number of splits.
-    for unit in units:
-        splitter = county_splits("", unit)
-        geometrysplits[unit] = sum(
+    geometrysplits = {
+        unit: sum(
             (len(value.contains))-1
-            for value in splitter(partition).values()
+            # Takes advantage of the fact that P is a Partition and `county_splits`
+            # returns a function. We don't need to name the partition, and the
+            # column of units being split by the plan are in `units`, so we can
+            # simply call the function returned by `county_splits`, passing it
+            # our Partition `P`.
+            for value in county_splits("", unit)(P).values()
         )
+        for unit in units
+    }
 
     return geometrysplits
+
+
+def pieces(P:Partition, units:List[str]) -> dict:
+    """
+    Determines the number of "unit pieces" produced by the plan. For example,
+    consider a state with 100 counties. Suppose that one county is split twice,
+    and another in half. Then, there are 3 + 2 = 5 "pieces," disregarding the
+    counties kept whole.
+    
+    Bear in mind that this calculates the number of *unit splits*, not the number
+    of *units split*: for example, if a district divides a county into three
+    pieces, the former reports two splits (as a unit divided into three pieces is
+    cut twice), while the latter would report one split (as there is one county 
+    being split).
+
+    :param P: `Partition` object.
+    :param units: List of data columns; each assigns a vertex to a unit. Generally,
+    these units are counties, VTDs, precincts, etc.
+    :returns: A dictionary mapping column names to the number of splits.
+    """
+    geometrypieces = {
+        unit: sum(
+            len(value.contains) if len(value.contains) > 1 else 0
+            # Takes advantage of the fact that P is a Partition and `county_splits`
+            # returns a function. We don't need to name the partition, and the
+            # column of units being split by the plan are in `units`, so we can
+            # simply call the function returned by `county_splits`, passing it
+            # our Partition `P`.
+            for value in county_splits("", unit)(P).values()
+        )
+        for unit in units
+    }
+
+    return geometrypieces

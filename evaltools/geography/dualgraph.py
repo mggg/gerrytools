@@ -1,5 +1,5 @@
 
-from gerrychain import Graph
+from ..auxiliary import Graph
 import geopandas as gpd
 from typing import List, Tuple
 
