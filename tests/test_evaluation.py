@@ -1,5 +1,7 @@
 
-from evaltools.evaluation import deviations, splits, pieces
+from evaltools.evaluation import (
+    deviations, splits, pieces, contiguous, unassigned
+)
 from evaltools.geography import Partition
 from gerrychain.graph import Graph
 from pathlib import Path
@@ -47,6 +49,29 @@ def test_deviations():
     assert type(devs) is dict
     assert set(data["CONGRESS"] for _, data in dg.nodes(data=True)) == set(devs.keys())
 
+
+def test_contiguity():
+    dg = Graph.from_json(root / "test-graph.json")
+    P = Partition(dg, "CONGRESS")
+    contiguity = contiguous(P)
+
+    # This plan should *not* be contiguous, as some VTDs are discontiguous
+    # themselves.
+    assert not contiguity
+
+
+def test_unassigned():
+    dg = Graph.from_json(root / "test-graph.json")
+    P = Partition(dg, "CONGRESS")
+    bads = unassigned(P)
+    wholebads = unassigned(P, raw=True)
+
+    # This plan shouldn't have any unassigned units.
+    assert bads == 0
+
+    # These two things should report the same number, since none are unassigned.
+    assert bads == wholebads
+
 if __name__ == "__main__":
     root = Path(os.getcwd()) / Path("test-resources/")
-    test_pieces()
+    test_unassigned()

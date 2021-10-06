@@ -1,2 +1,3 @@
-pdoc evaltools --html --output-dir=docs --math
-mv docs/evaltools/* docs/
+pdoc evaltools --html --output-dir=docs --force
+rsync -a docs/evaltools/ docs/
+rm -rf docs/evaltools

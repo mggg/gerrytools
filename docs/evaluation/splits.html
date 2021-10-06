@@ -27,11 +27,8 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">from gerrychain.updaters import county_splits
-from typing import List
-from ..auxiliary import Partition
 
-
-def splits(P:Partition, units:List[str]) -&gt; dict:
+def splits(P, units):
     &#34;&#34;&#34;
     Determines the number of units split by the districting plan.
     
@@ -65,7 +62,7 @@ def splits(P:Partition, units:List[str]) -&gt; dict:
     return geometrysplits
 
 
-def pieces(P:Partition, units:List[str]) -&gt; dict:
+def pieces(P, units):
     &#34;&#34;&#34;
     Determines the number of &#34;unit pieces&#34; produced by the plan. For example,
     consider a state with 100 counties. Suppose that one county is split twice,
@@ -78,10 +75,13 @@ def pieces(P:Partition, units:List[str]) -&gt; dict:
     cut twice), while the latter would report one split (as there is one county 
     being split).
 
-    :param P: `Partition` object.
-    :param units: List of data columns; each assigns a vertex to a unit. Generally,
-    these units are counties, VTDs, precincts, etc.
-    :returns: A dictionary mapping column names to the number of splits.
+    Args:
+        P: `Partition` object.
+        units: List of data columns; each assigns a vertex to a unit. Generally,
+            these units are counties, VTDs, precincts, etc.
+
+    Returns:
+        A dictionary mapping column names to the number of splits.
     &#34;&#34;&#34;
     geometrypieces = {
         unit: sum(
@@ -107,7 +107,7 @@ def pieces(P:Partition, units:List[str]) -&gt; dict:
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.evaluation.splits.pieces"><code class="name flex">
-<span>def <span class="ident">pieces</span></span>(<span>P: gerrychain.partition.partition.Partition, units: List[str]) ‑> dict</span>
+<span>def <span class="ident">pieces</span></span>(<span>P, units)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Determines the number of "unit pieces" produced by the plan. For example,
@@ -119,15 +119,21 @@ of <em>units split</em>: for example, if a district divides a county into three
 pieces, the former reports two splits (as a unit divided into three pieces is
 cut twice), while the latter would report one split (as there is one county
 being split).</p>
-<p>:param P: <code>Partition</code> object.
-:param units: List of data columns; each assigns a vertex to a unit. Generally,
-these units are counties, VTDs, precincts, etc.
-:returns: A dictionary mapping column names to the number of splits.</p></div>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>P</code></strong></dt>
+<dd><code>Partition</code> object.</dd>
+<dt><strong><code>units</code></strong></dt>
+<dd>List of data columns; each assigns a vertex to a unit. Generally,
+these units are counties, VTDs, precincts, etc.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A dictionary mapping column names to the number of splits.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def pieces(P:Partition, units:List[str]) -&gt; dict:
+<pre><code class="python">def pieces(P, units):
     &#34;&#34;&#34;
     Determines the number of &#34;unit pieces&#34; produced by the plan. For example,
     consider a state with 100 counties. Suppose that one county is split twice,
@@ -140,10 +146,13 @@ these units are counties, VTDs, precincts, etc.
     cut twice), while the latter would report one split (as there is one county 
     being split).
 
-    :param P: `Partition` object.
-    :param units: List of data columns; each assigns a vertex to a unit. Generally,
-    these units are counties, VTDs, precincts, etc.
-    :returns: A dictionary mapping column names to the number of splits.
+    Args:
+        P: `Partition` object.
+        units: List of data columns; each assigns a vertex to a unit. Generally,
+            these units are counties, VTDs, precincts, etc.
+
+    Returns:
+        A dictionary mapping column names to the number of splits.
     &#34;&#34;&#34;
     geometrypieces = {
         unit: sum(
@@ -162,7 +171,7 @@ these units are counties, VTDs, precincts, etc.
 </details>
 </dd>
 <dt id="evaltools.evaluation.splits.splits"><code class="name flex">
-<span>def <span class="ident">splits</span></span>(<span>P: gerrychain.partition.partition.Partition, units: List[str]) ‑> dict</span>
+<span>def <span class="ident">splits</span></span>(<span>P, units)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Determines the number of units split by the districting plan.</p>
@@ -185,7 +194,7 @@ these units are counties, VTDs, precincts, etc.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def splits(P:Partition, units:List[str]) -&gt; dict:
+<pre><code class="python">def splits(P, units):
     &#34;&#34;&#34;
     Determines the number of units split by the districting plan.
     

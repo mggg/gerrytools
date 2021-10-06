@@ -1,10 +1,7 @@
 
 from gerrychain.updaters import county_splits
-from typing import List
-from ..auxiliary import Partition
 
-
-def splits(P:Partition, units:List[str]) -> dict:
+def splits(P, units):
     """
     Determines the number of units split by the districting plan.
     
@@ -38,7 +35,7 @@ def splits(P:Partition, units:List[str]) -> dict:
     return geometrysplits
 
 
-def pieces(P:Partition, units:List[str]) -> dict:
+def pieces(P, units):
     """
     Determines the number of "unit pieces" produced by the plan. For example,
     consider a state with 100 counties. Suppose that one county is split twice,
@@ -51,10 +48,13 @@ def pieces(P:Partition, units:List[str]) -> dict:
     cut twice), while the latter would report one split (as there is one county 
     being split).
 
-    :param P: `Partition` object.
-    :param units: List of data columns; each assigns a vertex to a unit. Generally,
-    these units are counties, VTDs, precincts, etc.
-    :returns: A dictionary mapping column names to the number of splits.
+    Args:
+        P: `Partition` object.
+        units: List of data columns; each assigns a vertex to a unit. Generally,
+            these units are counties, VTDs, precincts, etc.
+
+    Returns:
+        A dictionary mapping column names to the number of splits.
     """
     geometrypieces = {
         unit: sum(
