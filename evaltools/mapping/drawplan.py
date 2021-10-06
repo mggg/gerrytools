@@ -1,5 +1,4 @@
 
-import geopandas as gpd
 import matplotlib.pyplot as plt
 import math
 from random import shuffle
@@ -10,21 +9,24 @@ def _riffle(l):
     return l
 
 def drawplan(
-        districts:gpd.GeoDataFrame, assignment:str, overlay:gpd.GeoDataFrame=None,
-        colors:str=None, numbers:bool=False
-    ) -> plt.Axes:
+        districts, assignment, overlay=None, colors=None, numbers=False,
+        coloring="districtr"
+    ):
     """
     Visualizes the districting plan defined by `assignment`.
 
-    :param districts: Geometries for the districting plan. Assumes there is one
-    geometry for each district.
-    :param assignment: Column of `districts` which defines the districting plan.
-    :param overlay: Optional; geodataframe to be plotted over the districts.
-    Often is a gdf of counties.
-    :param colors: Optional; column name which specifies colors for each district.
-    :param numbers: Optional; if true, plots district names (as defined by
-    `assignment`) at districts' centroids.
-    :returns: Matplotlib Axes object.
+    Args:
+        districts: Geometries for the districting plan. Assumes there is one
+            geometry for each district.
+        assignment: Column of `districts` which defines the districting plan.
+        overlay: Optional; geodataframe to be plotted over the districts.
+            Often is a gdf of counties.
+        colors: Optional; column name which specifies colors for each district.
+        numbers: Optional; if true, plots district names (as defined by
+            `assignment`) at districts' centroids.
+
+    Returns:
+        A `matplotlib` `Axes` object for the geometries attached to `districts`.
     """
     # Sort districts by their assignment and add a column specifying the color
     # index.

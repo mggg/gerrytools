@@ -264,7 +264,7 @@ component.</p></div>
 </details>
 </dd>
 <dt id="evaltools.drawplan"><code class="name flex">
-<span>def <span class="ident">drawplan</span></span>(<span>districts, assignment, overlay=None, colors=None, numbers=False)</span>
+<span>def <span class="ident">drawplan</span></span>(<span>districts, assignment, overlay=None, colors=None, numbers=False, coloring='districtr')</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Visualizes the districting plan defined by <code>assignment</code>.</p>
@@ -290,7 +290,10 @@ Often is a gdf of counties.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def drawplan(districts, assignment, overlay=None, colors=None, numbers=False):
+<pre><code class="python">def drawplan(
+        districts, assignment, overlay=None, colors=None, numbers=False,
+        coloring=&#34;districtr&#34;
+    ):
     &#34;&#34;&#34;
     Visualizes the districting plan defined by `assignment`.
 

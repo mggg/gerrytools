@@ -8,7 +8,7 @@ from .evaluation import (
 )
 
 __all__ = [
-    "plan", "districtr", "redblue", "drawplan", "dualgraph", "dissolve",
+    "districtr", "redblue", "drawplan", "dualgraph", "dissolve",
     "drawgraph", "Graph", "Partition", "splits", "pieces", "deviations",
     "ensemble_schema", "assignment_schema"
 ]

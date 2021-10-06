@@ -26,8 +26,7 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">import geopandas as gpd
-import matplotlib.pyplot as plt
+<pre><code class="python">import matplotlib.pyplot as plt
 import math
 from random import shuffle
 from ..colors import districtr
@@ -36,7 +35,10 @@ def _riffle(l):
     shuffle(l)
     return l
 
-def drawplan(districts, assignment, overlay=None, colors=None, numbers=False):
+def drawplan(
+        districts, assignment, overlay=None, colors=None, numbers=False,
+        coloring=&#34;districtr&#34;
+    ):
     &#34;&#34;&#34;
     Visualizes the districting plan defined by `assignment`.
 
@@ -105,7 +107,7 @@ def drawplan(districts, assignment, overlay=None, colors=None, numbers=False):
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.mapping.drawplan.drawplan"><code class="name flex">
-<span>def <span class="ident">drawplan</span></span>(<span>districts, assignment, overlay=None, colors=None, numbers=False)</span>
+<span>def <span class="ident">drawplan</span></span>(<span>districts, assignment, overlay=None, colors=None, numbers=False, coloring='districtr')</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Visualizes the districting plan defined by <code>assignment</code>.</p>
@@ -131,7 +133,10 @@ Often is a gdf of counties.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def drawplan(districts, assignment, overlay=None, colors=None, numbers=False):
+<pre><code class="python">def drawplan(
+        districts, assignment, overlay=None, colors=None, numbers=False,
+        coloring=&#34;districtr&#34;
+    ):
     &#34;&#34;&#34;
     Visualizes the districting plan defined by `assignment`.
 

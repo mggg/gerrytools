@@ -1,22 +1,23 @@
 
 import geopandas as gpd
 
-def dissolve(
-        geometries:gpd.GeoDataFrame, by="DISTRICTN", reset_index=True, keep=[],
-        aggfunc="sum"
-    ) -> gpd.GeoDataFrame:
+def dissolve(geometries, by="DISTRICTN", reset_index=True, keep=[],aggfunc="sum"):
     """
-    Dissolves `geometries` on the column `on`. Intended to dissolve a set of
+    Dissolves `geometries` on the column `by`. Intended to dissolve a set of
     source geometries (e.g. VTDs, blocks, block groups, etc.) to district
     geometries.
 
-    :param geometries: Set of geometries to be dissolved.
-    :param by: Name of the column used to group objects.
-    :param reset_index: Optional; if true, the index of the resulting GeoDataFrame
-    will be set to an integer index, not `by`. 
-    :param keep: Additional columns to keep beyond the geometry and `by` columns.
-    :param aggfunc: Pandas groupby function type when aggregating; defaults to
-    `"sum"`.
+    Args:
+        geometries: Set of geometries to be dissolved.
+        by: Name of the column used to group objects.
+        reset_index: Optional; if true, the index of the resulting GeoDataFrame
+            will be set to an integer index, not `by`. 
+        keep: Additional columns to keep beyond the geometry and `by` columns.
+        aggfunc: Pandas groupby function type when aggregating; defaults to `"sum"`.
+
+    Returns:
+        A `GeoDataFrame` containing dissolved geometries and kept columns
+        computed by the function designated by `aggfunc`.
     """
     # Pare down the geometries and dissolve.
     geometries = geometries[keep + [by, "geometry"]]

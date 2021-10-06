@@ -14,10 +14,13 @@ def splits(P:Partition, units:List[str]) -> dict:
     cut twice), while the latter would report one split (as there is one county 
     being split).
 
-    :param P: `Partition` object.
-    :param units: List of data columns; each assigns a vertex to a unit. Generally,
-    these units are counties, VTDs, precincts, etc.
-    :returns: A dictionary mapping column names to the number of splits.
+    Args:
+        P: `Partition` object.
+        units: List of data columns; each assigns a vertex to a unit. Generally,
+            these units are counties, VTDs, precincts, etc.
+    
+    Returns:
+        A dictionary mapping column names to the number of splits.
     """
     geometrysplits = {
         unit: sum(
