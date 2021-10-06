@@ -32,7 +32,8 @@ from numpy import nan
 def unassigned(P, raw=False):
     &#34;&#34;&#34;
     Determines the proportion (or raw number) of units without a district
-    assignment. An unassigned unit is a unit with a
+    assignment. An unassigned unit is a unit without a districting assignment an
+    empty/corrupted assignment.
 
     Args:
         P: `Partition` object.
@@ -70,7 +71,8 @@ def unassigned(P, raw=False):
 </code></dt>
 <dd>
 <div class="desc"><p>Determines the proportion (or raw number) of units without a district
-assignment. An unassigned unit is a unit with a</p>
+assignment. An unassigned unit is a unit without a districting assignment an
+empty/corrupted assignment.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>P</code></strong></dt>
@@ -88,7 +90,8 @@ the whole number of unassigned units).</p></div>
 <pre><code class="python">def unassigned(P, raw=False):
     &#34;&#34;&#34;
     Determines the proportion (or raw number) of units without a district
-    assignment. An unassigned unit is a unit with a
+    assignment. An unassigned unit is a unit without a districting assignment an
+    empty/corrupted assignment.
 
     Args:
         P: `Partition` object.

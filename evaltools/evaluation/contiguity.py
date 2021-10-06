@@ -5,7 +5,8 @@ from numpy import nan
 def unassigned(P, raw=False):
     """
     Determines the proportion (or raw number) of units without a district
-    assignment. An unassigned unit is a unit with a
+    assignment. An unassigned unit is a unit without a districting assignment an
+    empty/corrupted assignment.
 
     Args:
         P: `Partition` object.
