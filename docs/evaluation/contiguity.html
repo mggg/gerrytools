@@ -26,7 +26,36 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from gerrychain.constraints import contiguous</code></pre>
+<pre><code class="python">from gerrychain.constraints import contiguous
+from numpy import nan
+
+def unassigned(P, raw=False):
+    &#34;&#34;&#34;
+    Determines the proportion (or raw number) of units without a district
+    assignment. An unassigned unit is a unit with a
+
+    Args:
+        P: `Partition` object.
+        raw: Optional; if `True`, report the raw number of unassigned units.
+    
+    Returns:
+        `float` representing the proportion of units that are unassigned (or
+        the whole number of unassigned units).
+    &#34;&#34;&#34;
+    assignment = P.assignment
+
+    # Retrive the length of the assignment; this corresponds to the number of
+    # units which have an assignment key.
+    total = len(P.graph.nodes())
+
+    # Next, check for &#34;bad&#34; assignments for units: this includes empty strings
+    # and NaNs, for now.
+    units_assigned_well = len({
+        k: v
+        for k, v in assignment.items() if v not in [&#34;nan&#34;, &#34;NaN&#34;, &#34;&#34;]
+    })
+
+    return 1-(units_assigned_well/total) if not raw else (total-units_assigned_well)</code></pre>
 </details>
 </section>
 <section>
@@ -34,6 +63,58 @@
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="evaltools.evaluation.contiguity.unassigned"><code class="name flex">
+<span>def <span class="ident">unassigned</span></span>(<span>P, raw=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Determines the proportion (or raw number) of units without a district
+assignment. An unassigned unit is a unit with a</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>P</code></strong></dt>
+<dd><code>Partition</code> object.</dd>
+<dt><strong><code>raw</code></strong></dt>
+<dd>Optional; if <code>True</code>, report the raw number of unassigned units.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p><code>float</code> representing the proportion of units that are unassigned (or
+the whole number of unassigned units).</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def unassigned(P, raw=False):
+    &#34;&#34;&#34;
+    Determines the proportion (or raw number) of units without a district
+    assignment. An unassigned unit is a unit with a
+
+    Args:
+        P: `Partition` object.
+        raw: Optional; if `True`, report the raw number of unassigned units.
+    
+    Returns:
+        `float` representing the proportion of units that are unassigned (or
+        the whole number of unassigned units).
+    &#34;&#34;&#34;
+    assignment = P.assignment
+
+    # Retrive the length of the assignment; this corresponds to the number of
+    # units which have an assignment key.
+    total = len(P.graph.nodes())
+
+    # Next, check for &#34;bad&#34; assignments for units: this includes empty strings
+    # and NaNs, for now.
+    units_assigned_well = len({
+        k: v
+        for k, v in assignment.items() if v not in [&#34;nan&#34;, &#34;NaN&#34;, &#34;&#34;]
+    })
+
+    return 1-(units_assigned_well/total) if not raw else (total-units_assigned_well)</code></pre>
+</details>
+</dd>
+</dl>
 </section>
 <section>
 </section>
@@ -47,6 +128,11 @@
 <li><h3>Super-module</h3>
 <ul>
 <li><code><a title="evaltools.evaluation" href="index.html">evaltools.evaluation</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="evaltools.evaluation.contiguity.unassigned" href="#evaltools.evaluation.contiguity.unassigned">unassigned</a></code></li>
 </ul>
 </li>
 </ul>
