@@ -13,7 +13,17 @@ way to install is by running
 ```
 $ pip install git+https://github.com/mggg/plan-evaluation-tools
 ```
-in your favorite CLI.
+in your favorite CLI. If you want to contribute to the development of this repo
+(or not worry so often about having to pull new versions), run
+```
+$ git clone https://github.com/mggg/plan-evaluation-tools.git
+```
+then navigate into the `plan-evaluation-tools` repository and run
+```
+$ python setup.py install
+```
+This way, whenever changes are made, you can simply `git pull` and they will be
+immediately usable by all programs importing `evaltools`.
 
 ## Example Usage
 Let's say we want to find the number of county pieces induced by a districting
