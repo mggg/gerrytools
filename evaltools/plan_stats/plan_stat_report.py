@@ -11,8 +11,13 @@ import warnings; warnings.filterwarnings('ignore', 'GeoSeries.isna', UserWarning
 
 #vtd splits
 def vtd_splits(vtd_assignment_csv, block_assignment_csv, plan_shapefile, vtd_shapefile, block_shapefile):
-    
-    
+  '''
+  vtd_assignment_csv: Plan assignment on VTDs.
+  block_assignment_csv: Plan assignment on blocks. 
+  plan_shapefile: Shapefile for the plan, usually pulled from redistricting site. 
+  vtd_shapefile: Shapefile for the state on vtds. 
+  block_shapefile: Shapefile for the state on blocks. 
+  '''
   vtd_assignments = pd.read_csv(vtd_assignment_csv)
   vtds = gpd.read_file(vtd_shapefile)
   
@@ -71,7 +76,7 @@ def vtd_splits(vtd_assignment_csv, block_assignment_csv, plan_shapefile, vtd_sha
             
         if(min(pop_split, secondary_pop_split) >= 10):
             vtd_split_count += 1
-            reassigned_area += round(leftover.area, 4))
+            reassigned_area += round(leftover.area, 4)
             reassigned_pop += secondary_pop_split
             displaced_area.append("VTD: " + str(vtd["GEOID20"]) + " area splits. District " + str(district) + " contains " + str(round(1-leftover.area/vtd.geometry.area, 4)) + " proportion of area, while District " + str(secondary_district) + " contains " + str(round(leftover.area/vtd.geometry.area, 4)) + ". Total area of vtd = " + str(vtd.geometry.area)) 
             displaced_pop.append("VTD: " + str(vtd["GEOID20"]) + " population splits. District " + str(district) + " contains " + str(pop_split) + " people , while District " + str(secondary_district) + " contains " + str(secondary_pop_split) + ". VTD has " + str(vtd[vtd_pop_key]) + " total people.")
@@ -131,45 +136,6 @@ def plan_stat_report(assignment_csv, block_shapefile, block_graph):
   proportion_of_cut_edges = len(state_partition.cut_edges) / len(state_partition.graph.edges)
   return {"Proportion of cut_edges": proportion_of_cut_edges, "Cut Edges": len(state_partition.cut_edges), "Total Edges": len(state_partition.graph.edges), "Polsby popper": polsby, "Max Positive Populaton Deviation": pos_pop_dev, "District of Max Positive Population Deviation": max_pos_dev_district, "Max Negative Population Deviation": neg_pop_dev, "District of Max Negative Population Deviation": max_neg_dev_district}
 
-def plan_shapefile_to_assignment(plan_shapefile, vtd_shapefile, block_shapefile):
-  '''
-  plan_shapefile: Shapefile for the plan, usually pulled from redistricting site. 
-  vtd_shapefile: Shapefile for the state on vtds. 
-  block_shapefile: Shapefile for the state on blocks. 
-  '''
-  state_vtds = gpd.read_file(vtd_shapefile)
-  state_blocks = gpd.read_file(block_shapefile).to_crs(state_vtds.crs)
-    
-  shp = gpd.read_file(plan_shapefile).to_crs(state_vtds.crs)
-  bck_assignment = maup.assign(state_blocks, shp)
-  vtd_assignment = maup.assign(state_vtds, shp)
-    
-  assignment_filename_prefix = plan_shapefile.split("/")[-1].split(".")[0].replace(" ", "_")
-    
-  state_blocks["assignment"] = bck_assignment
-  state_vtds["assignment"] = vtd_assignment
-    
-  state_blocks["assignment"] = state_blocks["assignment"].apply(lambda x: shp.iloc[int(x)]["DISTRICT"] if not math.isnan(x) else None)
-  state_vtds["assignment"] = state_vtds["assignment"].apply(lambda x: shp.iloc[int(x)]["DISTRICT"] if not math.isnan(x) else None)
-    
-  state_blocks[[x for x in state_blocks.columns if "POP" in x or "VAP" in x]].groupby(state_blocks["assignment"]).sum().to_csv(assignment_filename_prefix + "_bck_stats.csv")
-  state_vtds[[x for x in state_vtds.columns if "POP" in x or "VAP" in x]].groupby(state_vtds["assignment"]).sum().to_csv(assignment_filename_prefix + "_vtd_stats.csv")
-    
-  state_blocks = state_blocks["assignment"].astype(int)
-  state_vtds = state_vtds["assignment"].astype(int)
-
-  state_blocks = state_blocks["GEOID20"].astype(str)
-  state_vtds = state_vtds["GEOID20"].astype(str)
-
-  state_blocks[["GEOID20", "assignment"]].dropna().to_csv(assignment_filename_prefix + "_bck_dropped.csv", index=False)
-  state_vtds[["GEOID20", "assignment"]].dropna().to_csv(assignment_filename_prefix + "_vtd_dropped.csv", index=False)
- 
-  state_blocks[["GEOID20", "assignment"]].to_csv(assignment_filename_prefix + "_bck.csv", index=False)
-  state_vtds[["GEOID20", "assignment"]].to_csv(assignment_filename_prefix + "_vtd.csv", index=False)
-
-  state_blocks.to_file(assignment_filename_prefix + "_on_blocks.shp")
-  state_vtds.to_file(assignment_filename_prefix + "_on_vtds.shp")
-
 def generate_plan_report_from_csv(csv_prefix, block_json, block_shapefile, vtd_shapefile):
   #version to be used when assignment csvs have already been generated  
   '''
@@ -205,12 +171,12 @@ def generate_plan_report_from_csv(csv_prefix, block_json, block_shapefile, vtd_s
       plan_report.close()
 
 def generate_plan_report_from_shp(plan_shapefile, block_json, block_shapefile, vtd_shapefile):
-      '''
-      plan_shapefile: Shapefile for plan
-      block_json: Json file for block dual graph of state
-      block_shapefile: Shapefile for the state on blocks
-      vtd_shapefile: Shapefile for state on vtds
-      '''
+    '''
+    plan_shapefile: Shapefile for plan
+    block_json: Json file for block dual graph of state
+    block_shapefile: Shapefile for the state on blocks
+    vtd_shapefile: Shapefile for state on vtds
+    '''
     plan_shapefile_to_assignment(plan_shapefile, vtd_shapefile, block_shapefile)
     
 
