@@ -5,20 +5,20 @@ A set of tools and resources for evaluating and visualizing proposed districting
 ### Use Cases
 Before installing, it's important to determine your use case: if you want to install
 the _tools_ to evaluate plans, then this is the repo for you; if you want the
-_evaluation data_, then [head to this repo](https://github.com/mggg/plan-evaluation).
+_evaluation data_, then [head to this repo](https://github.com/mggg/plan-evaluation-reporting).
 
 ### Instructions
 If you want to use this package to evaluate districting plans, the recommended
 way to install is by running
 ```
-$ pip install git+https://github.com/mggg/plan-evaluation-tools
+$ pip install git+https://github.com/mggg/plan-evaluation-processing
 ```
 in your favorite CLI. If you want to contribute to the development of this repo
 (or not worry so often about having to pull new versions), run
 ```
-$ git clone https://github.com/mggg/plan-evaluation-tools.git
+$ git clone https://github.com/mggg/plan-evaluation-processing.git
 ```
-then navigate into the `plan-evaluation-tools` repository and run
+then navigate into the `plan-evaluation-processing` repository and run
 ```
 $ python setup.py install
 ```
