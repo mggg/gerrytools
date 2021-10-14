@@ -1,10 +1,9 @@
 
 from gerrychain.constraints.validity import deviation_from_ideal as deviation
 from gerrychain.updaters import Tally
-from ..auxiliary import Partition
 
 
-def deviations(P:Partition, popcolumn:str) -> dict:
+def deviations(P, popcolumn):
     """
     Determines the districting plan's population deviation percentages.
     
@@ -22,3 +21,17 @@ def deviations(P:Partition, popcolumn:str) -> dict:
     # Return a dictionary that maps district names to population deviation
     # percentages.
     return deviation(P, attribute=popcolumn)
+
+
+def unassigned_population(P, popcolumn):
+    """
+    Determines the number of unassigned people in the districting plan.
+    
+    Args:
+        P: `Partition` object.
+        popcolumn: Column for tallying the desired population.
+
+    Returns:
+        Returns a 
+    """
+    pass
