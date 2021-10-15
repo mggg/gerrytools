@@ -7,8 +7,8 @@ class AssignmentCompressor:
     A class for compressing and decompressing lots of assignments very, very
     quickly. Intended for use with ``jsonlines``-like libraries (where assignments
     are read in line-by-line) or for network requests (where assignments are 
-    retrieved one-by-one). When decompressing, yields `SortedDict` objects, where
-    keys are in sorted order.
+    retrieved one-by-one). When decompressing, yields ``dict``s where keys are
+    in sorted order.
 
     The compression schema considers the set of unique identifiers, imposes an
     ordering (lexicographic order) on the identifiers, and matches the assignment
@@ -23,11 +23,14 @@ class AssignmentCompressor:
 
             ...
 
-            geoids = blocks["GEOID20"]
+            geoids = blocks["GEOID20"].astype(str)
             ac = AssignmentCompressor(geoids, location="compressed-assignments.ac")
 
             with ac as compressor:
                 for assignment in assignments:
+                    # Here, ensure that all assignments have string keys and
+                    # string values; also ensure that an assignment's keys are
+                    # a subset of `geoids` (or whatever IDs you're passing).
                     compressor.compress(assignment)
 
             ...
@@ -38,7 +41,7 @@ class AssignmentCompressor:
 
             ...
 
-            geoids = blocks["GEOID20"]
+            geoids = blocks["GEOID20"].astype(str)
             ac = AssignmentCompressor(geoids, location="compressed-assignments.ac")
 
             for assignment in ac.decompress():
@@ -86,6 +89,11 @@ class AssignmentCompressor:
         self.default = frozenset(zip(self.identifiers, ["-1"]*len(self.identifiers)))
         self.cache = []
         self.location = location
+
+        # Error to users if the window is nonexistent.
+        if type(window) != int or window <= 0:
+            raise ValueError("Cache window width must be a positive integer.")
+            
         self.window = window
 
         self.DISTRICT_SEPARATOR = b","
@@ -125,7 +133,7 @@ class AssignmentCompressor:
         feeding items to the compressor) we can force the remaining items to be
         compressed and written to file.
         """
-        self._compress(force=True)
+        if self.cache: self._compress(force=True)
 
 
     def compress(self, assignment):
@@ -178,7 +186,14 @@ class AssignmentCompressor:
                 )
                 writer.write(compressed)
 
-                # If this is the last chunk, don't write the delimiter.
+                # We only forcibly write the chunk separator to file if we've
+                # entered teardown logic and the cache *is not empty*. If the
+                # cache is empty when we're entering teardown logic, that means
+                # (number of assignments compressed) == (window width), in which
+                # case we've reached the end of compression and should not write
+                # a separator; doing so will produce an empty bytestring (which,
+                # in turn, produces a dictionary with one key, corresponding to
+                # a null assignment).
                 if not force: writer.write(self.CHUNK_SEPARATOR)
 
             # Reset the cache.

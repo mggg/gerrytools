@@ -35,7 +35,7 @@ def test_assignmentcompressor_compress():
     if location.exists(): os.remove(location)
 
     # Create an AssignmentCompressor.
-    ac = AssignmentCompressor(geoids, window=100, location=root/"test-assignments/compressed.ac")
+    ac = AssignmentCompressor(geoids, window=10, location=root/"test-assignments/compressed.ac")
 
     with ac as compressor:
         with jsonlines.open(root / "test-assignments/test-multiple-assignments.jsonl", mode="r") as reader:

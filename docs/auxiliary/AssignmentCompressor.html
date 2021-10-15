@@ -34,8 +34,8 @@ class AssignmentCompressor:
     A class for compressing and decompressing lots of assignments very, very
     quickly. Intended for use with ``jsonlines``-like libraries (where assignments
     are read in line-by-line) or for network requests (where assignments are 
-    retrieved one-by-one). When decompressing, yields `SortedDict` objects, where
-    keys are in sorted order.
+    retrieved one-by-one). When decompressing, yields ``dict``s where keys are
+    in sorted order.
 
     The compression schema considers the set of unique identifiers, imposes an
     ordering (lexicographic order) on the identifiers, and matches the assignment
@@ -50,11 +50,14 @@ class AssignmentCompressor:
 
             ...
 
-            geoids = blocks[&#34;GEOID20&#34;]
+            geoids = blocks[&#34;GEOID20&#34;].astype(str)
             ac = AssignmentCompressor(geoids, location=&#34;compressed-assignments.ac&#34;)
 
             with ac as compressor:
                 for assignment in assignments:
+                    # Here, ensure that all assignments have string keys and
+                    # string values; also ensure that an assignment&#39;s keys are
+                    # a subset of `geoids` (or whatever IDs you&#39;re passing).
                     compressor.compress(assignment)
 
             ...
@@ -65,7 +68,7 @@ class AssignmentCompressor:
 
             ...
 
-            geoids = blocks[&#34;GEOID20&#34;]
+            geoids = blocks[&#34;GEOID20&#34;].astype(str)
             ac = AssignmentCompressor(geoids, location=&#34;compressed-assignments.ac&#34;)
 
             for assignment in ac.decompress():
@@ -113,6 +116,11 @@ class AssignmentCompressor:
         self.default = frozenset(zip(self.identifiers, [&#34;-1&#34;]*len(self.identifiers)))
         self.cache = []
         self.location = location
+
+        # Error to users if the window is nonexistent.
+        if type(window) != int or window &lt;= 0:
+            raise ValueError(&#34;Cache window width must be a positive integer.&#34;)
+            
         self.window = window
 
         self.DISTRICT_SEPARATOR = b&#34;,&#34;
@@ -152,7 +160,7 @@ class AssignmentCompressor:
         feeding items to the compressor) we can force the remaining items to be
         compressed and written to file.
         &#34;&#34;&#34;
-        self._compress(force=True)
+        if self.cache: self._compress(force=True)
 
 
     def compress(self, assignment):
@@ -205,7 +213,14 @@ class AssignmentCompressor:
                 )
                 writer.write(compressed)
 
-                # If this is the last chunk, don&#39;t write the delimiter.
+                # We only forcibly write the chunk separator to file if we&#39;ve
+                # entered teardown logic and the cache *is not empty*. If the
+                # cache is empty when we&#39;re entering teardown logic, that means
+                # (number of assignments compressed) == (window width), in which
+                # case we&#39;ve reached the end of compression and should not write
+                # a separator; doing so will produce an empty bytestring (which,
+                # in turn, produces a dictionary with one key, corresponding to
+                # a null assignment).
                 if not force: writer.write(self.CHUNK_SEPARATOR)
 
             # Reset the cache.
@@ -298,8 +313,8 @@ class AssignmentCompressor:
 <div class="desc"><p>A class for compressing and decompressing lots of assignments very, very
 quickly. Intended for use with <code>jsonlines</code>-like libraries (where assignments
 are read in line-by-line) or for network requests (where assignments are
-retrieved one-by-one). When decompressing, yields <code>SortedDict</code> objects, where
-keys are in sorted order.</p>
+retrieved one-by-one). When decompressing, yields <code>dict</code>s where keys are
+in sorted order.</p>
 <p>The compression schema considers the set of unique identifiers, imposes an
 ordering (lexicographic order) on the identifiers, and matches the assignment
 to that ordering. We assign all unassigned units to <code>"-1"</code> and, once the
@@ -311,11 +326,14 @@ the same order, and the keys for each assignment are in the same order.</p>
 each identifier maps one geometric unit to one district.</p>
 <pre><code>...
 
-geoids = blocks["GEOID20"]
+geoids = blocks["GEOID20"].astype(str)
 ac = AssignmentCompressor(geoids, location="compressed-assignments.ac")
 
 with ac as compressor:
     for assignment in assignments:
+        # Here, ensure that all assignments have string keys and
+        # string values; also ensure that an assignment's keys are
+        # a subset of &lt;code&gt;geoids&lt;/code&gt; (or whatever IDs you're passing).
         compressor.compress(assignment)
 
 ...
@@ -325,7 +343,7 @@ identifiers which match the assignments. We can then iterate over the
 decompressed assignments as they're read out of the file.</p>
 <pre><code>...
 
-geoids = blocks["GEOID20"]
+geoids = blocks["GEOID20"].astype(str)
 ac = AssignmentCompressor(geoids, location="compressed-assignments.ac")
 
 for assignment in ac.decompress():
@@ -389,8 +407,8 @@ to <code>compressed.ac</code>.</dd>
     A class for compressing and decompressing lots of assignments very, very
     quickly. Intended for use with ``jsonlines``-like libraries (where assignments
     are read in line-by-line) or for network requests (where assignments are 
-    retrieved one-by-one). When decompressing, yields `SortedDict` objects, where
-    keys are in sorted order.
+    retrieved one-by-one). When decompressing, yields ``dict``s where keys are
+    in sorted order.
 
     The compression schema considers the set of unique identifiers, imposes an
     ordering (lexicographic order) on the identifiers, and matches the assignment
@@ -405,11 +423,14 @@ to <code>compressed.ac</code>.</dd>
 
             ...
 
-            geoids = blocks[&#34;GEOID20&#34;]
+            geoids = blocks[&#34;GEOID20&#34;].astype(str)
             ac = AssignmentCompressor(geoids, location=&#34;compressed-assignments.ac&#34;)
 
             with ac as compressor:
                 for assignment in assignments:
+                    # Here, ensure that all assignments have string keys and
+                    # string values; also ensure that an assignment&#39;s keys are
+                    # a subset of `geoids` (or whatever IDs you&#39;re passing).
                     compressor.compress(assignment)
 
             ...
@@ -420,7 +441,7 @@ to <code>compressed.ac</code>.</dd>
 
             ...
 
-            geoids = blocks[&#34;GEOID20&#34;]
+            geoids = blocks[&#34;GEOID20&#34;].astype(str)
             ac = AssignmentCompressor(geoids, location=&#34;compressed-assignments.ac&#34;)
 
             for assignment in ac.decompress():
@@ -468,6 +489,11 @@ to <code>compressed.ac</code>.</dd>
         self.default = frozenset(zip(self.identifiers, [&#34;-1&#34;]*len(self.identifiers)))
         self.cache = []
         self.location = location
+
+        # Error to users if the window is nonexistent.
+        if type(window) != int or window &lt;= 0:
+            raise ValueError(&#34;Cache window width must be a positive integer.&#34;)
+            
         self.window = window
 
         self.DISTRICT_SEPARATOR = b&#34;,&#34;
@@ -507,7 +533,7 @@ to <code>compressed.ac</code>.</dd>
         feeding items to the compressor) we can force the remaining items to be
         compressed and written to file.
         &#34;&#34;&#34;
-        self._compress(force=True)
+        if self.cache: self._compress(force=True)
 
 
     def compress(self, assignment):
@@ -560,7 +586,14 @@ to <code>compressed.ac</code>.</dd>
                 )
                 writer.write(compressed)
 
-                # If this is the last chunk, don&#39;t write the delimiter.
+                # We only forcibly write the chunk separator to file if we&#39;ve
+                # entered teardown logic and the cache *is not empty*. If the
+                # cache is empty when we&#39;re entering teardown logic, that means
+                # (number of assignments compressed) == (window width), in which
+                # case we&#39;ve reached the end of compression and should not write
+                # a separator; doing so will produce an empty bytestring (which,
+                # in turn, produces a dictionary with one key, corresponding to
+                # a null assignment).
                 if not force: writer.write(self.CHUNK_SEPARATOR)
 
             # Reset the cache.
