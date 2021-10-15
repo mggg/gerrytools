@@ -90,7 +90,7 @@ class AssignmentCompressor:
 
         self.DISTRICT_SEPARATOR = b","
         self.ASSIGNMENT_SEPARATOR = b"*"
-        self.CHUNK_SEPARATOR = b"(*)"
+        self.CHUNK_SEPARATOR = b"()"
         self.CHUNK_SIZE = 16384
         self.ENCODING = "raw_unicode_escape"
 
