@@ -1,6 +1,7 @@
 
 from evaltools.evaluation import (
-    deviations, splits, pieces, contiguous, unassigned
+    deviations, splits, pieces, contiguous, unassigned_units,
+    unassigned_population
 )
 from evaltools.geography import Partition
 from gerrychain.graph import Graph
@@ -60,11 +61,11 @@ def test_contiguity():
     assert not contiguity
 
 
-def test_unassigned():
+def test_unassigned_units():
     dg = Graph.from_json(root / "test-graph.json")
     P = Partition(dg, "CONGRESS")
-    bads = unassigned(P)
-    wholebads = unassigned(P, raw=True)
+    bads = unassigned_units(P)
+    wholebads = unassigned_units(P, raw=True)
 
     # This plan shouldn't have any unassigned units.
     assert bads == 0
@@ -74,4 +75,4 @@ def test_unassigned():
 
 if __name__ == "__main__":
     root = Path(os.getcwd()) / Path("test-resources/")
-    test_unassigned()
+    test_unassigned_units()

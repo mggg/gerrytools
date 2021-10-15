@@ -29,16 +29,17 @@
 <pre><code class="python">from .mapping import drawplan, drawgraph
 from .colors import districtr, redblue
 from .geography import dissolve, dualgraph
-from .auxiliary import Graph, Partition
+from .auxiliary import Graph, Partition, AssignmentCompressor
 from .evaluation import (
     splits, pieces, deviations, ensemble_schema, assignment_schema,
-    contiguous, unassigned
+    contiguous, unassigned_units, unassigned_population
 )
 
 __all__ = [
     &#34;districtr&#34;, &#34;redblue&#34;, &#34;drawplan&#34;, &#34;dualgraph&#34;, &#34;dissolve&#34;,
     &#34;drawgraph&#34;, &#34;Graph&#34;, &#34;Partition&#34;, &#34;splits&#34;, &#34;pieces&#34;, &#34;deviations&#34;,
-    &#34;ensemble_schema&#34;, &#34;assignment_schema&#34;, &#34;contiguous&#34;, &#34;unassigned&#34;
+    &#34;ensemble_schema&#34;, &#34;assignment_schema&#34;, &#34;contiguous&#34;, &#34;unassigned_units&#34;,
+    &#34;unassigned_population&#34;, &#34;AssignmentCompressor&#34;
 ]</code></pre>
 </details>
 </section>
@@ -98,7 +99,7 @@ __all__ = [
 </details>
 </dd>
 <dt id="evaltools.deviations"><code class="name flex">
-<span>def <span class="ident">deviations</span></span>(<span>P: gerrychain.partition.partition.Partition, popcolumn: str) ‑> dict</span>
+<span>def <span class="ident">deviations</span></span>(<span>P, popcolumn)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Determines the districting plan's population deviation percentages.</p>
@@ -115,7 +116,7 @@ __all__ = [
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def deviations(P:Partition, popcolumn:str) -&gt; dict:
+<pre><code class="python">def deviations(P, popcolumn):
     &#34;&#34;&#34;
     Determines the districting plan&#39;s population deviation percentages.
     
@@ -609,8 +610,40 @@ these units are counties, VTDs, precincts, etc.</dd>
     return geometrysplits</code></pre>
 </details>
 </dd>
-<dt id="evaltools.unassigned"><code class="name flex">
-<span>def <span class="ident">unassigned</span></span>(<span>P, raw=False)</span>
+<dt id="evaltools.unassigned_population"><code class="name flex">
+<span>def <span class="ident">unassigned_population</span></span>(<span>P, popcolumn)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Determines the number of unassigned people in the districting plan.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>P</code></strong></dt>
+<dd><code><a title="evaltools.Partition" href="#evaltools.Partition">Partition</a></code> object.</dd>
+<dt><strong><code>popcolumn</code></strong></dt>
+<dd>Column for tallying the desired population.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>Returns a</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def unassigned_population(P, popcolumn):
+    &#34;&#34;&#34;
+    Determines the number of unassigned people in the districting plan.
+    
+    Args:
+        P: `Partition` object.
+        popcolumn: Column for tallying the desired population.
+
+    Returns:
+        Returns a 
+    &#34;&#34;&#34;
+    pass</code></pre>
+</details>
+</dd>
+<dt id="evaltools.unassigned_units"><code class="name flex">
+<span>def <span class="ident">unassigned_units</span></span>(<span>P, raw=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Determines the proportion (or raw number) of units without a district
@@ -630,7 +663,7 @@ the whole number of unassigned units).</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def unassigned(P, raw=False):
+<pre><code class="python">def unassigned_units(P, raw=False):
     &#34;&#34;&#34;
     Determines the proportion (or raw number) of units without a district
     assignment. An unassigned unit is a unit without a districting assignment an
@@ -665,6 +698,478 @@ the whole number of unassigned units).</p></div>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
+<dt id="evaltools.AssignmentCompressor"><code class="flex name class">
+<span>class <span class="ident">AssignmentCompressor</span></span>
+<span>(</span><span>identifiers, window=10, location='compressed.ac')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>A class for compressing and decompressing lots of assignments very, very
+quickly. Intended for use with <code>jsonlines</code>-like libraries (where assignments
+are read in line-by-line), and decompressed assignments are read out as
+pandas <code>Series</code> objects, which can be immediately joined to <code>GeoDataFrame</code>s
+with the same identifiers.</p>
+<p>The compression schema considers the set of unique identifiers, imposes an
+ordering (alphabetical order) on the identifiers, and matches the assignment
+to that ordering. We assign all unassigned units to <code>-1</code> and, once the
+default cache size is hit (or assignments are no longer being read in),
+compress all assignments in the cache. Thus, assignments are read in and out
+in the same order.</p>
+<h2 id="example">Example</h2>
+<p>To compress assignments, we must have a set of geometric identifiers
+which match the assignments.</p>
+<pre><code>...
+
+geoids = blocks["GEOID20"]
+ac = AssignmentCompressor(geoids, location="compressed-assignments.ac")
+
+with ac as compressor:
+    for assignment in assignments:
+        compressor.compress(assignment)
+
+...
+</code></pre>
+<p>To decompress assignments, we again must have a set of geometric identifiers
+which match the assignments. We can then iterate over the decompressed
+assignments as they're read out of the file.</p>
+<pre><code>...
+
+geoids = blocks["GEOID20"]
+ac = AssignmentCompressor(geoids, location="compressed-assignments.ac")
+
+for assignment in ac.decompress():
+    &lt;do whatever!&gt;
+
+...
+</code></pre>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>DISTRICT_SEPARATOR</code></strong></dt>
+<dd>A bytestring which separates district identifiers in
+an assignment.</dd>
+<dt><strong><code>ASSIGNMENT_SEPARATOR</code></strong></dt>
+<dd>A bytestring which separates assignments from
+each other.</dd>
+<dt><strong><code>CHUNK_SEPARATOR</code></strong></dt>
+<dd>A bytestring which separates assignment chunks from each
+other.</dd>
+<dt><strong><code>CHUNK_SIZE</code></strong></dt>
+<dd>Default number of bytes read in from the IO stream at each
+step.</dd>
+<dt><strong><code>identifiers</code></strong></dt>
+<dd>A sortable, iterable collection of unique items corresponding
+to geographic identifiers.</dd>
+<dt><strong><code>compressed</code></strong></dt>
+<dd>A pandas <code>Index</code> containing the identifiers; this is used
+to quickly perform vectorized identifier matchings, rather than using
+traditional iterative methods.</dd>
+<dt><strong><code>cache</code></strong></dt>
+<dd>Collection of assignments to be compressed. Assignments are loaded
+into the cache every time the <code>.compress()</code> method is called, and
+is cleared whenever the length of the cache exceeds the window width.</dd>
+<dt><strong><code>window</code></strong></dt>
+<dd>Maximum cache length before the cache is compressed, written to
+file, and emptied.</dd>
+</dl>
+<p>Creates <code><a title="evaltools.AssignmentCompressor" href="#evaltools.AssignmentCompressor">AssignmentCompressor</a></code> instance.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>identifiers</code></strong></dt>
+<dd>A list-like collection of identifiers which match those
+used by the assignment. For example, if a districting plan's base
+geometry is 2020 Census blocks, then <code>identifiers</code> should be
+2020 Census block GEOIDs. These identifiers are sorted, and
+<code>-1</code>s are inserted where a block present in the identifiers
+is not present in the assignment.</dd>
+<dt><strong><code>window</code></strong></dt>
+<dd>A positive integer representing the cache window size. Defaults
+to cache.</dd>
+<dt><strong><code>location</code></strong></dt>
+<dd>The path to the compressed resource (read or write). Defaults
+to <code>compressed.ac</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class AssignmentCompressor:
+    &#34;&#34;&#34;
+    A class for compressing and decompressing lots of assignments very, very
+    quickly. Intended for use with ``jsonlines``-like libraries (where assignments
+    are read in line-by-line), and decompressed assignments are read out as
+    pandas ``Series`` objects, which can be immediately joined to ``GeoDataFrame``s
+    with the same identifiers.
+
+    The compression schema considers the set of unique identifiers, imposes an
+    ordering (alphabetical order) on the identifiers, and matches the assignment
+    to that ordering. We assign all unassigned units to ``-1`` and, once the
+    default cache size is hit (or assignments are no longer being read in),
+    compress all assignments in the cache. Thus, assignments are read in and out
+    in the same order.
+
+    Example:
+        To compress assignments, we must have a set of geometric identifiers
+        which match the assignments.
+
+            ...
+
+            geoids = blocks[&#34;GEOID20&#34;]
+            ac = AssignmentCompressor(geoids, location=&#34;compressed-assignments.ac&#34;)
+
+            with ac as compressor:
+                for assignment in assignments:
+                    compressor.compress(assignment)
+
+            ...
+
+        To decompress assignments, we again must have a set of geometric identifiers
+        which match the assignments. We can then iterate over the decompressed
+        assignments as they&#39;re read out of the file.
+
+            ...
+
+            geoids = blocks[&#34;GEOID20&#34;]
+            ac = AssignmentCompressor(geoids, location=&#34;compressed-assignments.ac&#34;)
+
+            for assignment in ac.decompress():
+                &lt;do whatever!&gt;
+
+            ...
+
+    Attributes:
+        DISTRICT_SEPARATOR: A bytestring which separates district identifiers in
+            an assignment.
+        ASSIGNMENT_SEPARATOR: A bytestring which separates assignments from
+            each other.
+        CHUNK_SEPARATOR: A bytestring which separates assignment chunks from each
+            other.
+        CHUNK_SIZE: Default number of bytes read in from the IO stream at each
+            step.
+        identifiers: A sortable, iterable collection of unique items corresponding
+            to geographic identifiers.
+        compressed: A pandas `Index` containing the identifiers; this is used
+            to quickly perform vectorized identifier matchings, rather than using
+            traditional iterative methods.
+        cache: Collection of assignments to be compressed. Assignments are loaded
+            into the cache every time the ``.compress()`` method is called, and
+            is cleared whenever the length of the cache exceeds the window width.
+        window: Maximum cache length before the cache is compressed, written to
+            file, and emptied.
+    &#34;&#34;&#34;
+    DISTRICT_SEPARATOR = b&#34;,&#34;
+    ASSIGNMENT_SEPARATOR = b&#34;*&#34;
+    CHUNK_SEPARATOR = b&#34;(*)&#34;
+    CHUNK_SIZE = 4096
+
+    def __init__(self, identifiers, window=10, location=&#34;compressed.ac&#34;):
+        &#34;&#34;&#34;
+        Creates `AssignmentCompressor` instance.
+
+        Args:
+            identifiers: A list-like collection of identifiers which match those
+                used by the assignment. For example, if a districting plan&#39;s base
+                geometry is 2020 Census blocks, then `identifiers` should be
+                2020 Census block GEOIDs. These identifiers are sorted, and
+                `-1`s are inserted where a block present in the identifiers
+                is not present in the assignment.
+            window: A positive integer representing the cache window size. Defaults
+                to cache.
+            location: The path to the compressed resource (read or write). Defaults
+                to `compressed.ac`.
+        &#34;&#34;&#34;
+        self.identifiers = list(sorted(identifiers))
+        self.cache = []
+        self.location = location
+        self.window = window
+
+    def match(self, assignment, _type=None):
+        &#34;&#34;&#34;
+        Matches an assignment to an index (the set of geometric identifiers)
+        and returns a pandas `Series`.
+
+        Args:
+            assignment: Dictionary which matches geometric identifiers to districts
+                *or* an iterable. If an iterable, the order of the districts
+                *must* match the order of the identifiers for the assignment to
+                be compressed/decompressed correctly.
+            _type: Type to which the districts identifiers are converted. If this
+                is ``None`` or falsy, then all district identifiers are converted
+                to the type of the first district identifier in ``assignment``.
+        &#34;&#34;&#34;
+        # Create a pandas `Series` with our index and insert `-1`s in appropriate
+        # locations. Also set identifiers to strings.
+        indexed = pd.Series(data=assignment, index=self.identifiers)
+        indexed.index = indexed.index.astype(str)
+        indexed = indexed.fillna(-1)
+
+        # Properly set types. We want things to be integers or strings – no bs
+        # float values like `32.0` or something, that wastes space.
+        provided_type = type(next(iter(assignment.values()))) if not _type else _type
+        indexed = indexed.astype(provided_type).astype(str)
+
+        return indexed
+
+    def __enter__(self):
+        &#34;&#34;&#34;
+        A simple context-management method. Allows the user to use `with`
+        statements when compressing stuff so we don&#39;t have to worry about the
+        user specifying the last item they&#39;ll be compressing.
+        &#34;&#34;&#34;
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        &#34;&#34;&#34;
+        Teardown. Once we&#39;ve exited the `with` statement (i.e. the user&#39;s all done
+        feeding items to the compressor) we can force the remaining items to be
+        compressed and written to file.
+        &#34;&#34;&#34;
+        self._compress(force=True)
+
+
+    def compress(self, assignment):
+        &#34;&#34;&#34;
+        Compresses the assignment `assignment` using ``zlib``.
+
+        Args:
+            assignment: A dictionary or dictionary-like object which maps identifiers
+                consistent with those in `identifiers` to district identifiers.
+                If an assignment does not specify a district for some units, a
+                `-1` is inserted to denote that no district was assigned to that
+                unit.
+        &#34;&#34;&#34;
+        # Byte-encode each of the things in the assignment.
+        indexed = self.match(assignment)
+        _encoded = indexed.str.encode(encoding=&#34;raw_unicode_escape&#34;)
+        encoded = bytes(self.DISTRICT_SEPARATOR.join(_encoded))
+
+        # Compress.
+        self.cache += [encoded]
+        self._compress()
+
+    def _compress(self, force=False):
+        &#34;&#34;&#34;
+        Private method which actually does the compression.
+
+        Args:
+            force: If this is truthy, then the length of the cache is ignored,
+                the cache is compressed, and the compressed data is written to
+                file. ``force`` is truthy when the object is being torn down
+                (i.e. after ``__exit()__`` is called).
+        &#34;&#34;&#34;
+        # Check to see if the cache is full. If so, compress the data, write to
+        # file, and reset the cache.
+        if len(self.cache) == self.window or force:
+            with open(self.location, &#34;ab&#34;) as writer:
+                # Write compressed data to file.
+                compressed = zlib.compress(
+                    bytes(self.ASSIGNMENT_SEPARATOR.join(self.cache))
+                )
+                writer.write(compressed)
+
+                # If this is the last chunk, don&#39;t write the delimiter.
+                if not force: writer.write(self.CHUNK_SEPARATOR)
+
+            # Reset the cache.
+            self.cache = []
+
+    def decompress(self):
+        &#34;&#34;&#34;
+        Decompresses the data at ``location``. A generator which ``yield``s
+        assignments.
+        &#34;&#34;&#34;
+        # Open the compressed file. Then we read it in chunks, loading until
+        # we hit our separator or until the end of the file.
+        with open(self.location, &#34;rb&#34;) as _compressed_fin:
+            for chunk in self._chunk(_compressed_fin):
+                if not chunk: break
+                for assignment in self._decompress(chunk): yield assignment
+
+    def _chunk(self, stream):
+        &#34;&#34;&#34;
+        Private method for reading chunks from file without holding the entire
+        file in memory. A generator for decompressed assignments.
+
+        Args:
+            stream: A ``BytesIO`` instance from which data is read.
+        &#34;&#34;&#34;
+        # Create a buffer.
+        _buffer = b&#34;&#34;
+
+        # Read until we hit the end of the file `yield`ing each chunk as we go.
+        while True:
+            # Read in a chunk of data.
+            chunk = stream.read(self.CHUNK_SIZE)
+            _buffer += chunk
+
+            # If the chunk&#39;s empty, `yield` the remaining buffer and return.
+            if not chunk: yield _buffer; break
+
+            # Check if the chunk has our delimiter in it. If it contains our
+            # delimiter, then the buffer *up to the delimiter* contains compressed
+            # assignments; this should be `yield`ed and decompressed. We only
+            # want to get the part before the delimiter for decompression, but
+            # retain the rest.
+            if self.CHUNK_SEPARATOR in _buffer:
+                part, _buffer = _buffer.split(self.CHUNK_SEPARATOR, 1)
+                yield part
+
+    def _decompress(self, chunk):
+        &#34;&#34;&#34;
+        Private method which decompresses assignments.
+
+        Args:
+            chunk: Compressed, byte-encoded data representing ``window``
+                assignments.
+
+        Returns:
+            List of decompressed assignment objects.
+        &#34;&#34;&#34;
+        # Decompress the chunk and split it on our delimiter.
+        decompressed = zlib.decompress(chunk)
+        decompressed_parts = decompressed.split(self.ASSIGNMENT_SEPARATOR)
+        
+        # For each of the parts, decode the bytes, make them into lists, and
+        # match them to GEOIDs.
+        decoded_parts = [part.decode() for part in decompressed_parts]
+        split_parts = [part.split(self.DISTRICT_SEPARATOR.decode()) for part in decoded_parts]
+        indexed_parts = [self.match(part, _type=str) for part in split_parts]
+        
+        return indexed_parts</code></pre>
+</details>
+<h3>Class variables</h3>
+<dl>
+<dt id="evaltools.AssignmentCompressor.ASSIGNMENT_SEPARATOR"><code class="name">var <span class="ident">ASSIGNMENT_SEPARATOR</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="evaltools.AssignmentCompressor.CHUNK_SEPARATOR"><code class="name">var <span class="ident">CHUNK_SEPARATOR</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="evaltools.AssignmentCompressor.CHUNK_SIZE"><code class="name">var <span class="ident">CHUNK_SIZE</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="evaltools.AssignmentCompressor.DISTRICT_SEPARATOR"><code class="name">var <span class="ident">DISTRICT_SEPARATOR</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="evaltools.AssignmentCompressor.compress"><code class="name flex">
+<span>def <span class="ident">compress</span></span>(<span>self, assignment)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Compresses the assignment <code>assignment</code> using <code>zlib</code>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>assignment</code></strong></dt>
+<dd>A dictionary or dictionary-like object which maps identifiers
+consistent with those in <code>identifiers</code> to district identifiers.
+If an assignment does not specify a district for some units, a
+<code>-1</code> is inserted to denote that no district was assigned to that
+unit.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def compress(self, assignment):
+    &#34;&#34;&#34;
+    Compresses the assignment `assignment` using ``zlib``.
+
+    Args:
+        assignment: A dictionary or dictionary-like object which maps identifiers
+            consistent with those in `identifiers` to district identifiers.
+            If an assignment does not specify a district for some units, a
+            `-1` is inserted to denote that no district was assigned to that
+            unit.
+    &#34;&#34;&#34;
+    # Byte-encode each of the things in the assignment.
+    indexed = self.match(assignment)
+    _encoded = indexed.str.encode(encoding=&#34;raw_unicode_escape&#34;)
+    encoded = bytes(self.DISTRICT_SEPARATOR.join(_encoded))
+
+    # Compress.
+    self.cache += [encoded]
+    self._compress()</code></pre>
+</details>
+</dd>
+<dt id="evaltools.AssignmentCompressor.decompress"><code class="name flex">
+<span>def <span class="ident">decompress</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Decompresses the data at <code>location</code>. A generator which <code>yield</code>s
+assignments.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def decompress(self):
+    &#34;&#34;&#34;
+    Decompresses the data at ``location``. A generator which ``yield``s
+    assignments.
+    &#34;&#34;&#34;
+    # Open the compressed file. Then we read it in chunks, loading until
+    # we hit our separator or until the end of the file.
+    with open(self.location, &#34;rb&#34;) as _compressed_fin:
+        for chunk in self._chunk(_compressed_fin):
+            if not chunk: break
+            for assignment in self._decompress(chunk): yield assignment</code></pre>
+</details>
+</dd>
+<dt id="evaltools.AssignmentCompressor.match"><code class="name flex">
+<span>def <span class="ident">match</span></span>(<span>self, assignment)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Matches an assignment to an index (the set of geometric identifiers)
+and returns a pandas <code>Series</code>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>assignment</code></strong></dt>
+<dd>Dictionary which matches geometric identifiers to districts
+<em>or</em> an iterable. If an iterable, the order of the districts
+<em>must</em> match the order of the identifiers for the assignment to
+be compressed/decompressed correctly.</dd>
+<dt><strong><code>_type</code></strong></dt>
+<dd>Type to which the districts identifiers are converted. If this
+is <code>None</code> or falsy, then all district identifiers are converted
+to the type of the first district identifier in <code>assignment</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def match(self, assignment, _type=None):
+    &#34;&#34;&#34;
+    Matches an assignment to an index (the set of geometric identifiers)
+    and returns a pandas `Series`.
+
+    Args:
+        assignment: Dictionary which matches geometric identifiers to districts
+            *or* an iterable. If an iterable, the order of the districts
+            *must* match the order of the identifiers for the assignment to
+            be compressed/decompressed correctly.
+        _type: Type to which the districts identifiers are converted. If this
+            is ``None`` or falsy, then all district identifiers are converted
+            to the type of the first district identifier in ``assignment``.
+    &#34;&#34;&#34;
+    # Create a pandas `Series` with our index and insert `-1`s in appropriate
+    # locations. Also set identifiers to strings.
+    indexed = pd.Series(data=assignment, index=self.identifiers)
+    indexed.index = indexed.index.astype(str)
+    indexed = indexed.fillna(-1)
+
+    # Properly set types. We want things to be integers or strings – no bs
+    # float values like `32.0` or something, that wastes space.
+    provided_type = type(next(iter(assignment.values()))) if not _type else _type
+    indexed = indexed.astype(provided_type).astype(str)
+
+    return indexed</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
 <dt id="evaltools.Graph"><code class="flex name class">
 <span>class <span class="ident">Graph</span></span>
 <span>(</span><span>incoming_graph_data=None, **attr)</span>
@@ -1836,7 +2341,7 @@ to adjust the plot.</p></div>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="two-column">
+<ul class="">
 <li><code><a title="evaltools.contiguous" href="#evaltools.contiguous">contiguous</a></code></li>
 <li><code><a title="evaltools.deviations" href="#evaltools.deviations">deviations</a></code></li>
 <li><code><a title="evaltools.dissolve" href="#evaltools.dissolve">dissolve</a></code></li>
@@ -1846,11 +2351,24 @@ to adjust the plot.</p></div>
 <li><code><a title="evaltools.pieces" href="#evaltools.pieces">pieces</a></code></li>
 <li><code><a title="evaltools.redblue" href="#evaltools.redblue">redblue</a></code></li>
 <li><code><a title="evaltools.splits" href="#evaltools.splits">splits</a></code></li>
-<li><code><a title="evaltools.unassigned" href="#evaltools.unassigned">unassigned</a></code></li>
+<li><code><a title="evaltools.unassigned_population" href="#evaltools.unassigned_population">unassigned_population</a></code></li>
+<li><code><a title="evaltools.unassigned_units" href="#evaltools.unassigned_units">unassigned_units</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
+<li>
+<h4><code><a title="evaltools.AssignmentCompressor" href="#evaltools.AssignmentCompressor">AssignmentCompressor</a></code></h4>
+<ul class="">
+<li><code><a title="evaltools.AssignmentCompressor.ASSIGNMENT_SEPARATOR" href="#evaltools.AssignmentCompressor.ASSIGNMENT_SEPARATOR">ASSIGNMENT_SEPARATOR</a></code></li>
+<li><code><a title="evaltools.AssignmentCompressor.CHUNK_SEPARATOR" href="#evaltools.AssignmentCompressor.CHUNK_SEPARATOR">CHUNK_SEPARATOR</a></code></li>
+<li><code><a title="evaltools.AssignmentCompressor.CHUNK_SIZE" href="#evaltools.AssignmentCompressor.CHUNK_SIZE">CHUNK_SIZE</a></code></li>
+<li><code><a title="evaltools.AssignmentCompressor.DISTRICT_SEPARATOR" href="#evaltools.AssignmentCompressor.DISTRICT_SEPARATOR">DISTRICT_SEPARATOR</a></code></li>
+<li><code><a title="evaltools.AssignmentCompressor.compress" href="#evaltools.AssignmentCompressor.compress">compress</a></code></li>
+<li><code><a title="evaltools.AssignmentCompressor.decompress" href="#evaltools.AssignmentCompressor.decompress">decompress</a></code></li>
+<li><code><a title="evaltools.AssignmentCompressor.match" href="#evaltools.AssignmentCompressor.match">match</a></code></li>
+</ul>
+</li>
 <li>
 <h4><code><a title="evaltools.Graph" href="#evaltools.Graph">Graph</a></code></h4>
 <ul class="two-column">
