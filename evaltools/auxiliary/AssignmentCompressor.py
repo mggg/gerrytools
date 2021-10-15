@@ -1,6 +1,7 @@
 
 from sortedcontainers import SortedDict, SortedList
 import zlib
+import warnings
 
 class AssignmentCompressor:
     """
@@ -30,7 +31,7 @@ class AssignmentCompressor:
                 for assignment in assignments:
                     # Here, ensure that all assignments have string keys and
                     # string values; also ensure that an assignment's keys are
-                    # a subset of `geoids` (or whatever IDs you're passing).
+                    # a subset of geoids (or whatever IDs you're passing).
                     compressor.compress(assignment)
 
             ...
@@ -93,12 +94,12 @@ class AssignmentCompressor:
         # Error to users if the window is nonexistent.
         if type(window) != int or window <= 0:
             raise ValueError("Cache window width must be a positive integer.")
-            
+
         self.window = window
 
-        self.DISTRICT_SEPARATOR = b","
-        self.ASSIGNMENT_SEPARATOR = b"*"
-        self.CHUNK_SEPARATOR = b"()"
+        self.DISTRICT_DELIMITER = b","
+        self.ASSIGNMENT_DELIMITER = b"<<<*>>>"
+        self.CHUNK_DELIMITER = b"(((*)))"
         self.CHUNK_SIZE = 16384
         self.ENCODING = "raw_unicode_escape"
 
@@ -146,20 +147,21 @@ class AssignmentCompressor:
         """
         # If the user provides an empty assignment or an incorrectly 
         if not assignment:
-            UserWarning("`assignment` is empty; skipping")
+            warnings.warn("`assignment` is empty; skipping", UserWarning)
             return
 
         if not set(assignment.keys()).issubset(self.identifiers):
-            UserWarning(
+            warnings.warn(
                 "`assignment`'s keys are not a subset of `identifiers`; skipping. " + \
-                "Please ensure that all keys and values in `assignment` are strings."
+                "Please ensure that all keys and values in `assignment` are strings.",
+                UserWarning
             )
             return
 
         # Join the things on the district separator, encode the whole thing, and
         # encode according to the default encoding.
         indexed = self.match(assignment)
-        sep = self.DISTRICT_SEPARATOR.decode()
+        sep = self.DISTRICT_DELIMITER.decode()
         encoded = bytes(sep.join(indexed.values()).encode(self.ENCODING))
 
         # Compress.
@@ -182,7 +184,7 @@ class AssignmentCompressor:
             with open(self.location, "ab") as writer:
                 # Write compressed data to file.
                 compressed = zlib.compress(
-                    bytes(self.ASSIGNMENT_SEPARATOR.join(self.cache))
+                    bytes(self.ASSIGNMENT_DELIMITER.join(self.cache))
                 )
                 writer.write(compressed)
 
@@ -194,7 +196,7 @@ class AssignmentCompressor:
                 # a separator; doing so will produce an empty bytestring (which,
                 # in turn, produces a dictionary with one key, corresponding to
                 # a null assignment).
-                if not force: writer.write(self.CHUNK_SEPARATOR)
+                if not force: writer.write(self.CHUNK_DELIMITER)
 
             # Reset the cache.
             self.cache = []
@@ -236,9 +238,9 @@ class AssignmentCompressor:
             # assignments; this should be `yield`ed and decompressed. We only
             # want to get the part before the delimiter for decompression, but
             # retain the rest.
-            if self.CHUNK_SEPARATOR in chunk:
+            if self.CHUNK_DELIMITER in chunk:
                 _buffered_bytes = b"".join(_buffer)
-                part, _buffer_first = _buffered_bytes.split(self.CHUNK_SEPARATOR, 1)
+                part, _buffer_first = _buffered_bytes.split(self.CHUNK_DELIMITER, 1)
                 _buffer = [_buffer_first]
                 yield part
 
@@ -258,12 +260,12 @@ class AssignmentCompressor:
         """
         # Decompress the chunk and split it on our delimiter.
         decompressed = zlib.decompress(chunk)
-        decompressed_parts = decompressed.split(self.ASSIGNMENT_SEPARATOR)
+        decompressed_parts = decompressed.split(self.ASSIGNMENT_DELIMITER)
         
         # For each of the parts, decode the bytes, make them into lists, and
         # match them to GEOIDs.
         decoded_parts = [part.decode() for part in decompressed_parts]
-        split_parts = [part.split(self.DISTRICT_SEPARATOR.decode()) for part in decoded_parts]
+        split_parts = [part.split(self.DISTRICT_DELIMITER.decode()) for part in decoded_parts]
         indexed_parts = [dict(zip(self.identifiers, part)) for part in split_parts]
 
         return indexed_parts
