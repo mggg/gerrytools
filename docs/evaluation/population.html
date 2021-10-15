@@ -28,10 +28,68 @@
 </summary>
 <pre><code class="python">from gerrychain.constraints.validity import deviation_from_ideal as deviation
 from gerrychain.updaters import Tally
-from ..auxiliary import Partition
 
 
-def deviations(P:Partition, popcolumn:str) -&gt; dict:
+def deviations(P, popcolumn):
+    &#34;&#34;&#34;
+    Determines the districting plan&#39;s population deviation percentages.
+    
+    Args:
+        P: `Partition` object.
+        popcolumn: Column for tallying the desired population.
+
+    Returns:
+        A dictionary which maps district names to population deviation percentages.
+    &#34;&#34;&#34;
+    # Create the partition and the corresponding updater.
+    poptally = Tally(popcolumn, alias=popcolumn)
+    P.updaters = { popcolumn: poptally }
+
+    # Return a dictionary that maps district names to population deviation
+    # percentages.
+    return deviation(P, attribute=popcolumn)
+
+
+def unassigned_population(P, popcolumn):
+    &#34;&#34;&#34;
+    Determines the number of unassigned people in the districting plan.
+    
+    Args:
+        P: `Partition` object.
+        popcolumn: Column for tallying the desired population.
+
+    Returns:
+        Returns a 
+    &#34;&#34;&#34;
+    pass</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="evaltools.evaluation.population.deviations"><code class="name flex">
+<span>def <span class="ident">deviations</span></span>(<span>P, popcolumn)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Determines the districting plan's population deviation percentages.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>P</code></strong></dt>
+<dd><code>Partition</code> object.</dd>
+<dt><strong><code>popcolumn</code></strong></dt>
+<dd>Column for tallying the desired population.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A dictionary which maps district names to population deviation percentages.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def deviations(P, popcolumn):
     &#34;&#34;&#34;
     Determines the districting plan&#39;s population deviation percentages.
     
@@ -50,19 +108,12 @@ def deviations(P:Partition, popcolumn:str) -&gt; dict:
     # percentages.
     return deviation(P, attribute=popcolumn)</code></pre>
 </details>
-</section>
-<section>
-</section>
-<section>
-</section>
-<section>
-<h2 class="section-title" id="header-functions">Functions</h2>
-<dl>
-<dt id="evaltools.evaluation.population.deviations"><code class="name flex">
-<span>def <span class="ident">deviations</span></span>(<span>P: gerrychain.partition.partition.Partition, popcolumn: str) ‑> dict</span>
+</dd>
+<dt id="evaltools.evaluation.population.unassigned_population"><code class="name flex">
+<span>def <span class="ident">unassigned_population</span></span>(<span>P, popcolumn)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Determines the districting plan's population deviation percentages.</p>
+<div class="desc"><p>Determines the number of unassigned people in the districting plan.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>P</code></strong></dt>
@@ -71,29 +122,23 @@ def deviations(P:Partition, popcolumn:str) -&gt; dict:
 <dd>Column for tallying the desired population.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>A dictionary which maps district names to population deviation percentages.</p></div>
+<p>Returns a</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def deviations(P:Partition, popcolumn:str) -&gt; dict:
+<pre><code class="python">def unassigned_population(P, popcolumn):
     &#34;&#34;&#34;
-    Determines the districting plan&#39;s population deviation percentages.
+    Determines the number of unassigned people in the districting plan.
     
     Args:
         P: `Partition` object.
         popcolumn: Column for tallying the desired population.
 
     Returns:
-        A dictionary which maps district names to population deviation percentages.
+        Returns a 
     &#34;&#34;&#34;
-    # Create the partition and the corresponding updater.
-    poptally = Tally(popcolumn, alias=popcolumn)
-    P.updaters = { popcolumn: poptally }
-
-    # Return a dictionary that maps district names to population deviation
-    # percentages.
-    return deviation(P, attribute=popcolumn)</code></pre>
+    pass</code></pre>
 </details>
 </dd>
 </dl>
@@ -115,6 +160,7 @@ def deviations(P:Partition, popcolumn:str) -&gt; dict:
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="evaltools.evaluation.population.deviations" href="#evaltools.evaluation.population.deviations">deviations</a></code></li>
+<li><code><a title="evaltools.evaluation.population.unassigned_population" href="#evaltools.evaluation.population.unassigned_population">unassigned_population</a></code></li>
 </ul>
 </li>
 </ul>

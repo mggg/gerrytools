@@ -2,7 +2,7 @@
 from gerrychain.constraints import contiguous
 from numpy import nan
 
-def unassigned(P, raw=False):
+def unassigned_units(P, raw=False):
     """
     Determines the proportion (or raw number) of units without a district
     assignment. An unassigned unit is a unit without a districting assignment an

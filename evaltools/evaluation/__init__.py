@@ -1,5 +1,5 @@
 
 from .splits import splits, pieces
-from .population import deviations
+from .population import deviations, unassigned_population
 from .schema import ensemble_schema, assignment_schema
-from .contiguity import contiguous, unassigned
+from .contiguity import contiguous, unassigned_units
