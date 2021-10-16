@@ -1,7 +1,6 @@
 
 from sortedcontainers import SortedDict, SortedList
 import zlib
-import warnings
 
 class AssignmentCompressor:
     """
@@ -145,28 +144,31 @@ class AssignmentCompressor:
             assignment: Dictionary which matches geometric identifiers to districts.
                 All keys and values in this dictionary must be strings.
         """
-        # If the user provides an empty assignment or an incorrectly 
+        # If the user provides an empty assignment or the assignment's keys aren't
+        # a subset of `identifiers`, warn the user and skip the assignment.
+        skip = False
+
         if not assignment:
-            warnings.warn("`assignment` is empty; skipping", UserWarning)
-            return
+            skip = True
+            print("`assignment` is empty; skipping.")
 
         if not set(assignment.keys()).issubset(self.identifiers):
-            warnings.warn(
+            skip = True
+            print(
                 "`assignment`'s keys are not a subset of `identifiers`; skipping. " + \
                 "Please ensure that all keys and values in `assignment` are strings.",
-                UserWarning
             )
-            return
 
         # Join the things on the district separator, encode the whole thing, and
         # encode according to the default encoding.
-        indexed = self.match(assignment)
-        sep = self.DISTRICT_DELIMITER.decode()
-        encoded = bytes(sep.join(indexed.values()).encode(self.ENCODING))
+        if not skip:
+            indexed = self.match(assignment)
+            sep = self.DISTRICT_DELIMITER.decode()
+            encoded = bytes(sep.join(indexed.values()).encode(self.ENCODING))
 
-        # Compress.
-        self.cache += [encoded]
-        self._compress()
+            # Compress.
+            self.cache += [encoded]
+            self._compress()
 
     def _compress(self, force=False):
         """

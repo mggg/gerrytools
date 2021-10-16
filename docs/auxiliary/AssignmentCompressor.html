@@ -28,7 +28,6 @@
 </summary>
 <pre><code class="python">from sortedcontainers import SortedDict, SortedList
 import zlib
-import warnings
 
 class AssignmentCompressor:
     &#34;&#34;&#34;
@@ -172,28 +171,31 @@ class AssignmentCompressor:
             assignment: Dictionary which matches geometric identifiers to districts.
                 All keys and values in this dictionary must be strings.
         &#34;&#34;&#34;
-        # If the user provides an empty assignment or an incorrectly 
+        # If the user provides an empty assignment or the assignment&#39;s keys aren&#39;t
+        # a subset of `identifiers`, warn the user and skip the assignment.
+        skip = False
+
         if not assignment:
-            warnings.warn(&#34;`assignment` is empty; skipping&#34;, UserWarning)
-            return
+            skip = True
+            print(&#34;`assignment` is empty; skipping.&#34;)
 
         if not set(assignment.keys()).issubset(self.identifiers):
-            warnings.warn(
+            skip = True
+            print(
                 &#34;`assignment`&#39;s keys are not a subset of `identifiers`; skipping. &#34; + \
                 &#34;Please ensure that all keys and values in `assignment` are strings.&#34;,
-                UserWarning
             )
-            return
 
         # Join the things on the district separator, encode the whole thing, and
         # encode according to the default encoding.
-        indexed = self.match(assignment)
-        sep = self.DISTRICT_DELIMITER.decode()
-        encoded = bytes(sep.join(indexed.values()).encode(self.ENCODING))
+        if not skip:
+            indexed = self.match(assignment)
+            sep = self.DISTRICT_DELIMITER.decode()
+            encoded = bytes(sep.join(indexed.values()).encode(self.ENCODING))
 
-        # Compress.
-        self.cache += [encoded]
-        self._compress()
+            # Compress.
+            self.cache += [encoded]
+            self._compress()
 
     def _compress(self, force=False):
         &#34;&#34;&#34;
@@ -546,28 +548,31 @@ to <code>compressed.ac</code>.</dd>
             assignment: Dictionary which matches geometric identifiers to districts.
                 All keys and values in this dictionary must be strings.
         &#34;&#34;&#34;
-        # If the user provides an empty assignment or an incorrectly 
+        # If the user provides an empty assignment or the assignment&#39;s keys aren&#39;t
+        # a subset of `identifiers`, warn the user and skip the assignment.
+        skip = False
+
         if not assignment:
-            warnings.warn(&#34;`assignment` is empty; skipping&#34;, UserWarning)
-            return
+            skip = True
+            print(&#34;`assignment` is empty; skipping.&#34;)
 
         if not set(assignment.keys()).issubset(self.identifiers):
-            warnings.warn(
+            skip = True
+            print(
                 &#34;`assignment`&#39;s keys are not a subset of `identifiers`; skipping. &#34; + \
                 &#34;Please ensure that all keys and values in `assignment` are strings.&#34;,
-                UserWarning
             )
-            return
 
         # Join the things on the district separator, encode the whole thing, and
         # encode according to the default encoding.
-        indexed = self.match(assignment)
-        sep = self.DISTRICT_DELIMITER.decode()
-        encoded = bytes(sep.join(indexed.values()).encode(self.ENCODING))
+        if not skip:
+            indexed = self.match(assignment)
+            sep = self.DISTRICT_DELIMITER.decode()
+            encoded = bytes(sep.join(indexed.values()).encode(self.ENCODING))
 
-        # Compress.
-        self.cache += [encoded]
-        self._compress()
+            # Compress.
+            self.cache += [encoded]
+            self._compress()
 
     def _compress(self, force=False):
         &#34;&#34;&#34;
@@ -696,28 +701,31 @@ All keys and values in this dictionary must be strings.</dd>
         assignment: Dictionary which matches geometric identifiers to districts.
             All keys and values in this dictionary must be strings.
     &#34;&#34;&#34;
-    # If the user provides an empty assignment or an incorrectly 
+    # If the user provides an empty assignment or the assignment&#39;s keys aren&#39;t
+    # a subset of `identifiers`, warn the user and skip the assignment.
+    skip = False
+
     if not assignment:
-        warnings.warn(&#34;`assignment` is empty; skipping&#34;, UserWarning)
-        return
+        skip = True
+        print(&#34;`assignment` is empty; skipping.&#34;)
 
     if not set(assignment.keys()).issubset(self.identifiers):
-        warnings.warn(
+        skip = True
+        print(
             &#34;`assignment`&#39;s keys are not a subset of `identifiers`; skipping. &#34; + \
             &#34;Please ensure that all keys and values in `assignment` are strings.&#34;,
-            UserWarning
         )
-        return
 
     # Join the things on the district separator, encode the whole thing, and
     # encode according to the default encoding.
-    indexed = self.match(assignment)
-    sep = self.DISTRICT_DELIMITER.decode()
-    encoded = bytes(sep.join(indexed.values()).encode(self.ENCODING))
+    if not skip:
+        indexed = self.match(assignment)
+        sep = self.DISTRICT_DELIMITER.decode()
+        encoded = bytes(sep.join(indexed.values()).encode(self.ENCODING))
 
-    # Compress.
-    self.cache += [encoded]
-    self._compress()</code></pre>
+        # Compress.
+        self.cache += [encoded]
+        self._compress()</code></pre>
 </details>
 </dd>
 <dt id="evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor.decompress"><code class="name flex">
