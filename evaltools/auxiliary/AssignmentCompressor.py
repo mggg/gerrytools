@@ -50,11 +50,11 @@ class AssignmentCompressor:
             ...
 
     Attributes:
-        DISTRICT_SEPARATOR: A bytestring which separates district identifiers in
+        DISTRICT_DELIMITER: A bytestring which separates district identifiers in
             an assignment.
-        ASSIGNMENT_SEPARATOR: A bytestring which separates assignments from
+        ASSIGNMENT_DELIMITER: A bytestring which separates assignments from
             each other.
-        CHUNK_SEPARATOR: A bytestring which separates assignment chunks from each
+        CHUNK_DELIMITER: A bytestring which separates assignment chunks from each
             other.
         CHUNK_SIZE: Default number of bytes read in from the IO stream at each
             step.
@@ -71,6 +71,7 @@ class AssignmentCompressor:
             file, and emptied.
         default: The default assignment which is updated each time an assignment
             is passed to the compressor.
+        location: The place to which compressed data is written or read.
     """
 
     def __init__(self, identifiers, window=10, location="compressed.ac"):

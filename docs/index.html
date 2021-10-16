@@ -746,13 +746,13 @@ for assignment in ac.decompress():
 </code></pre>
 <h2 id="attributes">Attributes</h2>
 <dl>
-<dt><strong><code>DISTRICT_SEPARATOR</code></strong></dt>
+<dt><strong><code>DISTRICT_DELIMITER</code></strong></dt>
 <dd>A bytestring which separates district identifiers in
 an assignment.</dd>
-<dt><strong><code>ASSIGNMENT_SEPARATOR</code></strong></dt>
+<dt><strong><code>ASSIGNMENT_DELIMITER</code></strong></dt>
 <dd>A bytestring which separates assignments from
 each other.</dd>
-<dt><strong><code>CHUNK_SEPARATOR</code></strong></dt>
+<dt><strong><code>CHUNK_DELIMITER</code></strong></dt>
 <dd>A bytestring which separates assignment chunks from each
 other.</dd>
 <dt><strong><code>CHUNK_SIZE</code></strong></dt>
@@ -777,6 +777,8 @@ file, and emptied.</dd>
 <dt><strong><code>default</code></strong></dt>
 <dd>The default assignment which is updated each time an assignment
 is passed to the compressor.</dd>
+<dt><strong><code>location</code></strong></dt>
+<dd>The place to which compressed data is written or read.</dd>
 </dl>
 <p>Creates <code><a title="evaltools.AssignmentCompressor" href="#evaltools.AssignmentCompressor">AssignmentCompressor</a></code> instance.</p>
 <h2 id="args">Args</h2>
@@ -843,11 +845,11 @@ to <code>compressed.ac</code>.</dd>
             ...
 
     Attributes:
-        DISTRICT_SEPARATOR: A bytestring which separates district identifiers in
+        DISTRICT_DELIMITER: A bytestring which separates district identifiers in
             an assignment.
-        ASSIGNMENT_SEPARATOR: A bytestring which separates assignments from
+        ASSIGNMENT_DELIMITER: A bytestring which separates assignments from
             each other.
-        CHUNK_SEPARATOR: A bytestring which separates assignment chunks from each
+        CHUNK_DELIMITER: A bytestring which separates assignment chunks from each
             other.
         CHUNK_SIZE: Default number of bytes read in from the IO stream at each
             step.
@@ -864,6 +866,7 @@ to <code>compressed.ac</code>.</dd>
             file, and emptied.
         default: The default assignment which is updated each time an assignment
             is passed to the compressor.
+        location: The place to which compressed data is written or read.
     &#34;&#34;&#34;
 
     def __init__(self, identifiers, window=10, location=&#34;compressed.ac&#34;):
