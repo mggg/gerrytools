@@ -1,11 +1,10 @@
 # plan-evaluation-tools
-A set of tools and resources for evaluating and visualizing proposed districting plans.
+A set of tools and resources for evaluating and visualizing proposed districting plans based on the criteria defined in commonly adopted 'traditional' redistricting principles. 
 
 ## Installation
 ### Use Cases
-Before installing, it's important to determine your use case: if you want to install
-the _tools_ to evaluate plans, then this is the repo for you; if you want the
-_evaluation data_, then [head to this repo](https://github.com/mggg/plan-evaluation-reporting).
+Before installing, it's important to determine your use case. For discrete evaluation tasks like measuring a district's compactness in a proposed plan, you want to install the _tools_. For a more thorough ensemble-based set of tools, check out the complementary to this library,
+_evaluation data_ and [head to this repo](https://github.com/mggg/plan-evaluation).
 
 ### Instructions
 If you want to use this package to evaluate districting plans, the recommended
