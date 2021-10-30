@@ -1,4 +1,4 @@
-# plan-evaluation-tools
+# plan-evaluation-processing
 A set of tools and resources for evaluating and visualizing proposed districting plans.
 
 ## Installation
