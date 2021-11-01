@@ -1,6 +1,7 @@
 
 from sortedcontainers import SortedDict, SortedList
 import zlib
+from typing import List
 
 class AssignmentCompressor:
     """
@@ -50,15 +51,15 @@ class AssignmentCompressor:
             ...
 
     Attributes:
-        DISTRICT_DELIMITER: A bytestring which separates district identifiers in
-            an assignment.
-        ASSIGNMENT_DELIMITER: A bytestring which separates assignments from
+        DISTRICT_DELIMITER (bytes): A bytestring which separates district
+            identifiers in an assignment.
+        ASSIGNMENT_DELIMITER (bytes): A bytestring which separates assignments from
             each other.
-        CHUNK_DELIMITER: A bytestring which separates assignment chunks from each
-            other.
-        CHUNK_SIZE: Default number of bytes read in from the IO stream at each
+        CHUNK_DELIMITER (bytes): A bytestring which separates assignment chunks
+            from each other.
+        CHUNK_SIZE (int): Default number of bytes read in from the IO stream at each
             step.
-        ENCODING: Default string encoding style.
+        ENCODING (str): Default string encoding style.
         identifiers: A sortable, iterable collection of unique items corresponding
             to geographic identifiers.
         compressed: A pandas `Index` containing the identifiers; this is used
@@ -79,12 +80,12 @@ class AssignmentCompressor:
         Creates `AssignmentCompressor` instance.
 
         Args:
-            identifiers: An iterable collection of string identifiers; any
+            identifiers (list): An iterable collection of string identifiers; any
                 assignment's keys must be a subset of `identifiers`.
-            window: A positive integer representing the cache window size. Defaults
-                to cache.
-            location: The path to the compressed resource (read or write). Defaults
-                to `compressed.ac`.
+            window (int, optional): A positive integer representing the cache
+                window size. Defaults to cache.
+            location (str, optional): The path to the compressed resource (read
+                or write). Defaults to `compressed.ac`.
         """
         self.identifiers = SortedList(identifiers)
         self.default = frozenset(zip(self.identifiers, ["-1"]*len(self.identifiers)))
@@ -103,14 +104,17 @@ class AssignmentCompressor:
         self.CHUNK_SIZE = 16384
         self.ENCODING = "raw_unicode_escape"
 
-    def match(self, assignment):
+    def match(self, assignment) -> SortedDict:
         """
         Matches an assignment to an index (the set of geometric identifiers)
         and returns a `SortedDict`.
 
         Args:
-            assignment: Dictionary which matches geometric identifiers to
+            assignment (dict): Dictionary which matches geometric identifiers to
                 districts. All keys and values in this dictionary must be strings.
+
+        Returns:
+            A `SortedDict` with identifiers matched ti district assignments.s
 
         """
         # Create a dictionary which maps identifiers to `-1`, and update our
@@ -136,13 +140,27 @@ class AssignmentCompressor:
         """
         if self.cache: self._compress(force=True)
 
+    def compress_all(self, assignments):
+        """
+        Compresses all assignments in `assignments`.
+
+        Args:
+            assignments (list): List of dictionaries which match geometric identifiers
+                to districts. All keys and values in these dictionaries must be
+                strings.
+        """
+        self.window = len(assignments)
+
+        with self as ac:
+            for assignment in assignments:
+                ac.compress(assignment)
 
     def compress(self, assignment):
         """
-        Compresses the assignment `assignment` using ``zlib``.
+        Compresses the assignment `assignment` using `zlib`.
 
         Args:
-            assignment: Dictionary which matches geometric identifiers to districts.
+            assignment (dict): Dictionary which matches geometric identifiers to districts.
                 All keys and values in this dictionary must be strings.
         """
         # If the user provides an empty assignment or the assignment's keys aren't
@@ -210,7 +228,7 @@ class AssignmentCompressor:
         assignments.
 
         Yields:
-            Yields decompressed assignment dictionaries.
+            Decompressed assignment dictionaries.
         """
         # Open the compressed file. Then we read it in chunks, loading until
         # we hit our separator or until the end of the file.
@@ -226,6 +244,9 @@ class AssignmentCompressor:
 
         Args:
             stream: A ``BytesIO`` instance from which data is read.
+
+        Yields:
+            Buffered, compressed bytes to be fed into the decompressor.
         """
         # Create a buffer.
         _buffer = []
@@ -250,7 +271,7 @@ class AssignmentCompressor:
             # If the chunk's empty, `yield` the remaining buffer and return.
             if not chunk: yield b"".join(_buffer); break
 
-    def _decompress(self, chunk):
+    def _decompress(self, chunk) -> List[dict]:
         """
         Private method which decompresses assignments.
 
