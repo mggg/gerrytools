@@ -1,4 +1,5 @@
 
 from .dissolve import dissolve
 from .dualgraph import dualgraph
-from ..auxiliary import Graph, Partition
+from .unitmap import unitmap, invert
+from ..processing import Graph, Partition

@@ -28,30 +28,51 @@
 </summary>
 <pre><code class="python">import matplotlib.pyplot as plt
 import math
-from random import shuffle
+from matplotlib.axes import Axes
+from string import hexdigits as hex
+from random import choice
 from ..colors import districtr
 
-def _riffle(l):
-    shuffle(l)
-    return l
+def hexshift(color) -&gt; str:
+    &#34;&#34;&#34;
+    Randomly modifies the provided hexadecimal color.
+
+    Args:
+        color (str): A hexadecimal color string; e.g. `&#34;#FFFF00&#34;`.
+
+    Returns:
+        A hexadecimal color string.
+    &#34;&#34;&#34;
+    # Choose a hexidecimal digit, first paring down the digits we&#39;ll use.
+    h = hex.upper()[:-6]
+    sub = choice(h)
+    char = choice(color[1:])
+
+    # Find the character we&#39;re going to replace that&#39;s *not* the same character
+    # as the one we got from the hexadecimal string.
+    while sub == char: sub = choice(h)
+
+    # Return the subbed string.
+    return color.replace(char, sub)
+
 
 def drawplan(
-        districts, assignment, overlay=None, colors=None, numbers=False,
-        coloring=&#34;districtr&#34;
-    ):
+        districts, assignment, overlay=None, colors=None, numbers=False, lw=1/2
+    ) -&gt; Axes:
     &#34;&#34;&#34;
     Visualizes the districting plan defined by `assignment`.
 
     Args:
-        districts: Geometries for the districting plan. Assumes there is one
-            geometry for each district.
-        assignment: Column of `districts` which defines the districting plan.
-        overlay: Optional; geodataframe to be plotted over the districts.
-            Often is a gdf of counties.
-        colors: Optional; column name which specifies colors for each district.
-        numbers: Optional; if true, plots district names (as defined by
-            `assignment`) at districts&#39; centroids.
-
+        districts (GeoDataFrame): Geometries for the districting plan. Assumes
+            there is one geometry for each district.
+        assignment (str): Column of `districts` which defines the districting plan.
+        overlay (GeoDataFrame, optional): GeoDataFrame to be plotted over the
+            districts. Often is a gdf of counties.
+        colors (str, optional): Column name which specifies colors for each district.
+        numbers (bool, optional): If `True`, plots district names (as defined by
+            `assignment`) at districts&#39; centroids. Defaults to `False`.
+        lw (float, optional): Line thickness if there are more than 20 districts.
+    
     Returns:
         A `matplotlib` `Axes` object for the geometries attached to `districts`.
     &#34;&#34;&#34;
@@ -65,15 +86,15 @@ def drawplan(
 
     # Assign colors.
     repeats = math.ceil(N/len(districtr))
-    tail = districtr*(repeats-1)
-    repeatedcolors = (districtr + (_riffle(tail) if tail else []))[:N]
+    tail = [hexshift(c) for c in districtr*(repeats-1)]
+    repeatedcolors = (districtr + (tail if tail else []))[:N]
     districts[&#34;color&#34;] = repeatedcolors
 
     # Plot the districts.
     base = districts.plot(
         color=districts[colors if colors else &#34;color&#34;],
         edgecolor=&#34;black&#34;,
-        linewidth=1 if N&lt;=20 else 1/2
+        linewidth=1 if N&lt;=20 else lw
     )
 
     # If we have overlaid geometries, plot those too.
@@ -107,25 +128,27 @@ def drawplan(
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.mapping.drawplan.drawplan"><code class="name flex">
-<span>def <span class="ident">drawplan</span></span>(<span>districts, assignment, overlay=None, colors=None, numbers=False, coloring='districtr')</span>
+<span>def <span class="ident">drawplan</span></span>(<span>districts, assignment, overlay=None, colors=None, numbers=False, lw=0.5) ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Visualizes the districting plan defined by <code>assignment</code>.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>districts</code></strong></dt>
-<dd>Geometries for the districting plan. Assumes there is one
-geometry for each district.</dd>
-<dt><strong><code>assignment</code></strong></dt>
+<dt><strong><code>districts</code></strong> :&ensp;<code>GeoDataFrame</code></dt>
+<dd>Geometries for the districting plan. Assumes
+there is one geometry for each district.</dd>
+<dt><strong><code>assignment</code></strong> :&ensp;<code>str</code></dt>
 <dd>Column of <code>districts</code> which defines the districting plan.</dd>
-<dt><strong><code>overlay</code></strong></dt>
-<dd>Optional; geodataframe to be plotted over the districts.
-Often is a gdf of counties.</dd>
-<dt><strong><code>colors</code></strong></dt>
-<dd>Optional; column name which specifies colors for each district.</dd>
-<dt><strong><code>numbers</code></strong></dt>
-<dd>Optional; if true, plots district names (as defined by
-<code>assignment</code>) at districts' centroids.</dd>
+<dt><strong><code>overlay</code></strong> :&ensp;<code>GeoDataFrame</code>, optional</dt>
+<dd>GeoDataFrame to be plotted over the
+districts. Often is a gdf of counties.</dd>
+<dt><strong><code>colors</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Column name which specifies colors for each district.</dd>
+<dt><strong><code>numbers</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>If <code>True</code>, plots district names (as defined by
+<code>assignment</code>) at districts' centroids. Defaults to <code>False</code>.</dd>
+<dt><strong><code>lw</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Line thickness if there are more than 20 districts.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A <code>matplotlib</code> <code>Axes</code> object for the geometries attached to <code>districts</code>.</p></div>
@@ -134,22 +157,22 @@ Often is a gdf of counties.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def drawplan(
-        districts, assignment, overlay=None, colors=None, numbers=False,
-        coloring=&#34;districtr&#34;
-    ):
+        districts, assignment, overlay=None, colors=None, numbers=False, lw=1/2
+    ) -&gt; Axes:
     &#34;&#34;&#34;
     Visualizes the districting plan defined by `assignment`.
 
     Args:
-        districts: Geometries for the districting plan. Assumes there is one
-            geometry for each district.
-        assignment: Column of `districts` which defines the districting plan.
-        overlay: Optional; geodataframe to be plotted over the districts.
-            Often is a gdf of counties.
-        colors: Optional; column name which specifies colors for each district.
-        numbers: Optional; if true, plots district names (as defined by
-            `assignment`) at districts&#39; centroids.
-
+        districts (GeoDataFrame): Geometries for the districting plan. Assumes
+            there is one geometry for each district.
+        assignment (str): Column of `districts` which defines the districting plan.
+        overlay (GeoDataFrame, optional): GeoDataFrame to be plotted over the
+            districts. Often is a gdf of counties.
+        colors (str, optional): Column name which specifies colors for each district.
+        numbers (bool, optional): If `True`, plots district names (as defined by
+            `assignment`) at districts&#39; centroids. Defaults to `False`.
+        lw (float, optional): Line thickness if there are more than 20 districts.
+    
     Returns:
         A `matplotlib` `Axes` object for the geometries attached to `districts`.
     &#34;&#34;&#34;
@@ -163,15 +186,15 @@ Often is a gdf of counties.</dd>
 
     # Assign colors.
     repeats = math.ceil(N/len(districtr))
-    tail = districtr*(repeats-1)
-    repeatedcolors = (districtr + (_riffle(tail) if tail else []))[:N]
+    tail = [hexshift(c) for c in districtr*(repeats-1)]
+    repeatedcolors = (districtr + (tail if tail else []))[:N]
     districts[&#34;color&#34;] = repeatedcolors
 
     # Plot the districts.
     base = districts.plot(
         color=districts[colors if colors else &#34;color&#34;],
         edgecolor=&#34;black&#34;,
-        linewidth=1 if N&lt;=20 else 1/2
+        linewidth=1 if N&lt;=20 else lw
     )
 
     # If we have overlaid geometries, plot those too.
@@ -197,6 +220,45 @@ Often is a gdf of counties.</dd>
     return base</code></pre>
 </details>
 </dd>
+<dt id="evaltools.mapping.drawplan.hexshift"><code class="name flex">
+<span>def <span class="ident">hexshift</span></span>(<span>color) ‑> str</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Randomly modifies the provided hexadecimal color.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>color</code></strong> :&ensp;<code>str</code></dt>
+<dd>A hexadecimal color string; e.g. <code>"#FFFF00"</code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A hexadecimal color string.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def hexshift(color) -&gt; str:
+    &#34;&#34;&#34;
+    Randomly modifies the provided hexadecimal color.
+
+    Args:
+        color (str): A hexadecimal color string; e.g. `&#34;#FFFF00&#34;`.
+
+    Returns:
+        A hexadecimal color string.
+    &#34;&#34;&#34;
+    # Choose a hexidecimal digit, first paring down the digits we&#39;ll use.
+    h = hex.upper()[:-6]
+    sub = choice(h)
+    char = choice(color[1:])
+
+    # Find the character we&#39;re going to replace that&#39;s *not* the same character
+    # as the one we got from the hexadecimal string.
+    while sub == char: sub = choice(h)
+
+    # Return the subbed string.
+    return color.replace(char, sub)</code></pre>
+</details>
+</dd>
 </dl>
 </section>
 <section>
@@ -216,6 +278,7 @@ Often is a gdf of counties.</dd>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="evaltools.mapping.drawplan.drawplan" href="#evaltools.mapping.drawplan.drawplan">drawplan</a></code></li>
+<li><code><a title="evaltools.mapping.drawplan.hexshift" href="#evaltools.mapping.drawplan.hexshift">hexshift</a></code></li>
 </ul>
 </li>
 </ul>
