@@ -1,19 +1,18 @@
 # plan-evaluation-tools
-A set of tools and resources for evaluating and visualizing proposed districting plans based on the criteria defined in commonly adopted 'traditional' redistricting principles. 
+A set of tools and resources for evaluating and visualizing proposed districting
+plans based on the criteria defined in commonly adopted 'traditional' redistricting
+principles. 
 
 ## Installation
-### Use Cases
-Before installing, it's important to determine your use case. For discrete evaluation tasks like measuring a district's compactness in a proposed plan, you want to install the _tools_. For a more thorough ensemble-based set of tools, check out the complementary to this library,
-_evaluation data_ and [head to this repo](https://github.com/mggg/plan-evaluation).
+### Use Case
+Before installing, it's important to determine your use case. For discrete
+evaluation tasks like measuring a district's compactness in a proposed plan,
+you want to install the _tools_. For a more thorough ensemble-based set of tools,
+check out this [complementary library](https://github.com/mggg/plan-evaluation-reporting).
 
 ### Instructions
 If you want to use this package to evaluate districting plans, the recommended
 way to install is by running
-```
-$ pip install git+https://github.com/mggg/plan-evaluation-processing
-```
-in your favorite CLI. If you want to contribute to the development of this repo
-(or not worry so often about having to pull new versions), run
 ```
 $ git clone https://github.com/mggg/plan-evaluation-processing.git
 ```
@@ -21,10 +20,159 @@ then navigate into the `plan-evaluation-processing` repository and run
 ```
 $ python setup.py install
 ```
-This way, whenever changes are made, you can simply `git pull` and they will be
-immediately usable by all programs importing `evaltools`.
+in your favorite CLI. This way, whenever changes are made, you can simply
+`git pull` and they will be immediately usable by all programs importing
+`evaltools`. Alternatively, you can install through pip using
+```
+$ pip install git+https://github.com/mggg/plan-evaluation-processing
+```
+although this may require frequent updating as the package iterates rapidly.
 
 ## Example Usage
+### [Retrieving districtr data](#retrieving-districtr-data)
+Let's say we want to create a "citizen ensemble" of districting plans – that is,
+the collection of (possibly incomplete) districting plans drawn and submitted by
+districtr users. To do so, we use the `evaltools.processing` subpackage.
+
+```python
+import us
+from evaltools.processing import submissions, tabularized
+
+# Set the state.
+state = us.states.WI
+
+# Retrieve submissions and tabularize them.
+subs = submissions(state)
+plans, cois, written = tabularized(state, subs)
+```
+Now, `plans`, `cois`, and `written` are pandas `DataFrame`s with the following
+columns:
+
+| Column | Description |
+| ------ | ----------- |
+| `id` | districtr identifier. |
+| `type` | Type of submission. |
+| `title` | Title of the submission. |
+| `districttype` | If a districting plan, the legislative chamber for which it's drawn. |
+| `first`, `last`, `city` | Submitter name and location. |
+| `datetime` | Submission timestamp. |
+| `tags` | Submission tags. |
+| `numberOfComments`, `comments` | Number of comments and comment text. |
+| `text`, `draft` | Submission text; whether this submission is a draft. |
+| `link` | Link to plan. |
+| `units`, `unitsType` | Name of units; type of units (districtr-process). |
+| `tileset` | Location of the plan's tileset. |
+| `plan` | The actual mapping from unit unique identifiers to districts. |
+
+
+### [Converting to alternate units](#converting-units)
+In the [previous step](#retrieving-districtr-data), we saw how to get submissions from
+districtr and into a tabular format. If we want to study the citizen ensemble
+defined by the submissions, we need to put the districting assignments on
+a common set of units: that's where the `unitmap`, `invert`, and `remap` functions
+come in handy.
+
+Suppose we have our tabular data `tabs`, and we want to convert each of the
+assignments in the `plan` column to a common set of units. First, we need a mapping
+from each unit type to a base set of units, usually 2020 Census blocks. To
+create this mapping, we use the `unitmap` function, which maps source geometries
+(blocks) to target geometries (VTDs):
+
+```python
+import geopandas as gpd
+import json
+from evaltools.geography import unitmap, invert
+
+# Read in geometric data.
+vtds = gpd.read_file("<path>/<to>/<vtds>")
+blocks = gpd.read_file("<path>/<to>/<blocks>")
+
+# Create mapping from blocks to VTDs.
+mapping = unitmap(blocks, vtds)
+
+# Write the mapping to file.
+with open("<path>/<to>/<destination>.json", "w"): json.dump(mapping, f)
+```
+
+Create a mapping for each set of units we wish to convert; for example, if the
+Wisconsin citizen ensemble has plans on 2020 VTDs, 2020 Precincts, and 2016
+Precincts, we should have mappings from each of these units to 2020 blocks. Once
+these mappings have been created, we can use the `remap` function on our `plans`
+(or `cois`) dataframes to convert the districting assignments to 2020 blocks.
+
+```python
+import us
+from evaltools.processing import submissions, tabularized, remap
+
+# Set the state.
+state = us.states.WI
+
+# Retrieve submissions and tabularize them.
+subs = submissions(state)
+plans, cois, written = tabularized(state, subs)
+
+# Create a dictionary of mappings for each unit type.
+unitmaps = {
+    "2020 VTDs": vtds20_to_blocks,
+    "2020 Precincts": precincts20_to_blocks,
+    "2016 Precincts": precincts16_to_blocks
+}
+
+# Re-map district assignments.
+plans = remap(plans, unitmaps)
+```
+
+Here, we ensure that each of the keys in `unitmaps` corresponds to a unit type
+in `plans["units"]`.
+
+### Compressing districtr submissions
+In the [previous step](#converting-units)), we saw how to get submissions
+directly from the districtr database. Because each (plan- and COI-based) submission
+contains a districting assignment, the total size of these assignments can be
+prohibitively large. To help, we use the `AssignmentCompressor` class of the
+`evaltools.processing` package. _Note that this compression is only necessary
+when the size of the saved assignment data file renders it impractical to easily
+share (generally >10MB)._
+
+```python
+from evaltools.processing import AssignmentCompressor
+import geopandas as gpd
+
+# Get identifiers for the units we're going to be compressing. Using this method
+# of compression assumes all assignments are on the *smame units*: in this case,
+# we assume that all assignments are on 2020 Census blocks.
+identifiers = gpd.read_file("<path>/<to>/<blocks>")["BLOCKS20"]
+
+# Create a new compressor, which we'll use to compress all the assignments
+# we've generated in previous steps.
+ac = AssignmentCompressor(identifiers, location="<compressed>.ac")
+
+# The first method of compressing districts uses the `with` statement to create
+# a safe context from which we can read compressed objects to the compressor.
+with ac as compressor:
+    for assignment in plans["plan"]:
+        compressor.compress(assignment)
+
+# The second method is just a wrapper for the above, which can help with code
+# complexity.
+ac.compress_all(plans["plan"])
+```
+After compressing the plans, they'll be stored at the filepath in the `location`
+parameter of the call to `AssignmentCompressor()`. We can decompress them using
+the `.decompress()` method:
+
+```python
+...
+
+ac = AssignmentCompressor(identifiers, location="<compressed>.ac")
+
+for assignment in ac.decompress():
+    <do whatever!>
+
+...
+```
+
+### Reporting Statistics
 Let's say we want to find the number of county pieces induced by a districting
 plan on VTDs; that is, the number of disjoint county chunks produced by the
 districting plan. First, we want to create a dual graph for the underlying geometries,
