@@ -1,7 +1,5 @@
-# plan-evaluation-tools
-A set of tools and resources for evaluating and visualizing proposed districting
-plans based on the criteria defined in commonly adopted 'traditional' redistricting
-principles. 
+# plan-evaluation-processing
+A set of tools and resources for evaluating and visualizing proposed districting plans.
 
 ## Installation
 ### Use Case
