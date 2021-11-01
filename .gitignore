@@ -4,7 +4,5 @@ __pycache__/
 .vscode/
 
 # Ignore large testing files.
-tests/test-resources/test-assignments/assignments.jsonl.gz
-tests/test-resources/test-assignments/*.pstats
-tests/test-resources/test-assignments/*.ac
+tests/test-resources/*
 */**/*.png

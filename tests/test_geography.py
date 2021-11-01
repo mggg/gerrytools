@@ -1,6 +1,5 @@
 
-from evaltools.geography import dissolve, dualgraph
-from evaltools import Graph
+from evaltools.geography import dissolve, dualgraph, unitmap, invert
 import geopandas as gpd
 from pathlib import Path
 import os
@@ -55,6 +54,25 @@ def test_dualgraph():
     assert set(default.nodes()) != set(nameadjusted.nodes())
     for _, data in nameadjusted.nodes(data=True): assert data.get("BIDEN", False)
 
+
+def test_unitmap():
+    # Read in some test dataframes.
+    vtds = gpd.read_file(root / "test-vtds")
+    counties = gpd.read_file(root / "test-counties")
+
+    # Make an assignment!
+    umap = unitmap((vtds, "GEOID20"), (counties, "COUNTYFP"))
+
+    # Assert that the type is a dict and that it has the right number of keys.
+    assert type(umap) is dict
+    assert len(umap) == len(vtds)
+
+    # Invert it!
+    inverse = invert(umap)
+
+    # Assert that we have a dict and that it has as many keys as counties.
+    assert type(inverse) is dict
+    assert len(inverse) == len(counties)
 
 if __name__ == "__main__":
     root = Path(os.getcwd()) / Path("test-resources/")
