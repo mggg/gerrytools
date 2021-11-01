@@ -43,8 +43,9 @@ state = us.states.WI
 subs = submissions(state)
 plans, cois, written = tabularized(state, subs)
 ```
-Now, `plans`, `cois`, and `written` are pandas `DataFrame`s with the following
-columns:
+Now, `plans`, `cois`, and `written` are pandas `DataFrame`s which contain
+districting plan, community of interest, and written submissions, respectively.
+Each of the DataFrames have the following columns:
 
 | Column | Description |
 | ------ | ----------- |
@@ -65,16 +66,16 @@ columns:
 
 ### [Converting to alternate units](#converting-units)
 In the [previous step](#retrieving-districtr-data), we saw how to get submissions from
-districtr and into a tabular format. If we want to study the citizen ensemble
-defined by the submissions, we need to put the districting assignments on
-a common set of units: that's where the `unitmap`, `invert`, and `remap` functions
+districtr and convert them into a tabular format. If we want to study the citizen 
+ensemble defined by the submissions, we need to put the districting assignments on
+a common set of units: that's where the `unitmap()`, `invert()`, and `remap()` functions
 come in handy.
 
 Suppose we have our tabular data `tabs`, and we want to convert each of the
-assignments in the `plan` column to a common set of units. First, we need a mapping
-from each unit type to a base set of units, usually 2020 Census blocks. To
-create this mapping, we use the `unitmap` function, which maps source geometries
-(blocks) to target geometries (VTDs):
+assignments in the `plans["plan"]` column to a common set of units. We first need
+a mapping from each unit type to a base set of units; typically, these are 2020 Census
+blocks. To create this mapping, we use the `unitmap()` function, which maps source
+geometries (blocks) to target geometries (VTDs):
 
 ```python
 import geopandas as gpd
@@ -92,10 +93,10 @@ mapping = unitmap(blocks, vtds)
 with open("<path>/<to>/<destination>.json", "w"): json.dump(mapping, f)
 ```
 
-Create a mapping for each set of units we wish to convert; for example, if the
+Create a mapping for each set of units we wish to convert: for example, if the
 Wisconsin citizen ensemble has plans on 2020 VTDs, 2020 Precincts, and 2016
 Precincts, we should have mappings from each of these units to 2020 blocks. Once
-these mappings have been created, we can use the `remap` function on our `plans`
+these mappings have been created, we can use the `remap()` function on our `plans`
 (or `cois`) dataframes to convert the districting assignments to 2020 blocks.
 
 ```python
@@ -129,15 +130,15 @@ directly from the districtr database. Because each (plan- and COI-based) submiss
 contains a districting assignment, the total size of these assignments can be
 prohibitively large. To help, we use the `AssignmentCompressor` class of the
 `evaltools.processing` package. _Note that this compression is only necessary
-when the size of the saved assignment data file renders it impractical to easily
-share (generally >10MB)._
+when the size (generally >20MB) of the saved assignment data file renders it
+impractical to easily store or share._
 
 ```python
 from evaltools.processing import AssignmentCompressor
 import geopandas as gpd
 
-# Get identifiers for the units we're going to be compressing. Using this method
-# of compression assumes all assignments are on the *smame units*: in this case,
+# Get identifiers for the assignment we're compressing. This method
+# of compression assumes all assignments are on the *same units*: in this case,
 # we assume that all assignments are on 2020 Census blocks.
 identifiers = gpd.read_file("<path>/<to>/<blocks>")["BLOCKS20"]
 
@@ -152,12 +153,13 @@ with ac as compressor:
         compressor.compress(assignment)
 
 # The second method is just a wrapper for the above, which can help with code
-# complexity.
+# readability.
 ac.compress_all(plans["plan"])
 ```
 After compressing the plans, they'll be stored at the filepath in the `location`
 parameter of the call to `AssignmentCompressor()`. We can decompress them using
-the `.decompress()` method:
+the `.decompress()` method, ensuring that the `identifiers` are the _same_ as
+those used during compression:
 
 ```python
 ...
@@ -186,24 +188,25 @@ vtds = gpd.read_file("<path>/<to>/<vtds>")
 graph = dualgraph(vtds, index="VTDID20")
 graph.to_file("<path>/<to>/<graph>.json")
 ```
-It is **strongly** recommended that users pre-compute dual graphs – especially
-those dual to geometries with a large number of polygons – as they are computationally
-expensive to compute.
+It is _strongly_ recommended that users pre-compute dual graphs – _especially
+those dual to large set of geometries, like Census blocks_ – as they are
+computationally expensive and time-consuming to compute.
 
 Next, we want to find the number of county pieces are induced by the districting
 plan. We can do so using the `pieces` function from `evaltools.evaluation`,
-assuming that the dual graph has an assignment column called `DISTRICT` which
-denotes the district each vertex's district assignment:
+assuming that the dual graph has a column assigning each vertex to a districting
+plan:
 
 ```python
 from evaltools.evaluation import pieces
 from evaltools import Partition, Graph
 
-# Read in the dual graph and create a Partition object.
+# Read in the dual graph and create a Partition object. In this case, the dual
+# graph has a column called `"DISTRICT"` which assigns each vertex to a district.
 graph = Graph.from_file("<path>/<to>/<graph>.json")
 districts = Partition(graph, "DISTRICT")
 
-# Find the number of county pieces: note that pieces consumes a list of unit
+# Find the number of county pieces: note that `pieces()` consumes a list of unit
 # names, so if we want to find the number of county and block group splits,
 # we can pass a column corresponding to block group assignments as well (e.g
 # ["COUNTYFP20", "BLOCKGROUP20"]).
