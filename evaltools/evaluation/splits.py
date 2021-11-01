@@ -39,7 +39,7 @@ def pieces(P, units) -> dict:
     """
     Determines the number of "unit pieces" produced by the plan. For example,
     consider a state with 100 counties. Suppose that one county is split twice,
-    and another in half. Then, there are 3 + 2 = 5 "pieces," disregarding the
+    and another once. Then, there are 3 + 2 = 5 "pieces," disregarding the
     counties kept whole.
     
     Bear in mind that this calculates the number of _unit splits_, not the number

@@ -38,8 +38,8 @@ def tabularized(state, submissions) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Data
     Returns districtr submission information in a tabular format.
 
     Args:
-        state: `us.State` object (e.g. `us.states.WI`).
-        submissions: List of `Submission` objects returned from a call to
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        submissions (list): List of `Submission` objects returned from a call to
             `submissions`.
 
     Returns:
@@ -118,8 +118,8 @@ def submissions(state, sample=None) -> List[Submission]:
     submissions.
 
     Args:
-        state: `us.State` object (e.g. `us.states.WI`).
-        sample: The number of sample plans to retrieve.
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        sample (int, optional): The number of sample plans to retrieve.
 
     Returns:
         A list of `Submissions`, either to be interpreted raw or tabularized.
@@ -170,7 +170,7 @@ def as_dataframe(url) -> pd.DataFrame:
     a pandas `DataFrame`.
 
     Args:
-        url: String; wherever we're getting things from.
+        url (str): Wherever we're getting things from.
     """
     raw = requests.get(url).content
     return pd.read_csv(io.StringIO(raw.decode("utf-8")), parse_dates=True)
@@ -181,7 +181,7 @@ def individual(identifier) -> dict:
     Retrieves districtr data for an individual plan.
 
     Args:
-        identifier: String; districtr identifier for an individual plan.
+        identifier (str): districtr identifier for an individual plan.
 
     Returns:
         districtr plan object (as a dictionary).
@@ -195,9 +195,9 @@ def parse_id(l, df=True) -> Union[str, pd.Series]:
     Given a districtr link, parse out the districtr identifier.
 
     Args:
-        l: districtr url containing the districtr ID of the provided plan.
-        df: If `l` is a dataframe, then we use pandas string operations rather
-            than built-in ones.
+        l (str): districtr url containing the districtr ID of the provided plan.
+        df (bool, optional): If `l` is a dataframe, then we use pandas string
+            operations rather than built-in ones.
 
     Returns:
         districtr ID.
@@ -211,7 +211,10 @@ def parse_datetime(d) -> pd.Series:
     Parses the timestamps in the dataframe returned by `as_dataframe()`.
 
     Args:
-        d: Column of the dataframe containing timestamps.
+        d (str): Column of the dataframe containing timestamps.
+
+    Returns:
+        `d` with its datetimes parsed correctly.
     """
     # Parse datetimes.
     prefix = d.str.split("+").str[0]

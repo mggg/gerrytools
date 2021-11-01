@@ -1,6 +1,10 @@
 
 import seaborn as sns
 
+"""
+Color schemes.
+"""
+
 districtr = [
     "#0099cd", "#ffca5d", "#00cd99", "#99cd00", "#cd0099", "#9900cd", "#8dd3c7",
     "#bebada", "#fb8072", "#80b1d3", "#fdb462", "#b3de69", "#fccde5", "#bc80bd",

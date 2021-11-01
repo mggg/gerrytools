@@ -65,8 +65,8 @@ def tabularized(state, submissions) -&gt; Tuple[pd.DataFrame, pd.DataFrame, pd.D
     Returns districtr submission information in a tabular format.
 
     Args:
-        state: `us.State` object (e.g. `us.states.WI`).
-        submissions: List of `Submission` objects returned from a call to
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        submissions (list): List of `Submission` objects returned from a call to
             `submissions`.
 
     Returns:
@@ -145,8 +145,8 @@ def submissions(state, sample=None) -&gt; List[Submission]:
     submissions.
 
     Args:
-        state: `us.State` object (e.g. `us.states.WI`).
-        sample: The number of sample plans to retrieve.
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        sample (int, optional): The number of sample plans to retrieve.
 
     Returns:
         A list of `Submissions`, either to be interpreted raw or tabularized.
@@ -197,7 +197,7 @@ def as_dataframe(url) -&gt; pd.DataFrame:
     a pandas `DataFrame`.
 
     Args:
-        url: String; wherever we&#39;re getting things from.
+        url (str): Wherever we&#39;re getting things from.
     &#34;&#34;&#34;
     raw = requests.get(url).content
     return pd.read_csv(io.StringIO(raw.decode(&#34;utf-8&#34;)), parse_dates=True)
@@ -208,7 +208,7 @@ def individual(identifier) -&gt; dict:
     Retrieves districtr data for an individual plan.
 
     Args:
-        identifier: String; districtr identifier for an individual plan.
+        identifier (str): districtr identifier for an individual plan.
 
     Returns:
         districtr plan object (as a dictionary).
@@ -222,9 +222,9 @@ def parse_id(l, df=True) -&gt; Union[str, pd.Series]:
     Given a districtr link, parse out the districtr identifier.
 
     Args:
-        l: districtr url containing the districtr ID of the provided plan.
-        df: If `l` is a dataframe, then we use pandas string operations rather
-            than built-in ones.
+        l (str): districtr url containing the districtr ID of the provided plan.
+        df (bool, optional): If `l` is a dataframe, then we use pandas string
+            operations rather than built-in ones.
 
     Returns:
         districtr ID.
@@ -238,7 +238,10 @@ def parse_datetime(d) -&gt; pd.Series:
     Parses the timestamps in the dataframe returned by `as_dataframe()`.
 
     Args:
-        d: Column of the dataframe containing timestamps.
+        d (str): Column of the dataframe containing timestamps.
+
+    Returns:
+        `d` with its datetimes parsed correctly.
     &#34;&#34;&#34;
     # Parse datetimes.
     prefix = d.str.split(&#34;+&#34;).str[0]
@@ -264,8 +267,8 @@ def parse_datetime(d) -&gt; pd.Series:
 a pandas <code>DataFrame</code>.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>url</code></strong></dt>
-<dd>String; wherever we're getting things from.</dd>
+<dt><strong><code>url</code></strong> :&ensp;<code>str</code></dt>
+<dd>Wherever we're getting things from.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -277,7 +280,7 @@ a pandas <code>DataFrame</code>.</p>
     a pandas `DataFrame`.
 
     Args:
-        url: String; wherever we&#39;re getting things from.
+        url (str): Wherever we&#39;re getting things from.
     &#34;&#34;&#34;
     raw = requests.get(url).content
     return pd.read_csv(io.StringIO(raw.decode(&#34;utf-8&#34;)), parse_dates=True)</code></pre>
@@ -290,8 +293,8 @@ a pandas <code>DataFrame</code>.</p>
 <div class="desc"><p>Retrieves districtr data for an individual plan.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>identifier</code></strong></dt>
-<dd>String; districtr identifier for an individual plan.</dd>
+<dt><strong><code>identifier</code></strong> :&ensp;<code>str</code></dt>
+<dd>districtr identifier for an individual plan.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>districtr plan object (as a dictionary).</p></div>
@@ -304,7 +307,7 @@ a pandas <code>DataFrame</code>.</p>
     Retrieves districtr data for an individual plan.
 
     Args:
-        identifier: String; districtr identifier for an individual plan.
+        identifier (str): districtr identifier for an individual plan.
 
     Returns:
         districtr plan object (as a dictionary).
@@ -320,9 +323,11 @@ a pandas <code>DataFrame</code>.</p>
 <div class="desc"><p>Parses the timestamps in the dataframe returned by <code><a title="evaltools.processing.fetch.as_dataframe" href="#evaltools.processing.fetch.as_dataframe">as_dataframe()</a></code>.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>d</code></strong></dt>
+<dt><strong><code>d</code></strong> :&ensp;<code>str</code></dt>
 <dd>Column of the dataframe containing timestamps.</dd>
-</dl></div>
+</dl>
+<h2 id="returns">Returns</h2>
+<p><code>d</code> with its datetimes parsed correctly.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -332,7 +337,10 @@ a pandas <code>DataFrame</code>.</p>
     Parses the timestamps in the dataframe returned by `as_dataframe()`.
 
     Args:
-        d: Column of the dataframe containing timestamps.
+        d (str): Column of the dataframe containing timestamps.
+
+    Returns:
+        `d` with its datetimes parsed correctly.
     &#34;&#34;&#34;
     # Parse datetimes.
     prefix = d.str.split(&#34;+&#34;).str[0]
@@ -350,11 +358,11 @@ a pandas <code>DataFrame</code>.</p>
 <div class="desc"><p>Given a districtr link, parse out the districtr identifier.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>l</code></strong></dt>
+<dt><strong><code>l</code></strong> :&ensp;<code>str</code></dt>
 <dd>districtr url containing the districtr ID of the provided plan.</dd>
-<dt><strong><code>df</code></strong></dt>
-<dd>If <code>l</code> is a dataframe, then we use pandas string operations rather
-than built-in ones.</dd>
+<dt><strong><code>df</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>If <code>l</code> is a dataframe, then we use pandas string
+operations rather than built-in ones.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>districtr ID.</p></div>
@@ -367,9 +375,9 @@ than built-in ones.</dd>
     Given a districtr link, parse out the districtr identifier.
 
     Args:
-        l: districtr url containing the districtr ID of the provided plan.
-        df: If `l` is a dataframe, then we use pandas string operations rather
-            than built-in ones.
+        l (str): districtr url containing the districtr ID of the provided plan.
+        df (bool, optional): If `l` is a dataframe, then we use pandas string
+            operations rather than built-in ones.
 
     Returns:
         districtr ID.
@@ -386,9 +394,9 @@ than built-in ones.</dd>
 submissions.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>state</code></strong></dt>
+<dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
 <dd><code>us.State</code> object (e.g. <code>us.states.WI</code>).</dd>
-<dt><strong><code>sample</code></strong></dt>
+<dt><strong><code>sample</code></strong> :&ensp;<code>int</code>, optional</dt>
 <dd>The number of sample plans to retrieve.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
@@ -403,8 +411,8 @@ submissions.</p>
     submissions.
 
     Args:
-        state: `us.State` object (e.g. `us.states.WI`).
-        sample: The number of sample plans to retrieve.
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        sample (int, optional): The number of sample plans to retrieve.
 
     Returns:
         A list of `Submissions`, either to be interpreted raw or tabularized.
@@ -456,9 +464,9 @@ submissions.</p>
 <div class="desc"><p>Returns districtr submission information in a tabular format.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>state</code></strong></dt>
+<dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
 <dd><code>us.State</code> object (e.g. <code>us.states.WI</code>).</dd>
-<dt><strong><code>submissions</code></strong></dt>
+<dt><strong><code>submissions</code></strong> :&ensp;<code>list</code></dt>
 <dd>List of <code><a title="evaltools.processing.fetch.Submission" href="#evaltools.processing.fetch.Submission">Submission</a></code> objects returned from a call to
 <code><a title="evaltools.processing.fetch.submissions" href="#evaltools.processing.fetch.submissions">submissions()</a></code>.</dd>
 </dl>
@@ -486,8 +494,8 @@ plans, cois, written = tabularized(state, subs)
     Returns districtr submission information in a tabular format.
 
     Args:
-        state: `us.State` object (e.g. `us.states.WI`).
-        submissions: List of `Submission` objects returned from a call to
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        submissions (list): List of `Submission` objects returned from a call to
             `submissions`.
 
     Returns:

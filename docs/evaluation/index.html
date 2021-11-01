@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>evaltools.evaluation API documentation</title>
-<meta name="description" content="" />
+<meta name="description" content="Basic functionality for evaluating districting plans." />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -22,14 +22,28 @@
 <h1 class="title">Module <code>evaltools.evaluation</code></h1>
 </header>
 <section id="section-intro">
+<p>Basic functionality for evaluating districting plans.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from .splits import splits, pieces
+<pre><code class="python">&#34;&#34;&#34;
+Basic functionality for evaluating districting plans.
+&#34;&#34;&#34;
+
+from .splits import splits, pieces
 from .population import deviations, unassigned_population
-from .schema import ensemble_schema, assignment_schema
-from .contiguity import unassigned_units, contiguous</code></pre>
+# from .schema import ensemble_schema, assignment_schema
+from .contiguity import unassigned_units, contiguous
+
+__all__ = [
+    &#34;splits&#34;,
+    &#34;pieces&#34;,
+    &#34;deviations&#34;,
+    &#34;unassigned_population&#34;,
+    &#34;unassigned_units&#34;,
+    &#34;contiguous&#34;
+]</code></pre>
 </details>
 </section>
 <section>
@@ -47,15 +61,290 @@ from .contiguity import unassigned_units, contiguous</code></pre>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.evaluation.splits" href="splits.html">evaltools.evaluation.splits</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
 </dl>
 </section>
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="evaltools.evaluation.contiguous"><code class="name flex">
+<span>def <span class="ident">contiguous</span></span>(<span>P) ‑> bool</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Determines whether the districting plan defined by the partition is
+contiguous.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>P</code></strong> :&ensp;<code>Partition</code></dt>
+<dd>GerryChain Partition object.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>Whether the districting plan defined by the partition is contiguous.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def contiguous(P) -&gt; bool:
+    &#34;&#34;&#34;
+    Determines whether the districting plan defined by the partition is
+    contiguous.
+
+    Args:
+        P (Partition): GerryChain Partition object.
+
+    Returns:
+        Whether the districting plan defined by the partition is contiguous.
+    &#34;&#34;&#34;
+    return ctgs(P)</code></pre>
+</details>
+</dd>
+<dt id="evaltools.evaluation.deviations"><code class="name flex">
+<span>def <span class="ident">deviations</span></span>(<span>P, popcolumn) ‑> dict</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Determines the districting plan's population deviation percentages.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>P</code></strong> :&ensp;<code>Partition</code></dt>
+<dd>GerryChain Partition object.</dd>
+<dt><strong><code>popcolumn</code></strong> :&ensp;<code>str</code></dt>
+<dd>Column for tallying the desired population.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A dictionary which maps district names to population deviation percentages.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def deviations(P, popcolumn) -&gt; dict:
+    &#34;&#34;&#34;
+    Determines the districting plan&#39;s population deviation percentages.
+    
+    Args:
+        P (Partition): GerryChain Partition object.
+        popcolumn (str): Column for tallying the desired population.
+
+    Returns:
+        A dictionary which maps district names to population deviation percentages.
+    &#34;&#34;&#34;
+    # Create the partition and the corresponding updater.
+    poptally = Tally(popcolumn, alias=popcolumn)
+    P.updaters = { popcolumn: poptally }
+
+    # Return a dictionary that maps district names to population deviation
+    # percentages.
+    return deviation(P, attribute=popcolumn)</code></pre>
+</details>
+</dd>
+<dt id="evaltools.evaluation.pieces"><code class="name flex">
+<span>def <span class="ident">pieces</span></span>(<span>P, units) ‑> dict</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Determines the number of "unit pieces" produced by the plan. For example,
+consider a state with 100 counties. Suppose that one county is split twice,
+and another once. Then, there are 3 + 2 = 5 "pieces," disregarding the
+counties kept whole.</p>
+<p>Bear in mind that this calculates the number of <em>unit splits</em>, not the number
+of <em>units split</em>: for example, if a district divides a county into three
+pieces, the former reports two splits (as a unit divided into three pieces is
+cut twice), while the latter would report one split (as there is one county
+being split).</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>P</code></strong> :&ensp;<code>Partition</code></dt>
+<dd>GerryChain Partition object.</dd>
+<dt><strong><code>units</code></strong> :&ensp;<code>list</code></dt>
+<dd>List of data columns; each assigns a vertex to a unit.
+Generally, these units are counties, VTDs, precincts, etc.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A dictionary mapping column names to the number of splits.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def pieces(P, units) -&gt; dict:
+    &#34;&#34;&#34;
+    Determines the number of &#34;unit pieces&#34; produced by the plan. For example,
+    consider a state with 100 counties. Suppose that one county is split twice,
+    and another once. Then, there are 3 + 2 = 5 &#34;pieces,&#34; disregarding the
+    counties kept whole.
+    
+    Bear in mind that this calculates the number of _unit splits_, not the number
+    of _units split_: for example, if a district divides a county into three
+    pieces, the former reports two splits (as a unit divided into three pieces is
+    cut twice), while the latter would report one split (as there is one county 
+    being split).
+
+    Args:
+        P (Partition): GerryChain Partition object.
+        units (list): List of data columns; each assigns a vertex to a unit.
+            Generally, these units are counties, VTDs, precincts, etc.
+
+    Returns:
+        A dictionary mapping column names to the number of splits.
+    &#34;&#34;&#34;
+    geometrypieces = {
+        unit: sum(
+            len(value.contains) if len(value.contains) &gt; 1 else 0
+            # Takes advantage of the fact that P is a Partition and `county_splits`
+            # returns a function. We don&#39;t need to name the partition, and the
+            # column of units being split by the plan are in `units`, so we can
+            # simply call the function returned by `county_splits`, passing it
+            # our Partition `P`.
+            for value in county_splits(&#34;&#34;, unit)(P).values()
+        )
+        for unit in units
+    }
+
+    return geometrypieces</code></pre>
+</details>
+</dd>
+<dt id="evaltools.evaluation.splits"><code class="name flex">
+<span>def <span class="ident">splits</span></span>(<span>P, units) ‑> dict</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Determines the number of units split by the districting plan.</p>
+<p>Bear in mind that this calculates the number of <em>unit splits</em>, not the number
+of <em>units split</em>: for example, if a district divides a county into three
+pieces, the former reports two splits (as a unit divided into three pieces is
+cut twice), while the latter would report one split (as there is one county
+being split).</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>P</code></strong> :&ensp;<code>Partition</code></dt>
+<dd>GerryChain Partition object.</dd>
+<dt><strong><code>units</code></strong> :&ensp;<code>list</code></dt>
+<dd>List of data columns; each assigns a vertex to a unit.
+Generally, these units are counties, VTDs, precincts, etc.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A dictionary mapping column names to the number of splits.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def splits(P, units) -&gt; dict:
+    &#34;&#34;&#34;
+    Determines the number of units split by the districting plan.
+    
+    Bear in mind that this calculates the number of *unit splits*, not the number
+    of *units split*: for example, if a district divides a county into three
+    pieces, the former reports two splits (as a unit divided into three pieces is
+    cut twice), while the latter would report one split (as there is one county 
+    being split).
+
+    Args:
+        P (Partition): GerryChain Partition object.
+        units (list): List of data columns; each assigns a vertex to a unit.
+            Generally, these units are counties, VTDs, precincts, etc.
+    
+    Returns:
+        A dictionary mapping column names to the number of splits.
+    &#34;&#34;&#34;
+    geometrysplits = {
+        unit: sum(
+            (len(value.contains))-1
+            # Takes advantage of the fact that P is a Partition and `county_splits`
+            # returns a function. We don&#39;t need to name the partition, and the
+            # column of units being split by the plan are in `units`, so we can
+            # simply call the function returned by `county_splits`, passing it
+            # our Partition `P`.
+            for value in county_splits(&#34;&#34;, unit)(P).values()
+        )
+        for unit in units
+    }
+
+    return geometrysplits</code></pre>
+</details>
+</dd>
+<dt id="evaltools.evaluation.unassigned_population"><code class="name flex">
+<span>def <span class="ident">unassigned_population</span></span>(<span>P, popcolumn)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Determines the number of unassigned people in the districting plan.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>P</code></strong></dt>
+<dd><code>Partition</code> object.</dd>
+<dt><strong><code>popcolumn</code></strong></dt>
+<dd>Column for tallying the desired population.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>Returns a</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def unassigned_population(P, popcolumn):
+    &#34;&#34;&#34;
+    Determines the number of unassigned people in the districting plan.
+    
+    Args:
+        P: `Partition` object.
+        popcolumn: Column for tallying the desired population.
+
+    Returns:
+        Returns a 
+    &#34;&#34;&#34;
+    pass</code></pre>
+</details>
+</dd>
+<dt id="evaltools.evaluation.unassigned_units"><code class="name flex">
+<span>def <span class="ident">unassigned_units</span></span>(<span>P, raw=False) ‑> int</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Determines the proportion (or raw number) of units without a district
+assignment. An unassigned unit is a unit without a districting assignment an
+empty/corrupted assignment.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>P</code></strong> :&ensp;<code>Partition</code></dt>
+<dd>GerryChain Partition object.</dd>
+<dt><strong><code>raw</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>If <code>True</code>, report the raw number of unassigned
+units. Defaults to <code>False</code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p><code>float</code> representing the proportion of units that are unassigned (or
+the whole number of unassigned units).</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def unassigned_units(P, raw=False) -&gt; int:
+    &#34;&#34;&#34;
+    Determines the proportion (or raw number) of units without a district
+    assignment. An unassigned unit is a unit without a districting assignment an
+    empty/corrupted assignment.
+
+    Args:
+        P (Partition): GerryChain Partition object.
+        raw (bool, optional): If `True`, report the raw number of unassigned
+            units. Defaults to `False`.
+    
+    Returns:
+        `float` representing the proportion of units that are unassigned (or
+        the whole number of unassigned units).
+    &#34;&#34;&#34;
+    assignment = P.assignment
+
+    # Retrive the length of the assignment; this corresponds to the number of
+    # units which have an assignment key.
+    total = len(P.graph.nodes())
+
+    # Next, check for &#34;bad&#34; assignments for units: this includes empty strings
+    # and NaNs, for now.
+    units_assigned_well = len({
+        k: v
+        for k, v in assignment.items() if v not in [&#34;nan&#34;, &#34;NaN&#34;, &#34;&#34;]
+    })
+
+    return 1-(units_assigned_well/total) if not raw else (total-units_assigned_well)</code></pre>
+</details>
+</dd>
+</dl>
 </section>
 <section>
 </section>
@@ -76,7 +365,16 @@ from .contiguity import unassigned_units, contiguous</code></pre>
 <li><code><a title="evaltools.evaluation.contiguity" href="contiguity.html">evaltools.evaluation.contiguity</a></code></li>
 <li><code><a title="evaltools.evaluation.population" href="population.html">evaltools.evaluation.population</a></code></li>
 <li><code><a title="evaltools.evaluation.schema" href="schema.html">evaltools.evaluation.schema</a></code></li>
-<li><code><a title="evaltools.evaluation.splits" href="splits.html">evaltools.evaluation.splits</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="evaltools.evaluation.contiguous" href="#evaltools.evaluation.contiguous">contiguous</a></code></li>
+<li><code><a title="evaltools.evaluation.deviations" href="#evaltools.evaluation.deviations">deviations</a></code></li>
+<li><code><a title="evaltools.evaluation.pieces" href="#evaltools.evaluation.pieces">pieces</a></code></li>
+<li><code><a title="evaltools.evaluation.splits" href="#evaltools.evaluation.splits">splits</a></code></li>
+<li><code><a title="evaltools.evaluation.unassigned_population" href="#evaltools.evaluation.unassigned_population">unassigned_population</a></code></li>
+<li><code><a title="evaltools.evaluation.unassigned_units" href="#evaltools.evaluation.unassigned_units">unassigned_units</a></code></li>
 </ul>
 </li>
 </ul>

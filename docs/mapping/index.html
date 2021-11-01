@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>evaltools.mapping API documentation</title>
-<meta name="description" content="" />
+<meta name="description" content="Makes pretty pictures of districting plans and dual graphs." />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -22,25 +22,27 @@
 <h1 class="title">Module <code>evaltools.mapping</code></h1>
 </header>
 <section id="section-intro">
+<p>Makes pretty pictures of districting plans and dual graphs.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from .drawplan import drawplan
-from .drawgraph import drawgraph</code></pre>
+<pre><code class="python">&#34;&#34;&#34;
+Makes pretty pictures of districting plans and dual graphs.
+&#34;&#34;&#34;
+
+from .drawplan import drawplan
+from .drawgraph import drawgraph
+
+__all__ = [
+    &#34;drawplan&#34;,
+    &#34;drawgraph&#34;
+]</code></pre>
 </details>
 </section>
 <section>
 <h2 class="section-title" id="header-submodules">Sub-modules</h2>
 <dl>
-<dt><code class="name"><a title="evaltools.mapping.drawgraph" href="drawgraph.html">evaltools.mapping.drawgraph</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="evaltools.mapping.drawplan" href="drawplan.html">evaltools.mapping.drawplan</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
 <dt><code class="name"><a title="evaltools.mapping.histogram" href="histogram.html">evaltools.mapping.histogram</a></code></dt>
 <dd>
 <div class="desc"></div>
@@ -54,6 +56,204 @@ from .drawgraph import drawgraph</code></pre>
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="evaltools.mapping.drawgraph"><code class="name flex">
+<span>def <span class="ident">drawgraph</span></span>(<span>G, ax=None, x='INTPTLON20', y='INTPTLAT20', components=False, node_size=1, **kwargs) ‑> Union[matplotlib.axes._axes.Axes, List[Tuple[matplotlib.figure.Figure, matplotlib.axes._axes.Axes]]]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Draws a gerrychain Graph object. Returns a single Axes object (for dual
+graphs drawn whole) and lists of <code>(Figure, Axes)</code> pairs for graphs drawn
+component-wise.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>G</code></strong> :&ensp;<code>Graph</code></dt>
+<dd>The dual graph to draw.</dd>
+<dt><strong><code>ax</code></strong> :&ensp;<code>Axes</code>, optional</dt>
+<dd><code>matplotlib.axes.Axes</code> object. If not passed, one
+is created.</dd>
+<dt><strong><code>x</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Vertex property used as the horizontal (E-W) coordinate.</dd>
+<dt><strong><code>y</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Vertex property used as the vertical (N-S) coordinate.</dd>
+<dt><strong><code>components</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>If <code>True</code>, the graph is assumed to have
+more than one connected component (e.g. Michigan) and is drawn
+component-wise and rather than return a single <code>Axes</code> object, return
+a list of <code>(Figure, Axes)</code> pairs. If something is passed to <code>ax</code>, the
+same Axes instance is used for each new Figure.</dd>
+<dt><strong><code>node_size</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Specifies the default size of a vertex.</dd>
+<dt><strong><code>kwargs</code></strong> :&ensp;<code>dict</code>, optional</dt>
+<dd>Arguments to be passed to <code>nx.draw()</code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A tuple of <code>matplotlib</code> <code>(Figure, Axes)</code> objects, or if <code>components</code> is
+<code>True</code>, returns a list of <code>(Figure, Axes)</code> objects corresponding to each
+component.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def drawgraph(
+        G, ax=None, x=&#34;INTPTLON20&#34;, y=&#34;INTPTLAT20&#34;, components=False, node_size=1,
+        **kwargs
+    ) -&gt; Union[Axes, List[Tuple[Figure,Axes]]]:
+    &#34;&#34;&#34;
+    Draws a gerrychain Graph object. Returns a single Axes object (for dual
+    graphs drawn whole) and lists of `(Figure, Axes)` pairs for graphs drawn
+    component-wise.
+
+    Args:
+        G (Graph): The dual graph to draw.
+        ax (Axes, optional): `matplotlib.axes.Axes` object. If not passed, one
+            is created.
+        x (str, optional): Vertex property used as the horizontal (E-W) coordinate.
+        y (str, optional): Vertex property used as the vertical (N-S) coordinate.
+        components (bool, optional): If `True`, the graph is assumed to have
+            more than one connected component (e.g. Michigan) and is drawn
+            component-wise and rather than return a single `Axes` object, return
+            a list of `(Figure, Axes)` pairs. If something is passed to `ax`, the
+            same Axes instance is used for each new Figure.
+        node_size (float, optional): Specifies the default size of a vertex.
+        kwargs (dict, optional): Arguments to be passed to `nx.draw()`.
+
+    Returns:
+        A tuple of `matplotlib` `(Figure, Axes)` objects, or if `components` is
+        `True`, returns a list of `(Figure, Axes)` objects corresponding to each
+        component.
+    &#34;&#34;&#34;
+    # Create a mapping from identifiers to positions.
+    positions = {
+        v: (properties[x], properties[y])
+        for v, properties in G.nodes(data=True)
+    }
+
+    # If `components` is true, plot the graph component-wise. Otherwise plot
+    # normally. First, set some properties common to both graphs.
+    properties = {&#34;pos&#34;: positions, &#34;node_size&#34;: node_size }
+
+    # Initialize `pairs` to None.
+    pairs = None
+
+    if not components:
+        if not ax: axes = plt.axes()
+        else: axes = ax
+        nx.draw(G, ax=axes, **properties, **kwargs)
+    else:
+        # Create lists for figures and axes.
+        pairs = []
+
+        connected_components = [c for c in nx.connected_components(G)]
+        for component in connected_components:
+            # Create a new Figure object for each component.
+            fig = plt.figure()
+            if not ax: ax = plt.axes()
+
+            # Plot the graph.
+            subgraph = G.subgraph(component)
+            nx.draw(subgraph, ax=ax, **properties, **kwargs)
+
+            # Add them to their respective lists.
+            pairs.append((fig, ax))
+
+    return pairs if pairs else axes</code></pre>
+</details>
+</dd>
+<dt id="evaltools.mapping.drawplan"><code class="name flex">
+<span>def <span class="ident">drawplan</span></span>(<span>districts, assignment, overlay=None, colors=None, numbers=False, lw=0.5) ‑> matplotlib.axes._axes.Axes</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Visualizes the districting plan defined by <code>assignment</code>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>districts</code></strong> :&ensp;<code>GeoDataFrame</code></dt>
+<dd>Geometries for the districting plan. Assumes
+there is one geometry for each district.</dd>
+<dt><strong><code>assignment</code></strong> :&ensp;<code>str</code></dt>
+<dd>Column of <code>districts</code> which defines the districting plan.</dd>
+<dt><strong><code>overlay</code></strong> :&ensp;<code>GeoDataFrame</code>, optional</dt>
+<dd>GeoDataFrame to be plotted over the
+districts. Often is a gdf of counties.</dd>
+<dt><strong><code>colors</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Column name which specifies colors for each district.</dd>
+<dt><strong><code>numbers</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>If <code>True</code>, plots district names (as defined by
+<code>assignment</code>) at districts' centroids. Defaults to <code>False</code>.</dd>
+<dt><strong><code>lw</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Line thickness if there are more than 20 districts.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A <code>matplotlib</code> <code>Axes</code> object for the geometries attached to <code>districts</code>.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def drawplan(
+        districts, assignment, overlay=None, colors=None, numbers=False, lw=1/2
+    ) -&gt; Axes:
+    &#34;&#34;&#34;
+    Visualizes the districting plan defined by `assignment`.
+
+    Args:
+        districts (GeoDataFrame): Geometries for the districting plan. Assumes
+            there is one geometry for each district.
+        assignment (str): Column of `districts` which defines the districting plan.
+        overlay (GeoDataFrame, optional): GeoDataFrame to be plotted over the
+            districts. Often is a gdf of counties.
+        colors (str, optional): Column name which specifies colors for each district.
+        numbers (bool, optional): If `True`, plots district names (as defined by
+            `assignment`) at districts&#39; centroids. Defaults to `False`.
+        lw (float, optional): Line thickness if there are more than 20 districts.
+    
+    Returns:
+        A `matplotlib` `Axes` object for the geometries attached to `districts`.
+    &#34;&#34;&#34;
+    # Sort districts by their assignment and add a column specifying the color
+    # index.
+    N = len(districts)
+    districts = districts.to_crs(&#34;epsg:3857&#34;)
+    districts[assignment] = districts[assignment].astype(int)
+    districts = districts.sort_values(by=assignment)
+    districts[&#34;colorindex&#34;] = list(range(N))
+
+    # Assign colors.
+    repeats = math.ceil(N/len(districtr))
+    tail = [hexshift(c) for c in districtr*(repeats-1)]
+    repeatedcolors = (districtr + (tail if tail else []))[:N]
+    districts[&#34;color&#34;] = repeatedcolors
+
+    # Plot the districts.
+    base = districts.plot(
+        color=districts[colors if colors else &#34;color&#34;],
+        edgecolor=&#34;black&#34;,
+        linewidth=1 if N&lt;=20 else lw
+    )
+
+    # If we have overlaid geometries, plot those too.
+    if overlay is not None:
+        overlay = overlay.to_crs(districts.crs)
+        overlay.plot(color=&#34;None&#34;, edgecolor=&#34;black&#34;, linewidth=1/8, ax=base)
+    
+    # If the `numbers` flag is passed, plot the numbers for each district.
+    if numbers:
+        for district, identifier in zip(districts[&#34;geometry&#34;], districts[assignment]):
+            x, y = list(district.centroid.coords)[0]
+            base.annotate(
+                identifier, (x, y), xytext=(x,y), xycoords=&#34;data&#34;, fontsize=6,
+                ha=&#34;center&#34;, va=&#34;center&#34;,
+                bbox=dict(
+                    boxstyle=&#34;circle,pad=0.2&#34;, fc=&#34;white&#34;, ec=&#34;none&#34;, alpha=1
+                )
+            )
+
+    # Turn plot axes off.
+    plt.axis(&#34;off&#34;)
+
+    return base</code></pre>
+</details>
+</dd>
+</dl>
 </section>
 <section>
 </section>
@@ -71,10 +271,14 @@ from .drawgraph import drawgraph</code></pre>
 </li>
 <li><h3><a href="#header-submodules">Sub-modules</a></h3>
 <ul>
-<li><code><a title="evaltools.mapping.drawgraph" href="drawgraph.html">evaltools.mapping.drawgraph</a></code></li>
-<li><code><a title="evaltools.mapping.drawplan" href="drawplan.html">evaltools.mapping.drawplan</a></code></li>
 <li><code><a title="evaltools.mapping.histogram" href="histogram.html">evaltools.mapping.histogram</a></code></li>
 <li><code><a title="evaltools.mapping.partisanship" href="partisanship.html">evaltools.mapping.partisanship</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="evaltools.mapping.drawgraph" href="#evaltools.mapping.drawgraph">drawgraph</a></code></li>
+<li><code><a title="evaltools.mapping.drawplan" href="#evaltools.mapping.drawplan">drawplan</a></code></li>
 </ul>
 </li>
 </ul>
