@@ -4,9 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>evaltools API documentation</title>
-<meta name="description" content="A package for processing districting plans, from retrieval to processing to
-visualization." />
+<title>evaltools.numbering.updater API documentation</title>
+<meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -20,77 +19,100 @@ visualization." />
 <main>
 <article id="content">
 <header>
-<h1 class="title">Package <code>evaltools</code></h1>
+<h1 class="title">Module <code>evaltools.numbering.updater</code></h1>
 </header>
 <section id="section-intro">
-<p>A package for processing districting plans, from retrieval to processing to
-visualization.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">&#34;&#34;&#34;
-A package for processing districting plans, from retrieval to processing to
-visualization.
-&#34;&#34;&#34;
-from .mapping import drawplan, drawgraph
-from .colors import districtr, redblue
-from .geography import dissolve, dualgraph
-from .evaluation import (
-    splits, pieces, deviations, contiguous, unassigned_units,
-    unassigned_population
-)
-from .numbering import (
-    minimize_dispersion, minimize_parity, minimize_dispersion_with_parity,
-    calculate_dispersion, dispersion_updater_closure
-)
+<pre><code class="python">import geopandas as gpd
+import gerrychain
+from evaltools.numbering import minimize_dispersion, calculate_dispersion
 
-&#34;&#34;&#34;
-__all__ = [
-    &#34;districtr&#34;, &#34;redblue&#34;, &#34;drawplan&#34;, &#34;dualgraph&#34;, &#34;dissolve&#34;,
-    &#34;drawgraph&#34;, &#34;Graph&#34;, &#34;Partition&#34;, &#34;splits&#34;, &#34;pieces&#34;, &#34;deviations&#34;,
-    &#34;ensemble_schema&#34;, &#34;assignment_schema&#34;, &#34;contiguous&#34;, &#34;unassigned_units&#34;,
-    &#34;unassigned_population&#34;, &#34;AssignmentCompressor&#34;,
-    &#34;minimize_dispersion&#34;, &#34;minimize_parity&#34;, &#34;minimize_dispersion_with_parity&#34;,
-    &#34;calculate_dispersion&#34;, &#34;dispersion_updater_closure&#34;
-]
-&#34;&#34;&#34;</code></pre>
+def dispersion_updater_closure(units: gpd.GeoDataFrame, enacted_col: str, pop_col: str):
+    &#34;&#34;&#34;
+    An updater to calculate best possible dispersion for a `gerrychain.Partition` object.
+
+    Args:
+        units: The units to optimize on. E.g. Census blocks.
+        enacted_col: The column in the GeoDataFrame with the enacted districts.
+        proposed_col: The column in the GeoDataFrame with the proposed districts.
+        extra_constraints: Optional; A function that can add extra constraints 
+
+            to the model, such as parity (in the case of WI).
+    Returns:
+        An updater that calculates the minimal core dispersion of a Partition object.
+    &#34;&#34;&#34;
+    def updater(partition: gerrychain.Partition):
+        units[&#34;partition&#34;] = partition.assignment.to_series()
+
+        relabeling = minimize_dispersion(units, enacted_col, &#34;partition&#34;, pop_col)
+        units[&#34;partition&#34;] = units[&#34;partition&#34;].apply(lambda x: relabeling[x])
+
+        return calculate_dispersion(units, enacted_col, &#34;partition&#34;, pop_col)
+
+    return updater</code></pre>
 </details>
 </section>
 <section>
-<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt><code class="name"><a title="evaltools.colors" href="colors.html">evaltools.colors</a></code></dt>
+<dt id="evaltools.numbering.updater.dispersion_updater_closure"><code class="name flex">
+<span>def <span class="ident">dispersion_updater_closure</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, pop_col: str)</span>
+</code></dt>
 <dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="evaltools.evaluation" href="evaluation/index.html">evaltools.evaluation</a></code></dt>
+<div class="desc"><p>An updater to calculate best possible dispersion for a <code>gerrychain.Partition</code> object.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>units</code></strong></dt>
+<dd>The units to optimize on. E.g. Census blocks.</dd>
+<dt><strong><code>enacted_col</code></strong></dt>
+<dd>The column in the GeoDataFrame with the enacted districts.</dd>
+<dt><strong><code>proposed_col</code></strong></dt>
+<dd>The column in the GeoDataFrame with the proposed districts.</dd>
+<dt><strong><code>extra_constraints</code></strong></dt>
 <dd>
-<div class="desc"><p>Basic functionality for evaluating districting plans.</p></div>
-</dd>
-<dt><code class="name"><a title="evaltools.geography" href="geography/index.html">evaltools.geography</a></code></dt>
-<dd>
-<div class="desc"><p>Provides ease-of-use functionality for geographic and geometric operations.</p></div>
-</dd>
-<dt><code class="name"><a title="evaltools.mapping" href="mapping/index.html">evaltools.mapping</a></code></dt>
-<dd>
-<div class="desc"><p>Makes pretty pictures of districting plans and dual graphs.</p></div>
-</dd>
-<dt><code class="name"><a title="evaltools.numbering" href="numbering/index.html">evaltools.numbering</a></code></dt>
-<dd>
-<div class="desc"><p>Various numbering optimization methods to minimize core dispersion
-and address numbering parity concerns. Used in WI.</p></div>
-</dd>
-<dt><code class="name"><a title="evaltools.processing" href="processing/index.html">evaltools.processing</a></code></dt>
-<dd>
-<div class="desc"><p>Facilities for processing districting plans in a standardized, functional-programmy
-way.</p></div>
+<p>Optional; A function that can add extra constraints </p>
+<p>to the model, such as parity (in the case of WI).</p>
 </dd>
 </dl>
-</section>
-<section>
-</section>
-<section>
+<h2 id="returns">Returns</h2>
+<p>An updater that calculates the minimal core dispersion of a Partition object.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def dispersion_updater_closure(units: gpd.GeoDataFrame, enacted_col: str, pop_col: str):
+    &#34;&#34;&#34;
+    An updater to calculate best possible dispersion for a `gerrychain.Partition` object.
+
+    Args:
+        units: The units to optimize on. E.g. Census blocks.
+        enacted_col: The column in the GeoDataFrame with the enacted districts.
+        proposed_col: The column in the GeoDataFrame with the proposed districts.
+        extra_constraints: Optional; A function that can add extra constraints 
+
+            to the model, such as parity (in the case of WI).
+    Returns:
+        An updater that calculates the minimal core dispersion of a Partition object.
+    &#34;&#34;&#34;
+    def updater(partition: gerrychain.Partition):
+        units[&#34;partition&#34;] = partition.assignment.to_series()
+
+        relabeling = minimize_dispersion(units, enacted_col, &#34;partition&#34;, pop_col)
+        units[&#34;partition&#34;] = units[&#34;partition&#34;].apply(lambda x: relabeling[x])
+
+        return calculate_dispersion(units, enacted_col, &#34;partition&#34;, pop_col)
+
+    return updater</code></pre>
+</details>
+</dd>
+</dl>
 </section>
 <section>
 </section>
@@ -101,14 +123,14 @@ way.</p></div>
 <ul></ul>
 </div>
 <ul id="index">
-<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<li><h3>Super-module</h3>
 <ul>
-<li><code><a title="evaltools.colors" href="colors.html">evaltools.colors</a></code></li>
-<li><code><a title="evaltools.evaluation" href="evaluation/index.html">evaltools.evaluation</a></code></li>
-<li><code><a title="evaltools.geography" href="geography/index.html">evaltools.geography</a></code></li>
-<li><code><a title="evaltools.mapping" href="mapping/index.html">evaltools.mapping</a></code></li>
-<li><code><a title="evaltools.numbering" href="numbering/index.html">evaltools.numbering</a></code></li>
-<li><code><a title="evaltools.processing" href="processing/index.html">evaltools.processing</a></code></li>
+<li><code><a title="evaltools.numbering" href="index.html">evaltools.numbering</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="evaltools.numbering.updater.dispersion_updater_closure" href="#evaltools.numbering.updater.dispersion_updater_closure">dispersion_updater_closure</a></code></li>
 </ul>
 </li>
 </ul>
