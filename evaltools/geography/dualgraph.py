@@ -19,15 +19,15 @@ def dualgraph(
         edges_to_add (list, optional): Edges to add to the graph object. Assumed to
             be a list of pairs of objects, e.g. `[(u, v), ...]` where `u` and `v`
             are vertex labels consistent with `index`.
-        edges_to_cut (list, optional()): Optional; edges to cut from the graph
-            object. Assumed to be a list of pairs of objects, e.g. `[(u, v), ...]`
-            where `u` and `v` are vertex labels consistent with `index`.
+        edges_to_cut (list, optional): Edges to cut from the graph object. Assumed
+            to be a list of pairs of objects, e.g. `[(u, v), ...]` where `u` and
+            `v` are vertex labels consistent with `index`.
 
     Returns:
         A gerrychain `Graph` object dual to the geometric data.
     """
     # Buffer geometries by default.
-    geometries[geometrycolumn] = geometries.buffer(buffer)
+    geometries[geometrycolumn] = geometries[geometrycolumn].buffer(buffer)
 
     # Set indices and rename columns.
     if index: geometries = geometries.set_index(index)
