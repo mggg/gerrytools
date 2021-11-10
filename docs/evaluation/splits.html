@@ -28,7 +28,7 @@
 </summary>
 <pre><code class="python">from gerrychain.updaters import county_splits
 
-def splits(P, units):
+def splits(P, units) -&gt; dict:
     &#34;&#34;&#34;
     Determines the number of units split by the districting plan.
     
@@ -39,9 +39,9 @@ def splits(P, units):
     being split).
 
     Args:
-        P: `Partition` object.
-        units: List of data columns; each assigns a vertex to a unit. Generally,
-            these units are counties, VTDs, precincts, etc.
+        P (Partition): GerryChain Partition object.
+        units (list): List of data columns; each assigns a vertex to a unit.
+            Generally, these units are counties, VTDs, precincts, etc.
     
     Returns:
         A dictionary mapping column names to the number of splits.
@@ -62,23 +62,23 @@ def splits(P, units):
     return geometrysplits
 
 
-def pieces(P, units):
+def pieces(P, units) -&gt; dict:
     &#34;&#34;&#34;
     Determines the number of &#34;unit pieces&#34; produced by the plan. For example,
     consider a state with 100 counties. Suppose that one county is split twice,
     and another in half. Then, there are 3 + 2 = 5 &#34;pieces,&#34; disregarding the
     counties kept whole.
     
-    Bear in mind that this calculates the number of *unit splits*, not the number
-    of *units split*: for example, if a district divides a county into three
+    Bear in mind that this calculates the number of _unit splits_, not the number
+    of _units split_: for example, if a district divides a county into three
     pieces, the former reports two splits (as a unit divided into three pieces is
     cut twice), while the latter would report one split (as there is one county 
     being split).
 
     Args:
-        P: `Partition` object.
-        units: List of data columns; each assigns a vertex to a unit. Generally,
-            these units are counties, VTDs, precincts, etc.
+        P (Partition): GerryChain Partition object.
+        units (list): List of data columns; each assigns a vertex to a unit.
+            Generally, these units are counties, VTDs, precincts, etc.
 
     Returns:
         A dictionary mapping column names to the number of splits.
@@ -107,7 +107,7 @@ def pieces(P, units):
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.evaluation.splits.pieces"><code class="name flex">
-<span>def <span class="ident">pieces</span></span>(<span>P, units)</span>
+<span>def <span class="ident">pieces</span></span>(<span>P, units) ‑> dict</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Determines the number of "unit pieces" produced by the plan. For example,
@@ -121,11 +121,11 @@ cut twice), while the latter would report one split (as there is one county
 being split).</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>P</code></strong></dt>
-<dd><code>Partition</code> object.</dd>
-<dt><strong><code>units</code></strong></dt>
-<dd>List of data columns; each assigns a vertex to a unit. Generally,
-these units are counties, VTDs, precincts, etc.</dd>
+<dt><strong><code>P</code></strong> :&ensp;<code>Partition</code></dt>
+<dd>GerryChain Partition object.</dd>
+<dt><strong><code>units</code></strong> :&ensp;<code>list</code></dt>
+<dd>List of data columns; each assigns a vertex to a unit.
+Generally, these units are counties, VTDs, precincts, etc.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A dictionary mapping column names to the number of splits.</p></div>
@@ -133,23 +133,23 @@ these units are counties, VTDs, precincts, etc.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def pieces(P, units):
+<pre><code class="python">def pieces(P, units) -&gt; dict:
     &#34;&#34;&#34;
     Determines the number of &#34;unit pieces&#34; produced by the plan. For example,
     consider a state with 100 counties. Suppose that one county is split twice,
     and another in half. Then, there are 3 + 2 = 5 &#34;pieces,&#34; disregarding the
     counties kept whole.
     
-    Bear in mind that this calculates the number of *unit splits*, not the number
-    of *units split*: for example, if a district divides a county into three
+    Bear in mind that this calculates the number of _unit splits_, not the number
+    of _units split_: for example, if a district divides a county into three
     pieces, the former reports two splits (as a unit divided into three pieces is
     cut twice), while the latter would report one split (as there is one county 
     being split).
 
     Args:
-        P: `Partition` object.
-        units: List of data columns; each assigns a vertex to a unit. Generally,
-            these units are counties, VTDs, precincts, etc.
+        P (Partition): GerryChain Partition object.
+        units (list): List of data columns; each assigns a vertex to a unit.
+            Generally, these units are counties, VTDs, precincts, etc.
 
     Returns:
         A dictionary mapping column names to the number of splits.
@@ -171,7 +171,7 @@ these units are counties, VTDs, precincts, etc.</dd>
 </details>
 </dd>
 <dt id="evaltools.evaluation.splits.splits"><code class="name flex">
-<span>def <span class="ident">splits</span></span>(<span>P, units)</span>
+<span>def <span class="ident">splits</span></span>(<span>P, units) ‑> dict</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Determines the number of units split by the districting plan.</p>
@@ -182,11 +182,11 @@ cut twice), while the latter would report one split (as there is one county
 being split).</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>P</code></strong></dt>
-<dd><code>Partition</code> object.</dd>
-<dt><strong><code>units</code></strong></dt>
-<dd>List of data columns; each assigns a vertex to a unit. Generally,
-these units are counties, VTDs, precincts, etc.</dd>
+<dt><strong><code>P</code></strong> :&ensp;<code>Partition</code></dt>
+<dd>GerryChain Partition object.</dd>
+<dt><strong><code>units</code></strong> :&ensp;<code>list</code></dt>
+<dd>List of data columns; each assigns a vertex to a unit.
+Generally, these units are counties, VTDs, precincts, etc.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A dictionary mapping column names to the number of splits.</p></div>
@@ -194,7 +194,7 @@ these units are counties, VTDs, precincts, etc.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def splits(P, units):
+<pre><code class="python">def splits(P, units) -&gt; dict:
     &#34;&#34;&#34;
     Determines the number of units split by the districting plan.
     
@@ -205,9 +205,9 @@ these units are counties, VTDs, precincts, etc.</dd>
     being split).
 
     Args:
-        P: `Partition` object.
-        units: List of data columns; each assigns a vertex to a unit. Generally,
-            these units are counties, VTDs, precincts, etc.
+        P (Partition): GerryChain Partition object.
+        units (list): List of data columns; each assigns a vertex to a unit.
+            Generally, these units are counties, VTDs, precincts, etc.
     
     Returns:
         A dictionary mapping column names to the number of splits.

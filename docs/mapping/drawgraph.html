@@ -28,29 +28,33 @@
 </summary>
 <pre><code class="python">import matplotlib.pyplot as plt
 import networkx as nx
+from matplotlib.figure import Figure
+from matplotlib.axes import Axes
+from typing import Union, Tuple, List
 
 
 def drawgraph(
         G, ax=None, x=&#34;INTPTLON20&#34;, y=&#34;INTPTLAT20&#34;, components=False, node_size=1,
         **kwargs
-    ):
+    ) -&gt; Union[Axes, List[Tuple[Figure,Axes]]]:
     &#34;&#34;&#34;
     Draws a gerrychain Graph object. Returns a single Axes object (for dual
     graphs drawn whole) and lists of `(Figure, Axes)` pairs for graphs drawn
     component-wise.
 
     Args:
-        G: The dual graph to draw.
-        ax: Optional; `matplotlib.axes.Axes` object. If not passed, one is created.
-        x: Optional; vertex property used as the horizontal (E-W) coordinate.
-        y: Optional; vertex property used as the vertical (N-S) coordinate.
-        components: Optional; if `True`, the graph is assumed to have more than
-            one connected component (e.g. Michigan) and is drawn component-wise
-            and rather than return a single `Axes` object, return a list of
-            `(Figure, Axes)` pairs. If something is passed to `ax`, the same
-            Axes instance is used for each new Figure.
-        node_size: Optional; specifies the default size of a vertex.
-        kwargs: Optional; arguments to be passed to `nx.draw()`.
+        G (Graph): The dual graph to draw.
+        ax (Axes, optional): `matplotlib.axes.Axes` object. If not passed, one
+            is created.
+        x (str, optional): Vertex property used as the horizontal (E-W) coordinate.
+        y (str, optional): Vertex property used as the vertical (N-S) coordinate.
+        components (bool, optional): If `True`, the graph is assumed to have
+            more than one connected component (e.g. Michigan) and is drawn
+            component-wise and rather than return a single `Axes` object, return
+            a list of `(Figure, Axes)` pairs. If something is passed to `ax`, the
+            same Axes instance is used for each new Figure.
+        node_size (float, optional): Specifies the default size of a vertex.
+        kwargs (dict, optional): Arguments to be passed to `nx.draw()`.
 
     Returns:
         A tuple of `matplotlib` `(Figure, Axes)` objects, or if `components` is
@@ -102,7 +106,7 @@ def drawgraph(
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.mapping.drawgraph.drawgraph"><code class="name flex">
-<span>def <span class="ident">drawgraph</span></span>(<span>G, ax=None, x='INTPTLON20', y='INTPTLAT20', components=False, node_size=1, **kwargs)</span>
+<span>def <span class="ident">drawgraph</span></span>(<span>G, ax=None, x='INTPTLON20', y='INTPTLAT20', components=False, node_size=1, **kwargs) ‑> Union[matplotlib.axes._axes.Axes, List[Tuple[matplotlib.figure.Figure, matplotlib.axes._axes.Axes]]]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Draws a gerrychain Graph object. Returns a single Axes object (for dual
@@ -110,24 +114,25 @@ graphs drawn whole) and lists of <code>(Figure, Axes)</code> pairs for graphs dr
 component-wise.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>G</code></strong></dt>
+<dt><strong><code>G</code></strong> :&ensp;<code>Graph</code></dt>
 <dd>The dual graph to draw.</dd>
-<dt><strong><code>ax</code></strong></dt>
-<dd>Optional; <code>matplotlib.axes.Axes</code> object. If not passed, one is created.</dd>
-<dt><strong><code>x</code></strong></dt>
-<dd>Optional; vertex property used as the horizontal (E-W) coordinate.</dd>
-<dt><strong><code>y</code></strong></dt>
-<dd>Optional; vertex property used as the vertical (N-S) coordinate.</dd>
-<dt><strong><code>components</code></strong></dt>
-<dd>Optional; if <code>True</code>, the graph is assumed to have more than
-one connected component (e.g. Michigan) and is drawn component-wise
-and rather than return a single <code>Axes</code> object, return a list of
-<code>(Figure, Axes)</code> pairs. If something is passed to <code>ax</code>, the same
-Axes instance is used for each new Figure.</dd>
-<dt><strong><code>node_size</code></strong></dt>
-<dd>Optional; specifies the default size of a vertex.</dd>
-<dt><strong><code>kwargs</code></strong></dt>
-<dd>Optional; arguments to be passed to <code>nx.draw()</code>.</dd>
+<dt><strong><code>ax</code></strong> :&ensp;<code>Axes</code>, optional</dt>
+<dd><code>matplotlib.axes.Axes</code> object. If not passed, one
+is created.</dd>
+<dt><strong><code>x</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Vertex property used as the horizontal (E-W) coordinate.</dd>
+<dt><strong><code>y</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Vertex property used as the vertical (N-S) coordinate.</dd>
+<dt><strong><code>components</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>If <code>True</code>, the graph is assumed to have
+more than one connected component (e.g. Michigan) and is drawn
+component-wise and rather than return a single <code>Axes</code> object, return
+a list of <code>(Figure, Axes)</code> pairs. If something is passed to <code>ax</code>, the
+same Axes instance is used for each new Figure.</dd>
+<dt><strong><code>node_size</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Specifies the default size of a vertex.</dd>
+<dt><strong><code>kwargs</code></strong> :&ensp;<code>dict</code>, optional</dt>
+<dd>Arguments to be passed to <code>nx.draw()</code>.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A tuple of <code>matplotlib</code> <code>(Figure, Axes)</code> objects, or if <code>components</code> is
@@ -140,24 +145,25 @@ component.</p></div>
 <pre><code class="python">def drawgraph(
         G, ax=None, x=&#34;INTPTLON20&#34;, y=&#34;INTPTLAT20&#34;, components=False, node_size=1,
         **kwargs
-    ):
+    ) -&gt; Union[Axes, List[Tuple[Figure,Axes]]]:
     &#34;&#34;&#34;
     Draws a gerrychain Graph object. Returns a single Axes object (for dual
     graphs drawn whole) and lists of `(Figure, Axes)` pairs for graphs drawn
     component-wise.
 
     Args:
-        G: The dual graph to draw.
-        ax: Optional; `matplotlib.axes.Axes` object. If not passed, one is created.
-        x: Optional; vertex property used as the horizontal (E-W) coordinate.
-        y: Optional; vertex property used as the vertical (N-S) coordinate.
-        components: Optional; if `True`, the graph is assumed to have more than
-            one connected component (e.g. Michigan) and is drawn component-wise
-            and rather than return a single `Axes` object, return a list of
-            `(Figure, Axes)` pairs. If something is passed to `ax`, the same
-            Axes instance is used for each new Figure.
-        node_size: Optional; specifies the default size of a vertex.
-        kwargs: Optional; arguments to be passed to `nx.draw()`.
+        G (Graph): The dual graph to draw.
+        ax (Axes, optional): `matplotlib.axes.Axes` object. If not passed, one
+            is created.
+        x (str, optional): Vertex property used as the horizontal (E-W) coordinate.
+        y (str, optional): Vertex property used as the vertical (N-S) coordinate.
+        components (bool, optional): If `True`, the graph is assumed to have
+            more than one connected component (e.g. Michigan) and is drawn
+            component-wise and rather than return a single `Axes` object, return
+            a list of `(Figure, Axes)` pairs. If something is passed to `ax`, the
+            same Axes instance is used for each new Figure.
+        node_size (float, optional): Specifies the default size of a vertex.
+        kwargs (dict, optional): Arguments to be passed to `nx.draw()`.
 
     Returns:
         A tuple of `matplotlib` `(Figure, Axes)` objects, or if `components` is

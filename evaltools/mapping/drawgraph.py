@@ -1,29 +1,33 @@
 
 import matplotlib.pyplot as plt
 import networkx as nx
+from matplotlib.figure import Figure
+from matplotlib.axes import Axes
+from typing import Union, Tuple, List
 
 
 def drawgraph(
         G, ax=None, x="INTPTLON20", y="INTPTLAT20", components=False, node_size=1,
         **kwargs
-    ):
+    ) -> Union[Axes, List[Tuple[Figure,Axes]]]:
     """
     Draws a gerrychain Graph object. Returns a single Axes object (for dual
     graphs drawn whole) and lists of `(Figure, Axes)` pairs for graphs drawn
     component-wise.
 
     Args:
-        G: The dual graph to draw.
-        ax: Optional; `matplotlib.axes.Axes` object. If not passed, one is created.
-        x: Optional; vertex property used as the horizontal (E-W) coordinate.
-        y: Optional; vertex property used as the vertical (N-S) coordinate.
-        components: Optional; if `True`, the graph is assumed to have more than
-            one connected component (e.g. Michigan) and is drawn component-wise
-            and rather than return a single `Axes` object, return a list of
-            `(Figure, Axes)` pairs. If something is passed to `ax`, the same
-            Axes instance is used for each new Figure.
-        node_size: Optional; specifies the default size of a vertex.
-        kwargs: Optional; arguments to be passed to `nx.draw()`.
+        G (Graph): The dual graph to draw.
+        ax (Axes, optional): `matplotlib.axes.Axes` object. If not passed, one
+            is created.
+        x (str, optional): Vertex property used as the horizontal (E-W) coordinate.
+        y (str, optional): Vertex property used as the vertical (N-S) coordinate.
+        components (bool, optional): If `True`, the graph is assumed to have
+            more than one connected component (e.g. Michigan) and is drawn
+            component-wise and rather than return a single `Axes` object, return
+            a list of `(Figure, Axes)` pairs. If something is passed to `ax`, the
+            same Axes instance is used for each new Figure.
+        node_size (float, optional): Specifies the default size of a vertex.
+        kwargs (dict, optional): Arguments to be passed to `nx.draw()`.
 
     Returns:
         A tuple of `matplotlib` `(Figure, Axes)` objects, or if `components` is

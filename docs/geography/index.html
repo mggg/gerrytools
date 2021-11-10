@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>evaltools.geography API documentation</title>
-<meta name="description" content="" />
+<meta name="description" content="Provides ease-of-use functionality for geographic and geometric operations." />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -22,31 +22,275 @@
 <h1 class="title">Module <code>evaltools.geography</code></h1>
 </header>
 <section id="section-intro">
+<p>Provides ease-of-use functionality for geographic and geometric operations.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from .dissolve import dissolve
+<pre><code class="python">&#34;&#34;&#34;
+Provides ease-of-use functionality for geographic and geometric operations.
+&#34;&#34;&#34;
+
+from .dissolve import dissolve
 from .dualgraph import dualgraph
-from ..auxiliary import Graph, Partition</code></pre>
+from .unitmap import unitmap, invert
+from ..processing import Graph, Partition
+
+__all__ = [
+    &#34;dissolve&#34;,
+    &#34;dualgraph&#34;,
+    &#34;unitmap&#34;,
+    &#34;invert&#34;
+]</code></pre>
 </details>
 </section>
 <section>
-<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt><code class="name"><a title="evaltools.geography.dissolve" href="dissolve.html">evaltools.geography.dissolve</a></code></dt>
+<dt id="evaltools.geography.dissolve"><code class="name flex">
+<span>def <span class="ident">dissolve</span></span>(<span>geometries, by='DISTRICTN', reset_index=True, keep=[], aggfunc='sum') ‑> geopandas.geodataframe.GeoDataFrame</span>
+</code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Dissolves <code>geometries</code> on the column <code>by</code>. Intended to dissolve a set of
+source geometries (e.g. VTDs, blocks, block groups, etc.) to district
+geometries.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>geometries</code></strong> :&ensp;<code>GeoDataFrame</code></dt>
+<dd>Set of geometries to be dissolved.</dd>
+<dt><strong><code>by</code></strong> :&ensp;<code>str</code></dt>
+<dd>Name of the column used to group objects.</dd>
+<dt><strong><code>reset_index</code></strong> :&ensp;<code>boolean</code>, optional</dt>
+<dd>If true, the index of the resulting
+GeoDataFrame will be set to an integer index, not <code>by</code>. Defaults to
+<code>True</code>.</dd>
+<dt><strong><code>keep</code></strong> :&ensp;<code>list</code>, optional</dt>
+<dd>Additional columns to keep beyond the geometry
+and <code>by</code> columns. Defaults to an empty list, so no additional columns
+are kept.</dd>
+<dt><strong><code>aggfunc</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Pandas groupby function type when aggregating;
+defaults to <code>"sum"</code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A <code>GeoDataFrame</code> containing dissolved geometries and kept columns
+computed by the function designated by <code>aggfunc</code>.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def dissolve(
+        geometries, by=&#34;DISTRICTN&#34;, reset_index=True, keep=[], aggfunc=&#34;sum&#34;
+    ) -&gt; GeoDataFrame:
+    &#34;&#34;&#34;
+    Dissolves `geometries` on the column `by`. Intended to dissolve a set of
+    source geometries (e.g. VTDs, blocks, block groups, etc.) to district
+    geometries.
+
+    Args:
+        geometries (GeoDataFrame): Set of geometries to be dissolved.
+        by (str): Name of the column used to group objects.
+        reset_index (boolean, optional): If true, the index of the resulting
+            GeoDataFrame will be set to an integer index, not `by`. Defaults to
+            `True`.
+        keep (list, optional): Additional columns to keep beyond the geometry
+            and `by` columns. Defaults to an empty list, so no additional columns
+            are kept.
+        aggfunc (str, optional): Pandas groupby function type when aggregating;
+            defaults to `&#34;sum&#34;`.
+
+    Returns:
+        A `GeoDataFrame` containing dissolved geometries and kept columns
+        computed by the function designated by `aggfunc`.
+    &#34;&#34;&#34;
+    # Pare down the geometries and dissolve.
+    geometries = geometries[keep + [by, &#34;geometry&#34;]]
+    geometries = geometries.dissolve(by=by, aggfunc=aggfunc)
+    if reset_index: geometries = geometries.reset_index()
+
+    return geometries</code></pre>
+</details>
 </dd>
-<dt><code class="name"><a title="evaltools.geography.dualgraph" href="dualgraph.html">evaltools.geography.dualgraph</a></code></dt>
+<dt id="evaltools.geography.dualgraph"><code class="name flex">
+<span>def <span class="ident">dualgraph</span></span>(<span>geometries, index=None, geometrycolumn='geometry', colmap={}, buffer=0, edges_to_add=[], edges_to_cut=[]) ‑> gerrychain.graph.graph.Graph</span>
+</code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Generates a graph dual to the provided geometric data.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>geometries</code></strong> :&ensp;<code>GeoDataFrame</code></dt>
+<dd>Geometric data represented as a GeoDataFrame.</dd>
+<dt><strong><code>index</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Unique identifiers; indexing column of <code>geometries</code>.
+If this value is not set, vertex labels are integer indices; otherwise,
+vertex labels are the values of this column. Defaults to <code>"geometry"</code>.</dd>
+<dt><strong><code>colmap</code></strong> :&ensp;<code>dict</code>, optional</dt>
+<dd>Maps old column names to new column names.</dd>
+<dt><strong><code>buffer</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Geometric buffer distance; defaults to <code>0</code>.</dd>
+<dt><strong><code>edges_to_add</code></strong> :&ensp;<code>list</code>, optional</dt>
+<dd>Edges to add to the graph object. Assumed to
+be a list of pairs of objects, e.g. <code>[(u, v), &hellip;]</code> where <code>u</code> and <code>v</code>
+are vertex labels consistent with <code>index</code>.</dd>
+<dt><strong><code>edges_to_cut</code></strong> :&ensp;<code>list</code>, optional</dt>
+<dd>Edges to cut from the graph object. Assumed
+to be a list of pairs of objects, e.g. <code>[(u, v), &hellip;]</code> where <code>u</code> and
+<code>v</code> are vertex labels consistent with <code>index</code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A gerrychain <code>Graph</code> object dual to the geometric data.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def dualgraph(
+        geometries, index=None, geometrycolumn=&#34;geometry&#34;, colmap={}, buffer=0,
+        edges_to_add=[], edges_to_cut=[]
+    ) -&gt; Graph:
+    &#34;&#34;&#34;
+    Generates a graph dual to the provided geometric data.
+
+    Args:
+        geometries (GeoDataFrame): Geometric data represented as a GeoDataFrame.
+        index (str, optional): Unique identifiers; indexing column of `geometries`.
+            If this value is not set, vertex labels are integer indices; otherwise,
+            vertex labels are the values of this column. Defaults to `&#34;geometry&#34;`.
+        colmap (dict, optional): Maps old column names to new column names.
+        buffer (float, optional): Geometric buffer distance; defaults to `0`.
+        edges_to_add (list, optional): Edges to add to the graph object. Assumed to
+            be a list of pairs of objects, e.g. `[(u, v), ...]` where `u` and `v`
+            are vertex labels consistent with `index`.
+        edges_to_cut (list, optional): Edges to cut from the graph object. Assumed
+            to be a list of pairs of objects, e.g. `[(u, v), ...]` where `u` and
+            `v` are vertex labels consistent with `index`.
+
+    Returns:
+        A gerrychain `Graph` object dual to the geometric data.
+    &#34;&#34;&#34;
+    # Buffer geometries by default.
+    geometries[geometrycolumn] = geometries[geometrycolumn].buffer(buffer)
+
+    # Set indices and rename columns.
+    if index: geometries = geometries.set_index(index)
+    if colmap: geometries = geometries.rename(colmap, axis=1)
+
+    # Generate the dual graph.
+    dg = Graph.from_geodataframe(geometries)
+
+    # Add and remove extraneous edges.
+    for add in edges_to_add: dg.add_edge(*add)
+    for cut in edges_to_cut: dg.remove_edge(*cut)
+
+    # Return the graph!
+    return dg</code></pre>
+</details>
+</dd>
+<dt id="evaltools.geography.invert"><code class="name flex">
+<span>def <span class="ident">invert</span></span>(<span>unitmap) ‑> dict</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Inverts the provided unit mapping.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>unitmap</code></strong></dt>
+<dd>Dictionary taking source unique identifiers to target unique
+identifiers.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A dictionary mapping target unique identifiers to <em>lists</em> of source
+unique identifiers.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def invert(unitmap) -&gt; dict:
+    &#34;&#34;&#34;
+    Inverts the provided unit mapping.
+
+    Args:
+        unitmap: Dictionary taking source unique identifiers to target unique
+            identifiers.
+
+    Returns:
+        A dictionary mapping target unique identifiers to _lists_ of source
+        unique identifiers.
+    &#34;&#34;&#34;
+    # Invert the dictionary.
+    inverse = {}
+
+    for s, t in unitmap.items():
+        if inverse.get(t, None): inverse[t].append(s)
+        else: inverse[t] = [s]
+
+    return inverse</code></pre>
+</details>
+</dd>
+<dt id="evaltools.geography.unitmap"><code class="name flex">
+<span>def <span class="ident">unitmap</span></span>(<span>_from, _to) ‑> dict</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates a mapping from source units to target units.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>_from</code></strong> :&ensp;<code>tuple</code></dt>
+<dd>2-tuple containing a <code>GeoDataFrame</code> and an index name corresponding
+to the unique identifiers of the units, e.g. <code>(vtds, "GEOID20")</code>.
+Unique identifiers will be keys in the resulting dictionary.</dd>
+<dt><strong><code>_to</code></strong> :&ensp;<code>tuple</code></dt>
+<dd>2-tuple containing a <code>GeoDataFrame</code> and an index name corresponding
+to the unique identifiers of the units, e.g. <code>(districts, "DISTRICTN")</code>.
+Unique identifiers will be values in the resulting dictionary.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A dictionary mapping <code>_from</code> unique identifiers to <code>_to</code> unique identifiers.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def unitmap(_from, _to) -&gt; dict:
+    &#34;&#34;&#34;
+    Creates a mapping from source units to target units.
+
+    Args:
+        _from (tuple): 2-tuple containing a `GeoDataFrame` and an index name corresponding
+            to the unique identifiers of the units, e.g. `(vtds, &#34;GEOID20&#34;)`.
+            Unique identifiers will be keys in the resulting dictionary.
+        _to (tuple): 2-tuple containing a `GeoDataFrame` and an index name corresponding
+            to the unique identifiers of the units, e.g. `(districts, &#34;DISTRICTN&#34;)`.
+            Unique identifiers will be values in the resulting dictionary.
+
+    Returns:
+        A dictionary mapping `_from` unique identifiers to `_to` unique identifiers.
+    &#34;&#34;&#34;
+    # Explode each of the tuples.
+    source_shapes, source_index = _from
+    target_shapes, target_index = _to
+
+    # Get rid of all the unnecessary data and set the indices of each dataframe
+    # to the specified indices.
+    source_shapes = source_shapes[[source_index, &#34;geometry&#34;]].set_index(source_index)
+    target_shapes = target_shapes[[target_index, &#34;geometry&#34;]].set_index(target_index)
+
+    # Ensure we&#39;re in the same CRS.
+    target_shapes = target_shapes.to_crs(source_shapes.crs)
+
+    # Set a progress bar; filter out all warnings; create the mapping.
+    maup.progress.enabled = True
+    warnings.simplefilter(&#34;ignore&#34;, UserWarning)
+    mapping = maup.assign(source_shapes, target_shapes)
+
+    # Reset the mapping&#39;s index, zip, and return.
+    mapping = mapping.reset_index()
+    mapping.columns = [source_index, target_index]
+    
+    return dict(zip(mapping[source_index], mapping[target_index]))</code></pre>
+</details>
 </dd>
 </dl>
-</section>
-<section>
-</section>
-<section>
 </section>
 <section>
 </section>
@@ -62,10 +306,12 @@ from ..auxiliary import Graph, Partition</code></pre>
 <li><code><a title="evaltools" href="../index.html">evaltools</a></code></li>
 </ul>
 </li>
-<li><h3><a href="#header-submodules">Sub-modules</a></h3>
-<ul>
-<li><code><a title="evaltools.geography.dissolve" href="dissolve.html">evaltools.geography.dissolve</a></code></li>
-<li><code><a title="evaltools.geography.dualgraph" href="dualgraph.html">evaltools.geography.dualgraph</a></code></li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="evaltools.geography.dissolve" href="#evaltools.geography.dissolve">dissolve</a></code></li>
+<li><code><a title="evaltools.geography.dualgraph" href="#evaltools.geography.dualgraph">dualgraph</a></code></li>
+<li><code><a title="evaltools.geography.invert" href="#evaltools.geography.invert">invert</a></code></li>
+<li><code><a title="evaltools.geography.unitmap" href="#evaltools.geography.unitmap">unitmap</a></code></li>
 </ul>
 </li>
 </ul>

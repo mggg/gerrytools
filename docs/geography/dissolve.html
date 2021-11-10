@@ -26,21 +26,28 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">import geopandas as gpd
+<pre><code class="python">from geopandas import GeoDataFrame
 
-def dissolve(geometries, by=&#34;DISTRICTN&#34;, reset_index=True, keep=[],aggfunc=&#34;sum&#34;):
+
+def dissolve(
+        geometries, by=&#34;DISTRICTN&#34;, reset_index=True, keep=[], aggfunc=&#34;sum&#34;
+    ) -&gt; GeoDataFrame:
     &#34;&#34;&#34;
     Dissolves `geometries` on the column `by`. Intended to dissolve a set of
     source geometries (e.g. VTDs, blocks, block groups, etc.) to district
     geometries.
 
     Args:
-        geometries: Set of geometries to be dissolved.
-        by: Name of the column used to group objects.
-        reset_index: Optional; if true, the index of the resulting GeoDataFrame
-            will be set to an integer index, not `by`. 
-        keep: Additional columns to keep beyond the geometry and `by` columns.
-        aggfunc: Pandas groupby function type when aggregating; defaults to `&#34;sum&#34;`.
+        geometries (GeoDataFrame): Set of geometries to be dissolved.
+        by (str): Name of the column used to group objects.
+        reset_index (boolean, optional): If true, the index of the resulting
+            GeoDataFrame will be set to an integer index, not `by`. Defaults to
+            `True`.
+        keep (list, optional): Additional columns to keep beyond the geometry
+            and `by` columns. Defaults to an empty list, so no additional columns
+            are kept.
+        aggfunc (str, optional): Pandas groupby function type when aggregating;
+            defaults to `&#34;sum&#34;`.
 
     Returns:
         A `GeoDataFrame` containing dissolved geometries and kept columns
@@ -62,7 +69,7 @@ def dissolve(geometries, by=&#34;DISTRICTN&#34;, reset_index=True, keep=[],aggfu
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.geography.dissolve.dissolve"><code class="name flex">
-<span>def <span class="ident">dissolve</span></span>(<span>geometries, by='DISTRICTN', reset_index=True, keep=[], aggfunc='sum')</span>
+<span>def <span class="ident">dissolve</span></span>(<span>geometries, by='DISTRICTN', reset_index=True, keep=[], aggfunc='sum') ‑> geopandas.geodataframe.GeoDataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Dissolves <code>geometries</code> on the column <code>by</code>. Intended to dissolve a set of
@@ -70,17 +77,21 @@ source geometries (e.g. VTDs, blocks, block groups, etc.) to district
 geometries.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>geometries</code></strong></dt>
+<dt><strong><code>geometries</code></strong> :&ensp;<code>GeoDataFrame</code></dt>
 <dd>Set of geometries to be dissolved.</dd>
-<dt><strong><code>by</code></strong></dt>
+<dt><strong><code>by</code></strong> :&ensp;<code>str</code></dt>
 <dd>Name of the column used to group objects.</dd>
-<dt><strong><code>reset_index</code></strong></dt>
-<dd>Optional; if true, the index of the resulting GeoDataFrame
-will be set to an integer index, not <code>by</code>. </dd>
-<dt><strong><code>keep</code></strong></dt>
-<dd>Additional columns to keep beyond the geometry and <code>by</code> columns.</dd>
-<dt><strong><code>aggfunc</code></strong></dt>
-<dd>Pandas groupby function type when aggregating; defaults to <code>"sum"</code>.</dd>
+<dt><strong><code>reset_index</code></strong> :&ensp;<code>boolean</code>, optional</dt>
+<dd>If true, the index of the resulting
+GeoDataFrame will be set to an integer index, not <code>by</code>. Defaults to
+<code>True</code>.</dd>
+<dt><strong><code>keep</code></strong> :&ensp;<code>list</code>, optional</dt>
+<dd>Additional columns to keep beyond the geometry
+and <code>by</code> columns. Defaults to an empty list, so no additional columns
+are kept.</dd>
+<dt><strong><code>aggfunc</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Pandas groupby function type when aggregating;
+defaults to <code>"sum"</code>.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A <code>GeoDataFrame</code> containing dissolved geometries and kept columns
@@ -89,19 +100,25 @@ computed by the function designated by <code>aggfunc</code>.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def dissolve(geometries, by=&#34;DISTRICTN&#34;, reset_index=True, keep=[],aggfunc=&#34;sum&#34;):
+<pre><code class="python">def dissolve(
+        geometries, by=&#34;DISTRICTN&#34;, reset_index=True, keep=[], aggfunc=&#34;sum&#34;
+    ) -&gt; GeoDataFrame:
     &#34;&#34;&#34;
     Dissolves `geometries` on the column `by`. Intended to dissolve a set of
     source geometries (e.g. VTDs, blocks, block groups, etc.) to district
     geometries.
 
     Args:
-        geometries: Set of geometries to be dissolved.
-        by: Name of the column used to group objects.
-        reset_index: Optional; if true, the index of the resulting GeoDataFrame
-            will be set to an integer index, not `by`. 
-        keep: Additional columns to keep beyond the geometry and `by` columns.
-        aggfunc: Pandas groupby function type when aggregating; defaults to `&#34;sum&#34;`.
+        geometries (GeoDataFrame): Set of geometries to be dissolved.
+        by (str): Name of the column used to group objects.
+        reset_index (boolean, optional): If true, the index of the resulting
+            GeoDataFrame will be set to an integer index, not `by`. Defaults to
+            `True`.
+        keep (list, optional): Additional columns to keep beyond the geometry
+            and `by` columns. Defaults to an empty list, so no additional columns
+            are kept.
+        aggfunc (str, optional): Pandas groupby function type when aggregating;
+            defaults to `&#34;sum&#34;`.
 
     Returns:
         A `GeoDataFrame` containing dissolved geometries and kept columns

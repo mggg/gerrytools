@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>evaltools.auxiliary.AssignmentCompressor API documentation</title>
-<meta name="description" content="" />
+<title>evaltools.processing API documentation</title>
+<meta name="description" content="Facilities for processing districting plans in a standardized, functional-programmy
+way." />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -19,301 +20,421 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>evaltools.auxiliary.AssignmentCompressor</code></h1>
+<h1 class="title">Module <code>evaltools.processing</code></h1>
 </header>
 <section id="section-intro">
+<p>Facilities for processing districting plans in a standardized, functional-programmy
+way.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from sortedcontainers import SortedDict, SortedList
-import zlib
+<pre><code class="python">&#34;&#34;&#34;
+Facilities for processing districting plans in a standardized, functional-programmy
+way.
+&#34;&#34;&#34;
 
-class AssignmentCompressor:
-    &#34;&#34;&#34;
-    A class for compressing and decompressing lots of assignments very, very
-    quickly. Intended for use with ``jsonlines``-like libraries (where assignments
-    are read in line-by-line) or for network requests (where assignments are 
-    retrieved one-by-one). When decompressing, yields ``dict``s where keys are
-    in sorted order.
+from .fetch import submissions, tabularized
+from .remap import remap
+from .URLs import ids, one, csvs
+from .AssignmentCompressor import AssignmentCompressor
+from gerrychain.graph import Graph
+from gerrychain.partition import Partition
 
-    The compression schema considers the set of unique identifiers, imposes an
-    ordering (lexicographic order) on the identifiers, and matches the assignment
-    to that ordering. We assign all unassigned units to ``&#34;-1&#34;`` and, once the
-    default cache size is hit (or assignments are no longer being read in),
-    compress all assignments in the cache. Assignments are read in and out in
-    the same order, and the keys for each assignment are in the same order.
-
-    Example:
-        To compress assignments, we need a set of unique identifiers such that
-        each identifier maps one geometric unit to one district.
-
-            ...
-
-            geoids = blocks[&#34;GEOID20&#34;].astype(str)
-            ac = AssignmentCompressor(geoids, location=&#34;compressed-assignments.ac&#34;)
-
-            with ac as compressor:
-                for assignment in assignments:
-                    # Here, ensure that all assignments have string keys and
-                    # string values; also ensure that an assignment&#39;s keys are
-                    # a subset of geoids (or whatever IDs you&#39;re passing).
-                    compressor.compress(assignment)
-
-            ...
-
-        To decompress assignments, we again must have a set of unique geometric
-        identifiers which match the assignments. We can then iterate over the
-        decompressed assignments as they&#39;re read out of the file.
-
-            ...
-
-            geoids = blocks[&#34;GEOID20&#34;].astype(str)
-            ac = AssignmentCompressor(geoids, location=&#34;compressed-assignments.ac&#34;)
-
-            for assignment in ac.decompress():
-                &lt;do whatever!&gt;
-
-            ...
-
-    Attributes:
-        DISTRICT_DELIMITER: A bytestring which separates district identifiers in
-            an assignment.
-        ASSIGNMENT_DELIMITER: A bytestring which separates assignments from
-            each other.
-        CHUNK_DELIMITER: A bytestring which separates assignment chunks from each
-            other.
-        CHUNK_SIZE: Default number of bytes read in from the IO stream at each
-            step.
-        ENCODING: Default string encoding style.
-        identifiers: A sortable, iterable collection of unique items corresponding
-            to geographic identifiers.
-        compressed: A pandas `Index` containing the identifiers; this is used
-            to quickly perform vectorized identifier matchings, rather than using
-            traditional iterative methods.
-        cache: Collection of assignments to be compressed. Assignments are loaded
-            into the cache every time the ``.compress()`` method is called, and
-            is cleared whenever the length of the cache exceeds the window width.
-        window: Maximum cache length before the cache is compressed, written to
-            file, and emptied.
-        default: The default assignment which is updated each time an assignment
-            is passed to the compressor.
-        location: The place to which compressed data is written or read.
-    &#34;&#34;&#34;
-
-    def __init__(self, identifiers, window=10, location=&#34;compressed.ac&#34;):
-        &#34;&#34;&#34;
-        Creates `AssignmentCompressor` instance.
-
-        Args:
-            identifiers: An iterable collection of string identifiers; any
-                assignment&#39;s keys must be a subset of `identifiers`.
-            window: A positive integer representing the cache window size. Defaults
-                to cache.
-            location: The path to the compressed resource (read or write). Defaults
-                to `compressed.ac`.
-        &#34;&#34;&#34;
-        self.identifiers = SortedList(identifiers)
-        self.default = frozenset(zip(self.identifiers, [&#34;-1&#34;]*len(self.identifiers)))
-        self.cache = []
-        self.location = location
-
-        # Error to users if the window is nonexistent.
-        if type(window) != int or window &lt;= 0:
-            raise ValueError(&#34;Cache window width must be a positive integer.&#34;)
-
-        self.window = window
-
-        self.DISTRICT_DELIMITER = b&#34;,&#34;
-        self.ASSIGNMENT_DELIMITER = b&#34;&lt;&lt;&lt;*&gt;&gt;&gt;&#34;
-        self.CHUNK_DELIMITER = b&#34;(((*)))&#34;
-        self.CHUNK_SIZE = 16384
-        self.ENCODING = &#34;raw_unicode_escape&#34;
-
-    def match(self, assignment):
-        &#34;&#34;&#34;
-        Matches an assignment to an index (the set of geometric identifiers)
-        and returns a `SortedDict`.
-
-        Args:
-            assignment: Dictionary which matches geometric identifiers to
-                districts. All keys and values in this dictionary must be strings.
-
-        &#34;&#34;&#34;
-        # Create a dictionary which maps identifiers to `-1`, and update our
-        # dictionary with assignment values.
-        indexer = SortedDict(self.default)
-        indexer.update(assignment)
-        
-        return indexer
-
-    def __enter__(self):
-        &#34;&#34;&#34;
-        A simple context-management method. Allows the user to use `with`
-        statements when compressing stuff so we don&#39;t have to worry about the
-        user specifying the last item they&#39;ll be compressing.
-        &#34;&#34;&#34;
-        return self
-
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        &#34;&#34;&#34;
-        Teardown. Once we&#39;ve exited the `with` statement (i.e. the user&#39;s all done
-        feeding items to the compressor) we can force the remaining items to be
-        compressed and written to file.
-        &#34;&#34;&#34;
-        if self.cache: self._compress(force=True)
-
-
-    def compress(self, assignment):
-        &#34;&#34;&#34;
-        Compresses the assignment `assignment` using `zlib`.
-
-        Args:
-            assignment: Dictionary which matches geometric identifiers to districts.
-                All keys and values in this dictionary must be strings.
-        &#34;&#34;&#34;
-        # If the user provides an empty assignment or the assignment&#39;s keys aren&#39;t
-        # a subset of `identifiers`, warn the user and skip the assignment.
-        skip = False
-
-        if not assignment:
-            skip = True
-            print(&#34;`assignment` is empty; skipping.&#34;)
-
-        if not set(assignment.keys()).issubset(self.identifiers):
-            skip = True
-            print(
-                &#34;`assignment`&#39;s keys are not a subset of `identifiers`; skipping. &#34; + \
-                &#34;Please ensure that all keys and values in `assignment` are strings.&#34;,
-            )
-
-        # Join the things on the district separator, encode the whole thing, and
-        # encode according to the default encoding.
-        if not skip:
-            indexed = self.match(assignment)
-            sep = self.DISTRICT_DELIMITER.decode()
-            encoded = bytes(sep.join(indexed.values()).encode(self.ENCODING))
-
-            # Compress.
-            self.cache += [encoded]
-            self._compress()
-
-    def _compress(self, force=False):
-        &#34;&#34;&#34;
-        Private method which actually does the compression.
-
-        Args:
-            force: If truthy, then the length of the cache is ignored, the data
-                in the cache are compressed, and the compressed data is written
-                to file. ``force`` is truthy when teardown logic is entered
-                (i.e. after ``__exit()__`` is called).
-        &#34;&#34;&#34;
-        # Check to see if the cache is full. If so, compress the data, write to
-        # file, and reset the cache.
-        if len(self.cache) == self.window or force:
-            with open(self.location, &#34;ab&#34;) as writer:
-                # Write compressed data to file.
-                compressed = zlib.compress(
-                    bytes(self.ASSIGNMENT_DELIMITER.join(self.cache))
-                )
-                writer.write(compressed)
-
-                # We only forcibly write the chunk separator to file if we&#39;ve
-                # entered teardown logic and the cache *is not empty*. If the
-                # cache is empty when we&#39;re entering teardown logic, that means
-                # (number of assignments compressed) == (window width), in which
-                # case we&#39;ve reached the end of compression and should not write
-                # a separator; doing so will produce an empty bytestring (which,
-                # in turn, produces a dictionary with one key, corresponding to
-                # a null assignment).
-                if not force: writer.write(self.CHUNK_DELIMITER)
-
-            # Reset the cache.
-            self.cache = []
-
-    def decompress(self):
-        &#34;&#34;&#34;
-        Decompresses the data at ``location``. A generator which ``yield``s
-        assignments.
-
-        Yields:
-            Decompressed assignment dictionaries.
-        &#34;&#34;&#34;
-        # Open the compressed file. Then we read it in chunks, loading until
-        # we hit our separator or until the end of the file.
-        with open(self.location, &#34;rb&#34;) as _compressed_fin:
-            for chunk in self._chunk(_compressed_fin):
-                if not chunk: break
-                for assignment in self._decompress(chunk): yield assignment
-
-    def _chunk(self, stream):
-        &#34;&#34;&#34;
-        Private method for reading chunks from file without holding the entire
-        file in memory. A generator for decompressed assignments.
-
-        Args:
-            stream: A ``BytesIO`` instance from which data is read.
-
-        Yields:
-            Buffered, compressed bytes to be fed into the decompressor.
-        &#34;&#34;&#34;
-        # Create a buffer.
-        _buffer = []
-
-        # Read until we hit the end of the file `yield`ing each chunk as we go.
-        while True:
-            # Read in a chunk of data.
-            chunk = stream.read(self.CHUNK_SIZE)
-            _buffer.append(chunk)
-
-            # Check if the chunk has our delimiter in it. If it contains our
-            # delimiter, then the buffer *up to the delimiter* contains compressed
-            # assignments; this should be `yield`ed and decompressed. We only
-            # want to get the part before the delimiter for decompression, but
-            # retain the rest.
-            if self.CHUNK_DELIMITER in chunk:
-                _buffered_bytes = b&#34;&#34;.join(_buffer)
-                part, _buffer_first = _buffered_bytes.split(self.CHUNK_DELIMITER, 1)
-                _buffer = [_buffer_first]
-                yield part
-
-            # If the chunk&#39;s empty, `yield` the remaining buffer and return.
-            if not chunk: yield b&#34;&#34;.join(_buffer); break
-
-    def _decompress(self, chunk):
-        &#34;&#34;&#34;
-        Private method which decompresses assignments.
-
-        Args:
-            chunk: Compressed, byte-encoded data representing ``window``
-                assignments.
-
-        Returns:
-            List of decompressed assignment objects.
-        &#34;&#34;&#34;
-        # Decompress the chunk and split it on our delimiter.
-        decompressed = zlib.decompress(chunk)
-        decompressed_parts = decompressed.split(self.ASSIGNMENT_DELIMITER)
-        
-        # For each of the parts, decode the bytes, make them into lists, and
-        # match them to GEOIDs.
-        decoded_parts = [part.decode() for part in decompressed_parts]
-        split_parts = [part.split(self.DISTRICT_DELIMITER.decode()) for part in decoded_parts]
-        indexed_parts = [dict(zip(self.identifiers, part)) for part in split_parts]
-
-        return indexed_parts</code></pre>
+__all__ = [
+    &#34;submissions&#34;,
+    &#34;tabularized&#34;,
+    &#34;remap&#34;,
+    &#34;ids&#34;,
+    &#34;one&#34;,
+    &#34;csvs&#34;,
+    &#34;AssignmentCompressor&#34;
+]</code></pre>
 </details>
 </section>
 <section>
+<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+<dl>
+<dt><code class="name"><a title="evaltools.processing.URLs" href="URLs.html">evaltools.processing.URLs</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt><code class="name"><a title="evaltools.processing.fetch" href="fetch.html">evaltools.processing.fetch</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
 </section>
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="evaltools.processing.csvs"><code class="name flex">
+<span>def <span class="ident">csvs</span></span>(<span>state, ptype='plan')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>URL for accessing districtr plan metadata.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong></dt>
+<dd><code>us.States</code> object (e.g. <code>us.states.WI</code>)</dd>
+<dt><strong><code>ptype</code></strong></dt>
+<dd>Type of plan we're retrieving; defaults to <code>"plan"</code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>String with the appropriate URL.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def csvs(state, ptype=&#34;plan&#34;):
+    &#34;&#34;&#34;
+    URL for accessing districtr plan metadata.
+
+    Args:
+        state: `us.States` object (e.g. `us.states.WI`)
+        ptype: Type of plan we&#39;re retrieving; defaults to `&#34;plan&#34;`.
+
+    Returns:
+        String with the appropriate URL.
+    &#34;&#34;&#34;
+    prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/csv/&#34;
+    suffix = f&#34;?type={ptype}&amp;length=10000&#34;
+    return f&#34;{prefix}{state.name.lower()}{suffix}&#34;</code></pre>
+</details>
+</dd>
+<dt id="evaltools.processing.ids"><code class="name flex">
+<span>def <span class="ident">ids</span></span>(<span>state)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>URL for accessing districtr identifiers.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong></dt>
+<dd>Name of the state (e.g. <code>"wisconsin"</code>) for which we're retrieving
+districtr identifiers.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>String with the appropriate URL.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def ids(state):
+    &#34;&#34;&#34;
+    URL for accessing districtr identifiers.
+
+    Args:
+        state: Name of the state (e.g. `&#34;wisconsin&#34;`) for which we&#39;re retrieving
+            districtr identifiers.
+
+    Returns:
+        String with the appropriate URL.
+    &#34;&#34;&#34;
+    return f&#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/districtr-ids/{state.name.lower()}&#34;</code></pre>
+</details>
+</dd>
+<dt id="evaltools.processing.one"><code class="name flex">
+<span>def <span class="ident">one</span></span>(<span>identifier)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>URL for accessing an individual districtr plan.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>identifier</code></strong></dt>
+<dd>distrivtr identifier.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>String with the appropriate URL.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def one(identifier):
+    &#34;&#34;&#34;
+    URL for accessing an individual districtr plan.
+
+    Args:
+        identifier: distrivtr identifier.
+
+    Returns:
+        String with the appropriate URL.
+    &#34;&#34;&#34;
+    return f&#34;https://districtr.org/.netlify/functions/planRead?id={identifier}&#34;</code></pre>
+</details>
+</dd>
+<dt id="evaltools.processing.remap"><code class="name flex">
+<span>def <span class="ident">remap</span></span>(<span>plans, unitmaps, popmap=None) ‑> Callable</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Re-maps assignments to the specified set of units.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>plans</code></strong> :&ensp;<code>DataFrame</code></dt>
+<dd>The Pandas DataFrame produced by <code><a title="evaltools.processing.tabularized" href="#evaltools.processing.tabularized">tabularized()</a></code>.</dd>
+<dt><strong><code>unitmaps</code></strong> :&ensp;<code>dict</code></dt>
+<dd>A dictionary whose keys are unit types appearing in the
+<code>unitsType</code> column, and whose values are dictionaries mapping unique
+identifiers of one set of geometries to unique identifiers (or lists
+of unique identifiers) of another set of geometries; these correspond
+to mappings generated by <code>unitmap()</code> and the inverse mapping generated
+by <code>invert()</code>.</dd>
+<dt><strong><code>popmap</code></strong> :&ensp;<code>dict</code>, optional</dt>
+<dd>A mapping from unit unique identifiers to
+population values. Only applies when we are mapping from smaller
+units to larger ones.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A function</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def remap(plans, unitmaps, popmap=None) -&gt; Callable:
+    &#34;&#34;&#34;
+    Re-maps assignments to the specified set of units.
+
+    Args:
+        plans (DataFrame): The Pandas DataFrame produced by ``tabularized()``.
+        unitmaps (dict): A dictionary whose keys are unit types appearing in the
+            `unitsType` column, and whose values are dictionaries mapping unique
+            identifiers of one set of geometries to unique identifiers (or lists
+            of unique identifiers) of another set of geometries; these correspond
+            to mappings generated by `unitmap()` and the inverse mapping generated
+            by `invert()`.
+        popmap (dict, optional): A mapping from unit unique identifiers to
+            population values. Only applies when we are mapping from smaller
+            units to larger ones.
+
+    Returns:
+        A function 
+    &#34;&#34;&#34;
+    def _(row):
+        # Get the assignment for the row.
+        assignment = ast.literal_eval(row[&#34;plan&#34;])
+
+        # Attempt to get the type of units specified by the row; if we can&#39;t – i.e.
+        # the user didn&#39;t specify a unit mapping corresponding to that unit type
+        # in `unitmaps` – we leave the assignment alone and warn the user.
+        try:
+            unitsType = row[&#34;units&#34;]
+            unitmap = unitmaps[unitsType]
+        except:
+            print(f&#34;No unit mapping provided for {row[&#39;units&#39;]}; skipping.&#34;)
+            return assignment
+
+        # What kind of mapping do we have? If `mapping` is from a single key
+        # to a single value, then we&#39;re mapping units one-to-one (e.g. block IDs
+        # to VTD IDs); otherwise, we&#39;re mapping units one-to-many (e.g. VTD IDs
+        # to blocks). If `mapping` is of the former type, then it&#39;s possible that
+        # some larger units may comprise smaller units in multiple districts. If
+        # this is the case, then we assign larger units to the district in which
+        # most of the larger unit&#39;s population resides; otherwise, we simply
+        # assign all smaller units to whichever district the larger unit&#39;s in.
+        firstvalue = next(iter(unitmap.values()))
+        unitmapdirection = &#34;down&#34;
+
+        # Mark which kind of mapping we have.
+        if type(firstvalue) is list: unitmapdirection = &#34;down&#34;
+        else: unitmapdirection = &#34;up&#34;
+
+        # Now, based on the mapping type, return the appropriate mapping.
+        if unitmapdirection == &#34;down&#34;: return _down(unitmap, assignment)
+        return _up(unitmap, popmap, assignment)
+
+    plans[&#34;plan&#34;] = plans.apply(_, axis=1)
+    return plans</code></pre>
+</details>
+</dd>
+<dt id="evaltools.processing.submissions"><code class="name flex">
+<span>def <span class="ident">submissions</span></span>(<span>state, sample=None) ‑> List[<a title="evaltools.processing.fetch.Submission" href="fetch.html#evaltools.processing.fetch.Submission">Submission</a>]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Retrieves raw districtr objects; this includes both plan- and COI-based
+submissions.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
+<dd><code>us.State</code> object (e.g. <code>us.states.WI</code>).</dd>
+<dt><strong><code>sample</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>The number of sample plans to retrieve.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A list of <code>Submissions</code>, either to be interpreted raw or tabularized.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def submissions(state, sample=None) -&gt; List[Submission]:
+    &#34;&#34;&#34;
+    Retrieves raw districtr objects; this includes both plan- and COI-based
+    submissions.
+
+    Args:
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        sample (int, optional): The number of sample plans to retrieve.
+
+    Returns:
+        A list of `Submissions`, either to be interpreted raw or tabularized.
+    &#34;&#34;&#34;
+    # Get the appropriate URL and send the request. Made some basic ASCII art with
+    # the second three variable names... it&#39;s like the request is loading letter
+    # by letter.
+    url = ids(state)
+    __w = requests.get(url).text
+    _aw = json.loads(__w)[&#34;ids&#34;]
+    raw = _aw[:sample] if sample else _aw
+
+    # Create `Submission` objects for each of the retrieved objects. Getting the
+    # individual plans is the bottleneck here, and unfortunately we can&#39;t retrieve
+    # them in bulk (... or can we?).
+    submissions = []
+    for entity in raw:
+        # Retrieve the required data points.
+        identifier = parse_id(entity[&#34;link&#34;], df=False)
+        districtr = individual(identifier)
+        
+        # Force all plan keys and values to strings.
+        plan = {
+            str(k): str(v) if type(v) is not list else str(v[0])
+            for k, v in districtr[&#34;plan&#34;][&#34;assignment&#34;].items()
+        }
+        units = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;name&#34;]
+        unitsType = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;unitType&#34;]
+        tileset = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;tilesets&#34;][0][&#34;sourceLayer&#34;]
+
+        # Create a new Submission.
+        submissions.append(Submission(
+            link=entity[&#34;link&#34;],
+            id=identifier,
+            plan=plan,
+            units=units,
+            unitsType=unitsType,
+            tileset=tileset,
+            type=entity[&#34;type&#34;]
+        ))
+
+    return submissions</code></pre>
+</details>
+</dd>
+<dt id="evaltools.processing.tabularized"><code class="name flex">
+<span>def <span class="ident">tabularized</span></span>(<span>state, submissions) ‑> Tuple[pandas.core.frame.DataFrame, pandas.core.frame.DataFrame, pandas.core.frame.DataFrame]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns districtr submission information in a tabular format.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
+<dd><code>us.State</code> object (e.g. <code>us.states.WI</code>).</dd>
+<dt><strong><code>submissions</code></strong> :&ensp;<code>list</code></dt>
+<dd>List of <code>Submission</code> objects returned from a call to
+<code><a title="evaltools.processing.submissions" href="#evaltools.processing.submissions">submissions()</a></code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>Three dataframes corresponding to plan-based submissions, COI-based
+submissions, and written submissions to the provided state.</p>
+<h2 id="example">Example</h2>
+<p>Prototypical example usage.</p>
+<pre><code>import us
+from evaltools.retrieve import submissions, tabularized
+
+# Set the state.
+state = us.states.WI
+
+# Retrieve the raw districtr submissions, then tabularize them.
+subs = submissions(state)
+plans, cois, written = tabularized(state, subs)
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def tabularized(state, submissions) -&gt; Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    &#34;&#34;&#34;
+    Returns districtr submission information in a tabular format.
+
+    Args:
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        submissions (list): List of `Submission` objects returned from a call to
+            `submissions`.
+
+    Returns:
+        Three dataframes corresponding to plan-based submissions, COI-based
+        submissions, and written submissions to the provided state.
+
+    Example:
+        Prototypical example usage.
+        
+            import us
+            from evaltools.retrieve import submissions, tabularized
+
+            # Set the state.
+            state = us.states.WI
+
+            # Retrieve the raw districtr submissions, then tabularize them.
+            subs = submissions(state)
+            plans, cois, written = tabularized(state, subs)
+
+    &#34;&#34;&#34;
+    # Sort submissions. (Not sure why this is necessary? Holdover from previous
+    # fetching code.)
+    submissions = list(sorted(submissions, key=lambda s: s.id))
+
+    # Categorize into three categories: plan submissions, COI submissions, and
+    # written submissions (which are ignored as they don&#39;t appear in the list
+    # of submissions).
+    _plans = [s.dict() for s in submissions if s.type == &#34;plan&#34;]
+    _cois = [s.dict() for s in submissions if s.type == &#34;coi&#34;]
+    
+    # Create preliminary dataframes so we can do safe `merge`s rather than rely
+    # explicitly on sorting; this also allows us to specify a sample size if
+    # we&#39;re only looking to sample a specific number of plans.
+    subset_plans = pd.DataFrame.from_records(_plans)
+    subset_cois = pd.DataFrame.from_records(_cois)
+    
+    # Get appropriate URLs and create dataframes.
+    plans_url = csvs(state)
+    cois_url = csvs(state, ptype=&#34;coi&#34;)
+    written_url = csvs(state, ptype=&#34;written&#34;)
+
+    plans = as_dataframe(plans_url)
+    cois = as_dataframe(cois_url)
+    writtens = as_dataframe(written_url)
+
+    # Adjust column contents for the plan and COI dataframes.
+    for universe in [plans, cois]:
+        # Adjust the `link` column type and create an `id` column from it.
+        universe[&#34;link&#34;] = universe[&#34;link&#34;].astype(str)
+        universe[&#34;id&#34;] = parse_id(universe[&#34;link&#34;])
+
+    # Adjust column contents for all dataframes.
+    for df in [plans, cois, writtens]: df[&#34;datetime&#34;] = parse_datetime(df[&#34;datetime&#34;])
+
+    # Add the retrieved plan data to the dataframes *if the subset dataframes
+    # contain items*.
+
+    if not subset_plans.empty: plans = plans.merge(subset_plans, on=&#34;id&#34;)
+    else: plans = pd.DataFrame()
+    if not subset_cois.empty: cois = cois.merge(subset_cois, on=&#34;id&#34;)
+    else: cois = pd.DataFrame()
+
+    # Drop bad columns and rename. Not sure why we have to `inplace` things here,
+    # but... fine.
+    for df in [plans, cois]:
+        if not df.empty:
+            df.drop([&#34;type_x&#34;, &#34;link_x&#34;, &#34;coalition&#34;], axis=1, inplace=True)
+            df.rename({&#34;type_y&#34;: &#34;type&#34;, &#34;link_y&#34;: &#34;link&#34;}, axis=1, inplace=True)
+
+    return plans, cois, writtens</code></pre>
+</details>
+</dd>
+</dl>
 </section>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor"><code class="flex name class">
+<dt id="evaltools.processing.AssignmentCompressor"><code class="flex name class">
 <span>class <span class="ident">AssignmentCompressor</span></span>
 <span>(</span><span>identifiers, window=10, location='compressed.ac')</span>
 </code></dt>
@@ -361,19 +482,19 @@ for assignment in ac.decompress():
 </code></pre>
 <h2 id="attributes">Attributes</h2>
 <dl>
-<dt><strong><code>DISTRICT_DELIMITER</code></strong></dt>
-<dd>A bytestring which separates district identifiers in
-an assignment.</dd>
-<dt><strong><code>ASSIGNMENT_DELIMITER</code></strong></dt>
+<dt><strong><code>DISTRICT_DELIMITER</code></strong> :&ensp;<code>bytes</code></dt>
+<dd>A bytestring which separates district
+identifiers in an assignment.</dd>
+<dt><strong><code>ASSIGNMENT_DELIMITER</code></strong> :&ensp;<code>bytes</code></dt>
 <dd>A bytestring which separates assignments from
 each other.</dd>
-<dt><strong><code>CHUNK_DELIMITER</code></strong></dt>
-<dd>A bytestring which separates assignment chunks from each
-other.</dd>
-<dt><strong><code>CHUNK_SIZE</code></strong></dt>
+<dt><strong><code>CHUNK_DELIMITER</code></strong> :&ensp;<code>bytes</code></dt>
+<dd>A bytestring which separates assignment chunks
+from each other.</dd>
+<dt><strong><code>CHUNK_SIZE</code></strong> :&ensp;<code>int</code></dt>
 <dd>Default number of bytes read in from the IO stream at each
 step.</dd>
-<dt><strong><code>ENCODING</code></strong></dt>
+<dt><strong><code>ENCODING</code></strong> :&ensp;<code>str</code></dt>
 <dd>Default string encoding style.</dd>
 <dt><strong><code>identifiers</code></strong></dt>
 <dd>A sortable, iterable collection of unique items corresponding
@@ -395,18 +516,18 @@ is passed to the compressor.</dd>
 <dt><strong><code>location</code></strong></dt>
 <dd>The place to which compressed data is written or read.</dd>
 </dl>
-<p>Creates <code><a title="evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor" href="#evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor">AssignmentCompressor</a></code> instance.</p>
+<p>Creates <code><a title="evaltools.processing.AssignmentCompressor" href="#evaltools.processing.AssignmentCompressor">AssignmentCompressor</a></code> instance.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>identifiers</code></strong></dt>
+<dt><strong><code>identifiers</code></strong> :&ensp;<code>list</code></dt>
 <dd>An iterable collection of string identifiers; any
 assignment's keys must be a subset of <code>identifiers</code>.</dd>
-<dt><strong><code>window</code></strong></dt>
-<dd>A positive integer representing the cache window size. Defaults
-to cache.</dd>
-<dt><strong><code>location</code></strong></dt>
-<dd>The path to the compressed resource (read or write). Defaults
-to <code>compressed.ac</code>.</dd>
+<dt><strong><code>window</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>A positive integer representing the cache
+window size. Defaults to cache.</dd>
+<dt><strong><code>location</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The path to the compressed resource (read
+or write). Defaults to <code>compressed.ac</code>.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -460,15 +581,15 @@ to <code>compressed.ac</code>.</dd>
             ...
 
     Attributes:
-        DISTRICT_DELIMITER: A bytestring which separates district identifiers in
-            an assignment.
-        ASSIGNMENT_DELIMITER: A bytestring which separates assignments from
+        DISTRICT_DELIMITER (bytes): A bytestring which separates district
+            identifiers in an assignment.
+        ASSIGNMENT_DELIMITER (bytes): A bytestring which separates assignments from
             each other.
-        CHUNK_DELIMITER: A bytestring which separates assignment chunks from each
-            other.
-        CHUNK_SIZE: Default number of bytes read in from the IO stream at each
+        CHUNK_DELIMITER (bytes): A bytestring which separates assignment chunks
+            from each other.
+        CHUNK_SIZE (int): Default number of bytes read in from the IO stream at each
             step.
-        ENCODING: Default string encoding style.
+        ENCODING (str): Default string encoding style.
         identifiers: A sortable, iterable collection of unique items corresponding
             to geographic identifiers.
         compressed: A pandas `Index` containing the identifiers; this is used
@@ -489,12 +610,12 @@ to <code>compressed.ac</code>.</dd>
         Creates `AssignmentCompressor` instance.
 
         Args:
-            identifiers: An iterable collection of string identifiers; any
+            identifiers (list): An iterable collection of string identifiers; any
                 assignment&#39;s keys must be a subset of `identifiers`.
-            window: A positive integer representing the cache window size. Defaults
-                to cache.
-            location: The path to the compressed resource (read or write). Defaults
-                to `compressed.ac`.
+            window (int, optional): A positive integer representing the cache
+                window size. Defaults to cache.
+            location (str, optional): The path to the compressed resource (read
+                or write). Defaults to `compressed.ac`.
         &#34;&#34;&#34;
         self.identifiers = SortedList(identifiers)
         self.default = frozenset(zip(self.identifiers, [&#34;-1&#34;]*len(self.identifiers)))
@@ -513,14 +634,17 @@ to <code>compressed.ac</code>.</dd>
         self.CHUNK_SIZE = 16384
         self.ENCODING = &#34;raw_unicode_escape&#34;
 
-    def match(self, assignment):
+    def match(self, assignment) -&gt; SortedDict:
         &#34;&#34;&#34;
         Matches an assignment to an index (the set of geometric identifiers)
         and returns a `SortedDict`.
 
         Args:
-            assignment: Dictionary which matches geometric identifiers to
+            assignment (dict): Dictionary which matches geometric identifiers to
                 districts. All keys and values in this dictionary must be strings.
+
+        Returns:
+            A `SortedDict` with identifiers matched ti district assignments.s
 
         &#34;&#34;&#34;
         # Create a dictionary which maps identifiers to `-1`, and update our
@@ -546,13 +670,27 @@ to <code>compressed.ac</code>.</dd>
         &#34;&#34;&#34;
         if self.cache: self._compress(force=True)
 
+    def compress_all(self, assignments):
+        &#34;&#34;&#34;
+        Compresses all assignments in `assignments`.
+
+        Args:
+            assignments (list): List of dictionaries which match geometric identifiers
+                to districts. All keys and values in these dictionaries must be
+                strings.
+        &#34;&#34;&#34;
+        self.window = len(assignments)
+
+        with self as ac:
+            for assignment in assignments:
+                ac.compress(assignment)
 
     def compress(self, assignment):
         &#34;&#34;&#34;
         Compresses the assignment `assignment` using `zlib`.
 
         Args:
-            assignment: Dictionary which matches geometric identifiers to districts.
+            assignment (dict): Dictionary which matches geometric identifiers to districts.
                 All keys and values in this dictionary must be strings.
         &#34;&#34;&#34;
         # If the user provides an empty assignment or the assignment&#39;s keys aren&#39;t
@@ -663,7 +801,7 @@ to <code>compressed.ac</code>.</dd>
             # If the chunk&#39;s empty, `yield` the remaining buffer and return.
             if not chunk: yield b&#34;&#34;.join(_buffer); break
 
-    def _decompress(self, chunk):
+    def _decompress(self, chunk) -&gt; List[dict]:
         &#34;&#34;&#34;
         Private method which decompresses assignments.
 
@@ -688,14 +826,14 @@ to <code>compressed.ac</code>.</dd>
 </details>
 <h3>Methods</h3>
 <dl>
-<dt id="evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor.compress"><code class="name flex">
+<dt id="evaltools.processing.AssignmentCompressor.compress"><code class="name flex">
 <span>def <span class="ident">compress</span></span>(<span>self, assignment)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Compresses the assignment <code>assignment</code> using <code>zlib</code>.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>assignment</code></strong></dt>
+<dt><strong><code>assignment</code></strong> :&ensp;<code>dict</code></dt>
 <dd>Dictionary which matches geometric identifiers to districts.
 All keys and values in this dictionary must be strings.</dd>
 </dl></div>
@@ -708,7 +846,7 @@ All keys and values in this dictionary must be strings.</dd>
     Compresses the assignment `assignment` using `zlib`.
 
     Args:
-        assignment: Dictionary which matches geometric identifiers to districts.
+        assignment (dict): Dictionary which matches geometric identifiers to districts.
             All keys and values in this dictionary must be strings.
     &#34;&#34;&#34;
     # If the user provides an empty assignment or the assignment&#39;s keys aren&#39;t
@@ -738,7 +876,39 @@ All keys and values in this dictionary must be strings.</dd>
         self._compress()</code></pre>
 </details>
 </dd>
-<dt id="evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor.decompress"><code class="name flex">
+<dt id="evaltools.processing.AssignmentCompressor.compress_all"><code class="name flex">
+<span>def <span class="ident">compress_all</span></span>(<span>self, assignments)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Compresses all assignments in <code>assignments</code>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>assignments</code></strong> :&ensp;<code>list</code></dt>
+<dd>List of dictionaries which match geometric identifiers
+to districts. All keys and values in these dictionaries must be
+strings.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def compress_all(self, assignments):
+    &#34;&#34;&#34;
+    Compresses all assignments in `assignments`.
+
+    Args:
+        assignments (list): List of dictionaries which match geometric identifiers
+            to districts. All keys and values in these dictionaries must be
+            strings.
+    &#34;&#34;&#34;
+    self.window = len(assignments)
+
+    with self as ac:
+        for assignment in assignments:
+            ac.compress(assignment)</code></pre>
+</details>
+</dd>
+<dt id="evaltools.processing.AssignmentCompressor.decompress"><code class="name flex">
 <span>def <span class="ident">decompress</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -766,30 +936,35 @@ assignments.</p>
             for assignment in self._decompress(chunk): yield assignment</code></pre>
 </details>
 </dd>
-<dt id="evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor.match"><code class="name flex">
-<span>def <span class="ident">match</span></span>(<span>self, assignment)</span>
+<dt id="evaltools.processing.AssignmentCompressor.match"><code class="name flex">
+<span>def <span class="ident">match</span></span>(<span>self, assignment) ‑> sortedcontainers.sorteddict.SortedDict</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Matches an assignment to an index (the set of geometric identifiers)
 and returns a <code>SortedDict</code>.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>assignment</code></strong></dt>
+<dt><strong><code>assignment</code></strong> :&ensp;<code>dict</code></dt>
 <dd>Dictionary which matches geometric identifiers to
 districts. All keys and values in this dictionary must be strings.</dd>
-</dl></div>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A <code>SortedDict</code> with identifiers matched ti district assignments.s</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def match(self, assignment):
+<pre><code class="python">def match(self, assignment) -&gt; SortedDict:
     &#34;&#34;&#34;
     Matches an assignment to an index (the set of geometric identifiers)
     and returns a `SortedDict`.
 
     Args:
-        assignment: Dictionary which matches geometric identifiers to
+        assignment (dict): Dictionary which matches geometric identifiers to
             districts. All keys and values in this dictionary must be strings.
+
+    Returns:
+        A `SortedDict` with identifiers matched ti district assignments.s
 
     &#34;&#34;&#34;
     # Create a dictionary which maps identifiers to `-1`, and update our
@@ -813,17 +988,34 @@ districts. All keys and values in this dictionary must be strings.</dd>
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="evaltools.auxiliary" href="index.html">evaltools.auxiliary</a></code></li>
+<li><code><a title="evaltools" href="../index.html">evaltools</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<ul>
+<li><code><a title="evaltools.processing.URLs" href="URLs.html">evaltools.processing.URLs</a></code></li>
+<li><code><a title="evaltools.processing.fetch" href="fetch.html">evaltools.processing.fetch</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="two-column">
+<li><code><a title="evaltools.processing.csvs" href="#evaltools.processing.csvs">csvs</a></code></li>
+<li><code><a title="evaltools.processing.ids" href="#evaltools.processing.ids">ids</a></code></li>
+<li><code><a title="evaltools.processing.one" href="#evaltools.processing.one">one</a></code></li>
+<li><code><a title="evaltools.processing.remap" href="#evaltools.processing.remap">remap</a></code></li>
+<li><code><a title="evaltools.processing.submissions" href="#evaltools.processing.submissions">submissions</a></code></li>
+<li><code><a title="evaltools.processing.tabularized" href="#evaltools.processing.tabularized">tabularized</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor" href="#evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor">AssignmentCompressor</a></code></h4>
+<h4><code><a title="evaltools.processing.AssignmentCompressor" href="#evaltools.processing.AssignmentCompressor">AssignmentCompressor</a></code></h4>
 <ul class="">
-<li><code><a title="evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor.compress" href="#evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor.compress">compress</a></code></li>
-<li><code><a title="evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor.decompress" href="#evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor.decompress">decompress</a></code></li>
-<li><code><a title="evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor.match" href="#evaltools.auxiliary.AssignmentCompressor.AssignmentCompressor.match">match</a></code></li>
+<li><code><a title="evaltools.processing.AssignmentCompressor.compress" href="#evaltools.processing.AssignmentCompressor.compress">compress</a></code></li>
+<li><code><a title="evaltools.processing.AssignmentCompressor.compress_all" href="#evaltools.processing.AssignmentCompressor.compress_all">compress_all</a></code></li>
+<li><code><a title="evaltools.processing.AssignmentCompressor.decompress" href="#evaltools.processing.AssignmentCompressor.decompress">decompress</a></code></li>
+<li><code><a title="evaltools.processing.AssignmentCompressor.match" href="#evaltools.processing.AssignmentCompressor.match">match</a></code></li>
 </ul>
 </li>
 </ul>

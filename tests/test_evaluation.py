@@ -1,7 +1,7 @@
 
 from evaltools.evaluation import (
-    deviations, splits, pieces, contiguous, unassigned_units,
-    unassigned_population
+    deviations, splits, pieces, unassigned_units, unassigned_population,
+    contiguous
 )
 from evaltools.geography import Partition
 from gerrychain.graph import Graph

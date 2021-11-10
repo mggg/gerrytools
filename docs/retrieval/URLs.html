@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>evaltools.evaluation.population API documentation</title>
+<title>evaltools.retrieval.URLs API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -19,49 +19,54 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>evaltools.evaluation.population</code></h1>
+<h1 class="title">Module <code>evaltools.retrieval.URLs</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from gerrychain.constraints.validity import deviation_from_ideal as deviation
-from gerrychain.updaters import Tally
-
-
-def deviations(P, popcolumn) -&gt; dict:
+<pre><code class="python">def ids(state):
     &#34;&#34;&#34;
-    Determines the districting plan&#39;s population deviation percentages.
-    
+    URL for accessing districtr identifiers.
+
     Args:
-        P (Partition): GerryChain Partition object.
-        popcolumn (str): Column for tallying the desired population.
+        state: Name of the state (e.g. `&#34;wisconsin&#34;`) for which we&#39;re retrieving
+            districtr identifiers.
 
     Returns:
-        A dictionary which maps district names to population deviation percentages.
+        String with the appropriate URL.
     &#34;&#34;&#34;
-    # Create the partition and the corresponding updater.
-    poptally = Tally(popcolumn, alias=popcolumn)
-    P.updaters = { popcolumn: poptally }
-
-    # Return a dictionary that maps district names to population deviation
-    # percentages.
-    return deviation(P, attribute=popcolumn)
+    return f&#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/districtr-ids/{state.name.lower()}&#34;
 
 
-def unassigned_population(P, popcolumn):
+def csvs(state, ptype=&#34;plan&#34;):
     &#34;&#34;&#34;
-    Determines the number of unassigned people in the districting plan.
-    
+    URL for accessing districtr plan metadata.
+
     Args:
-        P: `Partition` object.
-        popcolumn: Column for tallying the desired population.
+        state: `us.States` object (e.g. `us.states.WI`)
+        ptype: Type of plan we&#39;re retrieving; defaults to `&#34;plan&#34;`.
 
     Returns:
-        Returns a 
+        String with the appropriate URL.
     &#34;&#34;&#34;
-    pass</code></pre>
+    prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/csv/&#34;
+    suffix = f&#34;?type={ptype}&amp;length=10000&#34;
+    return f&#34;{prefix}{state.name.lower()}{suffix}&#34;
+
+
+def one(identifier):
+    &#34;&#34;&#34;
+    URL for accessing an individual districtr plan.
+
+    Args:
+        identifier: distrivtr identifier.
+
+    Returns:
+        String with the appropriate URL.
+    &#34;&#34;&#34;
+    return f&#34;https://districtr.org/.netlify/functions/planRead?id={identifier}&#34;</code></pre>
 </details>
 </section>
 <section>
@@ -71,74 +76,98 @@ def unassigned_population(P, popcolumn):
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="evaltools.evaluation.population.deviations"><code class="name flex">
-<span>def <span class="ident">deviations</span></span>(<span>P, popcolumn) ‑> dict</span>
+<dt id="evaltools.retrieval.URLs.csvs"><code class="name flex">
+<span>def <span class="ident">csvs</span></span>(<span>state, ptype='plan')</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Determines the districting plan's population deviation percentages.</p>
+<div class="desc"><p>URL for accessing districtr plan metadata.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>P</code></strong> :&ensp;<code>Partition</code></dt>
-<dd>GerryChain Partition object.</dd>
-<dt><strong><code>popcolumn</code></strong> :&ensp;<code>str</code></dt>
-<dd>Column for tallying the desired population.</dd>
+<dt><strong><code>state</code></strong></dt>
+<dd><code>us.States</code> object (e.g. <code>us.states.WI</code>)</dd>
+<dt><strong><code>ptype</code></strong></dt>
+<dd>Type of plan we're retrieving; defaults to <code>"plan"</code>.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>A dictionary which maps district names to population deviation percentages.</p></div>
+<p>String with the appropriate URL.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def deviations(P, popcolumn) -&gt; dict:
+<pre><code class="python">def csvs(state, ptype=&#34;plan&#34;):
     &#34;&#34;&#34;
-    Determines the districting plan&#39;s population deviation percentages.
-    
+    URL for accessing districtr plan metadata.
+
     Args:
-        P (Partition): GerryChain Partition object.
-        popcolumn (str): Column for tallying the desired population.
+        state: `us.States` object (e.g. `us.states.WI`)
+        ptype: Type of plan we&#39;re retrieving; defaults to `&#34;plan&#34;`.
 
     Returns:
-        A dictionary which maps district names to population deviation percentages.
+        String with the appropriate URL.
     &#34;&#34;&#34;
-    # Create the partition and the corresponding updater.
-    poptally = Tally(popcolumn, alias=popcolumn)
-    P.updaters = { popcolumn: poptally }
-
-    # Return a dictionary that maps district names to population deviation
-    # percentages.
-    return deviation(P, attribute=popcolumn)</code></pre>
+    prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/csv/&#34;
+    suffix = f&#34;?type={ptype}&amp;length=10000&#34;
+    return f&#34;{prefix}{state.name.lower()}{suffix}&#34;</code></pre>
 </details>
 </dd>
-<dt id="evaltools.evaluation.population.unassigned_population"><code class="name flex">
-<span>def <span class="ident">unassigned_population</span></span>(<span>P, popcolumn)</span>
+<dt id="evaltools.retrieval.URLs.ids"><code class="name flex">
+<span>def <span class="ident">ids</span></span>(<span>state)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Determines the number of unassigned people in the districting plan.</p>
+<div class="desc"><p>URL for accessing districtr identifiers.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>P</code></strong></dt>
-<dd><code>Partition</code> object.</dd>
-<dt><strong><code>popcolumn</code></strong></dt>
-<dd>Column for tallying the desired population.</dd>
+<dt><strong><code>state</code></strong></dt>
+<dd>Name of the state (e.g. <code>"wisconsin"</code>) for which we're retrieving
+districtr identifiers.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>Returns a</p></div>
+<p>String with the appropriate URL.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def unassigned_population(P, popcolumn):
+<pre><code class="python">def ids(state):
     &#34;&#34;&#34;
-    Determines the number of unassigned people in the districting plan.
-    
+    URL for accessing districtr identifiers.
+
     Args:
-        P: `Partition` object.
-        popcolumn: Column for tallying the desired population.
+        state: Name of the state (e.g. `&#34;wisconsin&#34;`) for which we&#39;re retrieving
+            districtr identifiers.
 
     Returns:
-        Returns a 
+        String with the appropriate URL.
     &#34;&#34;&#34;
-    pass</code></pre>
+    return f&#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/districtr-ids/{state.name.lower()}&#34;</code></pre>
+</details>
+</dd>
+<dt id="evaltools.retrieval.URLs.one"><code class="name flex">
+<span>def <span class="ident">one</span></span>(<span>identifier)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>URL for accessing an individual districtr plan.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>identifier</code></strong></dt>
+<dd>distrivtr identifier.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>String with the appropriate URL.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def one(identifier):
+    &#34;&#34;&#34;
+    URL for accessing an individual districtr plan.
+
+    Args:
+        identifier: distrivtr identifier.
+
+    Returns:
+        String with the appropriate URL.
+    &#34;&#34;&#34;
+    return f&#34;https://districtr.org/.netlify/functions/planRead?id={identifier}&#34;</code></pre>
 </details>
 </dd>
 </dl>
@@ -154,13 +183,14 @@ def unassigned_population(P, popcolumn):
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="evaltools.evaluation" href="index.html">evaltools.evaluation</a></code></li>
+<li><code><a title="evaltools.retrieval" href="index.html">evaltools.retrieval</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="evaltools.evaluation.population.deviations" href="#evaltools.evaluation.population.deviations">deviations</a></code></li>
-<li><code><a title="evaltools.evaluation.population.unassigned_population" href="#evaltools.evaluation.population.unassigned_population">unassigned_population</a></code></li>
+<li><code><a title="evaltools.retrieval.URLs.csvs" href="#evaltools.retrieval.URLs.csvs">csvs</a></code></li>
+<li><code><a title="evaltools.retrieval.URLs.ids" href="#evaltools.retrieval.URLs.ids">ids</a></code></li>
+<li><code><a title="evaltools.retrieval.URLs.one" href="#evaltools.retrieval.URLs.one">one</a></code></li>
 </ul>
 </li>
 </ul>

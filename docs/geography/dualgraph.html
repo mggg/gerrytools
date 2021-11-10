@@ -26,31 +26,29 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from ..auxiliary import Graph
+<pre><code class="python">from ..processing import Graph
 
 
 def dualgraph(
         geometries, index=None, geometrycolumn=&#34;geometry&#34;, colmap={}, buffer=0,
         edges_to_add=[], edges_to_cut=[]
-    ):
+    ) -&gt; Graph:
     &#34;&#34;&#34;
     Generates a graph dual to the provided geometric data.
 
     Args:
-        geometries: Geometric data represented as a GeoDataFrame.
-        index: Unique identifiers; indexing column of `geometries`. If this
-            value is not set, vertex labels are integer indices; otherwise, vertex
-            labels are the values of this column.
-        geometrycolumn: Optional; name of `geoemtries`&#39; geometry column.
-            Defaults to `&#34;geometry&#34;`.
-        colmap: Optional; maps old column names to new column names.
-        buffer: Optional; geometric buffer distance; defaults to `0`.
-        edges_to_add: Optional; edges to add to the graph object. Assumed to
-            be a list of pairs of objects, e.g. `[(u, v), ...]` where `u` and `v` are
-            vertex labels consistent with `index`.
-        edges_to_cut: Optional; edges to cut from the graph object. Assumed to
-            be a list of pairs of objects, e.g. `[(u, v), ...]` where `u` and `v` are
-            vertex labels consistent with `index`.
+        geometries (GeoDataFrame): Geometric data represented as a GeoDataFrame.
+        index (str, optional): Unique identifiers; indexing column of `geometries`.
+            If this value is not set, vertex labels are integer indices; otherwise,
+            vertex labels are the values of this column. Defaults to `&#34;geometry&#34;`.
+        colmap (dict, optional): Maps old column names to new column names.
+        buffer (float, optional): Geometric buffer distance; defaults to `0`.
+        edges_to_add (list, optional): Edges to add to the graph object. Assumed to
+            be a list of pairs of objects, e.g. `[(u, v), ...]` where `u` and `v`
+            are vertex labels consistent with `index`.
+        edges_to_cut (list, optional()): Optional; edges to cut from the graph
+            object. Assumed to be a list of pairs of objects, e.g. `[(u, v), ...]`
+            where `u` and `v` are vertex labels consistent with `index`.
 
     Returns:
         A gerrychain `Graph` object dual to the geometric data.
@@ -81,34 +79,30 @@ def dualgraph(
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.geography.dualgraph.dualgraph"><code class="name flex">
-<span>def <span class="ident">dualgraph</span></span>(<span>geometries, index=None, geometrycolumn='geometry', colmap={}, buffer=0, edges_to_add=[], edges_to_cut=[])</span>
+<span>def <span class="ident">dualgraph</span></span>(<span>geometries, index=None, geometrycolumn='geometry', colmap={}, buffer=0, edges_to_add=[], edges_to_cut=[]) ‑> gerrychain.graph.graph.Graph</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Generates a graph dual to the provided geometric data.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>geometries</code></strong></dt>
+<dt><strong><code>geometries</code></strong> :&ensp;<code>GeoDataFrame</code></dt>
 <dd>Geometric data represented as a GeoDataFrame.</dd>
-<dt><strong><code>index</code></strong></dt>
-<dd>Unique identifiers; indexing column of <code>geometries</code>. If this
-value is not set, vertex labels are integer indices; otherwise, vertex
-labels are the values of this column.</dd>
-<dt><strong><code>geometrycolumn</code></strong></dt>
-<dd>Optional; name of <code>geoemtries</code>' geometry column.
-Defaults to <code>"geometry"</code>.</dd>
-<dt><strong><code>colmap</code></strong></dt>
-<dd>Optional; maps old column names to new column names.</dd>
-<dt><strong><code>buffer</code></strong></dt>
-<dd>Optional; geometric buffer distance; defaults to <code>0</code>.</dd>
-<dt><strong><code>edges_to_add</code></strong></dt>
-<dd>Optional; edges to add to the graph object. Assumed to
-be a list of pairs of objects, e.g. <code>[(u, v), &hellip;]</code> where <code>u</code> and <code>v</code> are
-vertex labels consistent with <code>index</code>.</dd>
-<dt><strong><code>edges_to_cut</code></strong></dt>
-<dd>Optional; edges to cut from the graph object. Assumed to
-be a list of pairs of objects, e.g. <code>[(u, v), &hellip;]</code> where <code>u</code> and <code>v</code> are
-vertex labels consistent with <code>index</code>.</dd>
+<dt><strong><code>index</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Unique identifiers; indexing column of <code>geometries</code>.
+If this value is not set, vertex labels are integer indices; otherwise,
+vertex labels are the values of this column. Defaults to <code>"geometry"</code>.</dd>
+<dt><strong><code>colmap</code></strong> :&ensp;<code>dict</code>, optional</dt>
+<dd>Maps old column names to new column names.</dd>
+<dt><strong><code>buffer</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Geometric buffer distance; defaults to <code>0</code>.</dd>
+<dt><strong><code>edges_to_add</code></strong> :&ensp;<code>list</code>, optional</dt>
+<dd>Edges to add to the graph object. Assumed to
+be a list of pairs of objects, e.g. <code>[(u, v), &hellip;]</code> where <code>u</code> and <code>v</code>
+are vertex labels consistent with <code>index</code>.</dd>
 </dl>
+<p>edges_to_cut (list, optional()): Optional; edges to cut from the graph
+object. Assumed to be a list of pairs of objects, e.g. <code>[(u, v), &hellip;]</code>
+where <code>u</code> and <code>v</code> are vertex labels consistent with <code>index</code>.</p>
 <h2 id="returns">Returns</h2>
 <p>A gerrychain <code>Graph</code> object dual to the geometric data.</p></div>
 <details class="source">
@@ -118,25 +112,23 @@ vertex labels consistent with <code>index</code>.</dd>
 <pre><code class="python">def dualgraph(
         geometries, index=None, geometrycolumn=&#34;geometry&#34;, colmap={}, buffer=0,
         edges_to_add=[], edges_to_cut=[]
-    ):
+    ) -&gt; Graph:
     &#34;&#34;&#34;
     Generates a graph dual to the provided geometric data.
 
     Args:
-        geometries: Geometric data represented as a GeoDataFrame.
-        index: Unique identifiers; indexing column of `geometries`. If this
-            value is not set, vertex labels are integer indices; otherwise, vertex
-            labels are the values of this column.
-        geometrycolumn: Optional; name of `geoemtries`&#39; geometry column.
-            Defaults to `&#34;geometry&#34;`.
-        colmap: Optional; maps old column names to new column names.
-        buffer: Optional; geometric buffer distance; defaults to `0`.
-        edges_to_add: Optional; edges to add to the graph object. Assumed to
-            be a list of pairs of objects, e.g. `[(u, v), ...]` where `u` and `v` are
-            vertex labels consistent with `index`.
-        edges_to_cut: Optional; edges to cut from the graph object. Assumed to
-            be a list of pairs of objects, e.g. `[(u, v), ...]` where `u` and `v` are
-            vertex labels consistent with `index`.
+        geometries (GeoDataFrame): Geometric data represented as a GeoDataFrame.
+        index (str, optional): Unique identifiers; indexing column of `geometries`.
+            If this value is not set, vertex labels are integer indices; otherwise,
+            vertex labels are the values of this column. Defaults to `&#34;geometry&#34;`.
+        colmap (dict, optional): Maps old column names to new column names.
+        buffer (float, optional): Geometric buffer distance; defaults to `0`.
+        edges_to_add (list, optional): Edges to add to the graph object. Assumed to
+            be a list of pairs of objects, e.g. `[(u, v), ...]` where `u` and `v`
+            are vertex labels consistent with `index`.
+        edges_to_cut (list, optional()): Optional; edges to cut from the graph
+            object. Assumed to be a list of pairs of objects, e.g. `[(u, v), ...]`
+            where `u` and `v` are vertex labels consistent with `index`.
 
     Returns:
         A gerrychain `Graph` object dual to the geometric data.
