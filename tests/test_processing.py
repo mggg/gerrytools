@@ -157,7 +157,7 @@ def profile_assignmentcompressor_decompress():
 
 def test_submissions():
     # Select a state; we'll use Wisconsin. Set a sample size.
-    state = us.states.IN
+    state = us.states.WI
     sample = 20
 
     # Try to get stuff.
