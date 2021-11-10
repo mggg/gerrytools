@@ -9,9 +9,12 @@ from .optimize import (
     calculate_dispersion
 )
 
+from .updater import dispersion_updater_closure
+
 __all__ = [
     "minimize_dispersion",
     "minimize_dispersion_with_parity",
     "minimize_parity",
     "calculate_dispersion"
+    "dispersion_updater_closure"
 ]
