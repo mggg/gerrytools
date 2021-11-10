@@ -39,11 +39,14 @@ from .optimize import (
     calculate_dispersion
 )
 
+from .updater import dispersion_updater_closure
+
 __all__ = [
     &#34;minimize_dispersion&#34;,
     &#34;minimize_dispersion_with_parity&#34;,
     &#34;minimize_parity&#34;,
     &#34;calculate_dispersion&#34;
+    &#34;dispersion_updater_closure&#34;
 ]</code></pre>
 </details>
 </section>
@@ -54,6 +57,10 @@ __all__ = [
 <dd>
 <div class="desc"></div>
 </dd>
+<dt><code class="name"><a title="evaltools.numbering.updater" href="updater.html">evaltools.numbering.updater</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
 </dl>
 </section>
 <section>
@@ -61,12 +68,13 @@ __all__ = [
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="evaltools.numbering.calculate_dispersion"><code class="name flex">
-<span>def <span class="ident">calculate_dispersion</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str) ‑> int</span>
+<dt id="evaltools.numbering.calculate_dispersiondispersion_updater_closure"><code class="name flex">
+<span>def <span class="ident">calculate_dispersiondispersion_updater_closure</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str) ‑> Dict[str, bool]</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Calculates core dispersion in a state given an column with enacted districts
-and a column with proposed numberings. Used in WI.</p>
+<div class="desc"><p>Minimize odd-&gt;even parity shift in a state given an column with enacted districts
+and a column with proposed numberings. Returns a dictionary with the parity of the
+proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>units</code></strong></dt>
@@ -77,15 +85,17 @@ and a column with proposed numberings. Used in WI.</p>
 <dd>The column in the GeoDataFrame with the proposed districts.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>An integer of the absolute number of people who changed districts.</p></div>
+<p>A dictionary mapping proposed labels to booleans values representing the optimal parity.
+(True if even, False odd).</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def calculate_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str) -&gt; int:
+<pre><code class="python">def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str) -&gt; Dict[str, bool]:
     &#34;&#34;&#34;
-    Calculates core dispersion in a state given an column with enacted districts
-    and a column with proposed numberings. Used in WI.
+    Minimize odd-&gt;even parity shift in a state given an column with enacted districts
+    and a column with proposed numberings. Returns a dictionary with the parity of the
+    proposed cols. Used in WI. Assumes that district labels are 1-indexed.
 
     Args:
         units: The units to optimize on. E.g. Census blocks.
@@ -93,9 +103,30 @@ and a column with proposed numberings. Used in WI.</p>
         proposed_col: The column in the GeoDataFrame with the proposed districts.
 
     Returns:
-        An integer of the absolute number of people who changed districts.
+        A dictionary mapping proposed labels to booleans values representing the optimal parity. 
+        (True if even, False odd).
     &#34;&#34;&#34;
-    return units[units[enacted_col] != units[proposed_col]][pop_col].sum()</code></pre>
+    model = gp.Model(&#34;parity_model&#34;)
+    districts = list(set(units[proposed_col].astype(int)))
+    districts_even = model.addVars(len(districts), vtype=GRB.BINARY, name=&#34;districts_even&#34;)
+
+    exprs = []
+    for i, block in tqdm.tqdm(units[[enacted_col, proposed_col, pop_col]].iterrows()):
+        district = districts.index(int(block[proposed_col]))
+        isOdd = bool((int(block[enacted_col]) % 2) == 1)
+        exprs.append(isOdd * districts_even[district] * block[pop_col])
+
+    obj = gp.quicksum(exprs)
+    model.addConstr(gp.quicksum(districts_even) == math.floor(len(districts)/2), &#34;c0&#34;)
+
+    model.setObjective(obj, GRB.MINIMIZE)
+    model.optimize()
+
+    mapping = {}
+    for i, v in enumerate(model.getVars()):
+        mapping[districts[i]] = bool(v.x)
+
+    return mapping</code></pre>
 </details>
 </dd>
 <dt id="evaltools.numbering.minimize_dispersion"><code class="name flex">
@@ -308,11 +339,12 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
 <li><h3><a href="#header-submodules">Sub-modules</a></h3>
 <ul>
 <li><code><a title="evaltools.numbering.optimize" href="optimize.html">evaltools.numbering.optimize</a></code></li>
+<li><code><a title="evaltools.numbering.updater" href="updater.html">evaltools.numbering.updater</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="evaltools.numbering.calculate_dispersion" href="#evaltools.numbering.calculate_dispersion">calculate_dispersion</a></code></li>
+<li><code><a title="evaltools.numbering.calculate_dispersiondispersion_updater_closure" href="#evaltools.numbering.calculate_dispersiondispersion_updater_closure">calculate_dispersiondispersion_updater_closure</a></code></li>
 <li><code><a title="evaltools.numbering.minimize_dispersion" href="#evaltools.numbering.minimize_dispersion">minimize_dispersion</a></code></li>
 <li><code><a title="evaltools.numbering.minimize_dispersion_with_parity" href="#evaltools.numbering.minimize_dispersion_with_parity">minimize_dispersion_with_parity</a></code></li>
 <li><code><a title="evaltools.numbering.minimize_parity" href="#evaltools.numbering.minimize_parity">minimize_parity</a></code></li>
