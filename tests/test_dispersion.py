@@ -47,6 +47,9 @@ def test_dispersion_calc():
 
     total_dispersion_over_run = 0
     for count, partition in enumerate(chain):
-       total_dispersion_over_run += partition["dispersion"]
+        if count == 0:
+            assert partition["dispersion"] == 0
+
+        total_dispersion_over_run += partition["dispersion"]
 
     assert total_dispersion_over_run
