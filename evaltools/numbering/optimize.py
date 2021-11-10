@@ -5,10 +5,6 @@ import gurobipy as gp
 from gurobipy import GRB
 import math
 
-"""
-Various numbering optimization methods to minimize core dispersion
-and address numbering parity concerns. Used in WI.
-"""
 
 def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None) -> Dict[str, str]:
     """
