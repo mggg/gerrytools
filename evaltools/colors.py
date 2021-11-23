@@ -1,5 +1,6 @@
 
 import seaborn as sns
+import math
 
 """
 Color schemes.
@@ -18,11 +19,11 @@ def redblue(n):
     """
     Generates a red/white/blue color palette in `n` colors with white at the
     `mid`th index.
-    
-    :param midpoint: Integer; index of white.
-    :param n: Integer; number of colors.
-    :return: List; palette colors.
+
+    Args:
+        n (int): The number of colors to generate.
     """
+    midpoint = math.ceil(n/2)
     blues = list(sns.color_palette("coolwarm", as_cmap=False, n_colors=(n-midpoint)*2))[:n-midpoint]
     reds = list(sns.color_palette("coolwarm", as_cmap=False, n_colors=midpoint*2))[midpoint:]
     
