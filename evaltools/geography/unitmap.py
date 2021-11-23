@@ -3,15 +3,15 @@ import maup
 import warnings
 
 
-def unitmap(_from, _to) -> dict:
+def unitmap(source, target) -> dict:
     """
     Creates a mapping from source units to target units.
 
     Args:
-        _from (tuple): 2-tuple containing a `GeoDataFrame` and an index name corresponding
+        source (tuple): 2-tuple containing a `GeoDataFrame` and an index name corresponding
             to the unique identifiers of the units, e.g. `(vtds, "GEOID20")`.
             Unique identifiers will be keys in the resulting dictionary.
-        _to (tuple): 2-tuple containing a `GeoDataFrame` and an index name corresponding
+        target (tuple): 2-tuple containing a `GeoDataFrame` and an index name corresponding
             to the unique identifiers of the units, e.g. `(districts, "DISTRICTN")`.
             Unique identifiers will be values in the resulting dictionary.
 
@@ -19,8 +19,8 @@ def unitmap(_from, _to) -> dict:
         A dictionary mapping `_from` unique identifiers to `_to` unique identifiers.
     """
     # Explode each of the tuples.
-    source_shapes, source_index = _from
-    target_shapes, target_index = _to
+    source_shapes, source_index = source
+    target_shapes, target_index = target
 
     # Get rid of all the unnecessary data and set the indices of each dataframe
     # to the specified indices.
