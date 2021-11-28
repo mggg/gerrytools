@@ -1,6 +1,7 @@
 
 import seaborn as sns
 import math
+from typing import List, Tuple
 
 """
 Color schemes.
@@ -15,16 +16,26 @@ districtr = [
     "#D81B60", "#26A69A", "#FFEA00", "#6200EA"
 ]
 
-def redblue(n):
+def redblue(n) -> List[Tuple]:
     """
     Generates a red/white/blue color palette in `n` colors with white at the
     `mid`th index.
 
     Args:
         n (int): The number of colors to generate.
+
+    Returns:
+        List of RGB tuples.
     """
     midpoint = math.ceil(n/2)
-    blues = list(sns.color_palette("coolwarm", as_cmap=False, n_colors=(n-midpoint)*2))[:n-midpoint]
-    reds = list(sns.color_palette("coolwarm", as_cmap=False, n_colors=midpoint*2))[midpoint:]
+    
+    # To get the appropriately-toned blues and reds, we create a list of colors,
+    # then select the first section of each color.
+    blues = list(
+        sns.color_palette("coolwarm", as_cmap=False, n_colors=n+2)
+    )[:midpoint]
+    reds = list(
+        sns.color_palette("coolwarm", as_cmap=False, n_colors=n+2)
+    )[-midpoint:]
     
     return list(reversed(reds)) + list(reversed(blues))
