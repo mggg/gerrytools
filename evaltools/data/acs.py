@@ -71,7 +71,7 @@ def cvap(state, geometry="bg10") -> pd.DataFrame:
         block = instate_records[i:i+13]
         for line in block:
             record["GEOID"] = line["GEOID"]
-            record[descriptions[line["lnnumber"]]] = line["cvap_est"]
+            record[descriptions[line["lnnumber"]] + "19"] = line["cvap_est"]
 
         collapsed.append(record)
 
