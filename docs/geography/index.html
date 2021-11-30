@@ -230,17 +230,17 @@ unique identifiers.</p></div>
 </details>
 </dd>
 <dt id="evaltools.geography.unitmap"><code class="name flex">
-<span>def <span class="ident">unitmap</span></span>(<span>_from, _to) ‑> dict</span>
+<span>def <span class="ident">unitmap</span></span>(<span>source, target) ‑> dict</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Creates a mapping from source units to target units.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>_from</code></strong> :&ensp;<code>tuple</code></dt>
+<dt><strong><code>source</code></strong> :&ensp;<code>tuple</code></dt>
 <dd>2-tuple containing a <code>GeoDataFrame</code> and an index name corresponding
 to the unique identifiers of the units, e.g. <code>(vtds, "GEOID20")</code>.
 Unique identifiers will be keys in the resulting dictionary.</dd>
-<dt><strong><code>_to</code></strong> :&ensp;<code>tuple</code></dt>
+<dt><strong><code>target</code></strong> :&ensp;<code>tuple</code></dt>
 <dd>2-tuple containing a <code>GeoDataFrame</code> and an index name corresponding
 to the unique identifiers of the units, e.g. <code>(districts, "DISTRICTN")</code>.
 Unique identifiers will be values in the resulting dictionary.</dd>
@@ -251,15 +251,15 @@ Unique identifiers will be values in the resulting dictionary.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def unitmap(_from, _to) -&gt; dict:
+<pre><code class="python">def unitmap(source, target) -&gt; dict:
     &#34;&#34;&#34;
     Creates a mapping from source units to target units.
 
     Args:
-        _from (tuple): 2-tuple containing a `GeoDataFrame` and an index name corresponding
+        source (tuple): 2-tuple containing a `GeoDataFrame` and an index name corresponding
             to the unique identifiers of the units, e.g. `(vtds, &#34;GEOID20&#34;)`.
             Unique identifiers will be keys in the resulting dictionary.
-        _to (tuple): 2-tuple containing a `GeoDataFrame` and an index name corresponding
+        target (tuple): 2-tuple containing a `GeoDataFrame` and an index name corresponding
             to the unique identifiers of the units, e.g. `(districts, &#34;DISTRICTN&#34;)`.
             Unique identifiers will be values in the resulting dictionary.
 
@@ -267,8 +267,8 @@ Unique identifiers will be values in the resulting dictionary.</dd>
         A dictionary mapping `_from` unique identifiers to `_to` unique identifiers.
     &#34;&#34;&#34;
     # Explode each of the tuples.
-    source_shapes, source_index = _from
-    target_shapes, target_index = _to
+    source_shapes, source_index = source
+    target_shapes, target_index = target
 
     # Get rid of all the unnecessary data and set the indices of each dataframe
     # to the specified indices.
