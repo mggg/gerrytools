@@ -90,7 +90,7 @@ def acs5(state, geometry="tract", year=2019, columns=[]) -> pd.DataFrame:
             `"tract"`, so data is retrieved at the 2010 Census tract level.
         year (int, optional): Year for which data is retrieved. Defaults to 2019.
         columns (list, optional): Columns to retrieve. If `None`, a default set
-            of columns including total populations by race and ethnicity and VAP
+            of columns including total populations by race and ethnicity and voting-age
             populations by race and ethnicity are returned, along with a GEOID
             column.
 
