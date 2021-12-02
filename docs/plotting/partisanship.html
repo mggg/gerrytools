@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>evaltools.colors API documentation</title>
+<title>evaltools.plotting.partisanship API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -20,76 +20,73 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>evaltools.colors</code></h1>
+<h1 class="title">Module <code>evaltools.plotting.partisanship</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">import seaborn as sns
-import math
-from typing import List, Tuple
+<pre><code class="python">import pandas as pd
+import matplotlib.pyplot as plt
+import os
+import geopandas as gpd
+import matplotlib.colors as mcol
+import seaborn as sns
 
-def hexshift(color) -&gt; str:
-    &#34;&#34;&#34;
-    Randomly modifies the provided hexadecimal color.
+my_cmap = mcol.ListedColormap(
+    [&#39;#0000ff&#39;,
+    &#39;#5a00ef&#39;,
+    &#39;#8000dd&#39;,
+    &#39;#9c00ca&#39;,
+    &#39;#b400b4&#39;,
+    &#39;#ca009c&#39;,
+    &#39;#dd0080&#39;,
+    &#39;#ef005a&#39;,
+    &#39;#ff0000&#39;])
 
-    Args:
-        color (str): A hexadecimal color string; e.g. `&#34;#FFFF00&#34;`.
+def R_wins_by_district(districts_df, elections):
+    # districts_df must be dissolved by districts
+    dists_R_wins = [0] * 99
+    for index, row in districts_df.iterrows():
+        for election in elections:
+            if row[f&#34;{election}R&#34;] &gt; row[f&#34;{election}D&#34;]:
+                dists_R_wins[index] += 1
+    return dists_R_wins
 
-    Returns:
-        A hexadecimal color string.
-    &#34;&#34;&#34;
-    # Choose a hexidecimal digit, first paring down the digits we&#39;ll use.
-    h = hex.upper()[:-6]
-    sub = choice(h)
-    char = choice(color[1:])
-
-    # Find the character we&#39;re going to replace that&#39;s *not* the same character
-    # as the one we got from the hexadecimal string.
-    while sub == char: sub = choice(h)
-
-    # Return the subbed string.
-    return color.replace(char, sub)
-
-def districtr(N):
-    colors = [
-        &#34;#0099cd&#34;, &#34;#ffca5d&#34;, &#34;#00cd99&#34;, &#34;#99cd00&#34;, &#34;#cd0099&#34;, &#34;#9900cd&#34;, &#34;#8dd3c7&#34;,
-        &#34;#bebada&#34;, &#34;#fb8072&#34;, &#34;#80b1d3&#34;, &#34;#fdb462&#34;, &#34;#b3de69&#34;, &#34;#fccde5&#34;, &#34;#bc80bd&#34;,
-        &#34;#ccebc5&#34;, &#34;#ffed6f&#34;, &#34;#ffffb3&#34;, &#34;#a6cee3&#34;, &#34;#1f78b4&#34;, &#34;#b2df8a&#34;, &#34;#33a02c&#34;,
-        &#34;#fb9a99&#34;, &#34;#e31a1c&#34;, &#34;#fdbf6f&#34;, &#34;#ff7f00&#34;, &#34;#cab2d6&#34;, &#34;#6a3d9a&#34;, &#34;#b15928&#34;,
-        &#34;#64ffda&#34;, &#34;#00B8D4&#34;, &#34;#A1887F&#34;, &#34;#76FF03&#34;, &#34;#DCE775&#34;, &#34;#B388FF&#34;, &#34;#FF80AB&#34;,
-        &#34;#D81B60&#34;, &#34;#26A69A&#34;, &#34;#FFEA00&#34;, &#34;#6200EA&#34;
-    ]
-
-    repeats = math.ceil(N/len(colors))
-    tail = [hexshift(c) for c in colors*(repeats-1)]
-    return (colors + (tail if tail else []))[:N]
-
-def redbluecmap(n) -&gt; List[Tuple]:
-    &#34;&#34;&#34;
-    Generates a red/white/blue color palette in `n` colors with white at the
-    `mid`th index.
-
-    Args:
-        n (int): The number of colors to generate.
-
-    Returns:
-        List of RGB tuples.
-    &#34;&#34;&#34;
-    midpoint = math.ceil(n/2)
+def make_red_blue_plot(plan, elections, state_shape, unit_col, plan_folder=None, plot_folder=None):
+    state_gdf = gpd.read_file(state_shape)
+    if plan_folder is not None:
+        part_df = gpd.read_file(f&#34;{plan_folder}/{plan}.csv&#34;)
+    else:
+        part_df = gpd.read_file(f&#34;{plan}.csv&#34;)
+    part_df = part_df.rename(columns={&#39;field_2&#39;: &#39;plan_dist&#39;})
+    part_df = part_df.rename(columns={&#39;field_1&#39;: unit_col})
+    part_df[unit_col] = part_df[unit_col].astype(int)
+    part_df[&#39;plan_dist&#39;] = part_df[&#39;plan_dist&#39;].astype(int)
+    part_df = part_df.drop(columns=[&#39;geometry&#39;])
+    part_df = part_df.merge(state_gdf, on=unit_col)
+    districts_df = part_df.dissolve(by=&#39;plan_dist&#39;, aggfunc=&#39;sum&#39;)
     
-    # To get the appropriately-toned blues and reds, we create a list of colors,
-    # then select the first section of each color.
-    blues = list(
-        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
-    )[:midpoint]
-    reds = list(
-        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
-    )[-midpoint:]
+    R_wins = R_wins_by_district(districts_df, elections)
+    for i, wins in enumerate(R_wins):
+        part_df.loc[part_df.plan_dist==i, &#39;R_dist_wins&#39;] = wins
     
-    return list(reversed(reds)) + list(reversed(blues))</code></pre>
+    fig, ax = plt.subplots(1,1,figsize=(10,10))
+    part_df.plot(column=&#39;R_dist_wins&#39;, ax=ax, cmap=my_cmap)
+    districts_df.boundary.plot(ax=ax, color = &#39;black&#39;, linewidth = 0.25)
+    ax.axis(&#39;off&#39;)
+    ax.margins(0)
+    ax.set_title(plan, fontsize=24)
+    ax.apply_aspect()
+    cbar = fig.colorbar(plt.cm.ScalarMappable(cmap=my_cmap), location=&#39;bottom&#39;, ax=ax, ticks=[0,0.25,0.5,0.75,1])
+    cbar.ax.set_xticklabels([0,2,4,6,8])
+    if plot_folder is not None:
+        plt.savefig(f&#34;{plot_folder}/{plan}_R_wins_map.png&#34;)
+    else:
+        plt.savefig(f&#34;{plan}_R_wins_map.png&#34;)
+    plt.show()
+    return</code></pre>
 </details>
 </section>
 <section>
@@ -99,8 +96,8 @@ def redbluecmap(n) -&gt; List[Tuple]:
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="evaltools.colors.districtr"><code class="name flex">
-<span>def <span class="ident">districtr</span></span>(<span>N)</span>
+<dt id="evaltools.plotting.partisanship.R_wins_by_district"><code class="name flex">
+<span>def <span class="ident">R_wins_by_district</span></span>(<span>districts_df, elections)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -108,100 +105,58 @@ def redbluecmap(n) -&gt; List[Tuple]:
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def districtr(N):
-    colors = [
-        &#34;#0099cd&#34;, &#34;#ffca5d&#34;, &#34;#00cd99&#34;, &#34;#99cd00&#34;, &#34;#cd0099&#34;, &#34;#9900cd&#34;, &#34;#8dd3c7&#34;,
-        &#34;#bebada&#34;, &#34;#fb8072&#34;, &#34;#80b1d3&#34;, &#34;#fdb462&#34;, &#34;#b3de69&#34;, &#34;#fccde5&#34;, &#34;#bc80bd&#34;,
-        &#34;#ccebc5&#34;, &#34;#ffed6f&#34;, &#34;#ffffb3&#34;, &#34;#a6cee3&#34;, &#34;#1f78b4&#34;, &#34;#b2df8a&#34;, &#34;#33a02c&#34;,
-        &#34;#fb9a99&#34;, &#34;#e31a1c&#34;, &#34;#fdbf6f&#34;, &#34;#ff7f00&#34;, &#34;#cab2d6&#34;, &#34;#6a3d9a&#34;, &#34;#b15928&#34;,
-        &#34;#64ffda&#34;, &#34;#00B8D4&#34;, &#34;#A1887F&#34;, &#34;#76FF03&#34;, &#34;#DCE775&#34;, &#34;#B388FF&#34;, &#34;#FF80AB&#34;,
-        &#34;#D81B60&#34;, &#34;#26A69A&#34;, &#34;#FFEA00&#34;, &#34;#6200EA&#34;
-    ]
-
-    repeats = math.ceil(N/len(colors))
-    tail = [hexshift(c) for c in colors*(repeats-1)]
-    return (colors + (tail if tail else []))[:N]</code></pre>
+<pre><code class="python">def R_wins_by_district(districts_df, elections):
+    # districts_df must be dissolved by districts
+    dists_R_wins = [0] * 99
+    for index, row in districts_df.iterrows():
+        for election in elections:
+            if row[f&#34;{election}R&#34;] &gt; row[f&#34;{election}D&#34;]:
+                dists_R_wins[index] += 1
+    return dists_R_wins</code></pre>
 </details>
 </dd>
-<dt id="evaltools.colors.hexshift"><code class="name flex">
-<span>def <span class="ident">hexshift</span></span>(<span>color) ‑> str</span>
+<dt id="evaltools.plotting.partisanship.make_red_blue_plot"><code class="name flex">
+<span>def <span class="ident">make_red_blue_plot</span></span>(<span>plan, elections, state_shape, unit_col, plan_folder=None, plot_folder=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Randomly modifies the provided hexadecimal color.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>color</code></strong> :&ensp;<code>str</code></dt>
-<dd>A hexadecimal color string; e.g. <code>"#FFFF00"</code>.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<p>A hexadecimal color string.</p></div>
+<div class="desc"></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def hexshift(color) -&gt; str:
-    &#34;&#34;&#34;
-    Randomly modifies the provided hexadecimal color.
-
-    Args:
-        color (str): A hexadecimal color string; e.g. `&#34;#FFFF00&#34;`.
-
-    Returns:
-        A hexadecimal color string.
-    &#34;&#34;&#34;
-    # Choose a hexidecimal digit, first paring down the digits we&#39;ll use.
-    h = hex.upper()[:-6]
-    sub = choice(h)
-    char = choice(color[1:])
-
-    # Find the character we&#39;re going to replace that&#39;s *not* the same character
-    # as the one we got from the hexadecimal string.
-    while sub == char: sub = choice(h)
-
-    # Return the subbed string.
-    return color.replace(char, sub)</code></pre>
-</details>
-</dd>
-<dt id="evaltools.colors.redbluecmap"><code class="name flex">
-<span>def <span class="ident">redbluecmap</span></span>(<span>n) ‑> List[Tuple]</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Generates a red/white/blue color palette in <code>n</code> colors with white at the
-<code>mid</code>th index.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>n</code></strong> :&ensp;<code>int</code></dt>
-<dd>The number of colors to generate.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<p>List of RGB tuples.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def redbluecmap(n) -&gt; List[Tuple]:
-    &#34;&#34;&#34;
-    Generates a red/white/blue color palette in `n` colors with white at the
-    `mid`th index.
-
-    Args:
-        n (int): The number of colors to generate.
-
-    Returns:
-        List of RGB tuples.
-    &#34;&#34;&#34;
-    midpoint = math.ceil(n/2)
+<pre><code class="python">def make_red_blue_plot(plan, elections, state_shape, unit_col, plan_folder=None, plot_folder=None):
+    state_gdf = gpd.read_file(state_shape)
+    if plan_folder is not None:
+        part_df = gpd.read_file(f&#34;{plan_folder}/{plan}.csv&#34;)
+    else:
+        part_df = gpd.read_file(f&#34;{plan}.csv&#34;)
+    part_df = part_df.rename(columns={&#39;field_2&#39;: &#39;plan_dist&#39;})
+    part_df = part_df.rename(columns={&#39;field_1&#39;: unit_col})
+    part_df[unit_col] = part_df[unit_col].astype(int)
+    part_df[&#39;plan_dist&#39;] = part_df[&#39;plan_dist&#39;].astype(int)
+    part_df = part_df.drop(columns=[&#39;geometry&#39;])
+    part_df = part_df.merge(state_gdf, on=unit_col)
+    districts_df = part_df.dissolve(by=&#39;plan_dist&#39;, aggfunc=&#39;sum&#39;)
     
-    # To get the appropriately-toned blues and reds, we create a list of colors,
-    # then select the first section of each color.
-    blues = list(
-        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
-    )[:midpoint]
-    reds = list(
-        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
-    )[-midpoint:]
+    R_wins = R_wins_by_district(districts_df, elections)
+    for i, wins in enumerate(R_wins):
+        part_df.loc[part_df.plan_dist==i, &#39;R_dist_wins&#39;] = wins
     
-    return list(reversed(reds)) + list(reversed(blues))</code></pre>
+    fig, ax = plt.subplots(1,1,figsize=(10,10))
+    part_df.plot(column=&#39;R_dist_wins&#39;, ax=ax, cmap=my_cmap)
+    districts_df.boundary.plot(ax=ax, color = &#39;black&#39;, linewidth = 0.25)
+    ax.axis(&#39;off&#39;)
+    ax.margins(0)
+    ax.set_title(plan, fontsize=24)
+    ax.apply_aspect()
+    cbar = fig.colorbar(plt.cm.ScalarMappable(cmap=my_cmap), location=&#39;bottom&#39;, ax=ax, ticks=[0,0.25,0.5,0.75,1])
+    cbar.ax.set_xticklabels([0,2,4,6,8])
+    if plot_folder is not None:
+        plt.savefig(f&#34;{plot_folder}/{plan}_R_wins_map.png&#34;)
+    else:
+        plt.savefig(f&#34;{plan}_R_wins_map.png&#34;)
+    plt.show()
+    return</code></pre>
 </details>
 </dd>
 </dl>
@@ -230,14 +185,13 @@ max-height: 80%;
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="evaltools" href="index.html">evaltools</a></code></li>
+<li><code><a title="evaltools.plotting" href="index.html">evaltools.plotting</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="evaltools.colors.districtr" href="#evaltools.colors.districtr">districtr</a></code></li>
-<li><code><a title="evaltools.colors.hexshift" href="#evaltools.colors.hexshift">hexshift</a></code></li>
-<li><code><a title="evaltools.colors.redbluecmap" href="#evaltools.colors.redbluecmap">redbluecmap</a></code></li>
+<li><code><a title="evaltools.plotting.partisanship.R_wins_by_district" href="#evaltools.plotting.partisanship.R_wins_by_district">R_wins_by_district</a></code></li>
+<li><code><a title="evaltools.plotting.partisanship.make_red_blue_plot" href="#evaltools.plotting.partisanship.make_red_blue_plot">make_red_blue_plot</a></code></li>
 </ul>
 </li>
 </ul>

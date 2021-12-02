@@ -1,10 +1,11 @@
 
 """
-A package for processing districting plans, from retrieval to processing to
-visualization.
+
+.. include:: ../docs/introduction.md
 """
-from .mapping import drawplan, drawgraph
-from .colors import districtr, redblue
+
+from .plotting import drawplan, drawgraph, redblue, PlotSpecification
+from .colors import districtr, redbluecmap
 from .geography import dissolve, dualgraph
 from .evaluation import (
     splits, pieces, deviations, contiguous, unassigned_units,
