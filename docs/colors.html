@@ -27,6 +27,8 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">import seaborn as sns
+import math
+from typing import List, Tuple
 
 &#34;&#34;&#34;
 Color schemes.
@@ -41,17 +43,27 @@ districtr = [
     &#34;#D81B60&#34;, &#34;#26A69A&#34;, &#34;#FFEA00&#34;, &#34;#6200EA&#34;
 ]
 
-def redblue(n):
+def redblue(n) -&gt; List[Tuple]:
     &#34;&#34;&#34;
     Generates a red/white/blue color palette in `n` colors with white at the
     `mid`th index.
-    
-    :param midpoint: Integer; index of white.
-    :param n: Integer; number of colors.
-    :return: List; palette colors.
+
+    Args:
+        n (int): The number of colors to generate.
+
+    Returns:
+        List of RGB tuples.
     &#34;&#34;&#34;
-    blues = list(sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=(n-midpoint)*2))[:n-midpoint]
-    reds = list(sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=midpoint*2))[midpoint:]
+    midpoint = math.ceil(n/2)
+    
+    # To get the appropriately-toned blues and reds, we create a list of colors,
+    # then select the first section of each color.
+    blues = list(
+        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
+    )[:midpoint]
+    reds = list(
+        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
+    )[-midpoint:]
     
     return list(reversed(reds)) + list(reversed(blues))</code></pre>
 </details>
@@ -64,29 +76,43 @@ def redblue(n):
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.colors.redblue"><code class="name flex">
-<span>def <span class="ident">redblue</span></span>(<span>n)</span>
+<span>def <span class="ident">redblue</span></span>(<span>n) ‑> List[Tuple]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Generates a red/white/blue color palette in <code>n</code> colors with white at the
 <code>mid</code>th index.</p>
-<p>:param midpoint: Integer; index of white.
-:param n: Integer; number of colors.
-:return: List; palette colors.</p></div>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>n</code></strong> :&ensp;<code>int</code></dt>
+<dd>The number of colors to generate.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>List of RGB tuples.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def redblue(n):
+<pre><code class="python">def redblue(n) -&gt; List[Tuple]:
     &#34;&#34;&#34;
     Generates a red/white/blue color palette in `n` colors with white at the
     `mid`th index.
-    
-    :param midpoint: Integer; index of white.
-    :param n: Integer; number of colors.
-    :return: List; palette colors.
+
+    Args:
+        n (int): The number of colors to generate.
+
+    Returns:
+        List of RGB tuples.
     &#34;&#34;&#34;
-    blues = list(sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=(n-midpoint)*2))[:n-midpoint]
-    reds = list(sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=midpoint*2))[midpoint:]
+    midpoint = math.ceil(n/2)
+    
+    # To get the appropriately-toned blues and reds, we create a list of colors,
+    # then select the first section of each color.
+    blues = list(
+        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
+    )[:midpoint]
+    reds = list(
+        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
+    )[-midpoint:]
     
     return list(reversed(reds)) + list(reversed(blues))</code></pre>
 </details>
