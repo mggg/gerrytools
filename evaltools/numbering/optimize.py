@@ -6,7 +6,7 @@ from gurobipy import GRB
 import math
 
 
-def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None) -> Dict[str, str]:
+def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None, verbose: bool = False) -> Dict[str, str]:
     """
     Minimize core dispersion in a state given an column with enacted districts
     and a column with proposed numberings. Returns a dictionary relabeling the
@@ -18,17 +18,24 @@ def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col:
         proposed_col: The column in the GeoDataFrame with the proposed districts.
         extra_constraints: Optional; A function that can add extra constraints 
             to the model, such as parity (in the case of WI).
+        verbose: If true, do not suppress solver output. Otherwise, stay quiet.
 
     Returns:
         A dictionary mapping proposed labels to optimized labels.
     """
     districts = list(set(units[proposed_col].astype(int)))
     model = gp.Model("state_model")
+    model.setParam('OutputFlag', int(verbose))
 
     numbering = model.addVars(len(districts), len(districts), vtype=GRB.BINARY, name="numbering")
 
     exprs = []
-    for district in tqdm.tqdm(districts):  # iter over proposed
+    if verbose:
+        wrapper = lambda x: tqdm.tqdm(x)
+    else:
+        wrapper = lambda x: x
+
+    for district in wrapper(districts):  # iter over proposed
         enacted_intersection = units[units[proposed_col] == district].groupby(enacted_col).sum()[pop_col].to_dict()
 
         for enacted, overlap_pop in enacted_intersection.items(): # maximize overlap; minimize dispersion
@@ -55,7 +62,7 @@ def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col:
 
     return numbering_mapping
 
-def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str) -> Dict[str, bool]:
+def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, verbose: bool = False) -> Dict[str, bool]:
     """
     Minimize odd->even parity shift in a state given an column with enacted districts
     and a column with proposed numberings. Returns a dictionary with the parity of the
@@ -65,17 +72,24 @@ def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str
         units: The units to optimize on. E.g. Census blocks.
         enacted_col: The column in the GeoDataFrame with the enacted districts.
         proposed_col: The column in the GeoDataFrame with the proposed districts.
+        verbose: If true, do not suppress solver output. Otherwise, stay quiet.
 
     Returns:
         A dictionary mapping proposed labels to booleans values representing the optimal parity. 
         (True if even, False odd).
     """
     model = gp.Model("parity_model")
+    model.setParam('OutputFlag', int(verbose))
+
     districts = list(set(units[proposed_col].astype(int)))
     districts_even = model.addVars(len(districts), vtype=GRB.BINARY, name="districts_even")
 
     exprs = []
-    for i, block in tqdm.tqdm(units[[enacted_col, proposed_col, pop_col]].iterrows()):
+    if verbose:
+        wrapper = lambda x: tqdm.tqdm(x)
+    else:
+        wrapper = lambda x: x
+    for i, block in wrapper(units[[enacted_col, proposed_col, pop_col]].iterrows()):
         district = districts.index(int(block[proposed_col]))
         isOdd = bool((int(block[enacted_col]) % 2) == 1)
         exprs.append(isOdd * districts_even[district] * block[pop_col])
