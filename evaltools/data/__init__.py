@@ -4,9 +4,11 @@ Allows users to easily retrieve population and demographic data from the Census 
 """
 
 from .acs import cvap, raw, acs5
+from .census import census
 
 __all__ = [
     "cvap",
     "raw",
-    "acs5"
+    "acs5",
+    "census"
 ]

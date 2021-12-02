@@ -1,5 +1,5 @@
 
-from evaltools.data import raw, cvap, acs5
+from evaltools.data import cvap, acs5, census
 import us
 
 def test_cvap_tracts():
@@ -35,6 +35,7 @@ def test_cvap_bgs():
 def test_acs5_tracts():
     state = us.states.AL
     data = acs5(state, geometry="tract")
+
     tracts = 1181
     columns = {
         "TOTPOP19", "WHITE19", "BLACK19", "AMIN19", "ASIAN19", "NHPI19", "OTH19",
@@ -59,8 +60,12 @@ def test_acs5_bgs():
     # Assert some stuff.
     assert len(data) == bgs
     assert set(list(data)) == columns
+
+def test_census():
+    state = us.states.AL
+    census(state, geometry="tract")
     
 
 if __name__ == "__main__":
-    test_acs5_tracts()
+    test_census()
 
