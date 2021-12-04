@@ -6,8 +6,8 @@ import numpy as np
 
 
 def block_level_coi_preservation(
-    unit_blocks: Dict[Any, Sequence[Any]],
-    coi_blocks: Dict[Any, Sequence[Any]],
+    unit_blocks: Dict[Any, set],
+    coi_blocks: Dict[Any, set],
     block_pops: Dict[Any, float],
     thresholds: Sequence[float],
     partial_districts: bool = False
