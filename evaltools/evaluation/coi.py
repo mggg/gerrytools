@@ -28,11 +28,11 @@ def block_level_coi_preservation(
         COI population is much smaller than the typical district population,
         it is relatively easier to satisfy this criterion.
       * :math:`f_2(C_i, P, t) = 1` when :math:`100t\%%` of the population
-        of some district in :math:`P` is inside of :math:`C_i` (0 otherwise).
-        Intuitively, :math:`f_2` captures how districts are split across
-        communities of interest (though this notion is less easy to interpret
-        than :math:`f_1`). When the typical COI population is much larger
-        than the typical district population, it is relatively easier to
+        of some (ideally sized) district in :math:`P` is inside of :math:`C_i`
+        (0 otherwise).  Intuitively, :math:`f_2` captures how districts are
+        split across communities of interest (though this notion is less easy
+        to interpret than :math:`f_1`). When the typical COI population is
+        much larger than the typical district population, it is easier to
         satisfy this criterion.
 
     When `partial_districts` is `True`, we use an alternative formula for
@@ -56,9 +56,6 @@ def block_level_coi_preservation(
     :return: An updater that computes the COI preservation score for a
       partition for each threshold in `thresholds`.
     """
-    if min(thresholds) <= 0.5:
-        raise ValueError('Minimum inclusion threshold must be >50%.')
-
     # We precompute a sparse COI-unit intersection matrix.
     node_ordering = {k: idx for idx, k in enumerate(unit_blocks.keys())}
     unit_coi_inter_pops = np.zeros((len(coi_blocks), len(unit_blocks)))
@@ -90,13 +87,24 @@ def block_level_coi_preservation(
         max_district_pop_in_coi = np.max(coi_dist_pops, axis=1)
         score_by_threshold = {}
         ideal_dist_pop = total_pop / dist_mat.shape[1]
+        coi_ideal_districts = coi_pops / ideal_dist_pop
+
         for threshold in thresholds:
-            if not partial_districts:
-                score_by_threshold[threshold] = np.logical_or(
-                    max_district_pop_in_coi >= threshold * ideal_dist_pop,
-                    max_district_pop_in_coi >= threshold * coi_pops).sum()
+            # f_1: At least (100 * threshold)% of the population
+            # of the COI is contained within one district.
+            f1_scores = max_district_pop_in_coi >= threshold * coi_pops
+            if partial_districts:
+                # f_2: Number of districts (100 % threshold)% contained in
+                # in C_i, divided by the number of ideal districts in C_i.
+                over_threshold = (coi_dist_pops >=
+                                  threshold * ideal_dist_pop).sum(axis=1)
+                f2_scores = over_threshold / coi_ideal_districts
             else:
-                raise ValueError('Partial score not implemented yet.')
+                # f_2: At least (100 * threshold)% of the population of
+                # an ideal district is contained within the COI.
+                f2_scores = max_district_pop_in_coi >= threshold * ideal_dist_pop
+            score_by_threshold[threshold] = np.maximum(f1_scores,
+                                                       f2_scores).sum()
         return score_by_threshold
 
     return score_fn
