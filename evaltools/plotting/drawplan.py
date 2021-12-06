@@ -1,7 +1,7 @@
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
-from .colors import districtr, redbluecmap
+from .colors import districtr
 
 def drawplan(
         districts, assignment, overlays=None, colors=None, numbers=False, lw=1/2

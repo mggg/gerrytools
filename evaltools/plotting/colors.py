@@ -66,8 +66,38 @@ def redbluecmap(n) -> List[Tuple]:
     return list(reversed(reds)) + list(reversed(blues))
 
 
-def flare(n):
+def flare(n) -> list:
+    """
+    Returns a list of colors based on the `flare` Matplotlib/seaborn colormap.
+
+    Args:
+        n (int): Number of colors to generate.
+
+    Returns:
+        List of RGB triples.
+    """
     return list(sns.color_palette("flare", as_cmap=False, n_colors=n))
 
-def purples(n):
+def purples(n) -> list:
+    """
+    Returns a list of colors based on the `Purples` Matplotlib/seaborn colormap.
+
+    Args:
+        n (int): Number of colors to generate.
+
+    Returns:
+        List of RGB triples.
+    """
     return list(sns.color_palette("Purples", as_cmap=False, n_colors=n))
+
+def greens(n) -> list:
+    """
+    Returns a list of colors based on the `Greens` Matplotlib/seaborn colormap.
+
+    Args:
+        n (int): Number of colors to generate.
+
+    Returns:
+        List of RGB triples.
+    """
+    return list(sns.color_palette("Greens", as_cmap=False, n_colors=n))

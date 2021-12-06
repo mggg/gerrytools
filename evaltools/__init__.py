@@ -16,6 +16,7 @@ from .numbering import (
     minimize_dispersion, minimize_parity, minimize_dispersion_with_parity,
     calculate_dispersion, dispersion_updater_closure
 )
+from .data import acs5, cvap, census
 
 """
 __all__ = [
