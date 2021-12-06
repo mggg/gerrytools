@@ -29,10 +29,10 @@
 </summary>
 <pre><code class="python">from shapely.geometry import box, MultiPolygon, Point
 from random import uniform
-from pydantic import BaseModel
 from typing import Tuple
 import geopandas as gpd
 import json
+from ..geography import dissolve
 
 
 class PlotSpecification:
@@ -42,7 +42,7 @@ class PlotSpecification:
     store those data so plots can be re-created with speed.
     &#34;&#34;&#34;
 
-    crs: str = &#34;epsg:3857&#34;
+    webmercator: str = &#34;epsg:3857&#34;
     &#34;&#34;&#34;
     WebMercator CRS, with coordinates in feet.
     &#34;&#34;&#34;
@@ -61,8 +61,13 @@ class PlotSpecification:
         the calculated bounding box; if `False`, all other units are dropped and
         only designated units are included.
         &#34;&#34;&#34;
+
+        self.labels: dict = {}
+        &#34;&#34;&#34;
+        Labels and their locations. If this is empty, no labels are plotted.
+        &#34;&#34;&#34;
         
-    def findbbox(self, geometries, identifiers, idcolumn=&#34;COUNTYFP20&#34;, margin=1):
+    def computebbox(self, geometries, identifiers, idcolumn=&#34;COUNTYFP20&#34;, margin=1) -&gt; Tuple:
         r&#34;&#34;&#34;
         Finds the minimal rectangle containing the geometries matching the provided
         identifier codes. Typically, the `geometries` are counties and `identifiers`
@@ -79,8 +84,102 @@ class PlotSpecification:
                 the width of the margin-adjusted bounding box is \(w+2m\), where
                 \(m\) is the margin; the height of the bounding box is adjusted
                 similarly.
+
+        Returns:
+            A four-tuple of values: the first pair represents the bottom-left corner
+            of the bounding box, the second pair the top-right corner.
         &#34;&#34;&#34;
-        pass</code></pre>
+        # Set the geometries to the specified CRS, filter the geometries, and
+        # dissolve them.
+        geometries = geometries.to_crs(self.webmercator)
+        geometries[&#34;dissolve&#34;] = 1
+
+        subgeometries = geometries[geometries[idcolumn].astype(str).isin(identifiers)]
+        dissolved = dissolve(subgeometries, by=&#34;dissolve&#34;)
+
+        # Find the bounding box and adjust.
+        offset = margin*5280
+        bounds = dissolved.bounds
+        minx, maxx = bounds.minx.values[0], bounds.maxx.values[0]
+        miny, maxy = bounds.miny.values[0], bounds.maxy.values[0]
+
+        self.bbox = {
+            &#34;x&#34;: (minx-offset, maxx+offset),
+            &#34;y&#34;: (miny-offset, maxy+offset)
+        }
+
+        return minx-offset, miny-offset, maxx+offset, maxy+offset
+
+    def computelabels(self, districts, assignment, geometrycolumn=&#34;geometry&#34;) -&gt; dict:
+        &#34;&#34;&#34;
+        Computes label locations for the provided district geometries.
+
+        Args:
+            districts (gpd.GeoDataFrame): Districting plan; assumes there is one
+                geometry per district.
+            assignment (str): Column of `districts` which defines the
+                districting plan.
+            geometrycolumn (str, optional): Column of `districts` which defines
+                the geometry for each district.
+
+        Returns:
+            A dictionary mapping district labels to locations.
+        &#34;&#34;&#34;
+        # Make sure we&#39;re in the same CRS.
+        districts = districts.to_crs(self.webmercator)
+
+        # Get the bounding box; if there is no bounding box, we don&#39;t need to
+        # compute anything, and we simply assign labels to representative points.
+        if self.bbox:
+            minx, maxx = self.bbox[&#34;x&#34;]
+            miny, maxy = self.bbox[&#34;y&#34;]
+            bbox = box(minx, miny, maxx, maxy)
+
+        locations = {}
+        
+        for geometry, district in zip(districts[geometrycolumn], districts[assignment]):
+            # In the first condition, there *is* no bounding box for the plot;
+            # set the location of the district&#39;s label to be a representative
+            # point for the entire geometry.
+            if not self.bbox:
+                point = geometry.representative_point()
+                locations[district] = point.coords[0]
+            else:
+                # If there *is* a bounding box, we encounter three conditions:
+                # either the bounding box entirely contains the district, the
+                # bounding box contains a part of the district, or the intersection
+                # of the district and the bounding box is empty.
+
+                # If the district is entirely contained, return a representative
+                # point.
+                if bbox.contains(geometry):
+                    point = geometry.representative_point()
+                    locations[district] = point.coords[0]
+
+                # If the intersection is nonempty (and is greater than two square
+                # miles), return a representative point of the *intersection*.
+                elif bbox.intersection(geometry).area &gt; 2*(5280**2):
+                    # Find the intersection.
+                    intersection = bbox.intersection(geometry)
+
+                    # Check if the intersection is a MultiPolygon (i.e. there are
+                    # multiple pieces of the same district), and label the largest
+                    # one.
+                    if isinstance(intersection, MultiPolygon):
+                        largest = max(intersection, key=lambda p: p.area)
+                    else:
+                        largest = intersection
+
+                    # Compute the representative point.
+                    point = largest.representative_point()
+                    locations[district] = point.coords[0]
+
+                # Otherwise, continue.
+                else: continue
+
+        # Set labels to the `labels` property.
+        self.labels = locations
+        return locations</code></pre>
 </details>
 </section>
 <section>
@@ -110,7 +209,7 @@ store those data so plots can be re-created with speed.</p></div>
     store those data so plots can be re-created with speed.
     &#34;&#34;&#34;
 
-    crs: str = &#34;epsg:3857&#34;
+    webmercator: str = &#34;epsg:3857&#34;
     &#34;&#34;&#34;
     WebMercator CRS, with coordinates in feet.
     &#34;&#34;&#34;
@@ -129,8 +228,13 @@ store those data so plots can be re-created with speed.</p></div>
         the calculated bounding box; if `False`, all other units are dropped and
         only designated units are included.
         &#34;&#34;&#34;
+
+        self.labels: dict = {}
+        &#34;&#34;&#34;
+        Labels and their locations. If this is empty, no labels are plotted.
+        &#34;&#34;&#34;
         
-    def findbbox(self, geometries, identifiers, idcolumn=&#34;COUNTYFP20&#34;, margin=1):
+    def computebbox(self, geometries, identifiers, idcolumn=&#34;COUNTYFP20&#34;, margin=1) -&gt; Tuple:
         r&#34;&#34;&#34;
         Finds the minimal rectangle containing the geometries matching the provided
         identifier codes. Typically, the `geometries` are counties and `identifiers`
@@ -147,12 +251,106 @@ store those data so plots can be re-created with speed.</p></div>
                 the width of the margin-adjusted bounding box is \(w+2m\), where
                 \(m\) is the margin; the height of the bounding box is adjusted
                 similarly.
+
+        Returns:
+            A four-tuple of values: the first pair represents the bottom-left corner
+            of the bounding box, the second pair the top-right corner.
         &#34;&#34;&#34;
-        pass</code></pre>
+        # Set the geometries to the specified CRS, filter the geometries, and
+        # dissolve them.
+        geometries = geometries.to_crs(self.webmercator)
+        geometries[&#34;dissolve&#34;] = 1
+
+        subgeometries = geometries[geometries[idcolumn].astype(str).isin(identifiers)]
+        dissolved = dissolve(subgeometries, by=&#34;dissolve&#34;)
+
+        # Find the bounding box and adjust.
+        offset = margin*5280
+        bounds = dissolved.bounds
+        minx, maxx = bounds.minx.values[0], bounds.maxx.values[0]
+        miny, maxy = bounds.miny.values[0], bounds.maxy.values[0]
+
+        self.bbox = {
+            &#34;x&#34;: (minx-offset, maxx+offset),
+            &#34;y&#34;: (miny-offset, maxy+offset)
+        }
+
+        return minx-offset, miny-offset, maxx+offset, maxy+offset
+
+    def computelabels(self, districts, assignment, geometrycolumn=&#34;geometry&#34;) -&gt; dict:
+        &#34;&#34;&#34;
+        Computes label locations for the provided district geometries.
+
+        Args:
+            districts (gpd.GeoDataFrame): Districting plan; assumes there is one
+                geometry per district.
+            assignment (str): Column of `districts` which defines the
+                districting plan.
+            geometrycolumn (str, optional): Column of `districts` which defines
+                the geometry for each district.
+
+        Returns:
+            A dictionary mapping district labels to locations.
+        &#34;&#34;&#34;
+        # Make sure we&#39;re in the same CRS.
+        districts = districts.to_crs(self.webmercator)
+
+        # Get the bounding box; if there is no bounding box, we don&#39;t need to
+        # compute anything, and we simply assign labels to representative points.
+        if self.bbox:
+            minx, maxx = self.bbox[&#34;x&#34;]
+            miny, maxy = self.bbox[&#34;y&#34;]
+            bbox = box(minx, miny, maxx, maxy)
+
+        locations = {}
+        
+        for geometry, district in zip(districts[geometrycolumn], districts[assignment]):
+            # In the first condition, there *is* no bounding box for the plot;
+            # set the location of the district&#39;s label to be a representative
+            # point for the entire geometry.
+            if not self.bbox:
+                point = geometry.representative_point()
+                locations[district] = point.coords[0]
+            else:
+                # If there *is* a bounding box, we encounter three conditions:
+                # either the bounding box entirely contains the district, the
+                # bounding box contains a part of the district, or the intersection
+                # of the district and the bounding box is empty.
+
+                # If the district is entirely contained, return a representative
+                # point.
+                if bbox.contains(geometry):
+                    point = geometry.representative_point()
+                    locations[district] = point.coords[0]
+
+                # If the intersection is nonempty (and is greater than two square
+                # miles), return a representative point of the *intersection*.
+                elif bbox.intersection(geometry).area &gt; 2*(5280**2):
+                    # Find the intersection.
+                    intersection = bbox.intersection(geometry)
+
+                    # Check if the intersection is a MultiPolygon (i.e. there are
+                    # multiple pieces of the same district), and label the largest
+                    # one.
+                    if isinstance(intersection, MultiPolygon):
+                        largest = max(intersection, key=lambda p: p.area)
+                    else:
+                        largest = intersection
+
+                    # Compute the representative point.
+                    point = largest.representative_point()
+                    locations[district] = point.coords[0]
+
+                # Otherwise, continue.
+                else: continue
+
+        # Set labels to the `labels` property.
+        self.labels = locations
+        return locations</code></pre>
 </details>
 <h3>Class variables</h3>
 <dl>
-<dt id="evaltools.plotting.specification.PlotSpecification.crs"><code class="name">var <span class="ident">crs</span> : str</code></dt>
+<dt id="evaltools.plotting.specification.PlotSpecification.webmercator"><code class="name">var <span class="ident">webmercator</span> : str</code></dt>
 <dd>
 <div class="desc"><p>WebMercator CRS, with coordinates in feet.</p></div>
 </dd>
@@ -171,11 +369,15 @@ should be included. If <code>True</code>, the axis limits are modified according
 the calculated bounding box; if <code>False</code>, all other units are dropped and
 only designated units are included.</p></div>
 </dd>
+<dt id="evaltools.plotting.specification.PlotSpecification.labels"><code class="name">var <span class="ident">labels</span></code></dt>
+<dd>
+<div class="desc"><p>Labels and their locations. If this is empty, no labels are plotted.</p></div>
+</dd>
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="evaltools.plotting.specification.PlotSpecification.findbbox"><code class="name flex">
-<span>def <span class="ident">findbbox</span></span>(<span>self, geometries, identifiers, idcolumn='COUNTYFP20', margin=1)</span>
+<dt id="evaltools.plotting.specification.PlotSpecification.computebbox"><code class="name flex">
+<span>def <span class="ident">computebbox</span></span>(<span>self, geometries, identifiers, idcolumn='COUNTYFP20', margin=1) ‑> Tuple</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Finds the minimal rectangle containing the geometries matching the provided
@@ -197,12 +399,15 @@ For example, if the base width of the bounding box is <span><span class="MathJax
 the width of the margin-adjusted bounding box is <span><span class="MathJax_Preview">w+2m</span><script type="math/tex">w+2m</script></span>, where
 <span><span class="MathJax_Preview">m</span><script type="math/tex">m</script></span> is the margin; the height of the bounding box is adjusted
 similarly.</dd>
-</dl></div>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A four-tuple of values: the first pair represents the bottom-left corner
+of the bounding box, the second pair the top-right corner.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def findbbox(self, geometries, identifiers, idcolumn=&#34;COUNTYFP20&#34;, margin=1):
+<pre><code class="python">def computebbox(self, geometries, identifiers, idcolumn=&#34;COUNTYFP20&#34;, margin=1) -&gt; Tuple:
     r&#34;&#34;&#34;
     Finds the minimal rectangle containing the geometries matching the provided
     identifier codes. Typically, the `geometries` are counties and `identifiers`
@@ -219,8 +424,126 @@ similarly.</dd>
             the width of the margin-adjusted bounding box is \(w+2m\), where
             \(m\) is the margin; the height of the bounding box is adjusted
             similarly.
+
+    Returns:
+        A four-tuple of values: the first pair represents the bottom-left corner
+        of the bounding box, the second pair the top-right corner.
     &#34;&#34;&#34;
-    pass</code></pre>
+    # Set the geometries to the specified CRS, filter the geometries, and
+    # dissolve them.
+    geometries = geometries.to_crs(self.webmercator)
+    geometries[&#34;dissolve&#34;] = 1
+
+    subgeometries = geometries[geometries[idcolumn].astype(str).isin(identifiers)]
+    dissolved = dissolve(subgeometries, by=&#34;dissolve&#34;)
+
+    # Find the bounding box and adjust.
+    offset = margin*5280
+    bounds = dissolved.bounds
+    minx, maxx = bounds.minx.values[0], bounds.maxx.values[0]
+    miny, maxy = bounds.miny.values[0], bounds.maxy.values[0]
+
+    self.bbox = {
+        &#34;x&#34;: (minx-offset, maxx+offset),
+        &#34;y&#34;: (miny-offset, maxy+offset)
+    }
+
+    return minx-offset, miny-offset, maxx+offset, maxy+offset</code></pre>
+</details>
+</dd>
+<dt id="evaltools.plotting.specification.PlotSpecification.computelabels"><code class="name flex">
+<span>def <span class="ident">computelabels</span></span>(<span>self, districts, assignment, geometrycolumn='geometry') ‑> dict</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes label locations for the provided district geometries.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>districts</code></strong> :&ensp;<code>gpd.GeoDataFrame</code></dt>
+<dd>Districting plan; assumes there is one
+geometry per district.</dd>
+<dt><strong><code>assignment</code></strong> :&ensp;<code>str</code></dt>
+<dd>Column of <code>districts</code> which defines the
+districting plan.</dd>
+<dt><strong><code>geometrycolumn</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Column of <code>districts</code> which defines
+the geometry for each district.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A dictionary mapping district labels to locations.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def computelabels(self, districts, assignment, geometrycolumn=&#34;geometry&#34;) -&gt; dict:
+    &#34;&#34;&#34;
+    Computes label locations for the provided district geometries.
+
+    Args:
+        districts (gpd.GeoDataFrame): Districting plan; assumes there is one
+            geometry per district.
+        assignment (str): Column of `districts` which defines the
+            districting plan.
+        geometrycolumn (str, optional): Column of `districts` which defines
+            the geometry for each district.
+
+    Returns:
+        A dictionary mapping district labels to locations.
+    &#34;&#34;&#34;
+    # Make sure we&#39;re in the same CRS.
+    districts = districts.to_crs(self.webmercator)
+
+    # Get the bounding box; if there is no bounding box, we don&#39;t need to
+    # compute anything, and we simply assign labels to representative points.
+    if self.bbox:
+        minx, maxx = self.bbox[&#34;x&#34;]
+        miny, maxy = self.bbox[&#34;y&#34;]
+        bbox = box(minx, miny, maxx, maxy)
+
+    locations = {}
+    
+    for geometry, district in zip(districts[geometrycolumn], districts[assignment]):
+        # In the first condition, there *is* no bounding box for the plot;
+        # set the location of the district&#39;s label to be a representative
+        # point for the entire geometry.
+        if not self.bbox:
+            point = geometry.representative_point()
+            locations[district] = point.coords[0]
+        else:
+            # If there *is* a bounding box, we encounter three conditions:
+            # either the bounding box entirely contains the district, the
+            # bounding box contains a part of the district, or the intersection
+            # of the district and the bounding box is empty.
+
+            # If the district is entirely contained, return a representative
+            # point.
+            if bbox.contains(geometry):
+                point = geometry.representative_point()
+                locations[district] = point.coords[0]
+
+            # If the intersection is nonempty (and is greater than two square
+            # miles), return a representative point of the *intersection*.
+            elif bbox.intersection(geometry).area &gt; 2*(5280**2):
+                # Find the intersection.
+                intersection = bbox.intersection(geometry)
+
+                # Check if the intersection is a MultiPolygon (i.e. there are
+                # multiple pieces of the same district), and label the largest
+                # one.
+                if isinstance(intersection, MultiPolygon):
+                    largest = max(intersection, key=lambda p: p.area)
+                else:
+                    largest = intersection
+
+                # Compute the representative point.
+                point = largest.representative_point()
+                locations[district] = point.coords[0]
+
+            # Otherwise, continue.
+            else: continue
+
+    # Set labels to the `labels` property.
+    self.labels = locations
+    return locations</code></pre>
 </details>
 </dd>
 </dl>
@@ -232,7 +555,6 @@ similarly.</dd>
 <header>
 <a class="homelink" rel="home" title="evaltools" href="https://github.com/mggg/plan-evaluation-processing">
 <style>
-header { text-align: center; }
 header > h1 { display: none; }
 img.resize {
 max-width: 80%;
@@ -256,11 +578,13 @@ max-height: 80%;
 <ul>
 <li>
 <h4><code><a title="evaltools.plotting.specification.PlotSpecification" href="#evaltools.plotting.specification.PlotSpecification">PlotSpecification</a></code></h4>
-<ul class="">
+<ul class="two-column">
 <li><code><a title="evaltools.plotting.specification.PlotSpecification.bbox" href="#evaltools.plotting.specification.PlotSpecification.bbox">bbox</a></code></li>
+<li><code><a title="evaltools.plotting.specification.PlotSpecification.computebbox" href="#evaltools.plotting.specification.PlotSpecification.computebbox">computebbox</a></code></li>
+<li><code><a title="evaltools.plotting.specification.PlotSpecification.computelabels" href="#evaltools.plotting.specification.PlotSpecification.computelabels">computelabels</a></code></li>
 <li><code><a title="evaltools.plotting.specification.PlotSpecification.context" href="#evaltools.plotting.specification.PlotSpecification.context">context</a></code></li>
-<li><code><a title="evaltools.plotting.specification.PlotSpecification.crs" href="#evaltools.plotting.specification.PlotSpecification.crs">crs</a></code></li>
-<li><code><a title="evaltools.plotting.specification.PlotSpecification.findbbox" href="#evaltools.plotting.specification.PlotSpecification.findbbox">findbbox</a></code></li>
+<li><code><a title="evaltools.plotting.specification.PlotSpecification.labels" href="#evaltools.plotting.specification.PlotSpecification.labels">labels</a></code></li>
+<li><code><a title="evaltools.plotting.specification.PlotSpecification.webmercator" href="#evaltools.plotting.specification.PlotSpecification.webmercator">webmercator</a></code></li>
 </ul>
 </li>
 </ul>

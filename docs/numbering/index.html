@@ -70,7 +70,7 @@ __all__ = [
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.numbering.calculate_dispersiondispersion_updater_closure"><code class="name flex">
-<span>def <span class="ident">calculate_dispersiondispersion_updater_closure</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str) ‑> Dict[str, bool]</span>
+<span>def <span class="ident">calculate_dispersiondispersion_updater_closure</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, verbose: bool = False) ‑> Dict[str, bool]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Minimize odd-&gt;even parity shift in a state given an column with enacted districts
@@ -84,6 +84,8 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
 <dd>The column in the GeoDataFrame with the enacted districts.</dd>
 <dt><strong><code>proposed_col</code></strong></dt>
 <dd>The column in the GeoDataFrame with the proposed districts.</dd>
+<dt><strong><code>verbose</code></strong></dt>
+<dd>If true, do not suppress solver output. Otherwise, stay quiet.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A dictionary mapping proposed labels to booleans values representing the optimal parity.
@@ -92,7 +94,7 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str) -&gt; Dict[str, bool]:
+<pre><code class="python">def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, verbose: bool = False) -&gt; Dict[str, bool]:
     &#34;&#34;&#34;
     Minimize odd-&gt;even parity shift in a state given an column with enacted districts
     and a column with proposed numberings. Returns a dictionary with the parity of the
@@ -102,17 +104,24 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
         units: The units to optimize on. E.g. Census blocks.
         enacted_col: The column in the GeoDataFrame with the enacted districts.
         proposed_col: The column in the GeoDataFrame with the proposed districts.
+        verbose: If true, do not suppress solver output. Otherwise, stay quiet.
 
     Returns:
         A dictionary mapping proposed labels to booleans values representing the optimal parity. 
         (True if even, False odd).
     &#34;&#34;&#34;
     model = gp.Model(&#34;parity_model&#34;)
+    model.setParam(&#39;OutputFlag&#39;, int(verbose))
+
     districts = list(set(units[proposed_col].astype(int)))
     districts_even = model.addVars(len(districts), vtype=GRB.BINARY, name=&#34;districts_even&#34;)
 
     exprs = []
-    for i, block in tqdm.tqdm(units[[enacted_col, proposed_col, pop_col]].iterrows()):
+    if verbose:
+        wrapper = lambda x: tqdm.tqdm(x)
+    else:
+        wrapper = lambda x: x
+    for i, block in wrapper(units[[enacted_col, proposed_col, pop_col]].iterrows()):
         district = districts.index(int(block[proposed_col]))
         isOdd = bool((int(block[enacted_col]) % 2) == 1)
         exprs.append(isOdd * districts_even[district] * block[pop_col])
@@ -131,7 +140,7 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
 </details>
 </dd>
 <dt id="evaltools.numbering.minimize_dispersion"><code class="name flex">
-<span>def <span class="ident">minimize_dispersion</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints=None) ‑> Dict[str, str]</span>
+<span>def <span class="ident">minimize_dispersion</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints=None, verbose: bool = False) ‑> Dict[str, str]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Minimize core dispersion in a state given an column with enacted districts
@@ -148,6 +157,8 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
 <dt><strong><code>extra_constraints</code></strong></dt>
 <dd>Optional; A function that can add extra constraints
 to the model, such as parity (in the case of WI).</dd>
+<dt><strong><code>verbose</code></strong></dt>
+<dd>If true, do not suppress solver output. Otherwise, stay quiet.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A dictionary mapping proposed labels to optimized labels.</p></div>
@@ -155,7 +166,7 @@ to the model, such as parity (in the case of WI).</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None) -&gt; Dict[str, str]:
+<pre><code class="python">def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None, verbose: bool = False) -&gt; Dict[str, str]:
     &#34;&#34;&#34;
     Minimize core dispersion in a state given an column with enacted districts
     and a column with proposed numberings. Returns a dictionary relabeling the
@@ -167,17 +178,24 @@ to the model, such as parity (in the case of WI).</dd>
         proposed_col: The column in the GeoDataFrame with the proposed districts.
         extra_constraints: Optional; A function that can add extra constraints 
             to the model, such as parity (in the case of WI).
+        verbose: If true, do not suppress solver output. Otherwise, stay quiet.
 
     Returns:
         A dictionary mapping proposed labels to optimized labels.
     &#34;&#34;&#34;
     districts = list(set(units[proposed_col].astype(int)))
     model = gp.Model(&#34;state_model&#34;)
+    model.setParam(&#39;OutputFlag&#39;, int(verbose))
 
     numbering = model.addVars(len(districts), len(districts), vtype=GRB.BINARY, name=&#34;numbering&#34;)
 
     exprs = []
-    for district in tqdm.tqdm(districts):  # iter over proposed
+    if verbose:
+        wrapper = lambda x: tqdm.tqdm(x)
+    else:
+        wrapper = lambda x: x
+
+    for district in wrapper(districts):  # iter over proposed
         enacted_intersection = units[units[proposed_col] == district].groupby(enacted_col).sum()[pop_col].to_dict()
 
         for enacted, overlap_pop in enacted_intersection.items(): # maximize overlap; minimize dispersion
@@ -261,7 +279,7 @@ to the model, such as parity (in the case of WI).</dd>
 </details>
 </dd>
 <dt id="evaltools.numbering.minimize_parity"><code class="name flex">
-<span>def <span class="ident">minimize_parity</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str) ‑> Dict[str, bool]</span>
+<span>def <span class="ident">minimize_parity</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, verbose: bool = False) ‑> Dict[str, bool]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Minimize odd-&gt;even parity shift in a state given an column with enacted districts
@@ -275,6 +293,8 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
 <dd>The column in the GeoDataFrame with the enacted districts.</dd>
 <dt><strong><code>proposed_col</code></strong></dt>
 <dd>The column in the GeoDataFrame with the proposed districts.</dd>
+<dt><strong><code>verbose</code></strong></dt>
+<dd>If true, do not suppress solver output. Otherwise, stay quiet.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A dictionary mapping proposed labels to booleans values representing the optimal parity.
@@ -283,7 +303,7 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str) -&gt; Dict[str, bool]:
+<pre><code class="python">def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, verbose: bool = False) -&gt; Dict[str, bool]:
     &#34;&#34;&#34;
     Minimize odd-&gt;even parity shift in a state given an column with enacted districts
     and a column with proposed numberings. Returns a dictionary with the parity of the
@@ -293,17 +313,24 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
         units: The units to optimize on. E.g. Census blocks.
         enacted_col: The column in the GeoDataFrame with the enacted districts.
         proposed_col: The column in the GeoDataFrame with the proposed districts.
+        verbose: If true, do not suppress solver output. Otherwise, stay quiet.
 
     Returns:
         A dictionary mapping proposed labels to booleans values representing the optimal parity. 
         (True if even, False odd).
     &#34;&#34;&#34;
     model = gp.Model(&#34;parity_model&#34;)
+    model.setParam(&#39;OutputFlag&#39;, int(verbose))
+
     districts = list(set(units[proposed_col].astype(int)))
     districts_even = model.addVars(len(districts), vtype=GRB.BINARY, name=&#34;districts_even&#34;)
 
     exprs = []
-    for i, block in tqdm.tqdm(units[[enacted_col, proposed_col, pop_col]].iterrows()):
+    if verbose:
+        wrapper = lambda x: tqdm.tqdm(x)
+    else:
+        wrapper = lambda x: x
+    for i, block in wrapper(units[[enacted_col, proposed_col, pop_col]].iterrows()):
         district = districts.index(int(block[proposed_col]))
         isOdd = bool((int(block[enacted_col]) % 2) == 1)
         exprs.append(isOdd * districts_even[district] * block[pop_col])
@@ -330,7 +357,6 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
 <header>
 <a class="homelink" rel="home" title="evaltools" href="https://github.com/mggg/plan-evaluation-processing">
 <style>
-header { text-align: center; }
 header > h1 { display: none; }
 img.resize {
 max-width: 80%;

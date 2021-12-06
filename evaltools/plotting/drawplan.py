@@ -1,10 +1,7 @@
 
 import matplotlib.pyplot as plt
-import math
 from matplotlib.axes import Axes
-from string import hexdigits as hex
-from random import choice
-from ..colors import districtr, redbluecmap
+from .colors import districtr, redbluecmap
 
 def drawplan(
         districts, assignment, overlays=None, colors=None, numbers=False, lw=1/2

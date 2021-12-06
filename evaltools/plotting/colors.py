@@ -2,6 +2,8 @@
 import seaborn as sns
 import math
 from typing import List, Tuple
+from random import choice
+from string import hexdigits as hex
 
 def hexshift(color) -> str:
     """
