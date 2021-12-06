@@ -4,7 +4,6 @@
 .. include:: ../docs/introduction.md
 """
 
-from evaltools.plotting.colors import districtr, flare, purples
 from .plotting import (
     drawplan, drawgraph, districtr, flare, purples, redbluecmap, PlotSpecification
 )
