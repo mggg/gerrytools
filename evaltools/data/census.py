@@ -1,13 +1,9 @@
 
 import pandas as pd
-import numpy as np
 import requests
 from itertools import combinations
 from functools import reduce
 from typing import Iterable
-from math import comb
-
-acceptable_tables = {"P1", "P2", "P3", "P4"}
 
 def _rjoin(df, columns) -> Iterable:
     """
@@ -48,7 +44,7 @@ def census(state, table="P1", geometry="block") -> pd.DataFrame:
         geometry = "block"
 
     # Check whether we're providing an appropriate table name.
-    if table not in acceptable_tables:
+    if table not in {"P1", "P2", "P3", "P4"}:
         print(f"Table \"{table}\" not accepted; defaulting to \"P1.\"")
     
     # Keeping this key here in plaintext is fine, I don't want others to have to
