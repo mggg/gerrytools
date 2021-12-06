@@ -24,9 +24,11 @@ def test_cvap_bgs():
     
     # Set some testing variables.
     columns = {
-        "BLOCKGROUP10", "CVAP19", "NHCVAP19", "NHAICVAP19", "NHACVAP19", "NHBCVAP19",
-        "NHNHPICVAP19", "NHWCVAP19", "NHAIWCVAP19", "NHAWCVAP19", "NHBWCVAP19",
-        "NHAIBCVAP19", "NHOCVAP19", "HCVAP19", "POCCVAP19"
+        "TOTPOP19", "WHITE19", "BLACK19", "AMIN19", "ASIAN19", "NHPI19", "OTH19",
+        "2MORE19", "NHISP19", "WVAP19", "BVAP19", "AMINVAP19", "ASIANVAP19",
+        "NHPIVAP19", "OTHVAP19", "2MOREVAP19", "HVAP19", "TRACT10", "VAP19",
+        "WCVAP19", "BCVAP19", "AMINCVAP19", "ASIANCVAP19", "NHPICVAP19", "OTHCVAP19",
+        "2MORECVAP19", "NHWCVAP19", "HCVAP19", "CVAP19", "POCVAP19", "NHWVAP19"
     }
     bgs = 3438
 
@@ -42,7 +44,9 @@ def test_acs5_tracts():
     columns = {
         "TOTPOP19", "WHITE19", "BLACK19", "AMIN19", "ASIAN19", "NHPI19", "OTH19",
         "2MORE19", "NHISP19", "WVAP19", "BVAP19", "AMINVAP19", "ASIANVAP19",
-        "NHPIVAP19", "OTHVAP19", "2MOREVAP19", "HVAP19", "TRACT10", "VAP19"
+        "NHPIVAP19", "OTHVAP19", "2MOREVAP19", "HVAP19", "TRACT10", "VAP19",
+        "WCVAP19", "BCVAP19", "AMINCVAP19", "ASIANCVAP19", "NHPICVAP19", "OTHCVAP19",
+        "2MORECVAP19", "NHWCVAP19", "HCVAP19", "CVAP19", "POCVAP19", "NHWVAP19"
     }
 
     # Assert some stuff.
@@ -56,7 +60,9 @@ def test_acs5_bgs():
     columns = {
         "TOTPOP19", "WHITE19", "BLACK19", "AMIN19", "ASIAN19", "NHPI19", "OTH19",
         "2MORE19", "NHISP19", "WVAP19", "BVAP19", "AMINVAP19", "ASIANVAP19",
-        "NHPIVAP19", "OTHVAP19", "2MOREVAP19", "HVAP19", "BLOCKGROUP10", "VAP19"
+        "NHPIVAP19", "OTHVAP19", "2MOREVAP19", "HVAP19", "BLOCKGROUP10", "VAP19",
+        "WCVAP19", "BCVAP19", "AMINCVAP19", "ASIANCVAP19", "NHPICVAP19", "OTHCVAP19",
+        "2MORECVAP19", "NHWCVAP19", "HCVAP19", "CVAP19", "POCVAP19", "NHWVAP19"
     }
 
     # Assert some stuff.
@@ -99,6 +105,5 @@ def test_census_tracts():
     assert set(list(data)) == columns
 
 if __name__ == "__main__":
-    test_cvap_bgs()
-
+    test_acs5_tracts()
  
