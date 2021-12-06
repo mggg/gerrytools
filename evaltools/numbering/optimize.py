@@ -106,7 +106,7 @@ def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str
 
     return mapping
 
-def minimize_dispersion_with_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None) -> Dict[str, bool]:
+def minimize_dispersion_with_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None) -> Dict[str, str]:
     """
     Minimize dispersion and odd->even parity shift in a state given an column with 
     enacted districts and a column with proposed numberings. Returns a dictionary 
