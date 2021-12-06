@@ -34,7 +34,7 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
         9: "NHAWCVAP",
         10: "NHBWCVAP",
         11: "NHAIBCVAP",
-        12: "NHOCVAP",
+        12: "NHOTHCVAP",
         13: "HCVAP" 
     }
 
@@ -42,7 +42,7 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
     # "tract10."
     if geometry not in {"block group", "tract"}:
         print(f"Requested geometry \"{geometry}\" is not allowed; loading tracts.")
-        geometry = "tract10"
+        geometry = "tract"
 
     # Load the raw data.
     raw = _raw(geometry)
@@ -83,7 +83,7 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
 
     return data
 
-def acs5(state, geometry="tract", year=2019, columns=[]) -> pd.DataFrame:
+def acs5(state, geometry="tract", year=2019, columns=[], white="NHWVAP19") -> pd.DataFrame:
     """
     Retrieves ACS 5-year population estimates for the provided state, geometry
     level, and year. Geometries are from the **2010 Census**.
@@ -154,8 +154,7 @@ def acs5(state, geometry="tract", year=2019, columns=[]) -> pd.DataFrame:
         data = data.drop(group, axis=1)
 
     # Create a POCVAP column.
-    data["POCVAP19"] = data["VAP19"] - data["NHWVAP19"]
-
+    data["POCVAP19"] = data["VAP19"] - data[white]
     return data
 
 def variables(prefix, start, stop, suffix="E") -> list:

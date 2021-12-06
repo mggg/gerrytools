@@ -37,9 +37,9 @@ def unitmap(source, target) -> dict:
 
     # Reset the mapping's index, zip, and return.
     mapping = mapping.reset_index()
-    mapping.columns = [source_index, target_index]
+    mapping.columns = ["from", "to"]
     
-    return dict(zip(mapping[source_index], mapping[target_index]))
+    return dict(zip(mapping["from"], mapping["to"]))
 
 
 def invert(unitmap) -> dict:
