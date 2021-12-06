@@ -62,3 +62,10 @@ def redbluecmap(n) -> List[Tuple]:
     )[-midpoint:]
     
     return list(reversed(reds)) + list(reversed(blues))
+
+
+def flare(n):
+    return list(sns.color_palette("flare", as_cmap=False, n_colors=n))
+
+def purples(n):
+    return list(sns.color_palette("Purples", as_cmap=False, n_colors=n))

@@ -7,7 +7,8 @@ from pathlib import Path
 def cvap(state, geometry="tract") -> pd.DataFrame:
     """
     Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
-    the specified geometry level. Geometries from the **2010 Census**.
+    the specified geometry level. Geometries from the **2010 Census**. Variables
+    and descriptions are listed `here <https://tinyurl.com/3mnrm56s>`_.
 
     Args:
         state (us.State): The `State` object for which we're retrieving 2019 ACS
@@ -24,16 +25,16 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
     descriptions = {
         1: "CVAP",
         2: "NHCVAP",
-        3: "AICVAP",
-        4: "ACVAP",
-        5: "BCVAP",
-        6: "NHPICVAP",
-        7: "WCVAP",
-        8: "AIWCVAP",
-        9: "AWCVAP",
-        10: "BWCVAP",
-        11: "AIBCVAP",
-        12: "OCVAP",
+        3: "NHAICVAP",
+        4: "NHACVAP",
+        5: "NHBCVAP",
+        6: "NHNHPICVAP",
+        7: "NHWCVAP",
+        8: "NHAIWCVAP",
+        9: "NHAWCVAP",
+        10: "NHBWCVAP",
+        11: "NHAIBCVAP",
+        12: "NHOTHCVAP",
         13: "HCVAP" 
     }
 
@@ -41,16 +42,16 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
     # "tract10."
     if geometry not in {"block group", "tract"}:
         print(f"Requested geometry \"{geometry}\" is not allowed; loading tracts.")
-        geometry = "tract10"
+        geometry = "tract"
 
     # Load the raw data.
-    _raw = raw(geometry)
+    raw = _raw(geometry)
 
     # Create a STATE column for filtering and remove all rows which don't match
     # the state FIPS code.
-    _raw["GEOID"] = _raw["geoid"].str.split("US").str[1]
-    _raw["STATE"] = _raw["GEOID"].str[:2]
-    instate = _raw[_raw["STATE"] == str(state.fips)]
+    raw["GEOID"] = raw["geoid"].str.split("US").str[1]
+    raw["STATE"] = raw["GEOID"].str[:2]
+    instate = raw[raw["STATE"] == str(state.fips)]
 
     # Now that we have the in-state data, we aim to pivot the table. Because the
     # ACS data is in a line-numbered format (i.e. each chunk of 13 lines matches
@@ -75,10 +76,14 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
 
         collapsed.append(record)
 
-    # Create a dataframe out of the listed records and return.
-    return pd.DataFrame().from_records(collapsed)
+    # Create a dataframe and a POCCVAP column; all people minus non-Hispanic
+    # White.
+    data = pd.DataFrame().from_records(collapsed)
+    data["POCCVAP19"] = data["CVAP19"] - data["NHWCVAP19"]
 
-def acs5(state, geometry="tract", year=2019, columns=[]) -> pd.DataFrame:
+    return data
+
+def acs5(state, geometry="tract", year=2019, columns=[], white="NHWVAP19") -> pd.DataFrame:
     """
     Retrieves ACS 5-year population estimates for the provided state, geometry
     level, and year. Geometries are from the **2010 Census**.
@@ -107,16 +112,16 @@ def acs5(state, geometry="tract", year=2019, columns=[]) -> pd.DataFrame:
         "B03002_007E": "NHPI19",
         "B03002_008E": "OTH19",
         "B03002_009E": "2MORE19",
-        "B03002_002E": "NHISP19"
+        "B03002_002E": "NHISP19",
     }
 
     # Column *groups* for tables. This is a little messy.
     columns_tables = list(zip(
         [
             "WVAP19", "BVAP19", "AMINVAP19", "ASIANVAP19", "NHPIVAP19", "OTHVAP19",
-            "2MOREVAP19", "HVAP19"
+            "2MOREVAP19", "NHWVAP19", "HVAP19"
         ],
-        ["A", "B", "C", "D", "E", "F", "G", "I"]
+        ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
     ))
 
     groups = {
@@ -148,6 +153,8 @@ def acs5(state, geometry="tract", year=2019, columns=[]) -> pd.DataFrame:
         data[column] = data[group].sum(axis=1)
         data = data.drop(group, axis=1)
 
+    # Create a POCVAP column.
+    data["POCVAP19"] = data["VAP19"] - data[white]
     return data
 
 def variables(prefix, start, stop, suffix="E") -> list:
@@ -157,7 +164,8 @@ def variables(prefix, start, stop, suffix="E") -> list:
     like voting-age population. Variable names are formatted like
     `<prefix>_<number identifier><suffix>`, where `<prefix>` is a population grouping,
     `<number identifier>` is the number of the variable in that grouping, and
-    `<suffix>` designates the file used.
+    `<suffix>` designates the file used. Variables are listed
+    `here <https://tinyurl.com/43ajptky>`_.
 
     Args:
         prefix (str): Population grouping; typically "B01001." These prefixes
@@ -176,7 +184,7 @@ def variables(prefix, start, stop, suffix="E") -> list:
         for t in range(start, stop+1)
     ]
 
-def raw(geometry) -> pd.DataFrame:
+def _raw(geometry) -> pd.DataFrame:
     """
     Reads raw CVAP data from the local repository.
 
