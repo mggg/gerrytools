@@ -1,7 +1,9 @@
+from typing import Union
 
+import gerrychain
 from gerrychain.constraints import contiguous as ctgs
 
-def contiguous(P) -> bool:
+def contiguous(P: gerrychain.Partition) -> bool:
     """
     Determines whether the districting plan defined by the partition is
     contiguous.
@@ -15,7 +17,7 @@ def contiguous(P) -> bool:
     return ctgs(P)
 
 
-def unassigned_units(P, raw=False) -> int:
+def unassigned_units(P: gerrychain.Partition, raw: bool = False) -> Union[float, int]:
     """
     Determines the proportion (or raw number) of units without a district
     assignment. An unassigned unit is a unit without a districting assignment an

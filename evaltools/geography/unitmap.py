@@ -1,7 +1,10 @@
+from typing import List, Dict, TypeVar
 
 import maup
 import warnings
 
+A = TypeVar("A")
+B = TypeVar("B")
 
 def unitmap(source, target) -> dict:
     """
@@ -42,7 +45,7 @@ def unitmap(source, target) -> dict:
     return dict(zip(mapping[source_index], mapping[target_index]))
 
 
-def invert(unitmap) -> dict:
+def invert(unitmap: Dict[A, B]) -> Dict[B, List[A]]:
     """
     Inverts the provided unit mapping.
 
@@ -55,7 +58,7 @@ def invert(unitmap) -> dict:
         unique identifiers.
     """
     # Invert the dictionary.
-    inverse = {}
+    inverse: Dict[B, List[A]] = {}
 
     for s, t in unitmap.items():
         if inverse.get(t, None): inverse[t].append(s)
