@@ -34,17 +34,26 @@ Provides ease-of-use functionality for geographic and geometric operations.
 from .dissolve import dissolve
 from .dualgraph import dualgraph
 from .unitmap import unitmap, invert
+from .scores import reock
 from ..processing import Graph, Partition
 
 __all__ = [
     &#34;dissolve&#34;,
     &#34;dualgraph&#34;,
     &#34;unitmap&#34;,
-    &#34;invert&#34;
+    &#34;invert&#34;,
+    &#34;reock&#34;
 ]</code></pre>
 </details>
 </section>
 <section>
+<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+<dl>
+<dt><code class="name"><a title="evaltools.geography.scores" href="scores.html">evaltools.geography.scores</a></code></dt>
+<dd>
+<div class="desc"><p>Auxiliary and specialized geographical scores for plan evaluation.</p></div>
+</dd>
+</dl>
 </section>
 <section>
 </section>
@@ -190,7 +199,7 @@ to be a list of pairs of objects, e.g. <code>[(u, v), &hellip;]</code> where <co
 </details>
 </dd>
 <dt id="evaltools.geography.invert"><code class="name flex">
-<span>def <span class="ident">invert</span></span>(<span>unitmap) ‑> dict</span>
+<span>def <span class="ident">invert</span></span>(<span>unitmap: Dict[~A, ~B]) ‑> Dict[~B, List[~A]]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Inverts the provided unit mapping.</p>
@@ -207,7 +216,7 @@ unique identifiers.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def invert(unitmap) -&gt; dict:
+<pre><code class="python">def invert(unitmap: Dict[A, B]) -&gt; Dict[B, List[A]]:
     &#34;&#34;&#34;
     Inverts the provided unit mapping.
 
@@ -220,13 +229,87 @@ unique identifiers.</p></div>
         unique identifiers.
     &#34;&#34;&#34;
     # Invert the dictionary.
-    inverse = {}
+    inverse: Dict[B, List[A]] = {}
 
     for s, t in unitmap.items():
         if inverse.get(t, None): inverse[t].append(s)
         else: inverse[t] = [s]
 
     return inverse</code></pre>
+</details>
+</dd>
+<dt id="evaltools.geography.reock"><code class="name flex">
+<span>def <span class="ident">reock</span></span>(<span>geodata: Union[geopandas.geodataframe.GeoDataFrame, networkx.classes.graph.Graph]) ‑> Callable[[gerrychain.partition.partition.Partition], Dict[Any, float]]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Makes a Reock score function specialized to <code>geodata</code>.</p>
+<p>The Reock score of a district is its area defined by the area of its
+minimum enclosing circle. Computing the area of this circle is nontrivial,
+and the Reock score is distinct from other popular compactness scores
+(cut edges, Polsby-Popper) in its reliance on full district geometries
+(rather than district areas and perimeters, which can be computed
+efficiently from unit-level statistics).</p>
+<p>We precompute convex hulls of all geometries in <code>geodata</code> and
+build an index. The resulting score function uses this index for
+fast geometric computations; the function can only be used with
+dual graphs derived from <code>geodata</code>.</p>
+<p>:param geodata: Geographical data to precompute geometries from.
+May be a <code>geopandas.GeoDataFrame</code> or a <code>networkx.Graph</code> with
+a <code>geometry</code> column.
+:return: A per-district Reock score updater specialized to <code>geodata</code>.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def reock(
+    geodata: Union[gpd.GeoDataFrame, Graph]
+) -&gt; Callable[[Partition], Dict[Any, float]]:
+    &#34;&#34;&#34;Makes a Reock score function specialized to `geodata`.
+
+    The Reock score of a district is its area defined by the area of its
+    minimum enclosing circle. Computing the area of this circle is nontrivial,
+    and the Reock score is distinct from other popular compactness scores
+    (cut edges, Polsby-Popper) in its reliance on full district geometries
+    (rather than district areas and perimeters, which can be computed
+    efficiently from unit-level statistics).
+
+    We precompute convex hulls of all geometries in `geodata` and
+    build an index. The resulting score function uses this index for
+    fast geometric computations; the function can only be used with
+    dual graphs derived from `geodata`.
+
+    :param geodata: Geographical data to precompute geometries from.
+      May be a `geopandas.GeoDataFrame` or a `networkx.Graph` with
+      a `geometry` column.
+    :return: A per-district Reock score updater specialized to `geodata`.
+    &#34;&#34;&#34;
+    if isinstance(geodata, gpd.GeoDataFrame):
+        geometries = dict(geodata.geometry.apply(lambda p: p.convex_hull))
+    elif isinstance(geodata, Graph):
+        geometries = {
+            node: geom.convex_hull
+            for node, geom in geodata.nodes(&#39;geometry&#39;)
+        }
+    else:
+        raise ValueError(
+            &#39;Geodata must be a GeoDataFrame or a gerrychain.Graph.&#39;)
+
+    def score_fn(partition: Partition) -&gt; Dict[Any, float]:
+        boundary_nodes = set.union(*(set(e) for e in partition[&#39;cut_edges&#39;]))
+        part_scores = {}
+
+        for part, nodes in partition.parts.items():
+            geom = unary_union([
+                geometries[node] for node in nodes if node in boundary_nodes
+            ]).convex_hull
+            coords = np.array(geom.exterior.coords.xy).T.astype(np.float32)
+            _, radius = minEnclosingCircle(coords)
+            score = float(partition[&#39;area&#39;][part] / (pi * radius**2))
+            assert 0 &lt; score &lt; 1
+            part_scores[part] = score
+        return part_scores
+
+    return score_fn</code></pre>
 </details>
 </dd>
 <dt id="evaltools.geography.unitmap"><code class="name flex">
@@ -306,11 +389,17 @@ Unique identifiers will be values in the resulting dictionary.</dd>
 <li><code><a title="evaltools" href="../index.html">evaltools</a></code></li>
 </ul>
 </li>
+<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<ul>
+<li><code><a title="evaltools.geography.scores" href="scores.html">evaltools.geography.scores</a></code></li>
+</ul>
+</li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="evaltools.geography.dissolve" href="#evaltools.geography.dissolve">dissolve</a></code></li>
 <li><code><a title="evaltools.geography.dualgraph" href="#evaltools.geography.dualgraph">dualgraph</a></code></li>
 <li><code><a title="evaltools.geography.invert" href="#evaltools.geography.invert">invert</a></code></li>
+<li><code><a title="evaltools.geography.reock" href="#evaltools.geography.reock">reock</a></code></li>
 <li><code><a title="evaltools.geography.unitmap" href="#evaltools.geography.unitmap">unitmap</a></code></li>
 </ul>
 </li>

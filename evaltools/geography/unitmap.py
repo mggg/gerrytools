@@ -40,9 +40,10 @@ def unitmap(source, target) -> dict:
 
     # Reset the mapping's index, zip, and return.
     mapping = mapping.reset_index()
-    mapping.columns = [source_index, target_index]
+    l, r = "l", "r"
+    mapping.columns = [l, r]
     
-    return dict(zip(mapping[source_index], mapping[target_index]))
+    return dict(zip(mapping[l], mapping[r]))
 
 
 def invert(unitmap: Dict[A, B]) -> Dict[B, List[A]]:

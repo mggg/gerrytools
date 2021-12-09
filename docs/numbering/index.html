@@ -223,7 +223,7 @@ to the model, such as parity (in the case of WI).</dd>
 </details>
 </dd>
 <dt id="evaltools.numbering.minimize_dispersion_with_parity"><code class="name flex">
-<span>def <span class="ident">minimize_dispersion_with_parity</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints=None) ‑> Dict[str, bool]</span>
+<span>def <span class="ident">minimize_dispersion_with_parity</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints=None) ‑> Dict[str, str]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Minimize dispersion and odd-&gt;even parity shift in a state given an column with
@@ -247,7 +247,7 @@ to the model, such as parity (in the case of WI).</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def minimize_dispersion_with_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None) -&gt; Dict[str, bool]:
+<pre><code class="python">def minimize_dispersion_with_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None) -&gt; Dict[str, str]:
     &#34;&#34;&#34;
     Minimize dispersion and odd-&gt;even parity shift in a state given an column with 
     enacted districts and a column with proposed numberings. Returns a dictionary 
