@@ -14,6 +14,7 @@ from .numbering import (
     minimize_dispersion, minimize_parity, minimize_dispersion_with_parity,
     calculate_dispersion, dispersion_updater_closure
 )
+from .utils import rename, JSON, objectify
 
 """
 __all__ = [
@@ -22,6 +23,6 @@ __all__ = [
     "ensemble_schema", "assignment_schema", "contiguous", "unassigned_units",
     "unassigned_population", "AssignmentCompressor",
     "minimize_dispersion", "minimize_parity", "minimize_dispersion_with_parity",
-    "calculate_dispersion", "dispersion_updater_closure"
+    "calculate_dispersion", "dispersion_updater_closure", "rename"
 ]
 """

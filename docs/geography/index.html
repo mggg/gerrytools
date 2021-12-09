@@ -368,9 +368,10 @@ Unique identifiers will be values in the resulting dictionary.</dd>
 
     # Reset the mapping&#39;s index, zip, and return.
     mapping = mapping.reset_index()
-    mapping.columns = [source_index, target_index]
+    l, r = &#34;l&#34;, &#34;r&#34;
+    mapping.columns = [l, r]
     
-    return dict(zip(mapping[source_index], mapping[target_index]))</code></pre>
+    return dict(zip(mapping[l], mapping[r]))</code></pre>
 </details>
 </dd>
 </dl>
