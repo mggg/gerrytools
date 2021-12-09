@@ -34,7 +34,7 @@ A package for processing districting plans, from retrieval to processing to
 visualization.
 &#34;&#34;&#34;
 from .mapping import drawplan, drawgraph
-from .colors import districtr, redblue
+from .colors import districtr, redblue, flare, purples
 from .geography import dissolve, dualgraph
 from .evaluation import (
     splits, pieces, deviations, contiguous, unassigned_units,
@@ -48,7 +48,7 @@ from .utils import rename, JSON, objectify
 
 &#34;&#34;&#34;
 __all__ = [
-    &#34;districtr&#34;, &#34;redblue&#34;, &#34;drawplan&#34;, &#34;dualgraph&#34;, &#34;dissolve&#34;,
+    &#34;districtr&#34;, &#34;redblue&#34;, &#34;drawplan&#34;, &#34;dualgraph&#34;, &#34;dissolve&#34;, &#34;flare&#34;,
     &#34;drawgraph&#34;, &#34;Graph&#34;, &#34;Partition&#34;, &#34;splits&#34;, &#34;pieces&#34;, &#34;deviations&#34;,
     &#34;ensemble_schema&#34;, &#34;assignment_schema&#34;, &#34;contiguous&#34;, &#34;unassigned_units&#34;,
     &#34;unassigned_population&#34;, &#34;AssignmentCompressor&#34;,

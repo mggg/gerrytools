@@ -35,7 +35,7 @@ def cvap(state, geometry=&#34;tract&#34;) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
     the specified geometry level. Geometries from the **2010 Census**. Variables
-    and descriptions are listed `here &lt;https://tinyurl.com/3mnrm56s&gt;`_.
+    and descriptions are [listed here](https://tinyurl.com/3mnrm56s&gt;).
 
     Args:
         state (us.State): The `State` object for which we&#39;re retrieving 2019 ACS
@@ -61,7 +61,7 @@ def cvap(state, geometry=&#34;tract&#34;) -&gt; pd.DataFrame:
         9: &#34;NHAWCVAP&#34;,
         10: &#34;NHBWCVAP&#34;,
         11: &#34;NHAIBCVAP&#34;,
-        12: &#34;NHOCVAP&#34;,
+        12: &#34;NHOTHCVAP&#34;,
         13: &#34;HCVAP&#34; 
     }
 
@@ -69,7 +69,7 @@ def cvap(state, geometry=&#34;tract&#34;) -&gt; pd.DataFrame:
     # &#34;tract10.&#34;
     if geometry not in {&#34;block group&#34;, &#34;tract&#34;}:
         print(f&#34;Requested geometry \&#34;{geometry}\&#34; is not allowed; loading tracts.&#34;)
-        geometry = &#34;tract10&#34;
+        geometry = &#34;tract&#34;
 
     # Load the raw data.
     raw = _raw(geometry)
@@ -110,7 +110,7 @@ def cvap(state, geometry=&#34;tract&#34;) -&gt; pd.DataFrame:
 
     return data
 
-def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[]) -&gt; pd.DataFrame:
+def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWVAP19&#34;) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves ACS 5-year population estimates for the provided state, geometry
     level, and year. Geometries are from the **2010 Census**.
@@ -142,20 +142,51 @@ def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[]) -&gt; pd.DataFr
         &#34;B03002_002E&#34;: &#34;NHISP19&#34;,
     }
 
-    # Column *groups* for tables. This is a little messy.
-    columns_tables = list(zip(
+    # Create a dictionary of column groups.
+    groups = {}
+
+    # Get VAP columns. The columns listed here are by race, irrespective of ethnicity;
+    # for example, WVAP19 is the group of people who identified White as their *only*
+    # race, including people who identified as Hispanic and White.
+    vap_tables = list(zip(
         [
             &#34;WVAP19&#34;, &#34;BVAP19&#34;, &#34;AMINVAP19&#34;, &#34;ASIANVAP19&#34;, &#34;NHPIVAP19&#34;, &#34;OTHVAP19&#34;,
             &#34;2MOREVAP19&#34;, &#34;NHWVAP19&#34;, &#34;HVAP19&#34;
         ],
         [&#34;A&#34;, &#34;B&#34;, &#34;C&#34;, &#34;D&#34;, &#34;E&#34;, &#34;F&#34;, &#34;G&#34;, &#34;H&#34;, &#34;I&#34;]
     ))
+    groups.update({
+        column: variables(f&#34;B01001{table}&#34;, 7, 16) + variables(f&#34;B01001{table}&#34;, 22, 31)
+        for column, table in vap_tables
+    })
 
-    groups = {
-        column: variables(f&#34;B01001{table}&#34;, 7, 16, suffix=&#34;E&#34;) + variables(f&#34;B01001{table}&#34;, 22, 31, suffix=&#34;E&#34;)
-        for column, table in columns_tables
-    }
-    groups[&#34;VAP19&#34;] = variables(&#34;B01001&#34;, 7, 25, suffix=&#34;E&#34;) + variables(&#34;B01001&#34;, 31, 49, suffix=&#34;E&#34;)
+    # Get CVAP columns; the same goes for these columns as does the above, except
+    # these columns are 18 years and older *and* citizens.
+    cvap_tables = list(zip(
+        [
+            &#34;WCVAP19&#34;, &#34;BCVAP19&#34;, &#34;AMINCVAP19&#34;, &#34;ASIANCVAP19&#34;, &#34;NHPICVAP19&#34;, &#34;OTHCVAP19&#34;,
+            &#34;2MORECVAP19&#34;, &#34;NHWCVAP19&#34;, &#34;HCVAP19&#34;
+        ],
+        [&#34;A&#34;, &#34;B&#34;, &#34;C&#34;, &#34;D&#34;, &#34;E&#34;, &#34;F&#34;, &#34;G&#34;, &#34;H&#34;, &#34;I&#34;]
+    ))
+    groups.update({
+        column: 
+            variables(f&#34;B05003{table}&#34;, 9, 9) + variables(f&#34;B05003{table}&#34;, 11, 11) + # men
+            variables(f&#34;B05003{table}&#34;, 15, 15) + variables(f&#34;B05003{table}&#34;, 17, 17) # women
+        for column, table in cvap_tables
+    })
+    
+    # Get all voting-age people and citizen voting-age people.
+    groups[&#34;VAP19&#34;] = variables(&#34;B01001&#34;, 7, 25) + variables(&#34;B01001&#34;, 31, 49)
+    groups[&#34;CVAP19&#34;] = variables(f&#34;B05003&#34;, 9, 9) + \
+        variables(f&#34;B05003&#34;, 11, 11) + \
+        variables(f&#34;B05003&#34;, 15, 15) + \
+        variables(f&#34;B05003&#34;, 17, 17)
+
+    # TODO: all variables used across the data submodule should be packaged up
+    # as a class, so we can access individual dictionaries of variables to add.
+    # For example, we should have a `Variables.acs5.vap` property which gives us
+    # the voting-age population variables for the ACS 5-year estimates.
 
     # Get the list of all columns.
     allcols = list(popcolumns.keys()) + [c for k in groups.values() for c in k] + columns
@@ -181,8 +212,7 @@ def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[]) -&gt; pd.DataFr
         data = data.drop(group, axis=1)
 
     # Create a POCVAP column.
-    data[&#34;POCVAP19&#34;] = data[&#34;VAP19&#34;] - data[&#34;NHWVAP19&#34;]
-
+    data[&#34;POCVAP19&#34;] = data[&#34;VAP19&#34;] - data[white]
     return data
 
 def variables(prefix, start, stop, suffix=&#34;E&#34;) -&gt; list:
@@ -192,8 +222,8 @@ def variables(prefix, start, stop, suffix=&#34;E&#34;) -&gt; list:
     like voting-age population. Variable names are formatted like
     `&lt;prefix&gt;_&lt;number identifier&gt;&lt;suffix&gt;`, where `&lt;prefix&gt;` is a population grouping,
     `&lt;number identifier&gt;` is the number of the variable in that grouping, and
-    `&lt;suffix&gt;` designates the file used. Variables are listed
-    `here &lt;https://tinyurl.com/43ajptky&gt;`_.
+    `&lt;suffix&gt;` designates the file used. [Variables are listed
+    here ](https://tinyurl.com/43ajptky&gt;).
 
     Args:
         prefix (str): Population grouping; typically &#34;B01001.&#34; These prefixes
@@ -239,7 +269,7 @@ def _raw(geometry) -&gt; pd.DataFrame:
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.data.acs.acs5"><code class="name flex">
-<span>def <span class="ident">acs5</span></span>(<span>state, geometry='tract', year=2019, columns=[]) ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">acs5</span></span>(<span>state, geometry='tract', year=2019, columns=[], white='NHWVAP19') ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Retrieves ACS 5-year population estimates for the provided state, geometry
@@ -266,7 +296,7 @@ column.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[]) -&gt; pd.DataFrame:
+<pre><code class="python">def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWVAP19&#34;) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves ACS 5-year population estimates for the provided state, geometry
     level, and year. Geometries are from the **2010 Census**.
@@ -298,20 +328,51 @@ column.</dd>
         &#34;B03002_002E&#34;: &#34;NHISP19&#34;,
     }
 
-    # Column *groups* for tables. This is a little messy.
-    columns_tables = list(zip(
+    # Create a dictionary of column groups.
+    groups = {}
+
+    # Get VAP columns. The columns listed here are by race, irrespective of ethnicity;
+    # for example, WVAP19 is the group of people who identified White as their *only*
+    # race, including people who identified as Hispanic and White.
+    vap_tables = list(zip(
         [
             &#34;WVAP19&#34;, &#34;BVAP19&#34;, &#34;AMINVAP19&#34;, &#34;ASIANVAP19&#34;, &#34;NHPIVAP19&#34;, &#34;OTHVAP19&#34;,
             &#34;2MOREVAP19&#34;, &#34;NHWVAP19&#34;, &#34;HVAP19&#34;
         ],
         [&#34;A&#34;, &#34;B&#34;, &#34;C&#34;, &#34;D&#34;, &#34;E&#34;, &#34;F&#34;, &#34;G&#34;, &#34;H&#34;, &#34;I&#34;]
     ))
+    groups.update({
+        column: variables(f&#34;B01001{table}&#34;, 7, 16) + variables(f&#34;B01001{table}&#34;, 22, 31)
+        for column, table in vap_tables
+    })
 
-    groups = {
-        column: variables(f&#34;B01001{table}&#34;, 7, 16, suffix=&#34;E&#34;) + variables(f&#34;B01001{table}&#34;, 22, 31, suffix=&#34;E&#34;)
-        for column, table in columns_tables
-    }
-    groups[&#34;VAP19&#34;] = variables(&#34;B01001&#34;, 7, 25, suffix=&#34;E&#34;) + variables(&#34;B01001&#34;, 31, 49, suffix=&#34;E&#34;)
+    # Get CVAP columns; the same goes for these columns as does the above, except
+    # these columns are 18 years and older *and* citizens.
+    cvap_tables = list(zip(
+        [
+            &#34;WCVAP19&#34;, &#34;BCVAP19&#34;, &#34;AMINCVAP19&#34;, &#34;ASIANCVAP19&#34;, &#34;NHPICVAP19&#34;, &#34;OTHCVAP19&#34;,
+            &#34;2MORECVAP19&#34;, &#34;NHWCVAP19&#34;, &#34;HCVAP19&#34;
+        ],
+        [&#34;A&#34;, &#34;B&#34;, &#34;C&#34;, &#34;D&#34;, &#34;E&#34;, &#34;F&#34;, &#34;G&#34;, &#34;H&#34;, &#34;I&#34;]
+    ))
+    groups.update({
+        column: 
+            variables(f&#34;B05003{table}&#34;, 9, 9) + variables(f&#34;B05003{table}&#34;, 11, 11) + # men
+            variables(f&#34;B05003{table}&#34;, 15, 15) + variables(f&#34;B05003{table}&#34;, 17, 17) # women
+        for column, table in cvap_tables
+    })
+    
+    # Get all voting-age people and citizen voting-age people.
+    groups[&#34;VAP19&#34;] = variables(&#34;B01001&#34;, 7, 25) + variables(&#34;B01001&#34;, 31, 49)
+    groups[&#34;CVAP19&#34;] = variables(f&#34;B05003&#34;, 9, 9) + \
+        variables(f&#34;B05003&#34;, 11, 11) + \
+        variables(f&#34;B05003&#34;, 15, 15) + \
+        variables(f&#34;B05003&#34;, 17, 17)
+
+    # TODO: all variables used across the data submodule should be packaged up
+    # as a class, so we can access individual dictionaries of variables to add.
+    # For example, we should have a `Variables.acs5.vap` property which gives us
+    # the voting-age population variables for the ACS 5-year estimates.
 
     # Get the list of all columns.
     allcols = list(popcolumns.keys()) + [c for k in groups.values() for c in k] + columns
@@ -337,8 +398,7 @@ column.</dd>
         data = data.drop(group, axis=1)
 
     # Create a POCVAP column.
-    data[&#34;POCVAP19&#34;] = data[&#34;VAP19&#34;] - data[&#34;NHWVAP19&#34;]
-
+    data[&#34;POCVAP19&#34;] = data[&#34;VAP19&#34;] - data[white]
     return data</code></pre>
 </details>
 </dd>
@@ -348,7 +408,7 @@ column.</dd>
 <dd>
 <div class="desc"><p>Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
 the specified geometry level. Geometries from the <strong>2010 Census</strong>. Variables
-and descriptions are listed <code>here &lt;https://tinyurl.com/3mnrm56s&gt;</code>_.</p>
+and descriptions are <a href="https://tinyurl.com/3mnrm56s&gt;">listed here</a>.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>state</code></strong> :&ensp;<code>us.State</code></dt>
@@ -370,7 +430,7 @@ the 2019 ACS CVAP Special Tab.</p></div>
     &#34;&#34;&#34;
     Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
     the specified geometry level. Geometries from the **2010 Census**. Variables
-    and descriptions are listed `here &lt;https://tinyurl.com/3mnrm56s&gt;`_.
+    and descriptions are [listed here](https://tinyurl.com/3mnrm56s&gt;).
 
     Args:
         state (us.State): The `State` object for which we&#39;re retrieving 2019 ACS
@@ -396,7 +456,7 @@ the 2019 ACS CVAP Special Tab.</p></div>
         9: &#34;NHAWCVAP&#34;,
         10: &#34;NHBWCVAP&#34;,
         11: &#34;NHAIBCVAP&#34;,
-        12: &#34;NHOCVAP&#34;,
+        12: &#34;NHOTHCVAP&#34;,
         13: &#34;HCVAP&#34; 
     }
 
@@ -404,7 +464,7 @@ the 2019 ACS CVAP Special Tab.</p></div>
     # &#34;tract10.&#34;
     if geometry not in {&#34;block group&#34;, &#34;tract&#34;}:
         print(f&#34;Requested geometry \&#34;{geometry}\&#34; is not allowed; loading tracts.&#34;)
-        geometry = &#34;tract10&#34;
+        geometry = &#34;tract&#34;
 
     # Load the raw data.
     raw = _raw(geometry)
@@ -455,8 +515,8 @@ suffix parameters. Used to generate batches of names, especially for things
 like voting-age population. Variable names are formatted like
 <code>&lt;prefix&gt;_&lt;number identifier&gt;&lt;suffix&gt;</code>, where <code>&lt;prefix&gt;</code> is a population grouping,
 <code>&lt;number identifier&gt;</code> is the number of the variable in that grouping, and
-<code>&lt;suffix&gt;</code> designates the file used. Variables are listed
-<code>here &lt;https://tinyurl.com/43ajptky&gt;</code>_.</p>
+<code>&lt;suffix&gt;</code> designates the file used. <a href="&lt;https://tinyurl.com/43ajptky&gt;&gt;">Variables are listed
+here </a>.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>prefix</code></strong> :&ensp;<code>str</code></dt>
@@ -484,8 +544,8 @@ age-by-sex tables is "B01001B"; for Hispanic and Latino, it is
     like voting-age population. Variable names are formatted like
     `&lt;prefix&gt;_&lt;number identifier&gt;&lt;suffix&gt;`, where `&lt;prefix&gt;` is a population grouping,
     `&lt;number identifier&gt;` is the number of the variable in that grouping, and
-    `&lt;suffix&gt;` designates the file used. Variables are listed
-    `here &lt;https://tinyurl.com/43ajptky&gt;`_.
+    `&lt;suffix&gt;` designates the file used. [Variables are listed
+    here ](https://tinyurl.com/43ajptky&gt;).
 
     Args:
         prefix (str): Population grouping; typically &#34;B01001.&#34; These prefixes

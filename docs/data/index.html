@@ -32,12 +32,13 @@ Allows users to easily retrieve population and demographic data from the Census 
 &#34;&#34;&#34;
 
 from .acs import cvap, acs5
-from .census import census
+from .census import census, variables
 
 __all__ = [
     &#34;cvap&#34;,
     &#34;acs5&#34;,
-    &#34;census&#34;
+    &#34;census&#34;,
+    &#34;variables&#34;
 ]</code></pre>
 </details>
 </section>
@@ -56,7 +57,7 @@ __all__ = [
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.data.acs5"><code class="name flex">
-<span>def <span class="ident">acs5</span></span>(<span>state, geometry='tract', year=2019, columns=[]) ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">acs5</span></span>(<span>state, geometry='tract', year=2019, columns=[], white='NHWVAP19') ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Retrieves ACS 5-year population estimates for the provided state, geometry
@@ -83,7 +84,7 @@ column.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[]) -&gt; pd.DataFrame:
+<pre><code class="python">def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWVAP19&#34;) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves ACS 5-year population estimates for the provided state, geometry
     level, and year. Geometries are from the **2010 Census**.
@@ -115,20 +116,51 @@ column.</dd>
         &#34;B03002_002E&#34;: &#34;NHISP19&#34;,
     }
 
-    # Column *groups* for tables. This is a little messy.
-    columns_tables = list(zip(
+    # Create a dictionary of column groups.
+    groups = {}
+
+    # Get VAP columns. The columns listed here are by race, irrespective of ethnicity;
+    # for example, WVAP19 is the group of people who identified White as their *only*
+    # race, including people who identified as Hispanic and White.
+    vap_tables = list(zip(
         [
             &#34;WVAP19&#34;, &#34;BVAP19&#34;, &#34;AMINVAP19&#34;, &#34;ASIANVAP19&#34;, &#34;NHPIVAP19&#34;, &#34;OTHVAP19&#34;,
             &#34;2MOREVAP19&#34;, &#34;NHWVAP19&#34;, &#34;HVAP19&#34;
         ],
         [&#34;A&#34;, &#34;B&#34;, &#34;C&#34;, &#34;D&#34;, &#34;E&#34;, &#34;F&#34;, &#34;G&#34;, &#34;H&#34;, &#34;I&#34;]
     ))
+    groups.update({
+        column: variables(f&#34;B01001{table}&#34;, 7, 16) + variables(f&#34;B01001{table}&#34;, 22, 31)
+        for column, table in vap_tables
+    })
 
-    groups = {
-        column: variables(f&#34;B01001{table}&#34;, 7, 16, suffix=&#34;E&#34;) + variables(f&#34;B01001{table}&#34;, 22, 31, suffix=&#34;E&#34;)
-        for column, table in columns_tables
-    }
-    groups[&#34;VAP19&#34;] = variables(&#34;B01001&#34;, 7, 25, suffix=&#34;E&#34;) + variables(&#34;B01001&#34;, 31, 49, suffix=&#34;E&#34;)
+    # Get CVAP columns; the same goes for these columns as does the above, except
+    # these columns are 18 years and older *and* citizens.
+    cvap_tables = list(zip(
+        [
+            &#34;WCVAP19&#34;, &#34;BCVAP19&#34;, &#34;AMINCVAP19&#34;, &#34;ASIANCVAP19&#34;, &#34;NHPICVAP19&#34;, &#34;OTHCVAP19&#34;,
+            &#34;2MORECVAP19&#34;, &#34;NHWCVAP19&#34;, &#34;HCVAP19&#34;
+        ],
+        [&#34;A&#34;, &#34;B&#34;, &#34;C&#34;, &#34;D&#34;, &#34;E&#34;, &#34;F&#34;, &#34;G&#34;, &#34;H&#34;, &#34;I&#34;]
+    ))
+    groups.update({
+        column: 
+            variables(f&#34;B05003{table}&#34;, 9, 9) + variables(f&#34;B05003{table}&#34;, 11, 11) + # men
+            variables(f&#34;B05003{table}&#34;, 15, 15) + variables(f&#34;B05003{table}&#34;, 17, 17) # women
+        for column, table in cvap_tables
+    })
+    
+    # Get all voting-age people and citizen voting-age people.
+    groups[&#34;VAP19&#34;] = variables(&#34;B01001&#34;, 7, 25) + variables(&#34;B01001&#34;, 31, 49)
+    groups[&#34;CVAP19&#34;] = variables(f&#34;B05003&#34;, 9, 9) + \
+        variables(f&#34;B05003&#34;, 11, 11) + \
+        variables(f&#34;B05003&#34;, 15, 15) + \
+        variables(f&#34;B05003&#34;, 17, 17)
+
+    # TODO: all variables used across the data submodule should be packaged up
+    # as a class, so we can access individual dictionaries of variables to add.
+    # For example, we should have a `Variables.acs5.vap` property which gives us
+    # the voting-age population variables for the ACS 5-year estimates.
 
     # Get the list of all columns.
     allcols = list(popcolumns.keys()) + [c for k in groups.values() for c in k] + columns
@@ -154,13 +186,12 @@ column.</dd>
         data = data.drop(group, axis=1)
 
     # Create a POCVAP column.
-    data[&#34;POCVAP19&#34;] = data[&#34;VAP19&#34;] - data[&#34;NHWVAP19&#34;]
-
+    data[&#34;POCVAP19&#34;] = data[&#34;VAP19&#34;] - data[white]
     return data</code></pre>
 </details>
 </dd>
 <dt id="evaltools.data.census"><code class="name flex">
-<span>def <span class="ident">census</span></span>(<span>state, table='P1', geometry='block') ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">census</span></span>(<span>state, table='P1', columns={}, geometry='block', key='75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65') ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Retrieves geometry-level 2020 Decennial Census PL94-171 data via the Census
@@ -172,10 +203,18 @@ API.</p>
 <dt><strong><code>table</code></strong> :&ensp;<code>string</code>, optional</dt>
 <dd>Table from which we retrieve data. Defaults to
 the P1 table, which gets populations by race regardless of ethnicity.</dd>
+<dt><strong><code>columns</code></strong> :&ensp;<code>dict</code>, optional</dt>
+<dd>Dictionary which maps Census column names (from
+the correct table) to human-readable names. We require this to be a
+dictionary, <em>not</em> a list, as specifying human-readable names will
+implicitly protect against incorrect column names and excessive API
+calls.</dd>
 <dt><strong><code>geometry</code></strong> :&ensp;<code>string</code>, optional</dt>
 <dd>Geometry level at which we retrieve data.
 Defaults to <code>"block"</code>, to retrieve block-level data for the state
 provided.</dd>
+<dt><strong><code>key</code></strong> :&ensp;<code>string</code>, optional</dt>
+<dd>Census API key.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A DataFrame with columns renamed according to their Census description
@@ -184,7 +223,10 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def census(state, table=&#34;P1&#34;, geometry=&#34;block&#34;) -&gt; pd.DataFrame:
+<pre><code class="python">def census(
+        state, table=&#34;P1&#34;, columns={}, geometry=&#34;block&#34;,
+        key=&#34;75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65&#34;
+    ) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves geometry-level 2020 Decennial Census PL94-171 data via the Census
     API.
@@ -193,9 +235,15 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
         state (State): `us.State` object (e.g. `us.states.WI`).
         table (string, optional): Table from which we retrieve data. Defaults to
             the P1 table, which gets populations by race regardless of ethnicity.
+        columns (dict, optional): Dictionary which maps Census column names (from
+            the correct table) to human-readable names. We require this to be a
+            dictionary, _not_ a list, as specifying human-readable names will
+            implicitly protect against incorrect column names and excessive API
+            calls.
         geometry (string, optional): Geometry level at which we retrieve data.
             Defaults to `&#34;block&#34;`, to retrieve block-level data for the state
             provided.
+        key (string, optional): Census API key.
 
     Returns:
         A DataFrame with columns renamed according to their Census description
@@ -208,18 +256,13 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
         geometry = &#34;block&#34;
 
     # Check whether we&#39;re providing an appropriate table name.
-    if table not in acceptable_tables:
+    if table not in {&#34;P1&#34;, &#34;P2&#34;, &#34;P3&#34;, &#34;P4&#34;}:
         print(f&#34;Table \&#34;{table}\&#34; not accepted; defaulting to \&#34;P1.\&#34;&#34;)
         table = &#34;P1&#34;
-    
-    # Keeping this key here in plaintext is fine, I don&#39;t want others to have to
-    # configure their own keys. There aren&#39;t any API limits (I don&#39;t think?) and
-    # it&#39;s not consequential for me to leave this here.
-    key = &#34;75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65&#34;
 
     # Set the base Census API URL and get the keys for the provided table.
     base = f&#34;https://api.census.gov/data/2020/dec/pl&#34;
-    varmap = variables(table)
+    varmap = columns if columns else variables(table)
     vars = list(varmap.keys())
 
     # Create the end part of the query string.
@@ -238,7 +281,11 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
     # at once, we request things in two parts and then merge them together.
     mergeable = []
 
-    for start, stop in [(0, 50), (50, len(vars))]:
+    # Split up start and stop positions based on the number of variables.
+    if len(vars) &lt; 45: positions = [(0, len(vars))]
+    else: positions = [(0, 45), (45, len(vars))]
+
+    for start, stop in positions:
         # Get the chunk of variables and create a tail of columns (geographic
         # identifiers).
         varchunk = vars[start:stop]
@@ -274,7 +321,7 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
 <dd>
 <div class="desc"><p>Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
 the specified geometry level. Geometries from the <strong>2010 Census</strong>. Variables
-and descriptions are listed <code>here &lt;https://tinyurl.com/3mnrm56s&gt;</code>_.</p>
+and descriptions are <a href="https://tinyurl.com/3mnrm56s&gt;">listed here</a>.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>state</code></strong> :&ensp;<code>us.State</code></dt>
@@ -296,7 +343,7 @@ the 2019 ACS CVAP Special Tab.</p></div>
     &#34;&#34;&#34;
     Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
     the specified geometry level. Geometries from the **2010 Census**. Variables
-    and descriptions are listed `here &lt;https://tinyurl.com/3mnrm56s&gt;`_.
+    and descriptions are [listed here](https://tinyurl.com/3mnrm56s&gt;).
 
     Args:
         state (us.State): The `State` object for which we&#39;re retrieving 2019 ACS
@@ -322,7 +369,7 @@ the 2019 ACS CVAP Special Tab.</p></div>
         9: &#34;NHAWCVAP&#34;,
         10: &#34;NHBWCVAP&#34;,
         11: &#34;NHAIBCVAP&#34;,
-        12: &#34;NHOCVAP&#34;,
+        12: &#34;NHOTHCVAP&#34;,
         13: &#34;HCVAP&#34; 
     }
 
@@ -330,7 +377,7 @@ the 2019 ACS CVAP Special Tab.</p></div>
     # &#34;tract10.&#34;
     if geometry not in {&#34;block group&#34;, &#34;tract&#34;}:
         print(f&#34;Requested geometry \&#34;{geometry}\&#34; is not allowed; loading tracts.&#34;)
-        geometry = &#34;tract10&#34;
+        geometry = &#34;tract&#34;
 
     # Load the raw data.
     raw = _raw(geometry)
@@ -372,6 +419,82 @@ the 2019 ACS CVAP Special Tab.</p></div>
     return data</code></pre>
 </details>
 </dd>
+<dt id="evaltools.data.variables"><code class="name flex">
+<span>def <span class="ident">variables</span></span>(<span>table) ‑> dict</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Produces variable names for the 2020 Census PL94-171 tables. Variables are
+determined from patterns apparent in PL94 variable <a href="https://tinyurl.com/2s3btptn">lists for tables P1 through
+P4</a>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>table</code></strong> :&ensp;<code>string</code></dt>
+<dd>The table for which we're generating variables.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A dictionary mapping Census variable codes to human-readable ones.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def variables(table) -&gt; dict:
+    &#34;&#34;&#34;
+    Produces variable names for the 2020 Census PL94-171 tables. Variables are
+    determined from patterns apparent in PL94 variable [lists for tables P1 through
+    P4](https://tinyurl.com/2s3btptn).
+
+    Args:
+        table (string): The table for which we&#39;re generating variables.
+    
+    Returns:
+        A dictionary mapping Census variable codes to human-readable ones.
+    &#34;&#34;&#34;
+    # List the categories of Census variables and find the combinations in the
+    # correct order. This *should* be the original order in which they&#39;re listed,
+    # but these have been spot-checked to verify their correctness. These names
+    # are also modified based on the table passed; for example, if the table
+    # passed is P2 or P4, we prepend an &#34;NH&#34; to the beginning, as these columns
+    # are explicitly non-hispanic people. If the table passed is P3 or P4, we
+    # append a &#34;VAP&#34; to the end to signify these are people of voting age;
+    # otherwise, we add &#34;POP.&#34;
+    categories = [&#34;WHITE&#34;, &#34;BLACK&#34;, &#34;AMIN&#34;, &#34;ASIAN&#34;, &#34;NHPI&#34;, &#34;OTH&#34;]
+    prefix = &#34;NH&#34; if table in {&#34;P2&#34;, &#34;P4&#34;} else &#34;&#34;
+    suffix = &#34;VAP&#34; if table in {&#34;P3&#34;, &#34;P4&#34;} else &#34;POP&#34;
+    combos = list(pd.core.common.flatten(
+        [
+            prefix + &#34;&#34;.join(list(combo)) + suffix + &#34;20&#34;
+            for i in range(1, len(categories)+1)
+            for combo in list(combinations(categories, i))
+        ]
+    ))
+
+    # Now, for each of the combinations, we map the appropriate variable name to
+    # the descriptor. Each of these tranches should have a width of 6 choose i,
+    # where i is the number of categories in the combination. For example, the
+    # second tranch (from 13 to 27) has width 15, as 6C2=15.
+    if table in {&#34;P1&#34;, &#34;P3&#34;}: tranches = [(3, 8), (11, 25), (27, 46), (48, 62), (64, 69), (71, 71)]
+    else: tranches = [(5, 10), (13, 27), (29, 48), (50, 64), (66, 71), (73, 73)]
+
+    # Create variable numbers.
+    numbers = list(pd.core.common.flatten([list(range(i, j+1)) for i, j in tranches]))
+    
+    # Edit these for specific tables. For example, in tables P2 and P3, we want
+    # to get the total Hispanic population and the total population.
+    if table in {&#34;P2&#34;, &#34;P4&#34;}:
+        numbers = [1, 2] + numbers
+        hcol = &#34;HVAP20&#34; if table == &#34;P4&#34; else &#34;HISP20&#34;
+        tcol = &#34;VAP20&#34; if table == &#34;P4&#34; else &#34;TOTPOP20&#34;
+        combos = [tcol, hcol] + combos
+    else:
+        numbers = [1] + numbers
+        tcol = &#34;VAP20&#34; if table == &#34;P4&#34; else &#34;TOTPOP20&#34;
+        combos = [tcol] + combos
+    
+    # Create the variable names and zip the names together with the combinations.
+    names = [f&#34;{table}_{str(n).zfill(3)}N&#34; for n in numbers]
+    return dict(zip(names, combos))</code></pre>
+</details>
+</dd>
 </dl>
 </section>
 <section>
@@ -398,6 +521,7 @@ the 2019 ACS CVAP Special Tab.</p></div>
 <li><code><a title="evaltools.data.acs5" href="#evaltools.data.acs5">acs5</a></code></li>
 <li><code><a title="evaltools.data.census" href="#evaltools.data.census">census</a></code></li>
 <li><code><a title="evaltools.data.cvap" href="#evaltools.data.cvap">cvap</a></code></li>
+<li><code><a title="evaltools.data.variables" href="#evaltools.data.variables">variables</a></code></li>
 </ul>
 </li>
 </ul>

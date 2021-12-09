@@ -20,7 +20,10 @@ def _rjoin(df, columns) -> Iterable:
     stringified = [df[c].astype(str) for c in columns]
     return reduce(lambda l, r: l + r, stringified[1:], stringified[0])
 
-def census(state, table="P1", geometry="block") -> pd.DataFrame:
+def census(
+        state, table="P1", columns={}, geometry="block",
+        key="75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65"
+    ) -> pd.DataFrame:
     """
     Retrieves geometry-level 2020 Decennial Census PL94-171 data via the Census
     API.
@@ -29,9 +32,15 @@ def census(state, table="P1", geometry="block") -> pd.DataFrame:
         state (State): `us.State` object (e.g. `us.states.WI`).
         table (string, optional): Table from which we retrieve data. Defaults to
             the P1 table, which gets populations by race regardless of ethnicity.
+        columns (dict, optional): Dictionary which maps Census column names (from
+            the correct table) to human-readable names. We require this to be a
+            dictionary, _not_ a list, as specifying human-readable names will
+            implicitly protect against incorrect column names and excessive API
+            calls.
         geometry (string, optional): Geometry level at which we retrieve data.
             Defaults to `"block"`, to retrieve block-level data for the state
             provided.
+        key (string, optional): Census API key.
 
     Returns:
         A DataFrame with columns renamed according to their Census description
@@ -47,15 +56,10 @@ def census(state, table="P1", geometry="block") -> pd.DataFrame:
     if table not in {"P1", "P2", "P3", "P4"}:
         print(f"Table \"{table}\" not accepted; defaulting to \"P1.\"")
         table = "P1"
-    
-    # Keeping this key here in plaintext is fine, I don't want others to have to
-    # configure their own keys. There aren't any API limits (I don't think?) and
-    # it's not consequential for me to leave this here.
-    key = "75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65"
 
     # Set the base Census API URL and get the keys for the provided table.
     base = f"https://api.census.gov/data/2020/dec/pl"
-    varmap = variables(table)
+    varmap = columns if columns else variables(table)
     vars = list(varmap.keys())
 
     # Create the end part of the query string.
@@ -74,7 +78,11 @@ def census(state, table="P1", geometry="block") -> pd.DataFrame:
     # at once, we request things in two parts and then merge them together.
     mergeable = []
 
-    for start, stop in [(0, 50), (50, len(vars))]:
+    # Split up start and stop positions based on the number of variables.
+    if len(vars) < 45: positions = [(0, len(vars))]
+    else: positions = [(0, 45), (45, len(vars))]
+
+    for start, stop in positions:
         # Get the chunk of variables and create a tail of columns (geographic
         # identifiers).
         varchunk = vars[start:stop]
@@ -107,8 +115,8 @@ def census(state, table="P1", geometry="block") -> pd.DataFrame:
 def variables(table) -> dict:
     """
     Produces variable names for the 2020 Census PL94-171 tables. Variables are
-    determined from patterns apparent in PL94 variable lists for tables P1 through
-    P4 `here <tinyurl.com/2s3btptn>`_.
+    determined from patterns apparent in PL94 variable [lists for tables P1 through
+    P4](https://tinyurl.com/2s3btptn).
 
     Args:
         table (string): The table for which we're generating variables.

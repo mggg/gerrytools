@@ -1,5 +1,5 @@
 
-from evaltools.data import cvap, acs5, census
+from evaltools.data import cvap, acs5, census, variables
 import us
 
 def test_cvap_tracts():
@@ -54,8 +54,8 @@ def test_acs5_tracts():
     assert set(list(data)) == columns
 
 def test_acs5_bgs():
-    state = us.states.AL
-    data = acs5(state, geometry="block group")
+    AL = us.states.AL
+    data = acs5(AL, geometry="block group")
     bgs = 3438
     columns = {
         "TOTPOP19", "WHITE19", "BLACK19", "AMIN19", "ASIAN19", "NHPI19", "OTH19",
@@ -70,40 +70,36 @@ def test_acs5_bgs():
     assert set(list(data)) == columns
 
 def test_census_tracts():
-    state = us.states.AL
-    data = census(state, geometry="tract", table="P4")
-    columns = {
-        "GEOID20", 'VAP20', 'HVAP20', 'NHWHITEVAP20', 'NHBLACKVAP20', 'NHAMINVAP20',
-        'NHASIANVAP20', 'NHNHPIVAP20', 'NHOTHVAP20', 'NHWHITEBLACKVAP20',
-        'NHWHITEAMINVAP20', 'NHWHITEASIANVAP20', 'NHWHITENHPIVAP20',
-        'NHWHITEOTHVAP20', 'NHBLACKAMINVAP20', 'NHBLACKASIANVAP20',
-        'NHBLACKNHPIVAP20', 'NHBLACKOTHVAP20', 'NHAMINASIANVAP20',
-        'NHAMINNHPIVAP20', 'NHAMINOTHVAP20', 'NHASIANNHPIVAP20',
-        'NHASIANOTHVAP20', 'NHNHPIOTHVAP20', 'NHWHITEBLACKAMINVAP20',
-        'NHWHITEBLACKASIANVAP20', 'NHWHITEBLACKNHPIVAP20', 'NHWHITEBLACKOTHVAP20',
-        'NHWHITEAMINASIANVAP20', 'NHWHITEAMINNHPIVAP20', 'NHWHITEAMINOTHVAP20',
-        'NHWHITEASIANNHPIVAP20', 'NHWHITEASIANOTHVAP20', 'NHWHITENHPIOTHVAP20',
-        'NHBLACKAMINASIANVAP20', 'NHBLACKAMINNHPIVAP20', 'NHBLACKAMINOTHVAP20',
-        'NHBLACKASIANNHPIVAP20', 'NHBLACKASIANOTHVAP20', 'NHBLACKNHPIOTHVAP20',
-        'NHAMINASIANNHPIVAP20', 'NHAMINASIANOTHVAP20', 'NHAMINNHPIOTHVAP20',
-        'NHASIANNHPIOTHVAP20', 'NHWHITEBLACKAMINASIANVAP20',
-        'NHWHITEBLACKAMINNHPIVAP20', 'NHWHITEBLACKAMINOTHVAP20',
-        'NHWHITEBLACKASIANNHPIVAP20', 'NHWHITEBLACKASIANOTHVAP20',
-        'NHWHITEBLACKNHPIOTHVAP20', 'NHWHITEAMINASIANNHPIVAP20',
-        'NHWHITEAMINASIANOTHVAP20', 'NHWHITEAMINNHPIOTHVAP20',
-        'NHWHITEASIANNHPIOTHVAP20', 'NHBLACKAMINASIANNHPIVAP20',
-        'NHBLACKAMINASIANOTHVAP20', 'NHBLACKAMINNHPIOTHVAP20',
-        'NHBLACKASIANNHPIOTHVAP20', 'NHAMINASIANNHPIOTHVAP20',
-        'NHWHITEBLACKAMINASIANNHPIVAP20', 'NHWHITEBLACKAMINASIANOTHVAP20',
-        'NHWHITEBLACKAMINNHPIOTHVAP20', 'NHWHITEBLACKASIANNHPIOTHVAP20',
-        'NHWHITEAMINASIANNHPIOTHVAP20', 'NHBLACKAMINASIANNHPIOTHVAP20',
-        'NHWHITEBLACKAMINASIANNHPIOTHVAP20'
-    }
+    AL = us.states.AL
+    data = census(AL, geometry="tract", table="P4")
+    columns = {"GEOID20"} | set(variables("P4").values())
     tracts = 1437
+
+    assert len(data) == tracts
+    assert set(list(data)) == columns
+    
+    # Download additional variables and verify whether they match appropriately.
+    data = census(AL, table="P2", columns={"P2_003N": "NHISP"}, geometry="tract")
+    columns = {"GEOID20", "NHISP"}
+
+    assert len(data) == tracts
+    assert set(list(data)) == columns
+
+    # Now download *more* additional data and verify whether they match
+    # appropriately.
+    vars = variables("P3")
+    varnames = {
+        var: name
+        for var, name in vars.items() if "WHITE" in name or "BLACK" in name
+    }
+    columns = {"GEOID20"} | set(varnames.values())
+
+    # Get the data.
+    data = census(AL, table="P3", columns=varnames, geometry="tract")
 
     assert len(data) == tracts
     assert set(list(data)) == columns
 
 if __name__ == "__main__":
-    test_acs5_tracts()
+    test_census_tracts()
  
