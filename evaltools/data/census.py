@@ -46,6 +46,7 @@ def census(state, table="P1", geometry="block") -> pd.DataFrame:
     # Check whether we're providing an appropriate table name.
     if table not in {"P1", "P2", "P3", "P4"}:
         print(f"Table \"{table}\" not accepted; defaulting to \"P1.\"")
+        table = "P1"
     
     # Keeping this key here in plaintext is fine, I don't want others to have to
     # configure their own keys. There aren't any API limits (I don't think?) and

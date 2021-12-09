@@ -26,9 +26,12 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from gerrychain.constraints import contiguous as ctgs
+<pre><code class="python">from typing import Union
 
-def contiguous(P) -&gt; bool:
+import gerrychain
+from gerrychain.constraints import contiguous as ctgs
+
+def contiguous(P: gerrychain.Partition) -&gt; bool:
     &#34;&#34;&#34;
     Determines whether the districting plan defined by the partition is
     contiguous.
@@ -42,7 +45,7 @@ def contiguous(P) -&gt; bool:
     return ctgs(P)
 
 
-def unassigned_units(P, raw=False) -&gt; int:
+def unassigned_units(P: gerrychain.Partition, raw: bool = False) -&gt; Union[float, int]:
     &#34;&#34;&#34;
     Determines the proportion (or raw number) of units without a district
     assignment. An unassigned unit is a unit without a districting assignment an
@@ -81,7 +84,7 @@ def unassigned_units(P, raw=False) -&gt; int:
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.evaluation.contiguity.contiguous"><code class="name flex">
-<span>def <span class="ident">contiguous</span></span>(<span>P) ‑> bool</span>
+<span>def <span class="ident">contiguous</span></span>(<span>P: gerrychain.partition.partition.Partition) ‑> bool</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Determines whether the districting plan defined by the partition is
@@ -97,7 +100,7 @@ contiguous.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def contiguous(P) -&gt; bool:
+<pre><code class="python">def contiguous(P: gerrychain.Partition) -&gt; bool:
     &#34;&#34;&#34;
     Determines whether the districting plan defined by the partition is
     contiguous.
@@ -112,7 +115,7 @@ contiguous.</p>
 </details>
 </dd>
 <dt id="evaltools.evaluation.contiguity.unassigned_units"><code class="name flex">
-<span>def <span class="ident">unassigned_units</span></span>(<span>P, raw=False) ‑> int</span>
+<span>def <span class="ident">unassigned_units</span></span>(<span>P: gerrychain.partition.partition.Partition, raw: bool = False) ‑> Union[float, int]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Determines the proportion (or raw number) of units without a district
@@ -133,7 +136,7 @@ the whole number of unassigned units).</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def unassigned_units(P, raw=False) -&gt; int:
+<pre><code class="python">def unassigned_units(P: gerrychain.Partition, raw: bool = False) -&gt; Union[float, int]:
     &#34;&#34;&#34;
     Determines the proportion (or raw number) of units without a district
     assignment. An unassigned unit is a unit without a districting assignment an
