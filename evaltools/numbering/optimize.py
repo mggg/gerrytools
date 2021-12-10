@@ -1,10 +1,25 @@
-from typing import Dict
+from typing import Dict, List, Any, Callable
 import geopandas as gpd
 import tqdm
 import gurobipy as gp
 from gurobipy import GRB
 import math
 
+def ensure_column_types(units: gpd.GeoDataFrame, columns: List[str], expression: Callable[[Any], bool] = lambda x: x.startswith("int")) -> bool:
+    """
+    Ensure that the given columns in the GeoDataFrame have a type matching the 
+    filtering expression. This gives more flexibility over other type checking 
+    methods.
+
+    Args:
+        units: The GeoDataFrame to check.
+        colunms: A list of the columns to type check.
+        expression: A function that returns true if the type name is correct and false otherwise.
+
+    Returns:
+        A boolean indicating if all the columns checked match the expression.
+    """
+    return all([expression(x.name) for x in units[columns].dtypes])
 
 def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None, verbose: bool = False) -> Dict[str, str]:
     """
@@ -23,6 +38,12 @@ def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col:
     Returns:
         A dictionary mapping proposed labels to optimized labels.
     """
+    if not ensure_column_types(units, [enacted_col, proposed_col]):
+        raise TypeError("Your enacted and proposed columns must be an int type!")
+
+    if not ensure_column_types(units, [pop_col], lambda x: x.startswith("int") or x.startswith("float")):
+        raise TypeError("Your pop col must be an int or float type!") 
+
     districts = list(set(units[proposed_col].astype(int)))
     model = gp.Model("state_model")
     model.setParam('OutputFlag', int(verbose))
@@ -78,6 +99,12 @@ def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str
         A dictionary mapping proposed labels to booleans values representing the optimal parity. 
         (True if even, False odd).
     """
+    if not ensure_column_types(units, [enacted_col, proposed_col]):
+        raise TypeError("Your enacted and proposed columns must be an int type!")
+
+    if not ensure_column_types(units, [pop_col], lambda x: x.startswith("int") or x.startswith("float")):
+        raise TypeError("Your pop col must be an int or float type!") 
+
     model = gp.Model("parity_model")
     model.setParam('OutputFlag', int(verbose))
 
@@ -149,4 +176,7 @@ def calculate_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col
     Returns:
         An integer of the absolute number of people who changed districts.
     """
+    if units[enacted_col].dtype != units[proposed_col].dtype:
+        raise TypeError("Your enacted and proposed columns must have the same type!")
+
     return units[units[enacted_col] != units[proposed_col]][pop_col].sum()
