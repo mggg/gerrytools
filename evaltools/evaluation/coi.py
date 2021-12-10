@@ -68,8 +68,7 @@ def block_level_coi_preservation(
     coi_pops = np.array(
         [sum(block_pops[b] for b in blocks) for blocks in coi_blocks.values()])
     unit_pops = np.array([
-        sum(block_pops[b] for b in blocks)
-        for vtd, blocks in unit_blocks.items()
+        sum(block_pops[b] for b in blocks) for blocks in unit_blocks.values()
     ])
     total_pop = unit_pops.sum()
 
