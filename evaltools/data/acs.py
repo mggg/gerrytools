@@ -8,7 +8,7 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
     """
     Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
     the specified geometry level. Geometries from the **2010 Census**. Variables
-    and descriptions are listed `here <https://tinyurl.com/3mnrm56s>`_.
+    and descriptions are [listed here](https://tinyurl.com/3mnrm56s>).
 
     Args:
         state (us.State): The `State` object for which we're retrieving 2019 ACS
@@ -34,7 +34,7 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
         9: "NHAWCVAP",
         10: "NHBWCVAP",
         11: "NHAIBCVAP",
-        12: "NHOCVAP",
+        12: "NHOTHCVAP",
         13: "HCVAP" 
     }
 
@@ -42,7 +42,7 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
     # "tract10."
     if geometry not in {"block group", "tract"}:
         print(f"Requested geometry \"{geometry}\" is not allowed; loading tracts.")
-        geometry = "tract10"
+        geometry = "tract"
 
     # Load the raw data.
     raw = _raw(geometry)
@@ -83,7 +83,7 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
 
     return data
 
-def acs5(state, geometry="tract", year=2019, columns=[]) -> pd.DataFrame:
+def acs5(state, geometry="tract", year=2019, columns=[], white="NHWVAP19") -> pd.DataFrame:
     """
     Retrieves ACS 5-year population estimates for the provided state, geometry
     level, and year. Geometries are from the **2010 Census**.
@@ -115,20 +115,51 @@ def acs5(state, geometry="tract", year=2019, columns=[]) -> pd.DataFrame:
         "B03002_002E": "NHISP19",
     }
 
-    # Column *groups* for tables. This is a little messy.
-    columns_tables = list(zip(
+    # Create a dictionary of column groups.
+    groups = {}
+
+    # Get VAP columns. The columns listed here are by race, irrespective of ethnicity;
+    # for example, WVAP19 is the group of people who identified White as their *only*
+    # race, including people who identified as Hispanic and White.
+    vap_tables = list(zip(
         [
             "WVAP19", "BVAP19", "AMINVAP19", "ASIANVAP19", "NHPIVAP19", "OTHVAP19",
             "2MOREVAP19", "NHWVAP19", "HVAP19"
         ],
         ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
     ))
+    groups.update({
+        column: variables(f"B01001{table}", 7, 16) + variables(f"B01001{table}", 22, 31)
+        for column, table in vap_tables
+    })
 
-    groups = {
-        column: variables(f"B01001{table}", 7, 16, suffix="E") + variables(f"B01001{table}", 22, 31, suffix="E")
-        for column, table in columns_tables
-    }
-    groups["VAP19"] = variables("B01001", 7, 25, suffix="E") + variables("B01001", 31, 49, suffix="E")
+    # Get CVAP columns; the same goes for these columns as does the above, except
+    # these columns are 18 years and older *and* citizens.
+    cvap_tables = list(zip(
+        [
+            "WCVAP19", "BCVAP19", "AMINCVAP19", "ASIANCVAP19", "NHPICVAP19", "OTHCVAP19",
+            "2MORECVAP19", "NHWCVAP19", "HCVAP19"
+        ],
+        ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
+    ))
+    groups.update({
+        column: 
+            variables(f"B05003{table}", 9, 9) + variables(f"B05003{table}", 11, 11) + # men
+            variables(f"B05003{table}", 15, 15) + variables(f"B05003{table}", 17, 17) # women
+        for column, table in cvap_tables
+    })
+    
+    # Get all voting-age people and citizen voting-age people.
+    groups["VAP19"] = variables("B01001", 7, 25) + variables("B01001", 31, 49)
+    groups["CVAP19"] = variables(f"B05003", 9, 9) + \
+        variables(f"B05003", 11, 11) + \
+        variables(f"B05003", 15, 15) + \
+        variables(f"B05003", 17, 17)
+
+    # TODO: all variables used across the data submodule should be packaged up
+    # as a class, so we can access individual dictionaries of variables to add.
+    # For example, we should have a `Variables.acs5.vap` property which gives us
+    # the voting-age population variables for the ACS 5-year estimates.
 
     # Get the list of all columns.
     allcols = list(popcolumns.keys()) + [c for k in groups.values() for c in k] + columns
@@ -154,8 +185,7 @@ def acs5(state, geometry="tract", year=2019, columns=[]) -> pd.DataFrame:
         data = data.drop(group, axis=1)
 
     # Create a POCVAP column.
-    data["POCVAP19"] = data["VAP19"] - data["NHWVAP19"]
-
+    data["POCVAP19"] = data["VAP19"] - data[white]
     return data
 
 def variables(prefix, start, stop, suffix="E") -> list:
@@ -165,8 +195,8 @@ def variables(prefix, start, stop, suffix="E") -> list:
     like voting-age population. Variable names are formatted like
     `<prefix>_<number identifier><suffix>`, where `<prefix>` is a population grouping,
     `<number identifier>` is the number of the variable in that grouping, and
-    `<suffix>` designates the file used. Variables are listed
-    `here <https://tinyurl.com/43ajptky>`_.
+    `<suffix>` designates the file used. [Variables are listed
+    here ](https://tinyurl.com/43ajptky>).
 
     Args:
         prefix (str): Population grouping; typically "B01001." These prefixes

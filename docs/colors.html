@@ -65,7 +65,14 @@ def redblue(n) -&gt; List[Tuple]:
         sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
     )[-midpoint:]
     
-    return list(reversed(reds)) + list(reversed(blues))</code></pre>
+    return list(reversed(reds)) + list(reversed(blues))
+
+
+def flare(n):
+    return list(sns.color_palette(&#34;flare&#34;, as_cmap=False, n_colors=n))
+
+def purples(n):
+    return list(sns.color_palette(&#34;Purples&#34;, as_cmap=False, n_colors=n))</code></pre>
 </details>
 </section>
 <section>
@@ -75,6 +82,32 @@ def redblue(n) -&gt; List[Tuple]:
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
+<dt id="evaltools.colors.flare"><code class="name flex">
+<span>def <span class="ident">flare</span></span>(<span>n)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def flare(n):
+    return list(sns.color_palette(&#34;flare&#34;, as_cmap=False, n_colors=n))</code></pre>
+</details>
+</dd>
+<dt id="evaltools.colors.purples"><code class="name flex">
+<span>def <span class="ident">purples</span></span>(<span>n)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def purples(n):
+    return list(sns.color_palette(&#34;Purples&#34;, as_cmap=False, n_colors=n))</code></pre>
+</details>
+</dd>
 <dt id="evaltools.colors.redblue"><code class="name flex">
 <span>def <span class="ident">redblue</span></span>(<span>n) ‑> List[Tuple]</span>
 </code></dt>
@@ -135,6 +168,8 @@ def redblue(n) -&gt; List[Tuple]:
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
+<li><code><a title="evaltools.colors.flare" href="#evaltools.colors.flare">flare</a></code></li>
+<li><code><a title="evaltools.colors.purples" href="#evaltools.colors.purples">purples</a></code></li>
 <li><code><a title="evaltools.colors.redblue" href="#evaltools.colors.redblue">redblue</a></code></li>
 </ul>
 </li>
