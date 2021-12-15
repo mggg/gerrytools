@@ -3,7 +3,7 @@ import numpy as np
 import geopandas as gpd
 from typing import Dict, Callable, Union, Any
 from cv2 import minEnclosingCircle
-from networkx import Graph
+from gerrychain import Graph
 from gerrychain import GeographicPartition
 from shapely.ops import unary_union
 from math import pi
