@@ -3,7 +3,7 @@ import numpy as np
 import geopandas as gpd
 from typing import Dict, Callable, Union, Any
 from cv2 import minEnclosingCircle
-from networkx import Graph
+from gerrychain import Graph
 from gerrychain import GeographicPartition
 from shapely.ops import unary_union
 from math import pi
@@ -27,7 +27,7 @@ def reock(
     dual graphs derived from `geodata`.
 
     :param geodata: Geographical data to precompute geometries from.
-      May be a `geopandas.GeoDataFrame` or a `networkx.Graph` with
+      May be a `geopandas.GeoDataFrame` or a `gerrychain.Graph` with
       a `geometry` column.
     :return: A per-district Reock score updater specialized to `geodata`.
     """
