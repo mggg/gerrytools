@@ -27,7 +27,7 @@ def reock(
     dual graphs derived from `geodata`.
 
     :param geodata: Geographical data to precompute geometries from.
-      May be a `geopandas.GeoDataFrame` or a `networkx.Graph` with
+      May be a `geopandas.GeoDataFrame` or a `gerrychain.Graph` with
       a `geometry` column.
     :return: A per-district Reock score updater specialized to `geodata`.
     """
