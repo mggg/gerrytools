@@ -4,14 +4,14 @@ import geopandas as gpd
 from typing import Dict, Callable, Union, Any
 from cv2 import minEnclosingCircle
 from networkx import Graph
-from gerrychain import Partition
+from gerrychain import GeographicPartition
 from shapely.ops import unary_union
 from math import pi
 
 
 def reock(
     geodata: Union[gpd.GeoDataFrame, Graph]
-) -> Callable[[Partition], Dict[Any, float]]:
+) -> Callable[[GeographicPartition], Dict[Any, float]]:
     """Makes a Reock score function specialized to `geodata`.
 
     The Reock score of a district is its area defined by the area of its
@@ -42,8 +42,10 @@ def reock(
         raise ValueError(
             'Geodata must be a GeoDataFrame or a gerrychain.Graph.')
 
-    def score_fn(partition: Partition) -> Dict[Any, float]:
-        boundary_nodes = set.union(*(set(e) for e in partition['cut_edges']))
+    def score_fn(partition: GeographicPartition) -> Dict[Any, float]:
+        boundary_nodes = set.union(*(set(e) for e in partition["cut_edges"])).union(
+            partition["boundary_nodes"]
+        )
         part_scores = {}
 
         for part, nodes in partition.parts.items():
