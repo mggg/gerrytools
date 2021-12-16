@@ -14,23 +14,21 @@ class Submission(BaseModel):
     """
     Provides a base model for data retrieved from districtr. Allows us to use
     dot notation when accessing properties rather than dict notation.
-
-    Variables:
-        link (str): districtr link.
-        plan (dict): Assigns units to districts.
-        id (str): districtr identifier (for calls to `planRead`)
-        units (str): What units are these on?
-        unitsType (str): What kind of units are these?
-        tileset (str): Where does the tileset live?
-        type (str): What kind of thing is this?
     """
-    link: str       # Link to the districtr plan.
-    plan: dict      # districtr plan object; interpreted from JSON.
-    id: str         # districtr identifier.
-    units: str      # Unit identifier.
-    unitsType: str  # Unit type.
-    tileset: str    # Mapbox tileset link.
-    type: str       # What kind of thing is this?
+    link: str
+    """A districtr URL."""
+    plan: dict
+    """districtr plan object."""
+    id: str
+    """districtr identifier."""
+    units: str
+    """Unit identifier (e.g. `GEOID`)."""
+    unitsType: str
+    """Unit type (e.g. `blocks20`, `blockgroup`, etc.)"""
+    tileset: str
+    """Mapbox tileset URL."""
+    type: str
+    """Not sure."""
 
 
 def tabularized(state, submissions) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:

@@ -1,5 +1,5 @@
-from typing import List, Dict, TypeVar
 
+from typing import List, Dict, TypeVar
 import maup
 import warnings
 

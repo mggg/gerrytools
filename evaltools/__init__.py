@@ -1,10 +1,12 @@
 
 """
-A package for processing districting plans, from retrieval to processing to
-visualization.
+
+.. include:: ../docs/introduction.md
 """
-from .mapping import drawplan, drawgraph
-from .colors import districtr, redblue, flare, purples
+
+from .plotting import (
+    drawplan, drawgraph, districtr, flare, purples, redbluecmap, PlotSpecification
+)
 from .geography import dissolve, dualgraph
 from .evaluation import (
     splits, pieces, deviations, contiguous, unassigned_units,
@@ -15,14 +17,5 @@ from .numbering import (
     calculate_dispersion, dispersion_updater_closure
 )
 from .utils import rename, JSON, objectify
+from .data import acs5, cvap, census
 
-"""
-__all__ = [
-    "districtr", "redblue", "drawplan", "dualgraph", "dissolve", "flare",
-    "drawgraph", "Graph", "Partition", "splits", "pieces", "deviations",
-    "ensemble_schema", "assignment_schema", "contiguous", "unassigned_units",
-    "unassigned_population", "AssignmentCompressor",
-    "minimize_dispersion", "minimize_parity", "minimize_dispersion_with_parity",
-    "calculate_dispersion", "dispersion_updater_closure", "rename"
-]
-"""

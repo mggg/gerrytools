@@ -4,7 +4,7 @@ Facilities for processing districting plans in a standardized, functional-progra
 way.
 """
 
-from .fetch import submissions, tabularized
+from .fetch import submissions, tabularized, Submission
 from .remap import remap
 from .URLs import ids, one, csvs
 from .AssignmentCompressor import AssignmentCompressor
@@ -18,5 +18,6 @@ __all__ = [
     "ids",
     "one",
     "csvs",
-    "AssignmentCompressor"
+    "AssignmentCompressor",
+    "Submission"
 ]

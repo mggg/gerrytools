@@ -1,5 +1,5 @@
 
-from evaltools.mapping import drawgraph, drawplan
+from evaltools.plotting import drawgraph, drawplan, PlotSpecification
 from gerrychain.graph import Graph
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -7,6 +7,31 @@ import geopandas as gpd
 import os
 
 root = Path(os.getcwd()) / Path("tests/test-resources/")
+
+def test_PlotSpecification():
+    # Read in test stuff.
+    districts = gpd.read_file(root / "test-districts")
+    counties = gpd.read_file(root / "test-counties")
+
+    # Create a plot specification.
+    marion = PlotSpecification()
+    marion.context = True
+    bbox = marion.computebbox(counties, ["097"], idcolumn="COUNTYFP")
+    bbox_adj = marion.computebbox(counties, ["097"], idcolumn="COUNTYFP", margin=2)
+
+    # Assert that the bbox computed is the correct one!
+    assert bbox == (-9615282.470860107, 4807354.328610508, -9561225.27038856, 4860676.685822271)
+
+    # Assert that the adjusted bbox actually changes the margins correctly.
+    offset = 5280
+    assert bbox_adj == (
+        -9615282.470860107-offset, 4807354.328610508-offset,
+        -9561225.27038856+offset, 4860676.685822271+offset
+    )
+
+    # Now get the right districts!
+    locs = marion.computelabels(districts, "district")
+
 
 def test_drawgraph():
     # Read in the graph and the districts.
@@ -38,4 +63,5 @@ def test_drawplan():
 
 if __name__ == "__main__":
     root = Path(os.getcwd()) / Path("test-resources/")
-    test_drawplan()
+    test_PlotSpecification()
+
