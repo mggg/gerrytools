@@ -2,7 +2,7 @@
 import json
 from typing import List, Union
 
-class JSON(object):
+class JSONtoObject(object):
     """
     A class which represents JSON data as a Python object rather than a dict. If
     the JSON object is a list, returns a list of JSON-ified objects.
@@ -14,7 +14,7 @@ class JSON(object):
         """
         for k, v in data.items(): self.__dict__[k] = v
 
-def objectify(location) -> Union[List[JSON],JSON]:
+def objectify(location) -> Union[List[JSONtoObject],JSONtoObject]:
     """
     Reads in JSON data and creates a Python object out of it. If the JSON data
     read in is a list of JSON objects, a list of Python objects are returned.
@@ -29,5 +29,5 @@ def objectify(location) -> Union[List[JSON],JSON]:
     with open(location) as r:
         data = json.load(r)
 
-        if type(data) is list: return [JSON(p) for p in data]
-        return JSON(data)
+        if type(data) is list: return [JSONtoObject(p) for p in data]
+        return JSONtoObject(data)
