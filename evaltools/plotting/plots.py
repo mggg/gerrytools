@@ -1,11 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-from .colors import *
 
 LABEL_SIZE = 24
 TICK_SIZE = 12
 FIG_SIZE = (12,6)
+defaultGray = "#5c676f"
+citizenBlue = "#4693b3"
 
 def get_bins_and_labels(val_range, unique_vals, num_labels=8):
     """
@@ -118,3 +119,18 @@ def plot_histogram(ax, scores, proposed_info={}):
         ax.legend()
     ax.get_yaxis().set_visible(False)
     return ax
+
+def plot_violin(ax, scores, proposed_info={}):
+    """
+    Plot a violin plot, which takes `scores` — a list of lists, where each sublist will be its own violin.
+    Proposed scores will be plotted as colored circles on their respective violin.
+    Color the violins conditioned on the kind of the scores (ensemble or citizen), and if plotting ensemble, then
+    trim each sublist to only the values between the 1-99th percentile, to match our boxplits (otherwise don't trim).
+
+    Parameters:
+    ----------
+        - ax: matplotlib Axis
+        - scores: {str: [int]} with keys of `ensemble`, `citizen`, `proposed`
+        - proposed_info: {str: [str]} with keys of `colors`, `names`
+    """
+    return
