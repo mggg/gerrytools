@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
-from colors import *
+import numpy as np
+import random
+from .colors import *
 
 LABEL_SIZE = 24
 TICK_SIZE = 12
@@ -20,7 +22,7 @@ def get_bins_and_labels(val_range, unique_vals, num_labels=8):
             hist_bins.append(val - bin_width/2)
             hist_bins.append(val + 3*bin_width/2)
             tick_bins.append(val + bin_width/2)
-            num = round(val * self.num_districts)
+            num = round(val * self.num_districts) # TODO: this is not going to work
             tick_labels.append(f"{num}/{self.num_districts}")
     else:
         bin_width = 10 ** (np.floor(np.log10(val_range[1] - val_range[0])) - 1)
@@ -42,7 +44,40 @@ def get_bins_and_labels(val_range, unique_vals, num_labels=8):
                 tick_labels[i] = round(label, 2)
     return hist_bins, tick_bins, tick_labels, bin_width
 
-def plot_histogram(ax, scores):
+def draw_arrow(ax, text, orientation, padding=0.1):
+    """
+    For some partisan metrics, we want to draw an arrow showing where the POV-party's advantage is.
+    Depending on the orientation of the scores (histograms have scores arranged horizontally, violinplots
+    have scores arranged vertically), we either place the arrow at the bottom left, pointing rightward,
+    or in the middle of the y-axis, pointing up.
+    """
+    if orientation == "horizontal":
+        x = ax.get_xlim()[0]
+        y = ax.get_ylim()[0] - padding*ax.get_ylim()[1]
+        horizontal_align = "left"
+        rotation = 0
+    elif orientation == "vertical":
+        x = ax.get_xlim()[0] -  padding*(sum(map(lambda x: abs(x), ax.get_xlim())))
+        y = sum(ax.get_ylim())/2
+        horizontal_align = "center"
+        rotation = 90
+    ax.text(x, y,
+            text,
+            ha=horizontal_align,
+            va="center",
+            color="white",
+            rotation=rotation,
+            size=10,
+            bbox=dict(
+                boxstyle="rarrow,pad=0.3",
+                fc=defaultGray,
+                alpha=1,
+                ec="black",
+                )
+            )
+    return
+
+def plot_histogram(ax, scores, proposed_info={}):
     """
     Plot a histogram with the ensemble scores in bins and the proposed plans' scores as vertical lines.
     If there are many unique values, use a white border on the bins to distinguish, otherwise reduce the
@@ -52,6 +87,7 @@ def plot_histogram(ax, scores):
     ----------
         - ax: matplotlib Axis
         - scores: {str: [int]} with keys of `ensemble`, `citizen`, `proposed`
+        - proposed_info: {str: [str]} with keys of `colors`, `names`
     """
     all_scores = scores["ensemble"] + scores["citizen"] + scores["proposed"]
     score_range = (min(all_scores), max(all_scores))
@@ -75,14 +111,10 @@ def plot_histogram(ax, scores):
         for i, s in enumerate(scores["proposed"]):
             jitter = random.uniform(-bin_width/5, bin_width/5) if scores["proposed"].count(s) > 1 else 0
             ax.axvline(s + bin_width / 2 + jitter,
-                        color=self.proposed_colors[i],
+                        color=proposed_info['colors'][i],
                         lw=2,
-                        label=f"{self.proposed_names[i]}: {round(s,2)}",
+                        label=f"{proposed_info['names'][i]}: {round(s,2)}",
                         )
         ax.legend()
-    if self.ensemble_metrics[score]["type"] == "election_level":
-        self.draw_arrow(ax, score, "horizontal")
-    if score == "efficiency_gap":
-        self.add_ideal_band(ax, "horizontal")
     ax.get_yaxis().set_visible(False)
     return ax
