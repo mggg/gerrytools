@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+from .colors import districtr
 
 LABEL_SIZE = 24
 TICK_SIZE = 12
@@ -120,7 +121,7 @@ def plot_histogram(ax, scores, proposed_info={}):
     ax.get_yaxis().set_visible(False)
     return ax
 
-def plot_violin(ax, scores, proposed_info={}):
+def plot_violin(ax, scores, labels, proposed_info={}, percentiles=(1,99), tick_rotation=0, tick_size=TICK_SIZE):
     """
     Plot a violin plot, which takes `scores` — a list of lists, where each sublist will be its own violin.
     Proposed scores will be plotted as colored circles on their respective violin.
@@ -133,4 +134,37 @@ def plot_violin(ax, scores, proposed_info={}):
         - scores: {str: [int]} with keys of `ensemble`, `citizen`, `proposed`
         - proposed_info: {str: [str]} with keys of `colors`, `names`
     """
-    return
+    trimmed_scores = []
+    ensemble = scores["ensemble"] if scores["ensemble"] else scores["citizen"]
+    facecolor = defaultGray if scores["ensemble"] else citizenBlue
+    for score_list in ensemble:
+        low = np.percentile(ensemble, percentiles[0])
+        high = np.percentile(ensemble, percentiles[1])
+        # print(f"Only including scores between [{low}, {high}]")
+        trimmed_scores.append([s for s in score_list if s >= low and s <= high])
+    parts = ax.violinplot(trimmed_scores, showextrema=False)
+    for pc in parts["bodies"]:
+        pc.set_facecolor(facecolor)
+        pc.set_edgecolor("black")
+        pc.set_alpha(1)
+
+    ax.set_xticks(range(1, len(ensemble) + 1))
+    ax.set_xticklabels(labels, fontsize=tick_size, rotation=tick_rotation)
+    ax.set_xlim(0.5, len(ensemble) + 0.5)
+
+    if scores["proposed"]:
+        for i in range(len(scores["proposed"])):
+            for j, s in enumerate(scores["proposed"][i]):
+                # horizontally jitter proposed scores regardless of whether there are multiple scores at the same height
+                jitter = 0#random.uniform(-1/3, 1/3) #if proposed_scores[i].count(s) > 1 else 0
+                ax.scatter(i + 1 + jitter,
+                           s,
+                           color=districtr(j+1)[-1],
+                           edgecolor='black',
+                           s=100,
+                           alpha=0.9,
+                           label=proposed_info["names"][j] if i == 0 else None,
+                           )
+        ax.legend()
+        ax.grid(axis='x')
+    return ax

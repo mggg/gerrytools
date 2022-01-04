@@ -4,7 +4,8 @@ from .colors import redbluecmap, flare, purples, districtr
 from .specification import PlotSpecification
 from .plots import (
     plot_histogram,
-    draw_arrow
+    plot_violin,
+    draw_arrow,
 )
 
 """
@@ -21,5 +22,6 @@ __all__ = [
     "purples",
     "districtr",
     "plot_histogram",
+    "plot_violin",
     "draw_arrow",
 ]
