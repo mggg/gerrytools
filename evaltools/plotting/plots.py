@@ -14,7 +14,7 @@ def get_bins_and_labels(val_range, unique_vals, num_labels=8):
     Get necessary information for histograms. If we're working with only a few discrete, floating point values, then
     set the bin width to be relatively thin, Otherwise, adaptively set the bin width to the scale of our data. In
     both cases, shift the tick labels over to be in the center of the bins (shift by bin_width / 2).
-    TODO: clean this up..., document parameters.
+    TODO: clean this up... document parameters.
     """
     if type(val_range[1]) is not int and len(unique_vals) <= 20:
         sorted_vals = sorted(unique_vals)
@@ -77,6 +77,47 @@ def draw_arrow(ax, text, orientation, padding=0.1):
                 ec="black",
                 )
             )
+    return
+
+def draw_ideal(ax, label, placement, orientation, color=None, alpha=None):
+    color = color if color else defaultGray
+    orig_xlims = ax.get_xlim()
+    orig_ylims = ax.get_ylim()
+
+    if type(placement) is list:
+        alpha = alpha if alpha else 0.1
+        if orientation == "horizontal":
+            xlims = orig_xlims
+            ylims1 = [placement[0], placement[0]]
+            ylims2 = [placement[1], placement[1]]
+        elif orientation == "vertical":
+            xlims = placement
+            ylims1 = [orig_ylims[0], orig_ylims[0]]
+            ylims2 = [orig_ylims[1], orig_ylims[1]]
+        ax.fill_between(xlims,
+                        ylims1,
+                        ylims2,
+                        color=color,
+                        alpha=alpha,
+                        label=label,
+                       )
+    else:
+        alpha = alpha if alpha else 0.5
+        if orientation == "horizontal":
+            ax.axhline(placement + 0.5, # shifted to align with bins
+                       color=color,
+                       alpha=alpha, 
+                       label=label,
+                      )
+        elif orientation == "vertical":
+            ax.axvline(placement + 0.5, # shifted to align with bins
+                       color=color,
+                       alpha=alpha, 
+                       label=label,
+                      )    
+    ax.set_xlim(orig_xlims)
+    ax.set_ylim(orig_ylims)
+    ax.legend()
     return
 
 def plot_histogram(ax, scores, proposed_info={}):

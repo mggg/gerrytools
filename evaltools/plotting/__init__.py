@@ -6,6 +6,7 @@ from .plots import (
     plot_histogram,
     plot_violin,
     draw_arrow,
+    draw_ideal,
 )
 
 """
@@ -24,4 +25,5 @@ __all__ = [
     "plot_histogram",
     "plot_violin",
     "draw_arrow",
+    "draw_ideal",
 ]
