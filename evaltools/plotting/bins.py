@@ -21,7 +21,7 @@ def bins(scores, labels=8) -> Tuple[array, List, List, Union[float, int]]:
     # Get the minimum score, maximum score, 25th and 7th percentiles, and the IQR
     # of the observations.
     minscore, maxscore = min(scores), max(scores)
-    l, r = np.percentile(scores, [25, 75])
+    l, r = np.percentile(list(scores), [25, 75])
     iqr = r-l
     n = len(scores)
 
@@ -29,7 +29,17 @@ def bins(scores, labels=8) -> Tuple[array, List, List, Union[float, int]]:
     # are integers, round the bin width to the nearest integer.
     allints = all(type(score) is int for score in scores)
     fdr = 2*iqr*n**(-1/3)
-    width = round(fdr) if allints else fdr
+    # width = round(fdr) if allints else fdr
+
+    # Calculate bin width using Gabe's logarithmic rule
+    # TODO: Test this with real score data and see how it looks
+    width = 10 ** (np.floor(np.log10(maxscore - minscore)) - 1)
+    if width == 0.01:
+        width /= 5
+    if width == 0.1:
+        width = 1
+    if width >= 1:
+        width = int(width)
 
     hist_bins = np.arange(minscore, maxscore + 2 * width, width)
     label_interval = max(int(len(hist_bins) / labels), 1)
