@@ -5,6 +5,17 @@ from typing import List, Tuple
 from random import choice
 from string import hexdigits as hex
 
+"""
+Default gray plotting color; used in histograms, violin plots, and arrows.
+"""
+defaultGray = "#5c676f"
+
+"""
+Citizen ensemble blue color; used in histograms, violin plots, and arrows. (Aka
+Citizen Kane).
+"""
+citizenBlue = "#4693b3"
+
 def hexshift(color) -> str:
     """
     Randomly modifies the provided hexadecimal color.

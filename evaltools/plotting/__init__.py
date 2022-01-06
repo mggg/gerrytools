@@ -1,13 +1,12 @@
+
 from .drawplan import drawplan
 from .drawgraph import drawgraph
 from .colors import redbluecmap, flare, purples, districtr
 from .specification import PlotSpecification
-from .plots import (
-    plot_histogram,
-    plot_violin,
-    draw_arrow,
-    draw_ideal,
-)
+from .histogram import histogram
+from .violin import violin
+from .bins import bins
+from .annotation import arrow, ideal
 
 """
 Makes pretty pictures of districting plans and dual graphs.
@@ -22,8 +21,9 @@ __all__ = [
     "flare",
     "purples",
     "districtr",
-    "plot_histogram",
-    "plot_violin",
-    "draw_arrow",
-    "draw_ideal",
+    "histogram",
+    "violin",
+    "arrow",
+    "ideal",
+    "bins"
 ]
