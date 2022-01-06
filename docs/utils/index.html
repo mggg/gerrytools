@@ -33,16 +33,23 @@ Oft-used utilities for working with geometric data.
 &#34;&#34;&#34;
 
 from .rename import rename
-from .JSON import objectify, JSON
+from .JSON import objectify, JSONtoObject
 
 __all__ = [
     &#34;objectify&#34;,
-    &#34;JSON&#34;,
+    &#34;JSONtoObject&#34;,
     &#34;rename&#34;
 ]</code></pre>
 </details>
 </section>
 <section>
+<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+<dl>
+<dt><code class="name"><a title="evaltools.utils.JSON" href="JSON.html">evaltools.utils.JSON</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
 </section>
 <section>
 </section>
@@ -50,7 +57,7 @@ __all__ = [
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.utils.objectify"><code class="name flex">
-<span>def <span class="ident">objectify</span></span>(<span>location) ‑> Union[List[evaltools.utils.JSON.JSON], evaltools.utils.JSON.JSON]</span>
+<span>def <span class="ident">objectify</span></span>(<span>location) ‑> Union[List[<a title="evaltools.utils.JSON.JSONtoObject" href="JSON.html#evaltools.utils.JSON.JSONtoObject">JSONtoObject</a>], <a title="evaltools.utils.JSON.JSONtoObject" href="JSON.html#evaltools.utils.JSON.JSONtoObject">JSONtoObject</a>]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Reads in JSON data and creates a Python object out of it. If the JSON data
@@ -67,7 +74,7 @@ objects.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def objectify(location) -&gt; Union[List[JSON],JSON]:
+<pre><code class="python">def objectify(location) -&gt; Union[List[JSONtoObject],JSONtoObject]:
     &#34;&#34;&#34;
     Reads in JSON data and creates a Python object out of it. If the JSON data
     read in is a list of JSON objects, a list of Python objects are returned.
@@ -82,8 +89,8 @@ objects.</p></div>
     with open(location) as r:
         data = json.load(r)
 
-        if type(data) is list: return [JSON(p) for p in data]
-        return JSON(data)</code></pre>
+        if type(data) is list: return [JSONtoObject(p) for p in data]
+        return JSONtoObject(data)</code></pre>
 </details>
 </dd>
 <dt id="evaltools.utils.rename"><code class="name flex">
@@ -154,8 +161,8 @@ rename(old, new)
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="evaltools.utils.JSON"><code class="flex name class">
-<span>class <span class="ident">JSON</span></span>
+<dt id="evaltools.utils.JSONtoObject"><code class="flex name class">
+<span>class <span class="ident">JSONtoObject</span></span>
 <span>(</span><span>data)</span>
 </code></dt>
 <dd>
@@ -170,7 +177,7 @@ the JSON object is a list, returns a list of JSON-ified objects.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class JSON(object):
+<pre><code class="python">class JSONtoObject(object):
     &#34;&#34;&#34;
     A class which represents JSON data as a Python object rather than a dict. If
     the JSON object is a list, returns a list of JSON-ified objects.
@@ -209,6 +216,11 @@ max-height: 80%;
 <li><code><a title="evaltools" href="../index.html">evaltools</a></code></li>
 </ul>
 </li>
+<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<ul>
+<li><code><a title="evaltools.utils.JSON" href="JSON.html">evaltools.utils.JSON</a></code></li>
+</ul>
+</li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="evaltools.utils.objectify" href="#evaltools.utils.objectify">objectify</a></code></li>
@@ -218,7 +230,7 @@ max-height: 80%;
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="evaltools.utils.JSON" href="#evaltools.utils.JSON">JSON</a></code></h4>
+<h4><code><a title="evaltools.utils.JSONtoObject" href="#evaltools.utils.JSONtoObject">JSONtoObject</a></code></h4>
 </li>
 </ul>
 </li>

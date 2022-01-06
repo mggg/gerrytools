@@ -33,6 +33,17 @@ from typing import List, Tuple
 from random import choice
 from string import hexdigits as hex
 
+&#34;&#34;&#34;
+Default gray plotting color; used in histograms, violin plots, and arrows.
+&#34;&#34;&#34;
+defaultGray = &#34;#5c676f&#34;
+
+&#34;&#34;&#34;
+Citizen ensemble blue color; used in histograms, violin plots, and arrows. (Aka
+Citizen Kane).
+&#34;&#34;&#34;
+citizenBlue = &#34;#4693b3&#34;
+
 def hexshift(color) -&gt; str:
     &#34;&#34;&#34;
     Randomly modifies the provided hexadecimal color.
@@ -134,6 +145,14 @@ def greens(n) -&gt; list:
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-variables">Global variables</h2>
+<dl>
+<dt id="evaltools.plotting.colors.defaultGray"><code class="name">var <span class="ident">defaultGray</span></code></dt>
+<dd>
+<div class="desc"><p>Citizen ensemble blue color; used in histograms, violin plots, and arrows. (Aka
+Citizen Kane).</p></div>
+</dd>
+</dl>
 </section>
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
@@ -356,6 +375,11 @@ max-height: 80%;
 <li><h3>Super-module</h3>
 <ul>
 <li><code><a title="evaltools.plotting" href="index.html">evaltools.plotting</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-variables">Global variables</a></h3>
+<ul class="">
+<li><code><a title="evaltools.plotting.colors.defaultGray" href="#evaltools.plotting.colors.defaultGray">defaultGray</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
