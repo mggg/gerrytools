@@ -70,8 +70,7 @@ def ideal(ax, label, placement, orientation, color=defaultGray, alpha=0.1):
     # Warn the user and abort if the `placement` parameter isn't of the correct
     # type.
     if type(placement) not in {float, int, tuple}:
-        print("Warning: `placement` is not of correct type; aborting.")
-        raise TypeError
+        raise TypeError("`placement` is not of correct type.")
 
     # If `placement` is a tuple, we draw a band.
     if type(placement) is tuple:
