@@ -40,51 +40,83 @@ def reock(
     geometries is the same as the convex hull of the union of the geometries' convex
     hulls. Next, we show that the convex hull of only the exterior tiled geometries
     of a given polygon is the same as the convex hull of all the geometries.
-    Lastly, we show that the minimum bounding circle of the latter is the same
-    as the minimum bounding circle of the former.
+    Lastly, we show that the minimum bounding circle of a given polygon is the
+    same as the minimum bounding circle of the polygon's convex hull.
 
     <div class="proof">
         <p>
             <i>Proof (equality of convex hulls of unions).</i> Let \(X\) be a simple
             polygon in the plane; let \(S\) be a set of simple polygons \(s_1,
-            \dots, s_n\) which tile \(X\), and \(S^*\) a set of polygons where
-            \(s^*_i = \text{Hull}(s_i)\). Let \(V\) be the vertices which define
-            \(\text{Hull}(\cup S)\), and \(V^*\) the vertices which define
-            \(\text{Hull}(\cup S^*)\). We wish to show that \(V = V^*\).
+            \dots, s_n\) which tile \(X\) such that \(\cup S = X\), and \(S^*\)
+            a set of polygons where \(s^*_i = \text{Hull}(s_i)\). Denote the
+            union of polygons in \(S^*\) by \(X^*\), so  that \(\cup S^* = X^*\).
+            Let \(V\) be the vertices which define \(\text{Hull}(X)\), and \(V^*\)
+            the vertices which define  \(\text{Hull}(X^*)\). We wish to show that
+            \(V = V^*\).
         </p>
         <p>
             (\(\supseteq\)) Each vertex of \(s^*_i\) is a vertex of \(s_i\).
-            Consequently, the vertices of \(\cup S^*\) are a subset of \(\cup S\)'s
-            vertices, implying that \(\text{Hull}(\cup S^*)\)'s vertices are a subset
-            of \(\text{Hull}(\cup S)\)'s. As such, \(V \supseteq V^*\).
+            Consequently, the vertices of \(X^*\) are a subset of \(X\)'s
+            vertices, implying that \(\text{Hull}(X^*)\)'s vertices are a subset
+            of \(\text{Hull}(X)\)'s. As such, \(V \supseteq V^*\).
         </p>
 
         <p>
             (\(\subseteq\)) Suppose, for the sake of contradiction, that \(V\)
             contains a vertex \(v\) that is <i>not</i> contained in \(V^*\),
             and that \(v\) is a vertex of the polygon \(s_i\). If \(v\) is not
-            in \(V^*\), then it can't be on the hull of \(\cup S^*\); if \(v\)
-            can't be on the hull of \(\cup S^*\), then it can't be on the hull
+            in \(V^*\), then it can't be on the hull of \(X^*\); if \(v\)
+            can't be on the hull of \(X^*\), then it can't be on the hull
             of \(s^*_i\). If \(v\) isn't on the hull of \(s^*_i\), then it is
             a reflex vertex; if \(v\) is a reflex vertex, then it can't be on
-            the convex hull of \(s_i\), and thus can't be on the convex hull of
-            \(\cup S\), which is a contradiction. As such, \(V \subseteq V^*\).
+            the convex hull of \(X\), which is a contradiction. As such, \(V
+            \subseteq V^*\).
         </p>
         <p>
             Because we have \(V \supseteq V^*\) and \(V \subseteq V^*\), we have
-            \(V=V^*\), and the convex hull of \(\cup S\) is the same as \(\cup S^*\).
+            \(V=V^*\), and the convex hull of \(X\) is the same as the convex
+            hull of \(X^*\).
         </p>
     </div>
 
     <div class="proof">
         <p>
-            <i>Proof (Equality of convex hull of exterior).</i> Let \(S^*\) be as
-            before, and let \(X^* = \cup S^*\). Let \(I^*\) be the subset of
-            \(S^*\) such that no \(s^*_i\) in \(I^*\) shares a boundary with the
-            exterior face of \(X*\).
+            <i>Proof (Equality of convex hull of exterior).</i> Let \(S^*\), \(X^*\),
+            and \(V^*\) be as before. Let \(\partial X^*\) be \(X^*\)'s <i>boundary</i>,
+            the set of points for which all \(\epsilon\)-neighborhoods intersect
+            both the interior and exterior faces of \(X^*\). Let \(I^*\) be the
+            subset of \(S^*\)'s polygons which do not contain a point on the
+            boundary (i.e. the <i>interior</i> polygons), and let \(E^*\) be the
+            subset of \(S^*\)'s polygons which contain a point on the boundary
+            (i.e. the <i>exterior</i> polygons). Note that \(S^* = I^* \sqcup
+            E^*\).
         </p>
         <p>
-            To demonstrate
+            Because each vertex in \(V^*\) is a boundary point, \(E^*\) contains
+            all polygons with a vertex in \(V^*\). Because each vertex belongs
+            to a polygon in \(E^*\), we know that \(V^*\) is also the set of
+            vertices of \(\text{Hull}(\cup E^*)\). Now, because the hulls' vertices
+            are the same, we have that $$\text{Hull}(X^*) = \text{Hull}(\cup E^*)$$
+            which, because \(X^* = \cup S^*\), implies that $$\text{Hull}(\cup E^*)
+            = \text{Hull}\big(\cup(E^* \sqcup I^*)\big) = \text{Hull}(\cup S^*).$$
+        </p>
+    </div>
+
+    <div class="proof">
+        <p>
+            <i>Proof (equality of minimum bounding circles).</i> Given a polygon
+            \(P\), its minimum bounding disk \(D\) – whose boundary is the minimum
+            bounding circle \(C\) – necessarily contains \(P\)'s convex hull \(H\), the
+            minimally convex region containing \(P\), and is defined by at most
+            three vertices on \(H\). Thus, given two regions whose convex hulls are
+            the same, the same set of vertices on their hulls define the minimum
+            bounding disk.
+        </p>
+        <p>
+            Let \(H_X\) be the convex hull of \(X\). Because the convex hulls of
+            \(X\) and \(H_X\) are the same, the same set of vertices defines
+            their minimum bounding disks; as such, the minimum bounding circles
+            of \(X\) and \(H_X\) are the same.
         </p>
     </div>
     """
