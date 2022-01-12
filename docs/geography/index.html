@@ -306,6 +306,13 @@ Because we have \(V \supseteq V^*\) and \(V \subseteq V^*\), we have
 hull of \(X^*\).
 </p>
 </div>
+<p>The above proof justifies an important optimization wherein only the points
+defining the convex hulls of each polygon are stored, as opposed to storing
+<em>all</em> points defining each polygon. In practice, removing extraneous points
+reduces the number of stored points by ~75%, which saves memory and
+computation time. Even though the Reock score is computed using an expected
+linear-time algorithm (which, in the worst case, performs quadratically),
+reducing the number of points greatly reduces computation time.</p>
 <div class="proof">
 <p>
 <i>Proof (Equality of convex hull of exterior).</i> Let \(S^*\), \(X^*\),
@@ -344,7 +351,15 @@ Let \(H_X\) be the convex hull of \(X\). Because the convex hulls of
 their minimum bounding disks; as such, the minimum bounding circles
 of \(X\) and \(H_X\) are the same.
 </p>
-</div></div>
+</div>
+<p>The above proofs justify an additional important optimization for computing
+Reock scores: because the vertices of our dual graph map bijectively to the
+set of geometries to which they're dual, a district isn't a single polygon
+but a <em>collection</em> of them. Rather than find the convex hull (and minimum
+bounding circle) of the points defining <em>all</em> the geometries which make up the
+district, we can more quickly find the hull (and minimum bounding circle) of
+the points defining geometries which border other districts or border the
+state itself.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -419,6 +434,14 @@ of \(X\) and \(H_X\) are the same.
         &lt;/p&gt;
     &lt;/div&gt;
 
+    The above proof justifies an important optimization wherein only the points
+    defining the convex hulls of each polygon are stored, as opposed to storing
+    _all_ points defining each polygon. In practice, removing extraneous points
+    reduces the number of stored points by ~75%, which saves memory and
+    computation time. Even though the Reock score is computed using an expected
+    linear-time algorithm (which, in the worst case, performs quadratically),
+    reducing the number of points greatly reduces computation time.
+
     &lt;div class=&#34;proof&#34;&gt;
         &lt;p&gt;
             &lt;i&gt;Proof (Equality of convex hull of exterior).&lt;/i&gt; Let \(S^*\), \(X^*\),
@@ -459,6 +482,15 @@ of \(X\) and \(H_X\) are the same.
             of \(X\) and \(H_X\) are the same.
         &lt;/p&gt;
     &lt;/div&gt;
+
+    The above proofs justify an additional important optimization for computing
+    Reock scores: because the vertices of our dual graph map bijectively to the
+    set of geometries to which they&#39;re dual, a district isn&#39;t a single polygon
+    but a _collection_ of them. Rather than find the convex hull (and minimum
+    bounding circle) of the points defining _all_ the geometries which make up the
+    district, we can more quickly find the hull (and minimum bounding circle) of
+    the points defining geometries which border other districts or border the
+    state itself.
     &#34;&#34;&#34;
     if isinstance(geodata, gpd.GeoDataFrame):
         geometries = dict(geodata.geometry.apply(lambda p: p.convex_hull))

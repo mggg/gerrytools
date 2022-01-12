@@ -79,6 +79,14 @@ def reock(
         </p>
     </div>
 
+    The above proof justifies an important optimization wherein only the points
+    defining the convex hulls of each polygon are stored, as opposed to storing
+    _all_ points defining each polygon. In practice, removing extraneous points
+    reduces the number of stored points by ~75%, which saves memory and
+    computation time. Even though the Reock score is computed using an expected
+    linear-time algorithm (which, in the worst case, performs quadratically),
+    reducing the number of points greatly reduces computation time.
+
     <div class="proof">
         <p>
             <i>Proof (Equality of convex hull of exterior).</i> Let \(S^*\), \(X^*\),
@@ -119,6 +127,15 @@ def reock(
             of \(X\) and \(H_X\) are the same.
         </p>
     </div>
+
+    The above proofs justify an additional important optimization for computing
+    Reock scores: because the vertices of our dual graph map bijectively to the
+    set of geometries to which they're dual, a district isn't a single polygon
+    but a _collection_ of them. Rather than find the convex hull (and minimum
+    bounding circle) of the points defining _all_ the geometries which make up the
+    district, we can more quickly find the hull (and minimum bounding circle) of
+    the points defining geometries which border other districts or border the
+    state itself.
     """
     if isinstance(geodata, gpd.GeoDataFrame):
         geometries = dict(geodata.geometry.apply(lambda p: p.convex_hull))
