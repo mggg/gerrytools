@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>evaltools.plotting API documentation</title>
-<meta name="description" content="" />
+<meta name="description" content="Makes pretty pictures of districting plans, dual graphs, histograms, boxplots,
+and violin plots 🎻." />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -23,11 +24,18 @@
 <h1 class="title">Module <code>evaltools.plotting</code></h1>
 </header>
 <section id="section-intro">
+<p>Makes pretty pictures of districting plans, dual graphs, histograms, boxplots,
+and violin plots 🎻.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from .drawplan import drawplan
+<pre><code class="python">&#34;&#34;&#34;
+Makes pretty pictures of districting plans, dual graphs, histograms, boxplots,
+and violin plots 🎻.
+&#34;&#34;&#34;
+
+from .drawplan import drawplan
 from .drawgraph import drawgraph
 from .colors import redbluecmap, flare, purples, districtr
 from .specification import PlotSpecification
@@ -35,11 +43,6 @@ from .histogram import histogram
 from .violin import violin
 from .bins import bins
 from .annotation import arrow, ideal
-
-&#34;&#34;&#34;
-Makes pretty pictures of districting plans and dual graphs.
-Makes histograms, violin plots, and boxplots of various scores.
-&#34;&#34;&#34;
 
 __all__ = [
     &#34;drawplan&#34;,
@@ -197,7 +200,7 @@ labels for the bins that are ticked, and the bin width.</p></div>
     # Get the minimum score, maximum score, 25th and 7th percentiles, and the IQR
     # of the observations.
     minscore, maxscore = min(scores), max(scores)
-    l, r = np.percentile(scores, [25, 75])
+    l, r = np.percentile(list(scores), [25, 75])
     iqr = r-l
     n = len(scores)
 
@@ -205,7 +208,17 @@ labels for the bins that are ticked, and the bin width.</p></div>
     # are integers, round the bin width to the nearest integer.
     allints = all(type(score) is int for score in scores)
     fdr = 2*iqr*n**(-1/3)
-    width = round(fdr) if allints else fdr
+    # width = round(fdr) if allints else fdr
+
+    # Calculate bin width using Gabe&#39;s logarithmic rule
+    # TODO: Test this with real score data and see how it looks
+    width = 10 ** (np.floor(np.log10(maxscore - minscore)) - 1)
+    if width == 0.01:
+        width /= 5
+    if width == 0.1:
+        width = 1
+    if width &gt;= 1:
+        width = int(width)
 
     hist_bins = np.arange(minscore, maxscore + 2 * width, width)
     label_interval = max(int(len(hist_bins) / labels), 1)
@@ -608,8 +621,7 @@ values are <code>"horizontal"</code> or <code>"vertical"</code>.</dd>
     # Warn the user and abort if the `placement` parameter isn&#39;t of the correct
     # type.
     if type(placement) not in {float, int, tuple}:
-        print(&#34;Warning: `placement` is not of correct type; aborting.&#34;)
-        raise TypeError
+        raise TypeError(&#34;`placement` is not of correct type.&#34;)
 
     # If `placement` is a tuple, we draw a band.
     if type(placement) is tuple:
@@ -1205,6 +1217,21 @@ the geometry for each district.</dd>
 </section>
 </article>
 <nav id="sidebar">
+<!-- include a script for adding stuff to the end of proofs. -->
+<script>
+// Get all the proofs in the document.
+proofs = document.getElementsByClassName("proof");
+// For each of the proofs, attach a floating child element in the bottom-right
+// corner.
+for (var proof of proofs) {
+// Create a proof-ending tombstone.
+square = document.createElement("div");
+square.className = "tombstone";
+square.innerHTML = "◼️";
+// Attach the tombstone to the proof.
+proof.appendChild(square);
+}
+</script>
 <header>
 <a class="homelink" rel="home" title="evaltools" href="https://github.com/mggg/plan-evaluation-processing">
 <style>
@@ -1212,6 +1239,18 @@ header > h1 { display: none; }
 img.resize {
 max-width: 80%;
 max-height: 80%;
+display: block;
+margin: 0 auto;
+}
+div.proof {
+border: 1px solid black;
+padding: 0em 1em;
+width: 90%;
+margin: 1em auto;
+}
+.tombstone {
+margin-top: -2em;
+float: right;
 }
 </style>
 <img class="resize" src="https://mggg.org/assets/logo.svg" alt="MGGG Logo">

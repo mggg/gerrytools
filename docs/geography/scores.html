@@ -42,7 +42,8 @@ from math import pi
 def reock(
     geodata: Union[gpd.GeoDataFrame, Graph]
 ) -&gt; Callable[[GeographicPartition], Dict[Any, float]]:
-    &#34;&#34;&#34;Makes a Reock score function specialized to `geodata`.
+    r&#34;&#34;&#34;
+    Makes a Reock score function specialized to `geodata`.
 
     The Reock score of a district is its area defined by the area of its
     minimum enclosing circle. Computing the area of this circle is nontrivial,
@@ -56,10 +57,61 @@ def reock(
     fast geometric computations; the function can only be used with
     dual graphs derived from `geodata`.
 
-    :param geodata: Geographical data to precompute geometries from.
-      May be a `geopandas.GeoDataFrame` or a `gerrychain.Graph` with
-      a `geometry` column.
-    :return: A per-district Reock score updater specialized to `geodata`.
+    Args:
+        geodata (gpd.GeoDataFrame, Graph): Geographical data to precompute
+            geometries from.
+    Returns:
+        A per-district Reock score updater specialized to `geodata`.
+
+    &lt;/br&gt;
+
+    Below, we provide short proofs of correctness for the optimizations utilized
+    in this updater. First, we show that the convex hull of a union of tiled
+    geometries is the same as the convex hull of the union of the geometries&#39; convex
+    hulls. Next, we show that the convex hull of only the exterior tiled geometries
+    of a given polygon is the same as the convex hull of all the geometries.
+    Lastly, we show that the minimum bounding circle of the latter is the same
+    as the minimum bounding circle of the former.
+
+    &lt;div class=&#34;proof&#34;&gt;
+        &lt;p&gt;
+            &lt;i&gt;Proof (equality of convex hulls of unions).&lt;/i&gt; Let \(X\) be a simple
+            polygon in the plane; let \(S\) be a set of simple polygons \(s_1,
+            \dots, s_n\) which tile \(X\), and \(S^*\) a set of polygons where
+            \(s^*_i = \text{Hull}(s_i)\). Let \(V\) be the vertices which define
+            \(\text{Hull}(\cup S)\), and \(V^*\) the vertices which define
+            \(\text{Hull}(\cup S^*)\). We wish to show that \(V = V^*\).
+        &lt;/p&gt;
+        &lt;p&gt;
+            (\(\supseteq\)) Each vertex of \(s^*_i\) is a vertex of \(s_i\).
+            Consequently, the vertices of \(\cup S^*\) are a subset of \(\cup S\)&#39;s
+            vertices, implying that \(\text{Hull}(\cup S^*)\)&#39;s vertices are a subset
+            of \(\text{Hull}(\cup S)\)&#39;s. As such, \(V \supseteq V^*\).
+        &lt;/p&gt;
+
+        &lt;p&gt;
+            (\(\subseteq\)) Suppose, for the sake of contradiction, that \(V\)
+            contains a vertex \(v\) that is &lt;i&gt;not&lt;/i&gt; contained in \(V^*\),
+            and that \(v\) is a vertex of the polygon \(s_i\). If \(v\) is not
+            in \(V^*\), then it can&#39;t be on the hull of \(\cup S^*\); if \(v\)
+            can&#39;t be on the hull of \(\cup S^*\), then it can&#39;t be on the hull
+            of \(s^*_i\). If \(v\) isn&#39;t on the hull of \(s^*_i\), then it is
+            a reflex vertex; if \(v\) is a reflex vertex, then it can&#39;t be on
+            the convex hull of \(s_i\), and thus can&#39;t be on the convex hull of
+            \(\cup S\), which is a contradiction. As such, \(V \subseteq V^*\).
+        &lt;/p&gt;
+        &lt;p&gt;
+            Because we have \(V \supseteq V^*\) and \(V \subseteq V^*\), we have
+            \(V=V^*\), and the convex hull of \(\cup S\) is the same as \(\cup S^*\).
+        &lt;/p&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&#34;proof&#34;&gt;
+        &lt;p&gt;
+            &lt;i&gt;Proof (Equality of convex hull of exterior).&lt;/i&gt; Let \(X\) and
+            \(S^*\) be as before.
+        &lt;/p&gt;
+    &lt;/div&gt;
     &#34;&#34;&#34;
     if isinstance(geodata, gpd.GeoDataFrame):
         geometries = dict(geodata.geometry.apply(lambda p: p.convex_hull))
@@ -132,10 +184,59 @@ efficiently from unit-level statistics).</p>
 build an index. The resulting score function uses this index for
 fast geometric computations; the function can only be used with
 dual graphs derived from <code>geodata</code>.</p>
-<p>:param geodata: Geographical data to precompute geometries from.
-May be a <code>geopandas.GeoDataFrame</code> or a <code>gerrychain.Graph</code> with
-a <code>geometry</code> column.
-:return: A per-district Reock score updater specialized to <code>geodata</code>.</p></div>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>geodata</code></strong> :&ensp;<code>gpd.GeoDataFrame, Graph</code></dt>
+<dd>Geographical data to precompute
+geometries from.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A per-district Reock score updater specialized to <code>geodata</code>.
+</br></p>
+<p>Below, we provide short proofs of correctness for the optimizations utilized
+in this updater. First, we show that the convex hull of a union of tiled
+geometries is the same as the convex hull of the union of the geometries' convex
+hulls. Next, we show that the convex hull of only the exterior tiled geometries
+of a given polygon is the same as the convex hull of all the geometries.
+Lastly, we show that the minimum bounding circle of the latter is the same
+as the minimum bounding circle of the former.</p>
+<div class="proof">
+<p>
+<i>Proof (equality of convex hulls of unions).</i> Let \(X\) be a simple
+polygon in the plane; let \(S\) be a set of simple polygons \(s_1,
+\dots, s_n\) which tile \(X\), and \(S^*\) a set of polygons where
+\(s^*_i = \text{Hull}(s_i)\). Let \(V\) be the vertices which define
+\(\text{Hull}(\cup S)\), and \(V^*\) the vertices which define
+\(\text{Hull}(\cup S^*)\). We wish to show that \(V = V^*\).
+</p>
+<p>
+(\(\supseteq\)) Each vertex of \(s^*_i\) is a vertex of \(s_i\).
+Consequently, the vertices of \(\cup S^*\) are a subset of \(\cup S\)'s
+vertices, implying that \(\text{Hull}(\cup S^*)\)'s vertices are a subset
+of \(\text{Hull}(\cup S)\)'s. As such, \(V \supseteq V^*\).
+</p>
+<p>
+(\(\subseteq\)) Suppose, for the sake of contradiction, that \(V\)
+contains a vertex \(v\) that is <i>not</i> contained in \(V^*\),
+and that \(v\) is a vertex of the polygon \(s_i\). If \(v\) is not
+in \(V^*\), then it can't be on the hull of \(\cup S^*\); if \(v\)
+can't be on the hull of \(\cup S^*\), then it can't be on the hull
+of \(s^*_i\). If \(v\) isn't on the hull of \(s^*_i\), then it is
+a reflex vertex; if \(v\) is a reflex vertex, then it can't be on
+the convex hull of \(s_i\), and thus can't be on the convex hull of
+\(\cup S\), which is a contradiction. As such, \(V \subseteq V^*\).
+</p>
+<p>
+Because we have \(V \supseteq V^*\) and \(V \subseteq V^*\), we have
+\(V=V^*\), and the convex hull of \(\cup S\) is the same as \(\cup S^*\).
+</p>
+</div>
+<div class="proof">
+<p>
+<i>Proof (Equality of convex hull of exterior).</i> Let \(X\) and
+\(S^*\) be as before.
+</p>
+</div></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -143,7 +244,8 @@ a <code>geometry</code> column.
 <pre><code class="python">def reock(
     geodata: Union[gpd.GeoDataFrame, Graph]
 ) -&gt; Callable[[GeographicPartition], Dict[Any, float]]:
-    &#34;&#34;&#34;Makes a Reock score function specialized to `geodata`.
+    r&#34;&#34;&#34;
+    Makes a Reock score function specialized to `geodata`.
 
     The Reock score of a district is its area defined by the area of its
     minimum enclosing circle. Computing the area of this circle is nontrivial,
@@ -157,10 +259,61 @@ a <code>geometry</code> column.
     fast geometric computations; the function can only be used with
     dual graphs derived from `geodata`.
 
-    :param geodata: Geographical data to precompute geometries from.
-      May be a `geopandas.GeoDataFrame` or a `gerrychain.Graph` with
-      a `geometry` column.
-    :return: A per-district Reock score updater specialized to `geodata`.
+    Args:
+        geodata (gpd.GeoDataFrame, Graph): Geographical data to precompute
+            geometries from.
+    Returns:
+        A per-district Reock score updater specialized to `geodata`.
+
+    &lt;/br&gt;
+
+    Below, we provide short proofs of correctness for the optimizations utilized
+    in this updater. First, we show that the convex hull of a union of tiled
+    geometries is the same as the convex hull of the union of the geometries&#39; convex
+    hulls. Next, we show that the convex hull of only the exterior tiled geometries
+    of a given polygon is the same as the convex hull of all the geometries.
+    Lastly, we show that the minimum bounding circle of the latter is the same
+    as the minimum bounding circle of the former.
+
+    &lt;div class=&#34;proof&#34;&gt;
+        &lt;p&gt;
+            &lt;i&gt;Proof (equality of convex hulls of unions).&lt;/i&gt; Let \(X\) be a simple
+            polygon in the plane; let \(S\) be a set of simple polygons \(s_1,
+            \dots, s_n\) which tile \(X\), and \(S^*\) a set of polygons where
+            \(s^*_i = \text{Hull}(s_i)\). Let \(V\) be the vertices which define
+            \(\text{Hull}(\cup S)\), and \(V^*\) the vertices which define
+            \(\text{Hull}(\cup S^*)\). We wish to show that \(V = V^*\).
+        &lt;/p&gt;
+        &lt;p&gt;
+            (\(\supseteq\)) Each vertex of \(s^*_i\) is a vertex of \(s_i\).
+            Consequently, the vertices of \(\cup S^*\) are a subset of \(\cup S\)&#39;s
+            vertices, implying that \(\text{Hull}(\cup S^*)\)&#39;s vertices are a subset
+            of \(\text{Hull}(\cup S)\)&#39;s. As such, \(V \supseteq V^*\).
+        &lt;/p&gt;
+
+        &lt;p&gt;
+            (\(\subseteq\)) Suppose, for the sake of contradiction, that \(V\)
+            contains a vertex \(v\) that is &lt;i&gt;not&lt;/i&gt; contained in \(V^*\),
+            and that \(v\) is a vertex of the polygon \(s_i\). If \(v\) is not
+            in \(V^*\), then it can&#39;t be on the hull of \(\cup S^*\); if \(v\)
+            can&#39;t be on the hull of \(\cup S^*\), then it can&#39;t be on the hull
+            of \(s^*_i\). If \(v\) isn&#39;t on the hull of \(s^*_i\), then it is
+            a reflex vertex; if \(v\) is a reflex vertex, then it can&#39;t be on
+            the convex hull of \(s_i\), and thus can&#39;t be on the convex hull of
+            \(\cup S\), which is a contradiction. As such, \(V \subseteq V^*\).
+        &lt;/p&gt;
+        &lt;p&gt;
+            Because we have \(V \supseteq V^*\) and \(V \subseteq V^*\), we have
+            \(V=V^*\), and the convex hull of \(\cup S\) is the same as \(\cup S^*\).
+        &lt;/p&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&#34;proof&#34;&gt;
+        &lt;p&gt;
+            &lt;i&gt;Proof (Equality of convex hull of exterior).&lt;/i&gt; Let \(X\) and
+            \(S^*\) be as before.
+        &lt;/p&gt;
+    &lt;/div&gt;
     &#34;&#34;&#34;
     if isinstance(geodata, gpd.GeoDataFrame):
         geometries = dict(geodata.geometry.apply(lambda p: p.convex_hull))
@@ -199,6 +352,21 @@ a <code>geometry</code> column.
 </section>
 </article>
 <nav id="sidebar">
+<!-- include a script for adding stuff to the end of proofs. -->
+<script>
+// Get all the proofs in the document.
+proofs = document.getElementsByClassName("proof");
+// For each of the proofs, attach a floating child element in the bottom-right
+// corner.
+for (var proof of proofs) {
+// Create a proof-ending tombstone.
+square = document.createElement("div");
+square.className = "tombstone";
+square.innerHTML = "◼️";
+// Attach the tombstone to the proof.
+proof.appendChild(square);
+}
+</script>
 <header>
 <a class="homelink" rel="home" title="evaltools" href="https://github.com/mggg/plan-evaluation-processing">
 <style>
@@ -206,6 +374,18 @@ header > h1 { display: none; }
 img.resize {
 max-width: 80%;
 max-height: 80%;
+display: block;
+margin: 0 auto;
+}
+div.proof {
+border: 1px solid black;
+padding: 0em 1em;
+width: 90%;
+margin: 1em auto;
+}
+.tombstone {
+margin-top: -2em;
+float: right;
 }
 </style>
 <img class="resize" src="https://mggg.org/assets/logo.svg" alt="MGGG Logo">
