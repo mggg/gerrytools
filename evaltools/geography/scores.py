@@ -78,8 +78,13 @@ def reock(
 
     <div class="proof">
         <p>
-            <i>Proof (Equality of convex hull of exterior).</i> Let \(X\) and
-            \(S^*\) be as before.
+            <i>Proof (Equality of convex hull of exterior).</i> Let \(S^*\) be as
+            before, and let \(X^* = \cup S^*\). Let \(I^*\) be the subset of
+            \(S^*\) such that no \(s^*_i\) in \(I^*\) shares a boundary with the
+            exterior face of \(X*\).
+        </p>
+        <p>
+            To demonstrate
         </p>
     </div>
     """
