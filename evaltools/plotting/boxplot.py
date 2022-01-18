@@ -4,19 +4,19 @@ import numpy as np
 import random
 from .colors import defaultGray, citizenBlue, districtr
 
-def violin(
+def boxplot(
         ax, scores, labels, proposed_info={}, percentiles=(1,99), rotation=0,
         ticksize=12, jitter=1/3
     ) -> Axes:
     """
-    Plot a violin plot, which takes `scores` — a list of lists, where each sublist
-    will be its own violin. Proposed scores will be plotted as colored circles on
-    their respective violin. Color the violins conditioned on the kind of the scores
+    Plot boxplots, which takes `scores` — a list of lists, where each sublist
+    will be its own box. Proposed scores will be plotted as colored circles on
+    their respective box. Color the boxplots conditioned on the kind of the scores
     (ensemble or citizen), and if plotting ensemble, then trim each sublist to
     only the values between the specified percentiles.
 
     Args:
-        ax (Axes): `Axes` object on which the violins are plotted.
+        ax (Axes): `Axes` object on which the boxplots are plotted.
         scores (dict): Dictionary with keys of `ensemble`, `citizen`, `proposed`
             which map to lists of numerical scores.
         proposed_info (dict, optional): Dictionary with keys of `colors`, `names`;
@@ -39,27 +39,20 @@ def violin(
     ensemble = scores["ensemble"] if scores["ensemble"] else scores["citizen"]
     facecolor = defaultGray if scores["ensemble"] else citizenBlue
 
-    # Initialize a list for winnowing scores.
-    trimmed_scores = []
+    # Specify the boxplots' style.
+    boxstyle = {
+        "lw": 2,
+        "color": facecolor,
+    }
 
-    # Pare each ensemble down to only the observations between the 1st and 99th
-    # percentiles.
-    for score_list in ensemble:
-        low = np.percentile(ensemble, percentiles[0])
-        high = np.percentile(ensemble, percentiles[1])
-        # print(f"Only including scores between [{low}, {high}]")
-        trimmed_scores.append([s for s in score_list if s >= low and s <= high])
-
-    # Plot violins.
-    parts = ax.violinplot(trimmed_scores, showextrema=False)
-
-    # For each of the violins, modify its visual properties; change the face color
-    # to the specified face color, change its edge color to black, and set its
-    # opacity to 1.
-    for pc in parts["bodies"]:
-        pc.set_facecolor(facecolor)
-        pc.set_edgecolor("black")
-        pc.set_alpha(1)
+    # Plot boxplots.
+    ax.boxplot(scores,
+               whis=percentiles,
+               boxprops=boxstyle,
+               whiskerprops=boxstyle,
+               capprops=boxstyle,
+               medianprops=boxstyle,
+              )
 
     # Set xticks, xlabels, and x-axis limits.
     ax.set_xticks(range(1, len(ensemble) + 1))
