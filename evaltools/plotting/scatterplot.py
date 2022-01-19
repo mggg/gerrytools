@@ -18,9 +18,11 @@ def scatterplot(ax, x, y, labels, limits=set(), proposed_info={}, resolution=50,
         Axes object on which the scatterplot is plotted.
     """
     min_val = min(min(x), min(y))
+    x_range = (min(x), max(x))
+    y_range = (min(y), max(y))
     h, xedges, yedges, image = ax.hist2d(x,
                                          y,
-                                         resolution,
+                                         bins=[range(min(x), max(x)), range(min(y), max(y))],
                                          cmap='Greys',
                                         #  cmin=min_val,
                                          range=axis_range,

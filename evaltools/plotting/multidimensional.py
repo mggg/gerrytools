@@ -8,6 +8,7 @@ def multidimensional(x,
                      y, 
                      hist, 
                      labels=["X values", "Y values", "Histogram values"],
+                     bin_width=1,
                      limits=set(), 
                      proposed_info={},
                      figsize=(12,8),
@@ -32,7 +33,7 @@ def multidimensional(x,
     Returns:
         The scatterplot and histogram axes.
     """
-    fig = plt.subplots(figsize=figsize)
+    _ = plt.subplots(figsize=figsize)
     gs = gridspec.GridSpec(2, 1, height_ratios=[2, 1])
 
     scatter_limits = limits[:2] if limits else set()
@@ -49,7 +50,7 @@ def multidimensional(x,
     scores = {
         "ensemble": hist,
         "citizen": [],
-        "proposed": proposed_info["hist"],
+        "proposed": proposed_info["hist"] if proposed_info else [],
     }
     hist_limits = limits[-1] if limits else set()
     hist_label = labels[-1]
@@ -59,7 +60,7 @@ def multidimensional(x,
                         label=hist_label,
                         limits=hist_limits, 
                         proposed_info=proposed_info, 
-                        bin_width=5,
+                        bin_width=bin_width,
                        )
     hist_ax.get_yaxis().set_visible(False)
     hist_ax.spines['top'].set_visible(False)
