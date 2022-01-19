@@ -1,5 +1,5 @@
-from typing import Union
 
+from typing import Union
 import gerrychain
 from gerrychain.constraints import contiguous as ctgs
 

@@ -1,6 +1,7 @@
 
 from evaltools.geography import dissolve, dualgraph, unitmap, invert, reock
 from gerrychain.grid import Grid
+from gerrychain.graph import Graph
 from shapely.geometry import box
 import geopandas as gpd
 from pathlib import Path
@@ -100,7 +101,7 @@ def test_reock_score_squares_graph():
     grid = Grid((10, 10))
     for (x, y), data in grid.graph.nodes(data=True):
         data['geometry'] = box(x, y, x + 1, y + 1)
-    score_fn = reock(grid.graph)
+    score_fn = reock(Graph(grid.graph))
 
     # The Reock score of a square inscribed in a circle is
     # area(square) / area(circle) = 2/π.
@@ -116,7 +117,7 @@ def test_reock_score_disconnected():
     grid = Grid((10, 10))
     for (x, y), data in grid.graph.nodes(data=True):
         data['geometry'] = box(x, y, x + 1, y + 1)
-    score_fn = reock(grid.graph)
+    score_fn = reock(Graph(grid.graph))
 
     # Break district 0 into two disconnected pieces 
     # (while preserving convex hull perimeter),

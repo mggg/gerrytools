@@ -126,7 +126,7 @@ contiguous.</p>
     &#34;&#34;&#34;
     # Create the partition and the corresponding updater.
     poptally = Tally(popcolumn, alias=popcolumn)
-    P.updaters = { popcolumn: poptally }
+    P.updaters.update({ popcolumn: poptally })
 
     # Return a dictionary that maps district names to population deviation
     # percentages.
@@ -134,7 +134,7 @@ contiguous.</p>
 </details>
 </dd>
 <dt id="evaltools.evaluation.pieces"><code class="name flex">
-<span>def <span class="ident">pieces</span></span>(<span>P, units) ‑> dict</span>
+<span>def <span class="ident">pieces</span></span>(<span>P, units, names=False) ‑> dict</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Determines the number of "unit pieces" produced by the plan. For example,
@@ -153,14 +153,19 @@ being split).</p>
 <dt><strong><code>units</code></strong> :&ensp;<code>list</code></dt>
 <dd>List of data columns; each assigns a vertex to a unit.
 Generally, these units are counties, VTDs, precincts, etc.</dd>
+<dt><strong><code>names</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Should the dictionary include the identifiers of
+the split units instead of the number?</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>A dictionary mapping column names to the number of splits.</p></div>
+<p>A dictionary mapping column names to the number of pieces; if the <code>names</code>
+parameter is truthy, we return a dictionary mapping column names to the
+list of units split.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def pieces(P, units) -&gt; dict:
+<pre><code class="python">def pieces(P, units, names=False) -&gt; dict:
     &#34;&#34;&#34;
     Determines the number of &#34;unit pieces&#34; produced by the plan. For example,
     consider a state with 100 counties. Suppose that one county is split twice,
@@ -177,36 +182,52 @@ Generally, these units are counties, VTDs, precincts, etc.</dd>
         P (Partition): GerryChain Partition object.
         units (list): List of data columns; each assigns a vertex to a unit.
             Generally, these units are counties, VTDs, precincts, etc.
+        names (bool, optional): Should the dictionary include the identifiers of
+            the split units instead of the number?
 
     Returns:
-        A dictionary mapping column names to the number of splits.
+        A dictionary mapping column names to the number of pieces; if the `names`
+        parameter is truthy, we return a dictionary mapping column names to the
+        list of units split.
     &#34;&#34;&#34;
-    geometrypieces = {
-        unit: sum(
-            len(value.contains) if len(value.contains) &gt; 1 else 0
-            # Takes advantage of the fact that P is a Partition and `county_splits`
-            # returns a function. We don&#39;t need to name the partition, and the
-            # column of units being split by the plan are in `units`, so we can
-            # simply call the function returned by `county_splits`, passing it
-            # our Partition `P`.
-            for value in county_splits(&#34;&#34;, unit)(P).values()
-        )
-        for unit in units
-    }
+    # Check whether the `units` parameter is a list; if not, we force it to one.
+    if type(units) != list:
+        print(&#34;Passed `units` parameter is not a list; forcing to list and continuing.&#34;)
+        units = [units]
 
-    return geometrypieces</code></pre>
+    # If the `names` parameter is truthy, we want to get the unique identifiers
+    # of the units being split; otherwise, we just report the number. In this
+    # case, however, the number of unit pieces *cannot* be retrieved from the
+    # list of units split.
+    if names:
+        geometrysplits = {
+            unit: [
+                name for name, split in county_splits(&#34;&#34;, unit)(P).items()
+                if len(split.contains) &gt; 1
+            ]
+            for unit in units
+        }
+    else:
+        geometrysplits = {
+            unit: sum(
+                len(split.contains) for split in county_splits(&#34;&#34;, unit)(P).values()
+                if len(split.contains) &gt; 1
+            )
+            for unit in units
+        }
+    
+    return geometrysplits</code></pre>
 </details>
 </dd>
 <dt id="evaltools.evaluation.splits"><code class="name flex">
-<span>def <span class="ident">splits</span></span>(<span>P, units) ‑> dict</span>
+<span>def <span class="ident">splits</span></span>(<span>P, units, names=False) ‑> dict</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Determines the number of units split by the districting plan.</p>
-<p>Bear in mind that this calculates the number of <em>unit splits</em>, not the number
-of <em>units split</em>: for example, if a district divides a county into three
-pieces, the former reports two splits (as a unit divided into three pieces is
-cut twice), while the latter would report one split (as there is one county
-being split).</p>
+<p>Bear in mind that this calculates the number of <em>units split</em>, not the number
+of <em>unit splits</em>: for example, if two districts divides a county into three
+pieces, the former reports one split (as the county is the unit split) and
+the latter reports </p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>P</code></strong> :&ensp;<code>Partition</code></dt>
@@ -214,44 +235,65 @@ being split).</p>
 <dt><strong><code>units</code></strong> :&ensp;<code>list</code></dt>
 <dd>List of data columns; each assigns a vertex to a unit.
 Generally, these units are counties, VTDs, precincts, etc.</dd>
+<dt><strong><code>names</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Should the dictionary include the identifiers of
+the split units instead of the number?</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>A dictionary mapping column names to the number of splits.</p></div>
+<p>A dictionary mapping column names to the number of splits; if the <code>names</code>
+parameter is truthy, we return a dictionary mapping column names to the
+list of units split.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def splits(P, units) -&gt; dict:
+<pre><code class="python">def splits(P, units, names=False) -&gt; dict:
     &#34;&#34;&#34;
     Determines the number of units split by the districting plan.
     
-    Bear in mind that this calculates the number of *unit splits*, not the number
-    of *units split*: for example, if a district divides a county into three
-    pieces, the former reports two splits (as a unit divided into three pieces is
-    cut twice), while the latter would report one split (as there is one county 
-    being split).
+    Bear in mind that this calculates the number of _units split_, not the number
+    of _unit splits_: for example, if two districts divides a county into three
+    pieces, the former reports one split (as the county is the unit split) and
+    the latter reports 
 
     Args:
         P (Partition): GerryChain Partition object.
         units (list): List of data columns; each assigns a vertex to a unit.
             Generally, these units are counties, VTDs, precincts, etc.
+        names (bool, optional): Should the dictionary include the identifiers of
+            the split units instead of the number?
     
     Returns:
-        A dictionary mapping column names to the number of splits.
+        A dictionary mapping column names to the number of splits; if the `names`
+        parameter is truthy, we return a dictionary mapping column names to the
+        list of units split.
     &#34;&#34;&#34;
-    geometrysplits = {
-        unit: sum(
-            (len(value.contains))-1
-            # Takes advantage of the fact that P is a Partition and `county_splits`
-            # returns a function. We don&#39;t need to name the partition, and the
-            # column of units being split by the plan are in `units`, so we can
-            # simply call the function returned by `county_splits`, passing it
-            # our Partition `P`.
-            for value in county_splits(&#34;&#34;, unit)(P).values()
-        )
-        for unit in units
-    }
-
+    # Check whether the `units` parameter is a list; if not, we force it to one.
+    if type(units) != list:
+        print(&#34;Passed `units` parameter is not a list; forcing to list and continuing.&#34;)
+        units = [units]
+    
+    # If the `names` parameter is truthy, we want to get the unique identifiers
+    # of the units being split; otherwise, we just report the number. However,
+    # the number of units split can be retrieved even when the `names` parameter
+    # is falsy by taking the length of the list of unique identifiers.
+    if names:
+        geometrysplits = {
+            unit: [
+                name for name, split in county_splits(&#34;&#34;, unit)(P).items()
+                if len(split.contains) &gt; 1
+            ]
+            for unit in units
+        }
+    else:
+        geometrysplits = {
+            unit: sum(
+                1 for split in county_splits(&#34;&#34;, unit)(P).values()
+                if len(split.contains) &gt; 1
+            )
+            for unit in units
+        }
+    
     return geometrysplits</code></pre>
 </details>
 </dd>
@@ -262,13 +304,13 @@ Generally, these units are counties, VTDs, precincts, etc.</dd>
 <div class="desc"><p>Determines the number of unassigned people in the districting plan.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>P</code></strong></dt>
-<dd><code>Partition</code> object.</dd>
-<dt><strong><code>popcolumn</code></strong></dt>
+<dt><strong><code>P</code></strong> :&ensp;<code>Partition</code></dt>
+<dd>GerryChain Partition object.</dd>
+<dt><strong><code>popcolumn</code></strong> :&ensp;<code>str</code></dt>
 <dd>Column for tallying the desired population.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>Returns a</p></div>
+<p>Returns the total number of people unassigned to a district.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -278,13 +320,13 @@ Generally, these units are counties, VTDs, precincts, etc.</dd>
     Determines the number of unassigned people in the districting plan.
     
     Args:
-        P: `Partition` object.
-        popcolumn: Column for tallying the desired population.
+        P (Partition): GerryChain Partition object.
+        popcolumn (str): Column for tallying the desired population.
 
     Returns:
-        Returns a 
+        Returns the total number of people unassigned to a district.
     &#34;&#34;&#34;
-    pass</code></pre>
+    assignment = P.assignment</code></pre>
 </details>
 </dd>
 <dt id="evaltools.evaluation.unassigned_units"><code class="name flex">

@@ -36,7 +36,7 @@ def cvap(state, geometry=&#34;tract&#34;) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
     the specified geometry level. Geometries from the **2010 Census**. Variables
-    and descriptions are [listed here](https://tinyurl.com/3mnrm56s&gt;).
+    and descriptions are [listed here](https://tinyurl.com/3mnrm56s).
 
     Args:
         state (us.State): The `State` object for which we&#39;re retrieving 2019 ACS
@@ -108,6 +108,8 @@ def cvap(state, geometry=&#34;tract&#34;) -&gt; pd.DataFrame:
     # White.
     data = pd.DataFrame().from_records(collapsed)
     data[&#34;POCCVAP19&#34;] = data[&#34;CVAP19&#34;] - data[&#34;NHWCVAP19&#34;]
+
+    print(data.head())
 
     return data
 
@@ -409,7 +411,7 @@ column.</dd>
 <dd>
 <div class="desc"><p>Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
 the specified geometry level. Geometries from the <strong>2010 Census</strong>. Variables
-and descriptions are <a href="https://tinyurl.com/3mnrm56s&gt;">listed here</a>.</p>
+and descriptions are <a href="https://tinyurl.com/3mnrm56s">listed here</a>.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>state</code></strong> :&ensp;<code>us.State</code></dt>
@@ -431,7 +433,7 @@ the 2019 ACS CVAP Special Tab.</p></div>
     &#34;&#34;&#34;
     Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
     the specified geometry level. Geometries from the **2010 Census**. Variables
-    and descriptions are [listed here](https://tinyurl.com/3mnrm56s&gt;).
+    and descriptions are [listed here](https://tinyurl.com/3mnrm56s).
 
     Args:
         state (us.State): The `State` object for which we&#39;re retrieving 2019 ACS
@@ -503,6 +505,8 @@ the 2019 ACS CVAP Special Tab.</p></div>
     # White.
     data = pd.DataFrame().from_records(collapsed)
     data[&#34;POCCVAP19&#34;] = data[&#34;CVAP19&#34;] - data[&#34;NHWCVAP19&#34;]
+
+    print(data.head())
 
     return data</code></pre>
 </details>

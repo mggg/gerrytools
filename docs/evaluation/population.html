@@ -44,11 +44,12 @@ def deviations(P, popcolumn) -&gt; dict:
     &#34;&#34;&#34;
     # Create the partition and the corresponding updater.
     poptally = Tally(popcolumn, alias=popcolumn)
-    P.updaters = { popcolumn: poptally }
+    P.updaters.update({ popcolumn: poptally })
 
     # Return a dictionary that maps district names to population deviation
     # percentages.
     return deviation(P, attribute=popcolumn)
+
 
 
 def unassigned_population(P, popcolumn):
@@ -56,13 +57,13 @@ def unassigned_population(P, popcolumn):
     Determines the number of unassigned people in the districting plan.
     
     Args:
-        P: `Partition` object.
-        popcolumn: Column for tallying the desired population.
+        P (Partition): GerryChain Partition object.
+        popcolumn (str): Column for tallying the desired population.
 
     Returns:
-        Returns a 
+        Returns the total number of people unassigned to a district.
     &#34;&#34;&#34;
-    pass</code></pre>
+    assignment = P.assignment</code></pre>
 </details>
 </section>
 <section>
@@ -103,7 +104,7 @@ def unassigned_population(P, popcolumn):
     &#34;&#34;&#34;
     # Create the partition and the corresponding updater.
     poptally = Tally(popcolumn, alias=popcolumn)
-    P.updaters = { popcolumn: poptally }
+    P.updaters.update({ popcolumn: poptally })
 
     # Return a dictionary that maps district names to population deviation
     # percentages.
@@ -117,13 +118,13 @@ def unassigned_population(P, popcolumn):
 <div class="desc"><p>Determines the number of unassigned people in the districting plan.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>P</code></strong></dt>
-<dd><code>Partition</code> object.</dd>
-<dt><strong><code>popcolumn</code></strong></dt>
+<dt><strong><code>P</code></strong> :&ensp;<code>Partition</code></dt>
+<dd>GerryChain Partition object.</dd>
+<dt><strong><code>popcolumn</code></strong> :&ensp;<code>str</code></dt>
 <dd>Column for tallying the desired population.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>Returns a</p></div>
+<p>Returns the total number of people unassigned to a district.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -133,13 +134,13 @@ def unassigned_population(P, popcolumn):
     Determines the number of unassigned people in the districting plan.
     
     Args:
-        P: `Partition` object.
-        popcolumn: Column for tallying the desired population.
+        P (Partition): GerryChain Partition object.
+        popcolumn (str): Column for tallying the desired population.
 
     Returns:
-        Returns a 
+        Returns the total number of people unassigned to a district.
     &#34;&#34;&#34;
-    pass</code></pre>
+    assignment = P.assignment</code></pre>
 </details>
 </dd>
 </dl>

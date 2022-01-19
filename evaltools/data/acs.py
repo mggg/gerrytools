@@ -8,7 +8,7 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
     """
     Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
     the specified geometry level. Geometries from the **2010 Census**. Variables
-    and descriptions are [listed here](https://tinyurl.com/3mnrm56s>).
+    and descriptions are [listed here](https://tinyurl.com/3mnrm56s).
 
     Args:
         state (us.State): The `State` object for which we're retrieving 2019 ACS
@@ -80,6 +80,8 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
     # White.
     data = pd.DataFrame().from_records(collapsed)
     data["POCCVAP19"] = data["CVAP19"] - data["NHWCVAP19"]
+
+    print(data.head())
 
     return data
 

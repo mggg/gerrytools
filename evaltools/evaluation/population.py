@@ -16,11 +16,12 @@ def deviations(P, popcolumn) -> dict:
     """
     # Create the partition and the corresponding updater.
     poptally = Tally(popcolumn, alias=popcolumn)
-    P.updaters = { popcolumn: poptally }
+    P.updaters.update({ popcolumn: poptally })
 
     # Return a dictionary that maps district names to population deviation
     # percentages.
     return deviation(P, attribute=popcolumn)
+
 
 
 def unassigned_population(P, popcolumn):
@@ -28,10 +29,10 @@ def unassigned_population(P, popcolumn):
     Determines the number of unassigned people in the districting plan.
     
     Args:
-        P: `Partition` object.
-        popcolumn: Column for tallying the desired population.
+        P (Partition): GerryChain Partition object.
+        popcolumn (str): Column for tallying the desired population.
 
     Returns:
-        Returns a 
+        Returns the total number of people unassigned to a district.
     """
-    pass
+    assignment = P.assignment
