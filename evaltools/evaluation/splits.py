@@ -51,7 +51,6 @@ def splits(P, units, names=False) -> dict:
     return geometrysplits
 
 
-
 def pieces(P, units, names=False) -> dict:
     """
     Determines the number of "unit pieces" produced by the plan. For example,
