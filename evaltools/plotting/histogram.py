@@ -5,7 +5,13 @@ from .bins import bins
 from .colors import defaultGray, citizenBlue
 
 
-def histogram(ax, scores, label="Histogram value", limits=set(), proposed_info={}, ticksize=12, bin_width=None) -> Axes:
+def histogram(ax, 
+              scores, 
+              label="Histogram value", 
+              limits=set(), 
+              proposed_info={}, 
+              ticksize=12, 
+              bin_width=None) -> Axes:
     """
     Plot a histogram with the ensemble scores in bins and the proposed plans'
     scores as vertical lines. If there are many unique values, use a white border

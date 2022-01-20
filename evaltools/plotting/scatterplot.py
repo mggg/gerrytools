@@ -1,4 +1,5 @@
 from matplotlib.axes import Axes
+import numpy as np
 
 def scatterplot(ax, x, y, labels, limits=set(), proposed_info={}, resolution=50, axis_range=None) -> Axes:
     """
@@ -22,7 +23,7 @@ def scatterplot(ax, x, y, labels, limits=set(), proposed_info={}, resolution=50,
     y_range = (min(y), max(y))
     h, xedges, yedges, image = ax.hist2d(x,
                                          y,
-                                         bins=[range(min(x), max(x)), range(min(y), max(y))],
+                                         bins=[np.arange(min(x), max(x)), np.arange(min(y), max(y))],
                                          cmap='Greys',
                                         #  cmin=min_val,
                                          range=axis_range,
