@@ -10,6 +10,10 @@ from .colors import redbluecmap, flare, purples, districtr
 from .specification import PlotSpecification
 from .histogram import histogram
 from .violin import violin
+from .boxplot import boxplot
+from .scatterplot import scatterplot
+from .multidimensional import multidimensional
+from .gifs import gif_multidimensional
 from .bins import bins
 from .annotation import arrow, ideal
 
@@ -23,6 +27,10 @@ __all__ = [
     "districtr",
     "histogram",
     "violin",
+    "boxplot",
+    "scatterplot",
+    "multidimensional",
+    "gif_multidimensional",
     "arrow",
     "ideal",
     "bins"

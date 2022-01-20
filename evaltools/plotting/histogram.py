@@ -5,7 +5,13 @@ from .bins import bins
 from .colors import defaultGray, citizenBlue
 
 
-def histogram(ax, scores, proposed_info={}, ticksize=12) -> Axes:
+def histogram(ax, 
+              scores, 
+              label="Histogram value", 
+              limits=set(), 
+              proposed_info={}, 
+              ticksize=12, 
+              bin_width=None) -> Axes:
     """
     Plot a histogram with the ensemble scores in bins and the proposed plans'
     scores as vertical lines. If there are many unique values, use a white border
@@ -18,7 +24,8 @@ def histogram(ax, scores, proposed_info={}, ticksize=12) -> Axes:
         scores (dict): Dictionary with keys of `ensemble`, `citizen`, `proposed`
             which map to lists of numerical scores.
         proposed_info (dict, optional): Dictionary with keys of `colors`, `names`;
-            the \(i\)th color in `color` corresponds to the \(i\)th name in `names.
+            the \(i\)th color in `color` corresponds to the \(i\)th name in `names`.
+        limits: (tuple, optional): x-axis limits.
         ticksize (float, optional): Font size of tick labels.
 
     Returns:
@@ -26,9 +33,11 @@ def histogram(ax, scores, proposed_info={}, ticksize=12) -> Axes:
     """
     # Put all scores into a single list.
     all_scores = scores["ensemble"] + scores["citizen"] + scores["proposed"]
-
-    # Get the necessary bins, ticks, labels, and bin width.
-    hist_bins, tick_bins, tick_labels, bin_width = bins(set(all_scores))
+    if not bin_width:
+        # Get the necessary bins, ticks, labels, and bin width.
+        hist_bins, tick_bins, tick_labels, bin_width = bins(set(all_scores).union(limits))
+    else:
+        hist_bins, tick_bins, tick_labels, bin_width = bins(set(all_scores).union(limits), bin_width)
 
     # Set xticks and xticklabels.
     ax.set_xticks(tick_bins)
@@ -66,6 +75,8 @@ def histogram(ax, scores, proposed_info={}, ticksize=12) -> Axes:
             )
         
         ax.legend()
+    ax.set_xlabel(label, fontsize=24)
     ax.get_yaxis().set_visible(False)
-
+    if limits:
+        ax.set_xlim(limits)
     return ax

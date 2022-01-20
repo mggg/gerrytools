@@ -4,7 +4,7 @@ from numpy import array
 from typing import Tuple, List, Union
 
 
-def bins(scores, labels=8) -> Tuple[array, List, List, Union[float, int]]:
+def bins(scores, width=None, labels=8) -> Tuple[array, List, List, Union[float, int]]:
     """
     Get necessary information for histograms. If we're working with only a few
     discrete, floating point values, then set the bin width to be relatively thin.
@@ -12,34 +12,26 @@ def bins(scores, labels=8) -> Tuple[array, List, List, Union[float, int]]:
     
     Args:
         scores (list): The collection of all observations.
+        width (int, optional): The width of the bins.
         labels (int, optional): The number of histograms to be labeled.
 
     Returns:
         A tuple consisting of the histogram bins, the bins that are ticked, the
         labels for the bins that are ticked, and the bin width.
     """
-    # Get the minimum score, maximum score, 25th and 7th percentiles, and the IQR
-    # of the observations.
+    # Get the minimum score and maximum score
     minscore, maxscore = min(scores), max(scores)
-    l, r = np.percentile(list(scores), [25, 75])
-    iqr = r-l
-    n = len(scores)
-
-    # Calculate the bin width using the Freedman-Diaconis rule; if all observations
-    # are integers, round the bin width to the nearest integer.
-    allints = all(type(score) is int for score in scores)
-    fdr = 2*iqr*n**(-1/3)
-    # width = round(fdr) if allints else fdr
 
     # Calculate bin width using Gabe's logarithmic rule
     # TODO: Test this with real score data and see how it looks
-    width = 10 ** (np.floor(np.log10(maxscore - minscore)) - 1)
-    if width == 0.01:
-        width /= 5
-    if width == 0.1:
-        width = 1
-    if width >= 1:
-        width = int(width)
+    if not width:
+        width = 10 ** (np.floor(np.log10(maxscore - minscore)) - 1)
+        if width == 0.01:
+            width /= 5
+        if width == 0.1:
+            width = 1
+        if width >= 1:
+            width = int(width)
 
     hist_bins = np.arange(minscore, maxscore + 2 * width, width)
     label_interval = max(int(len(hist_bins) / labels), 1)
