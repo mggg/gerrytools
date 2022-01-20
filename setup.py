@@ -3,7 +3,8 @@ from setuptools import setup, find_packages
 
 requirements = [
     "pandas", "scipy", "networkx", "geopandas", "shapely", "matplotlib",
-    "gerrychain", "sortedcontainers", "gurobipy", "jsonlines", "opencv-python"
+    "gerrychain", "sortedcontainers", "gurobipy", "jsonlines", "opencv-python",
+    "us"
 ]
 
 setup(
