@@ -1,0 +1,10 @@
+seaborn>=0.10.0
+geopandas>=0.9.0
+gerrychain>=0.2.17
+networkx>=2.6.3
+pandas>=1.1.4
+matplotlib>=3.2.1
+numpy>=1.17.2
+pydantic>=1.8.2
+requests>=2.26.0
+censusdata
