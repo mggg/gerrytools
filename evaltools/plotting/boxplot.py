@@ -46,13 +46,14 @@ def boxplot(
     }
 
     # Plot boxplots.
-    ax.boxplot(scores,
-               whis=percentiles,
-               boxprops=boxstyle,
-               whiskerprops=boxstyle,
-               capprops=boxstyle,
-               medianprops=boxstyle,
-              )
+    ax.boxplot(
+        ensemble,
+        whis=percentiles,
+        boxprops=boxstyle,
+        whiskerprops=boxstyle,
+        capprops=boxstyle,
+        medianprops=boxstyle,
+    )
 
     # Set xticks, xlabels, and x-axis limits.
     ax.set_xticks(range(1, len(ensemble) + 1))

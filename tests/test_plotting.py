@@ -1,9 +1,12 @@
 
-from evaltools.plotting import drawgraph, drawplan, PlotSpecification
+from evaltools.plotting import (
+    drawgraph, drawplan, PlotSpecification, districtr, boxplot
+)
 from gerrychain.graph import Graph
 from pathlib import Path
 import matplotlib.pyplot as plt
 import geopandas as gpd
+import numpy as np
 import os
 
 root = Path(os.getcwd()) / Path("tests/test-resources/")
@@ -60,8 +63,27 @@ def test_drawplan():
     ax = drawplan(districts, assignment="district", numbers=True)
     assert ax is not None
 
+def test_boxplot():
+    means = [int(x) for x in np.random.normal(24, 6, size=10)]
+    labels = [f"E{i+1}" for i in range(len(means))]
+    num_proposed = 3
+
+    scores = {
+        "ensemble": [[int(x) for x in np.random.normal(m, 4, size=1000)] for m in means],
+        "proposed": [[int(x) for x in np.random.normal(m, 8, size=num_proposed)] for m in means],
+    }
+
+    proposed_info = {
+        "colors": districtr(num_proposed),
+        "names": [f"Plan {i+1}" for i in range(num_proposed)],
+    }
+
+    fig, ax = plt.subplots(figsize=(12,6))
+    ax = boxplot(ax, scores, labels, proposed_info, percentiles=(25,75))
+    plt.show()
+
 
 if __name__ == "__main__":
     root = Path(os.getcwd()) / Path("test-resources/")
-    test_PlotSpecification()
+    test_boxplot()
 

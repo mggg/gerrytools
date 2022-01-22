@@ -84,4 +84,4 @@ def test_unassigned_units():
 
 if __name__ == "__main__":
     root = Path(os.getcwd()) / Path("test-resources/")
-    test_splits()
+    test_pieces()
