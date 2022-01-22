@@ -16,6 +16,9 @@ def test_splits():
     P = Partition(dg, "CONGRESS")
     units = ["COUNTYFP20"]
     geometricsplits = splits(P, ["COUNTYFP20"])
+    geometricsplitsnames = splits(P, ["COUNTYFP20"], names=True)
+
+    split = {'005', '135', '085', '067', '091', '045', '097', '017'}
 
     # Assert that we have a dictionary and that we have the right keys in it.
     assert type(geometricsplits) is dict
@@ -24,6 +27,8 @@ def test_splits():
     # Make sure that we're counting the number of splits correctly – Indiana's
     # enacted Congressional plan should split counties 8 times.
     assert geometricsplits["COUNTYFP20"] == 8
+    assert len(geometricsplitsnames["COUNTYFP20"]) == 8
+    assert set(geometricsplitsnames["COUNTYFP20"]) == split
 
 
 def test_pieces():
@@ -32,6 +37,9 @@ def test_pieces():
     P = Partition(dg, "CONGRESS")
     units = ["COUNTYFP20"]
     geometricpieces = pieces(P, ["COUNTYFP20"])
+    geometricpiecesnames = pieces(P, ["COUNTYFP20"], names=True)
+
+    split = {'005', '135', '085', '067', '091', '045', '097', '017'}
 
     # Assert that we have a dictionary and that we have the right keys in it.
     assert type(geometricpieces) is dict
@@ -40,6 +48,7 @@ def test_pieces():
     # Make sure that we're counting the number of splits correctly – Indiana's
     # enacted Congressional plan should split counties 8 times.
     assert geometricpieces["COUNTYFP20"] == 16
+    assert set(geometricpiecesnames["COUNTYFP20"]) == split
 
 
 def test_deviations():
@@ -75,4 +84,4 @@ def test_unassigned_units():
 
 if __name__ == "__main__":
     root = Path(os.getcwd()) / Path("test-resources/")
-    test_unassigned_units()
+    test_splits()
