@@ -43,7 +43,7 @@ def drawdemographics(state_shape, districts=None, assignment=None, demographic="
     
     if max(state_shape[demographic]) <= 1: 
         colorbar_ticks = np.linspace(0, 1, 11)
-        colorbar_labels = [f"{tick*10}%" for tick in colorbar_ticks]
+        colorbar_labels = [f"{tick*100}%" for tick in colorbar_ticks]
         vmin = 0
         vmax = 1        
         bounds = colorbar_ticks * 100 
@@ -99,7 +99,7 @@ def drawdemographics(state_shape, districts=None, assignment=None, demographic="
         for district, identifier in zip(districts["geometry"], districts[assignment]):
             x,y = list(district.centroid.coords)[0]
             base.annotate(
-                identifier, (x,y), xytext=(x,y), xycoords="data", fontsize=10, 
+                identifier, (x,y), xytext=(x,y), xycoords="data", fontsize=15, 
                 ha="center", va="center",
                 bbox=dict(
                     boxstyle="round,pad=0.2", fc="wheat", ec="black", alpha=1, 
