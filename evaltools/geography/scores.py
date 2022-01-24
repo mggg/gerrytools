@@ -3,8 +3,8 @@ import numpy as np
 import geopandas as gpd
 from typing import Dict, Callable, Union, Any
 from cv2 import minEnclosingCircle
-from gerrychain import Graph
-from gerrychain import GeographicPartition
+from gerrychain import Graph, GeographicPartition
+from gerrychain.updaters import boundary_nodes
 from shapely.ops import unary_union
 from math import pi
 
@@ -149,14 +149,16 @@ def reock(
             'Geodata must be a GeoDataFrame or a gerrychain.Graph.')
 
     def score_fn(partition: GeographicPartition) -> Dict[Any, float]:
-        boundary_nodes = set.union(*(set(e) for e in partition["cut_edges"])).union(
+        partition.updaters.update({"boundary_nodes": boundary_nodes})
+
+        boundary = set.union(*(set(e) for e in partition["cut_edges"])).union(
             partition["boundary_nodes"]
         )
         part_scores = {}
 
         for part, nodes in partition.parts.items():
             geom = unary_union([
-                geometries[node] for node in nodes if node in boundary_nodes
+                geometries[node] for node in nodes if node in boundary
             ]).convex_hull
             coords = np.array(geom.exterior.coords.xy).T.astype(np.float32)
             _, radius = minEnclosingCircle(coords)
