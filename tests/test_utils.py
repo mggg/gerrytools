@@ -1,8 +1,11 @@
 
-from evaltools.utils import rename
+from evaltools.utils import rename, jsonify
+from pydantic import ValidationError
 from pathlib import Path
 import os
 import shutil
+
+from evaltools.utils.JSON import JSON
 
 root = Path(os.getcwd()) / Path("tests/test-resources/")
 
@@ -31,6 +34,19 @@ def test_rename():
     assert (root/"renamed").exists()
     assert (root/"renamed/renamed.ext").exists()
 
+def test_json():
+    # Read in plans.
+    goods = jsonify(root / "test-plans.json")
+
+    # Verify that we have a good list of plans.
+    assert type(goods) is list
+    assert all(type(good) is JSON for good in goods)
+    
+    # Import some bad ones, but make sure we catch the validation error.
+    try: bads = jsonify(root / "test-plans-bad.json")
+    except Exception as e:
+        assert type(e) is ValidationError
+
 if __name__ == "__main__":
     root = Path(os.getcwd()) / Path("test-resources/")
-    test_rename()
+    test_json()

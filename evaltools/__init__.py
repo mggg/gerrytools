@@ -14,7 +14,7 @@ from .numbering import (
     minimize_dispersion, minimize_parity, minimize_dispersion_with_parity,
     calculate_dispersion, dispersion_updater_closure
 )
-from .utils import rename, JSON, objectify
+from .utils import rename, JSON, jsonify
 
 """
 __all__ = [

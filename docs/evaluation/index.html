@@ -133,7 +133,7 @@ contiguous.</p>
 </details>
 </dd>
 <dt id="evaltools.evaluation.pieces"><code class="name flex">
-<span>def <span class="ident">pieces</span></span>(<span>P, units) ‑> dict</span>
+<span>def <span class="ident">pieces</span></span>(<span>P, units, names=False) ‑> dict</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Determines the number of "unit pieces" produced by the plan. For example,
@@ -152,14 +152,18 @@ being split).</p>
 <dt><strong><code>units</code></strong> :&ensp;<code>list</code></dt>
 <dd>List of data columns; each assigns a vertex to a unit.
 Generally, these units are counties, VTDs, precincts, etc.</dd>
+<dt><strong><code>names</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether we return the identifiers of the things
+being pieced.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>A dictionary mapping column names to the number of splits.</p></div>
+<p>A dictionary mapping column names to the number of pieces <em>or</em> the list of
+things cut into pieces.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def pieces(P, units) -&gt; dict:
+<pre><code class="python">def pieces(P, units, names=False) -&gt; dict:
     &#34;&#34;&#34;
     Determines the number of &#34;unit pieces&#34; produced by the plan. For example,
     consider a state with 100 counties. Suppose that one county is split twice,
@@ -176,28 +180,37 @@ Generally, these units are counties, VTDs, precincts, etc.</dd>
         P (Partition): GerryChain Partition object.
         units (list): List of data columns; each assigns a vertex to a unit.
             Generally, these units are counties, VTDs, precincts, etc.
+        names (bool, optional): Whether we return the identifiers of the things
+            being pieced.
 
     Returns:
-        A dictionary mapping column names to the number of splits.
+        A dictionary mapping column names to the number of pieces *or* the list of
+        things cut into pieces.
     &#34;&#34;&#34;
-    geometrypieces = {
-        unit: sum(
-            len(value.contains) if len(value.contains) &gt; 1 else 0
-            # Takes advantage of the fact that P is a Partition and `county_splits`
-            # returns a function. We don&#39;t need to name the partition, and the
-            # column of units being split by the plan are in `units`, so we can
-            # simply call the function returned by `county_splits`, passing it
-            # our Partition `P`.
-            for value in county_splits(&#34;&#34;, unit)(P).values()
-        )
-        for unit in units
-    }
+    if not names:
+        geometrypieces = {
+            unit: sum(
+                len(split.contains)
+                for split in county_splits(&#34;&#34;, unit)(P).values()
+                if len(split.contains) &gt; 1
+            )
+            for unit in units
+        }
+    else:
+        geometrypieces = {
+            unit: [
+                identifier
+                for identifier, split in county_splits(&#34;&#34;, unit)(P).items()
+                if len(split.contains) &gt; 1
+            ]
+            for unit in units
+        }
 
     return geometrypieces</code></pre>
 </details>
 </dd>
 <dt id="evaltools.evaluation.splits"><code class="name flex">
-<span>def <span class="ident">splits</span></span>(<span>P, units) ‑> dict</span>
+<span>def <span class="ident">splits</span></span>(<span>P, units, names=False) ‑> dict</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Determines the number of units split by the districting plan.</p>
@@ -213,14 +226,18 @@ being split).</p>
 <dt><strong><code>units</code></strong> :&ensp;<code>list</code></dt>
 <dd>List of data columns; each assigns a vertex to a unit.
 Generally, these units are counties, VTDs, precincts, etc.</dd>
+<dt><strong><code>names</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether we return the identifiers of the things
+being split.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>A dictionary mapping column names to the number of splits.</p></div>
+<p>A dictionary mapping column names to the number of splits or the list
+of things split.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def splits(P, units) -&gt; dict:
+<pre><code class="python">def splits(P, units, names=False) -&gt; dict:
     &#34;&#34;&#34;
     Determines the number of units split by the districting plan.
     
@@ -234,22 +251,31 @@ Generally, these units are counties, VTDs, precincts, etc.</dd>
         P (Partition): GerryChain Partition object.
         units (list): List of data columns; each assigns a vertex to a unit.
             Generally, these units are counties, VTDs, precincts, etc.
+        names (bool, optional): Whether we return the identifiers of the things
+            being split.
     
     Returns:
-        A dictionary mapping column names to the number of splits.
+        A dictionary mapping column names to the number of splits or the list
+        of things split.
     &#34;&#34;&#34;
-    geometrysplits = {
-        unit: sum(
-            (len(value.contains))-1
-            # Takes advantage of the fact that P is a Partition and `county_splits`
-            # returns a function. We don&#39;t need to name the partition, and the
-            # column of units being split by the plan are in `units`, so we can
-            # simply call the function returned by `county_splits`, passing it
-            # our Partition `P`.
-            for value in county_splits(&#34;&#34;, unit)(P).values()
-        )
-        for unit in units
-    }
+    if not names:
+        geometrysplits = {
+            unit: sum(
+                1
+                for split in county_splits(&#34;&#34;, unit)(P).values()
+                if len(split.contains) &gt; 1
+            )
+            for unit in units
+        }
+    else:
+        geometrysplits = {
+            unit: [
+                identifier
+                for identifier, split in county_splits(&#34;&#34;, unit)(P).items()
+                if len(split.contains) &gt; 1
+            ]
+            for unit in units
+        }
 
     return geometrysplits</code></pre>
 </details>

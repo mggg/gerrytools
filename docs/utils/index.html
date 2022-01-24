@@ -32,10 +32,10 @@ Oft-used utilities for working with geometric data.
 &#34;&#34;&#34;
 
 from .rename import rename
-from .JSON import objectify, JSON
+from .JSON import jsonify, JSON
 
 __all__ = [
-    &#34;objectify&#34;,
+    &#34;jsonify&#34;,
     &#34;JSON&#34;,
     &#34;rename&#34;
 ]</code></pre>
@@ -48,8 +48,8 @@ __all__ = [
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="evaltools.utils.objectify"><code class="name flex">
-<span>def <span class="ident">objectify</span></span>(<span>location) ‑> Union[List[evaltools.utils.JSON.JSON], evaltools.utils.JSON.JSON]</span>
+<dt id="evaltools.utils.jsonify"><code class="name flex">
+<span>def <span class="ident">jsonify</span></span>(<span>location) ‑> list</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Reads in JSON data and creates a Python object out of it. If the JSON data
@@ -60,13 +60,13 @@ read in is a list of JSON objects, a list of Python objects are returned.</p>
 <dd>Filepath.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>A dot-notation-accessible object or list of dot-notation-accessible
-objects.</p></div>
+<p>A list of pydantic dot-notation-accesible objects, which should contain
+information about districting plans.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def objectify(location) -&gt; Union[List[JSON],JSON]:
+<pre><code class="python">def jsonify(location) -&gt; list:
     &#34;&#34;&#34;
     Reads in JSON data and creates a Python object out of it. If the JSON data
     read in is a list of JSON objects, a list of Python objects are returned.
@@ -75,14 +75,29 @@ objects.</p></div>
         location (string): Filepath.
 
     Returns:
-        A dot-notation-accessible object or list of dot-notation-accessible
-        objects.
+        A list of pydantic dot-notation-accesible objects, which should contain
+        information about districting plans.
     &#34;&#34;&#34;
     with open(location) as r:
         data = json.load(r)
 
-        if type(data) is list: return [JSON(p) for p in data]
-        return JSON(data)</code></pre>
+        # First, check whether `data` is a list; if it is, deal with all the
+        # plans individually and return the list.
+        if type(data) is list: return [
+            JSON(
+                column=p[&#34;column&#34;],
+                locator=p[&#34;locator&#34;],
+                title=p[&#34;locator&#34;] if p.get(&#34;locator&#34;, False) else None
+            )
+            for p in data
+        ]
+
+        # Otherwise, return a singleton list with a single plan.
+        return [JSON(
+            column=data[&#34;column&#34;],
+            locator=data[&#34;locator&#34;],
+            title=data[&#34;locator&#34;] if data.get(&#34;locator&#34;, False) else None
+        )]</code></pre>
 </details>
 </dd>
 <dt id="evaltools.utils.rename"><code class="name flex">
@@ -155,32 +170,88 @@ rename(old, new)
 <dl>
 <dt id="evaltools.utils.JSON"><code class="flex name class">
 <span>class <span class="ident">JSON</span></span>
-<span>(</span><span>data)</span>
+<span>(</span><span>**data: Any)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>A class which represents JSON data as a Python object rather than a dict. If
-the JSON object is a list, returns a list of JSON-ified objects.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>data</code></strong> :&ensp;<code>string</code></dt>
-<dd>Data to jsonify.</dd>
-</dl></div>
+<div class="desc"><p>Plan specification models. To better work with multiple plans at once, this
+plan specification allows users to specify information which should remain
+consistent across all operations; for example, the <code>column</code> field should be
+the name of the column in which the corresponding plan's assignment is stored
+across all data products.</p>
+<p>Create a new model by parsing and validating input data from keyword arguments.</p>
+<p>Raises ValidationError if the input data cannot be parsed to form a valid model.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class JSON(object):
+<pre><code class="python">class JSON(BaseModel):
     &#34;&#34;&#34;
-    A class which represents JSON data as a Python object rather than a dict. If
-    the JSON object is a list, returns a list of JSON-ified objects.
+    Plan specification models. To better work with multiple plans at once, this
+    plan specification allows users to specify information which should remain
+    consistent across all operations; for example, the `column` field should be
+    the name of the column in which the corresponding plan&#39;s assignment is stored
+    across all data products.
     &#34;&#34;&#34;
-    def __init__(self, data):
+
+    column: str
+    &#34;&#34;&#34;
+    Column on all data products which contains district assignment information
+    for this districting plan.
+    &#34;&#34;&#34;
+
+    locator: str
+    &#34;&#34;&#34;
+    File/directory name for all resources which contain information about this
+    districting plan.
+    &#34;&#34;&#34;
+
+    title: Optional[str]
+    &#34;&#34;&#34;
+    Official title of the plan.
+    &#34;&#34;&#34;
+
+    @validator(&#34;column&#34;)
+    def _validate_column(cls, column):
         &#34;&#34;&#34;
-        Args:
-            data (string): Data to jsonify.
+        Validates the specified column name. For most of our purposes, we cannot
+        include spaces, hyphens, percent signs, and other commonly-used special
+        characters. Furthermore, because these plans are often saved in shapefiles,
+        which have a 10-character column name limit, we force column names to be
+        10 or fewer characters.
         &#34;&#34;&#34;
-        for k, v in data.items(): self.__dict__[k] = v</code></pre>
+        # Check for column length.
+        if len(column) &gt; 10: raise ValidationError(&#34;Column name cannot exceed 10 characters.&#34;)
+
+        # Check for illegal characters.
+        illegal = {&#34;/&#34;, &#34;%&#34;, &#34;-&#34;, &#34;–&#34;, &#34;—&#34;, &#34; &#34;}
+        
+        for c in illegal:
+            if c in column: raise ValidationError(f&#34;Character {c} cannot be in column name.&#34;)
+
+        return column</code></pre>
 </details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>pydantic.main.BaseModel</li>
+<li>pydantic.utils.Representation</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="evaltools.utils.JSON.column"><code class="name">var <span class="ident">column</span> : str</code></dt>
+<dd>
+<div class="desc"><p>Column on all data products which contains district assignment information
+for this districting plan.</p></div>
+</dd>
+<dt id="evaltools.utils.JSON.locator"><code class="name">var <span class="ident">locator</span> : str</code></dt>
+<dd>
+<div class="desc"><p>File/directory name for all resources which contain information about this
+districting plan.</p></div>
+</dd>
+<dt id="evaltools.utils.JSON.title"><code class="name">var <span class="ident">title</span> : Optional[str]</code></dt>
+<dd>
+<div class="desc"><p>Official title of the plan.</p></div>
+</dd>
+</dl>
 </dd>
 </dl>
 </section>
@@ -198,7 +269,7 @@ the JSON object is a list, returns a list of JSON-ified objects.</p>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="evaltools.utils.objectify" href="#evaltools.utils.objectify">objectify</a></code></li>
+<li><code><a title="evaltools.utils.jsonify" href="#evaltools.utils.jsonify">jsonify</a></code></li>
 <li><code><a title="evaltools.utils.rename" href="#evaltools.utils.rename">rename</a></code></li>
 </ul>
 </li>
@@ -206,6 +277,11 @@ the JSON object is a list, returns a list of JSON-ified objects.</p>
 <ul>
 <li>
 <h4><code><a title="evaltools.utils.JSON" href="#evaltools.utils.JSON">JSON</a></code></h4>
+<ul class="">
+<li><code><a title="evaltools.utils.JSON.column" href="#evaltools.utils.JSON.column">column</a></code></li>
+<li><code><a title="evaltools.utils.JSON.locator" href="#evaltools.utils.JSON.locator">locator</a></code></li>
+<li><code><a title="evaltools.utils.JSON.title" href="#evaltools.utils.JSON.title">title</a></code></li>
+</ul>
 </li>
 </ul>
 </li>

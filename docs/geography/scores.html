@@ -32,15 +32,15 @@ import numpy as np
 import geopandas as gpd
 from typing import Dict, Callable, Union, Any
 from cv2 import minEnclosingCircle
-from networkx import Graph
-from gerrychain import Partition
+from gerrychain import Graph
+from gerrychain import GeographicPartition
 from shapely.ops import unary_union
 from math import pi
 
 
 def reock(
     geodata: Union[gpd.GeoDataFrame, Graph]
-) -&gt; Callable[[Partition], Dict[Any, float]]:
+) -&gt; Callable[[GeographicPartition], Dict[Any, float]]:
     &#34;&#34;&#34;Makes a Reock score function specialized to `geodata`.
 
     The Reock score of a district is its area defined by the area of its
@@ -56,7 +56,7 @@ def reock(
     dual graphs derived from `geodata`.
 
     :param geodata: Geographical data to precompute geometries from.
-      May be a `geopandas.GeoDataFrame` or a `networkx.Graph` with
+      May be a `geopandas.GeoDataFrame` or a `gerrychain.Graph` with
       a `geometry` column.
     :return: A per-district Reock score updater specialized to `geodata`.
     &#34;&#34;&#34;
@@ -71,8 +71,10 @@ def reock(
         raise ValueError(
             &#39;Geodata must be a GeoDataFrame or a gerrychain.Graph.&#39;)
 
-    def score_fn(partition: Partition) -&gt; Dict[Any, float]:
-        boundary_nodes = set.union(*(set(e) for e in partition[&#39;cut_edges&#39;]))
+    def score_fn(partition: GeographicPartition) -&gt; Dict[Any, float]:
+        boundary_nodes = set.union(*(set(e) for e in partition[&#34;cut_edges&#34;])).union(
+            partition[&#34;boundary_nodes&#34;]
+        )
         part_scores = {}
 
         for part, nodes in partition.parts.items():
@@ -115,7 +117,7 @@ The function finds the minimal enclosing circle of a 2D point set using an itera
 @param radius Output radius of the circle.</p></div>
 </dd>
 <dt id="evaltools.geography.scores.reock"><code class="name flex">
-<span>def <span class="ident">reock</span></span>(<span>geodata: Union[geopandas.geodataframe.GeoDataFrame, networkx.classes.graph.Graph]) ‑> Callable[[gerrychain.partition.partition.Partition], Dict[Any, float]]</span>
+<span>def <span class="ident">reock</span></span>(<span>geodata: Union[geopandas.geodataframe.GeoDataFrame, gerrychain.graph.graph.Graph]) ‑> Callable[[gerrychain.partition.geographic.GeographicPartition], Dict[Any, float]]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Makes a Reock score function specialized to <code>geodata</code>.</p>
@@ -130,7 +132,7 @@ build an index. The resulting score function uses this index for
 fast geometric computations; the function can only be used with
 dual graphs derived from <code>geodata</code>.</p>
 <p>:param geodata: Geographical data to precompute geometries from.
-May be a <code>geopandas.GeoDataFrame</code> or a <code>networkx.Graph</code> with
+May be a <code>geopandas.GeoDataFrame</code> or a <code>gerrychain.Graph</code> with
 a <code>geometry</code> column.
 :return: A per-district Reock score updater specialized to <code>geodata</code>.</p></div>
 <details class="source">
@@ -139,7 +141,7 @@ a <code>geometry</code> column.
 </summary>
 <pre><code class="python">def reock(
     geodata: Union[gpd.GeoDataFrame, Graph]
-) -&gt; Callable[[Partition], Dict[Any, float]]:
+) -&gt; Callable[[GeographicPartition], Dict[Any, float]]:
     &#34;&#34;&#34;Makes a Reock score function specialized to `geodata`.
 
     The Reock score of a district is its area defined by the area of its
@@ -155,7 +157,7 @@ a <code>geometry</code> column.
     dual graphs derived from `geodata`.
 
     :param geodata: Geographical data to precompute geometries from.
-      May be a `geopandas.GeoDataFrame` or a `networkx.Graph` with
+      May be a `geopandas.GeoDataFrame` or a `gerrychain.Graph` with
       a `geometry` column.
     :return: A per-district Reock score updater specialized to `geodata`.
     &#34;&#34;&#34;
@@ -170,8 +172,10 @@ a <code>geometry</code> column.
         raise ValueError(
             &#39;Geodata must be a GeoDataFrame or a gerrychain.Graph.&#39;)
 
-    def score_fn(partition: Partition) -&gt; Dict[Any, float]:
-        boundary_nodes = set.union(*(set(e) for e in partition[&#39;cut_edges&#39;]))
+    def score_fn(partition: GeographicPartition) -&gt; Dict[Any, float]:
+        boundary_nodes = set.union(*(set(e) for e in partition[&#34;cut_edges&#34;])).union(
+            partition[&#34;boundary_nodes&#34;]
+        )
         part_scores = {}
 
         for part, nodes in partition.parts.items():

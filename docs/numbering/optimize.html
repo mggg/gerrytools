@@ -26,13 +26,28 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from typing import Dict
+<pre><code class="python">from typing import Dict, List, Any, Callable
 import geopandas as gpd
 import tqdm
 import gurobipy as gp
 from gurobipy import GRB
 import math
 
+def ensure_column_types(units: gpd.GeoDataFrame, columns: List[str], expression: Callable[[Any], bool] = lambda x: x.startswith(&#34;int&#34;)) -&gt; bool:
+    &#34;&#34;&#34;
+    Ensure that the given columns in the GeoDataFrame have a type matching the 
+    filtering expression. This gives more flexibility over other type checking 
+    methods.
+
+    Args:
+        units: The GeoDataFrame to check.
+        colunms: A list of the columns to type check.
+        expression: A function that returns true if the type name is correct and false otherwise.
+
+    Returns:
+        A boolean indicating if all the columns checked match the expression.
+    &#34;&#34;&#34;
+    return all([expression(x.name) for x in units[columns].dtypes])
 
 def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None, verbose: bool = False) -&gt; Dict[str, str]:
     &#34;&#34;&#34;
@@ -51,6 +66,12 @@ def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col:
     Returns:
         A dictionary mapping proposed labels to optimized labels.
     &#34;&#34;&#34;
+    if not ensure_column_types(units, [enacted_col, proposed_col]):
+        raise TypeError(&#34;Your enacted and proposed columns must be an int type!&#34;)
+
+    if not ensure_column_types(units, [pop_col], lambda x: x.startswith(&#34;int&#34;) or x.startswith(&#34;float&#34;)):
+        raise TypeError(&#34;Your pop col must be an int or float type!&#34;) 
+
     districts = list(set(units[proposed_col].astype(int)))
     model = gp.Model(&#34;state_model&#34;)
     model.setParam(&#39;OutputFlag&#39;, int(verbose))
@@ -106,6 +127,12 @@ def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str
         A dictionary mapping proposed labels to booleans values representing the optimal parity. 
         (True if even, False odd).
     &#34;&#34;&#34;
+    if not ensure_column_types(units, [enacted_col, proposed_col]):
+        raise TypeError(&#34;Your enacted and proposed columns must be an int type!&#34;)
+
+    if not ensure_column_types(units, [pop_col], lambda x: x.startswith(&#34;int&#34;) or x.startswith(&#34;float&#34;)):
+        raise TypeError(&#34;Your pop col must be an int or float type!&#34;) 
+
     model = gp.Model(&#34;parity_model&#34;)
     model.setParam(&#39;OutputFlag&#39;, int(verbose))
 
@@ -177,6 +204,9 @@ def calculate_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col
     Returns:
         An integer of the absolute number of people who changed districts.
     &#34;&#34;&#34;
+    if units[enacted_col].dtype != units[proposed_col].dtype:
+        raise TypeError(&#34;Your enacted and proposed columns must have the same type!&#34;)
+
     return units[units[enacted_col] != units[proposed_col]][pop_col].sum()</code></pre>
 </details>
 </section>
@@ -221,7 +251,49 @@ and a column with proposed numberings. Used in WI.</p>
     Returns:
         An integer of the absolute number of people who changed districts.
     &#34;&#34;&#34;
+    if units[enacted_col].dtype != units[proposed_col].dtype:
+        raise TypeError(&#34;Your enacted and proposed columns must have the same type!&#34;)
+
     return units[units[enacted_col] != units[proposed_col]][pop_col].sum()</code></pre>
+</details>
+</dd>
+<dt id="evaltools.numbering.optimize.ensure_column_types"><code class="name flex">
+<span>def <span class="ident">ensure_column_types</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, columns: List[str], expression: Callable[[Any], bool] = &lt;function &lt;lambda&gt;&gt;) ‑> bool</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Ensure that the given columns in the GeoDataFrame have a type matching the
+filtering expression. This gives more flexibility over other type checking
+methods.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>units</code></strong></dt>
+<dd>The GeoDataFrame to check.</dd>
+<dt><strong><code>colunms</code></strong></dt>
+<dd>A list of the columns to type check.</dd>
+<dt><strong><code>expression</code></strong></dt>
+<dd>A function that returns true if the type name is correct and false otherwise.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A boolean indicating if all the columns checked match the expression.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def ensure_column_types(units: gpd.GeoDataFrame, columns: List[str], expression: Callable[[Any], bool] = lambda x: x.startswith(&#34;int&#34;)) -&gt; bool:
+    &#34;&#34;&#34;
+    Ensure that the given columns in the GeoDataFrame have a type matching the 
+    filtering expression. This gives more flexibility over other type checking 
+    methods.
+
+    Args:
+        units: The GeoDataFrame to check.
+        colunms: A list of the columns to type check.
+        expression: A function that returns true if the type name is correct and false otherwise.
+
+    Returns:
+        A boolean indicating if all the columns checked match the expression.
+    &#34;&#34;&#34;
+    return all([expression(x.name) for x in units[columns].dtypes])</code></pre>
 </details>
 </dd>
 <dt id="evaltools.numbering.optimize.minimize_dispersion"><code class="name flex">
@@ -268,6 +340,12 @@ to the model, such as parity (in the case of WI).</dd>
     Returns:
         A dictionary mapping proposed labels to optimized labels.
     &#34;&#34;&#34;
+    if not ensure_column_types(units, [enacted_col, proposed_col]):
+        raise TypeError(&#34;Your enacted and proposed columns must be an int type!&#34;)
+
+    if not ensure_column_types(units, [pop_col], lambda x: x.startswith(&#34;int&#34;) or x.startswith(&#34;float&#34;)):
+        raise TypeError(&#34;Your pop col must be an int or float type!&#34;) 
+
     districts = list(set(units[proposed_col].astype(int)))
     model = gp.Model(&#34;state_model&#34;)
     model.setParam(&#39;OutputFlag&#39;, int(verbose))
@@ -404,6 +482,12 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
         A dictionary mapping proposed labels to booleans values representing the optimal parity. 
         (True if even, False odd).
     &#34;&#34;&#34;
+    if not ensure_column_types(units, [enacted_col, proposed_col]):
+        raise TypeError(&#34;Your enacted and proposed columns must be an int type!&#34;)
+
+    if not ensure_column_types(units, [pop_col], lambda x: x.startswith(&#34;int&#34;) or x.startswith(&#34;float&#34;)):
+        raise TypeError(&#34;Your pop col must be an int or float type!&#34;) 
+
     model = gp.Model(&#34;parity_model&#34;)
     model.setParam(&#39;OutputFlag&#39;, int(verbose))
 
@@ -452,6 +536,7 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="evaltools.numbering.optimize.calculate_dispersion" href="#evaltools.numbering.optimize.calculate_dispersion">calculate_dispersion</a></code></li>
+<li><code><a title="evaltools.numbering.optimize.ensure_column_types" href="#evaltools.numbering.optimize.ensure_column_types">ensure_column_types</a></code></li>
 <li><code><a title="evaltools.numbering.optimize.minimize_dispersion" href="#evaltools.numbering.optimize.minimize_dispersion">minimize_dispersion</a></code></li>
 <li><code><a title="evaltools.numbering.optimize.minimize_dispersion_with_parity" href="#evaltools.numbering.optimize.minimize_dispersion_with_parity">minimize_dispersion_with_parity</a></code></li>
 <li><code><a title="evaltools.numbering.optimize.minimize_parity" href="#evaltools.numbering.optimize.minimize_parity">minimize_parity</a></code></li>

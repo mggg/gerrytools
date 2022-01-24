@@ -109,6 +109,12 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
         A dictionary mapping proposed labels to booleans values representing the optimal parity. 
         (True if even, False odd).
     &#34;&#34;&#34;
+    if not ensure_column_types(units, [enacted_col, proposed_col]):
+        raise TypeError(&#34;Your enacted and proposed columns must be an int type!&#34;)
+
+    if not ensure_column_types(units, [pop_col], lambda x: x.startswith(&#34;int&#34;) or x.startswith(&#34;float&#34;)):
+        raise TypeError(&#34;Your pop col must be an int or float type!&#34;) 
+
     model = gp.Model(&#34;parity_model&#34;)
     model.setParam(&#39;OutputFlag&#39;, int(verbose))
 
@@ -182,6 +188,12 @@ to the model, such as parity (in the case of WI).</dd>
     Returns:
         A dictionary mapping proposed labels to optimized labels.
     &#34;&#34;&#34;
+    if not ensure_column_types(units, [enacted_col, proposed_col]):
+        raise TypeError(&#34;Your enacted and proposed columns must be an int type!&#34;)
+
+    if not ensure_column_types(units, [pop_col], lambda x: x.startswith(&#34;int&#34;) or x.startswith(&#34;float&#34;)):
+        raise TypeError(&#34;Your pop col must be an int or float type!&#34;) 
+
     districts = list(set(units[proposed_col].astype(int)))
     model = gp.Model(&#34;state_model&#34;)
     model.setParam(&#39;OutputFlag&#39;, int(verbose))
@@ -318,6 +330,12 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
         A dictionary mapping proposed labels to booleans values representing the optimal parity. 
         (True if even, False odd).
     &#34;&#34;&#34;
+    if not ensure_column_types(units, [enacted_col, proposed_col]):
+        raise TypeError(&#34;Your enacted and proposed columns must be an int type!&#34;)
+
+    if not ensure_column_types(units, [pop_col], lambda x: x.startswith(&#34;int&#34;) or x.startswith(&#34;float&#34;)):
+        raise TypeError(&#34;Your pop col must be an int or float type!&#34;) 
+
     model = gp.Model(&#34;parity_model&#34;)
     model.setParam(&#39;OutputFlag&#39;, int(verbose))
 
