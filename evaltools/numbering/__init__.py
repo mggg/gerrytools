@@ -15,6 +15,6 @@ __all__ = [
     "minimize_dispersion",
     "minimize_dispersion_with_parity",
     "minimize_parity",
-    "calculate_dispersion"
+    "calculate_dispersion",
     "dispersion_updater_closure"
 ]

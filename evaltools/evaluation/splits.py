@@ -65,8 +65,8 @@ def pieces(P, units, names=False) -> dict:
             being pieced.
 
     Returns:
-        A dictionary mapping column names to the number of pieces *or* the number
-        of things being split.
+        A dictionary mapping column names to the number of pieces *or* the list of
+        things cut into pieces.
     """
     if not names:
         geometrypieces = {
