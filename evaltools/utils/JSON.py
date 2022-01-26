@@ -1,7 +1,7 @@
 
 import json
 from pydantic import BaseModel, ValidationError, validator
-from typing import List, Union, Optional
+from typing import List, Union, Any
 
 class JSON(BaseModel):
     """
@@ -24,7 +24,7 @@ class JSON(BaseModel):
     districting plan.
     """
 
-    title: Optional[str]
+    title: Any = None
     """
     Official title of the plan.
     """
@@ -39,13 +39,13 @@ class JSON(BaseModel):
         10 or fewer characters.
         """
         # Check for column length.
-        if len(column) > 10: raise ValidationError("Column name cannot exceed 10 characters.")
+        if len(column) > 10: raise ValueError(f"Column name {column} exceeds 10-character limit.")
 
         # Check for illegal characters.
         illegal = {"/", "%", "-", "–", "—", " "}
         
         for c in illegal:
-            if c in column: raise ValidationError(f"Character {c} cannot be in column name.")
+            if c in column: raise ValueError(f"Character {c} cannot be in column name.")
 
         return column
 
@@ -71,7 +71,7 @@ def jsonify(location) -> list:
             JSON(
                 column=p["column"],
                 locator=p["locator"],
-                title=p["locator"] if p.get("locator", False) else None
+                title=p["title"] if p.get("title", False) else None
             )
             for p in data
         ]
@@ -80,5 +80,5 @@ def jsonify(location) -> list:
         return [JSON(
             column=data["column"],
             locator=data["locator"],
-            title=data["locator"] if data.get("locator", False) else None
+            title=data["title"] if data.get("title", False) else None
         )]
