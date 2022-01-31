@@ -22,7 +22,7 @@ def bins(scores, width=None, labels=8) -> Tuple[array, List, List, Union[float, 
     # Get the minimum score and maximum score
     minscore, maxscore = min(scores), max(scores)
 
-    # Calculate bin width using Gabe's logarithmic rule
+    # Calculate bin width using Gabe's logarithmic heuristic
     # TODO: Test this with real score data and see how it looks
     if not width:
         width = 10 ** (np.floor(np.log10(maxscore - minscore)) - 1)

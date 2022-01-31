@@ -7,10 +7,12 @@ from .colors import defaultGray, citizenBlue
 
 def histogram(ax, 
               scores, 
-              label="Histogram value", 
-              limits=set(), 
+              label=None, 
+              limits=tuple(), 
               proposed_info={}, 
               ticksize=12, 
+              fontsize=24,
+              jitter=False,
               bin_width=None) -> Axes:
     """
     Plot a histogram with the ensemble scores in bins and the proposed plans'
@@ -23,11 +25,17 @@ def histogram(ax,
         ax (Axes): `Axes` object on which the histogram is plotted.
         scores (dict): Dictionary with keys of `ensemble`, `citizen`, `proposed`
             which map to lists of numerical scores.
+        label (str, optional): String for x-axis label.
+        limits (tuple, optional): X-axis limits (specify to force histogram to extend to 
+            these limits).
         proposed_info (dict, optional): Dictionary with keys of `colors`, `names`;
             the \(i\)th color in `color` corresponds to the \(i\)th name in `names`.
-        limits: (tuple, optional): x-axis limits.
         ticksize (float, optional): Font size of tick labels.
-
+        fontsize (float, optional): Font size of x-axis label.
+        jitter: (Boolean, optional): If True, horizontally jitter proposed plans if they share the
+            same value
+        bin_width: (float, optional): Manually set histogram bin width, if preferred.
+        
     Returns:
         Axes object on which the histogram is plotted.
     """
@@ -40,13 +48,7 @@ def histogram(ax,
         hist_bins, tick_bins, tick_labels, bin_width = bins(set(all_scores).union(limits), bin_width)
 
     # Set xticks and xticklabels.
-    # tick_bins = [82.5, 87.5, 92.5, 97.5, 102.5, 107.5, 112.5]
-    # tick_bins = [92.5, 97.5, 102.5, 107.5, 112.5, 117.5]
-    # print(tick_bins)
     ax.set_xticks(tick_bins)
-    # tick_labels = ["122 R\n 82 D", "117 R\n 87 D", "112 R\n 92 D", "107 R\n 97 D", "102 R\n102 D", " 97 R\n107 D", " 92 R\n112 D"]
-    # tick_labels = ["112 R\n 92 D", "107 R\n 97 D", "102 R\n102 D", " 97 R\n107 D", " 92 R\n112 D", " 87 R\n117 D"]
-    # print(tick_labels)
     ax.set_xticklabels(tick_labels, fontsize=ticksize)
 
     # Adjust the visual width of the bins according to the number of observations;
@@ -70,18 +72,22 @@ def histogram(ax,
             )
     if scores["proposed"]:
         for i, s in enumerate(scores["proposed"]):
-            jitter = 0 #random.uniform(-bin_width/5, bin_width/5) if scores["proposed"].count(s) > 1 else 0
+            if jitter and scores["proposed"].count(s) > 1:
+                jitter_val = random.uniform(-bin_width/4, bin_width/4)
+            else:
+                jitter_val = 0
 
             # Plot vertical line.
             ax.axvline(
-                s + bin_width / 2 + jitter,
+                s + bin_width / 2 + jitter_val,
                 color=proposed_info['colors'][i],
                 lw=2,
                 label=f"{proposed_info['names'][i]}: {round(s,2)}",
             )
         
-        # ax.legend()
-    # ax.set_xlabel(label, fontsize=24)
+        ax.legend()
+    if label:
+        ax.set_xlabel(label, fontsize=fontsize)
     ax.get_yaxis().set_visible(False)
     if limits:
         ax.set_xlim(limits)
