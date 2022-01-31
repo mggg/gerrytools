@@ -9,7 +9,7 @@ def multidimensional(x,
                      hist, 
                      labels=["X values", "Y values", "Histogram values"],
                      bin_width=1,
-                     limits=set(), 
+                     limits=None, 
                      proposed_info={},
                      figsize=(12,8),
                      save={},
@@ -53,6 +53,7 @@ def multidimensional(x,
         "proposed": proposed_info["hist"] if proposed_info else [],
     }
     hist_limits = limits[-1] if limits else set()
+    # print(f"limits is: {limits}, {hist_limits}")
     hist_label = labels[-1]
     hist_ax = plt.subplot(gs[1])
     hist_ax = histogram(hist_ax, 

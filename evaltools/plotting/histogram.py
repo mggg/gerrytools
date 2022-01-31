@@ -40,7 +40,13 @@ def histogram(ax,
         hist_bins, tick_bins, tick_labels, bin_width = bins(set(all_scores).union(limits), bin_width)
 
     # Set xticks and xticklabels.
+    # tick_bins = [82.5, 87.5, 92.5, 97.5, 102.5, 107.5, 112.5]
+    # tick_bins = [92.5, 97.5, 102.5, 107.5, 112.5, 117.5]
+    # print(tick_bins)
     ax.set_xticks(tick_bins)
+    # tick_labels = ["122 R\n 82 D", "117 R\n 87 D", "112 R\n 92 D", "107 R\n 97 D", "102 R\n102 D", " 97 R\n107 D", " 92 R\n112 D"]
+    # tick_labels = ["112 R\n 92 D", "107 R\n 97 D", "102 R\n102 D", " 97 R\n107 D", " 92 R\n112 D", " 87 R\n117 D"]
+    # print(tick_labels)
     ax.set_xticklabels(tick_labels, fontsize=ticksize)
 
     # Adjust the visual width of the bins according to the number of observations;
@@ -64,7 +70,7 @@ def histogram(ax,
             )
     if scores["proposed"]:
         for i, s in enumerate(scores["proposed"]):
-            jitter = random.uniform(-bin_width/5, bin_width/5) if scores["proposed"].count(s) > 1 else 0
+            jitter = 0 #random.uniform(-bin_width/5, bin_width/5) if scores["proposed"].count(s) > 1 else 0
 
             # Plot vertical line.
             ax.axvline(
@@ -74,8 +80,8 @@ def histogram(ax,
                 label=f"{proposed_info['names'][i]}: {round(s,2)}",
             )
         
-        ax.legend()
-    ax.set_xlabel(label, fontsize=24)
+        # ax.legend()
+    # ax.set_xlabel(label, fontsize=24)
     ax.get_yaxis().set_visible(False)
     if limits:
         ax.set_xlim(limits)

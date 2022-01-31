@@ -7,6 +7,7 @@ def gif_multidimensional(data,
                          labels=["X values", "Y values", "Histogram values"],
                          filename="testfile", 
                          folder="test", 
+                         limits=None,
                          DPI=150,
                          figsize=(12,8),
                          ):
@@ -37,7 +38,7 @@ def gif_multidimensional(data,
     x_limits = (lower_bound * min_of_min(xs), upper_bound * max_of_max(xs))
     y_limits = (lower_bound * min_of_min(ys), upper_bound * max_of_max(ys))
     hist_limits = (int(lower_bound * min_of_min(hists)), int(upper_bound * max_of_max(hists)))
-    limits = [x_limits, y_limits, hist_limits]
+    limits = [x_limits, y_limits, hist_limits] if not limits else limits
     
     save = {
         "folder":folder,
