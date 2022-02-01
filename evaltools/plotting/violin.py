@@ -9,11 +9,11 @@ def violin(
         ticksize=12, jitter=1/3
     ) -> Axes:
     """
-    Plot a violin plot, which takes `scores` — a list of lists, where each sublist
-    will be its own violin. Proposed scores will be plotted as colored circles on
+    Plot a violin plot, which takes `scores` — a dictionary where each value (corresponding to 
+    an ensemble, citizens' ensemble, or proposed plans), will be a list of lists, where each 
+    sublist will be its own violin. Proposed scores will be plotted as colored circles on
     their respective violin. Color the violins conditioned on the kind of the scores
-    (ensemble or citizen), and if plotting ensemble, then trim each sublist to
-    only the values between the specified percentiles.
+    (ensemble or citizen), and trim each sublist to only the values between the percentiles.
 
     Args:
         ax (Axes): `Axes` object on which the violins are plotted.
@@ -31,6 +31,7 @@ def violin(
         jitter (float, optional): When there is more than one proposed plan,
             adjust its detail points by a value drawn from \(\mathcal U (-\epsilon,
             \epsilon)\) where \(\epsilon = \) `jitter`.
+        labels (list, optional): x- and y-axis labels, if desired.
 
     Returns:
         `Axes` object on which the violins are plotted.
@@ -77,7 +78,6 @@ def violin(
                 # Horizontally jitter proposed scores if there are multiple scores
                 # at the same height.
                 jitter_val = random.uniform(-jitter, jitter) if scores["proposed"][violin].count(score) > 1 else 0
-                # print(plan, jitter)
                 ax.scatter(
                     violin + 1 + jitter_val,
                     score,
