@@ -2,8 +2,9 @@ from matplotlib.axes import Axes
 from .colors import defaultGray
 from .utils import sort_elections
 import numpy as np
+import random
 
-def sealevel(ax, scores, num_districts, proposed_info):
+def sealevel(ax, scores, num_districts, proposed_info, ticksize=12):
     """
     Plot a sea level plot: Each plan is a line across our elections on the 
     x-axis, with Democratic vote share on the y-axis. The statewide Dem. vote
@@ -18,32 +19,40 @@ def sealevel(ax, scores, num_districts, proposed_info):
     """
     assert "statewide" in scores
     elections = sort_elections(scores["statewide"].keys())
-    seats_by_plan = {plan:[] for plan in scores}
+    shares_by_plan = {plan:[] for plan in scores}
     for plan in scores:
         for election in elections:
-            seats_by_plan[plan].append(scores[plan][election])
-    print(seats_by_plan)
+            shares_by_plan[plan].append(scores[plan][election])
+    print(shares_by_plan)
 
-    ax.plot(proportional_share,
+    ax.plot(shares_by_plan['statewide'],
             marker='o',
             markersize=10,
             lw=5,
             label="Proportionality",
            )
-    for plan in proposed_info['names']:
-        for j in range(len(seats_by_plan[plan])):
-            jitter = 0 # ADD JITTER
-        ax.plot(seats_by_plan[plan],
+    for i, plan in enumerate(proposed_info['names']):
+        for j in range(len(shares_by_plan[plan])):
+            jitter = random.uniform(-0.02, 0.02) if len(set([shares_by_plan[plan][j] for plan in shares_by_plan.keys()])) > 1 else 0
+            shares_by_plan[plan][j] = shares_by_plan[plan][j] + jitter
+        ax.plot(shares_by_plan[plan],
                 marker='o',
                 linestyle='--',
-                color=proposed_info['colors'],
+                color=proposed_info['colors'][i],
                 label=plan,
                )
+    ax.legend()
     if num_districts <= 20:
         yticks = np.arange(0, 1 + 1/num_districts, 1/num_districts)
         yticklabels = [f"{i}/{num_districts}" for i in range(num_districts + 1)]
         ax.set_yticks(yticks)
         ax.set_yticklabels(yticklabels)
     ax.axhline(0.5, color=defaultGray, label="50%")
+    ax.set_xticks(range(len(elections)))
+    ax.set_xticklabels(elections, fontsize=ticksize)
+    ax.set_ylim(-0.02, 1)
+
+
+    return ax
 
 

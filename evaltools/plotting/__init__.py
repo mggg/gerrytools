@@ -12,6 +12,7 @@ from .histogram import histogram
 from .violin import violin
 from .boxplot import boxplot
 from .scatterplot import scatterplot
+from .sealevel import sealevel
 from .multidimensional import multidimensional
 from .gifs import gif_multidimensional
 from .bins import bins
@@ -29,6 +30,7 @@ __all__ = [
     "violin",
     "boxplot",
     "scatterplot",
+    "sealevel",
     "multidimensional",
     "gif_multidimensional",
     "arrow",
