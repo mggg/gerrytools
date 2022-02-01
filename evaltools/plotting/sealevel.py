@@ -16,6 +16,7 @@ def sealevel(ax, scores, num_districts, proposed_info, ticksize=12):
             Each value is another dictionary, with keys for each election, values are the # seats.
         proposed_info (dict, optional): Dictionary with keys of `colors`, `names`;
             the \(i\)th color in `color` corresponds to the \(i\)th name in `names`.
+        ticksize (float, optional): Font size for tick labels.
     """
     assert "statewide" in scores
     elections = sort_elections(scores["statewide"].keys())
@@ -23,7 +24,6 @@ def sealevel(ax, scores, num_districts, proposed_info, ticksize=12):
     for plan in scores:
         for election in elections:
             shares_by_plan[plan].append(scores[plan][election])
-    print(shares_by_plan)
 
     ax.plot(shares_by_plan['statewide'],
             marker='o',
