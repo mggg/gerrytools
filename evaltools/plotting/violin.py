@@ -32,6 +32,7 @@ def violin(
             adjust its detail points by a value drawn from \(\mathcal U (-\epsilon,
             \epsilon)\) where \(\epsilon = \) `jitter`.
         labels (list, optional): x- and y-axis labels, if desired.
+        xticklabels (list, optional): Labels for the violins, default to integers.
 
     Returns:
         `Axes` object on which the violins are plotted.

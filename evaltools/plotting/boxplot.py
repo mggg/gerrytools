@@ -5,15 +5,14 @@ import random
 from .colors import defaultGray, citizenBlue, districtr
 
 def boxplot(
-        ax, scores, labels, proposed_info={}, percentiles=(1,99), rotation=0,
+        ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1,99), rotation=0,
         ticksize=12, jitter=1/3
     ) -> Axes:
     """
-    Plot boxplots, which takes `scores` — a list of lists, where each sublist
+    Plot boxplots, which takes `scores` — a dictionary where each value (corresponding to an ensemble, citizens' ensemble, or proposed plans), will be a list of lists, where each sublist
     will be its own box. Proposed scores will be plotted as colored circles on
     their respective box. Color the boxplots conditioned on the kind of the scores
-    (ensemble or citizen), and if plotting ensemble, then trim each sublist to
-    only the values between the specified percentiles.
+    (ensemble or citizen), and trim each sublist to only the values between the specified percentiles.
 
     Args:
         ax (Axes): `Axes` object on which the boxplots are plotted.
@@ -31,6 +30,8 @@ def boxplot(
         jitter (float, optional): When there is more than one proposed plan,
             adjust its detail points by a value drawn from \(\mathcal U (-\epsilon,
             \epsilon)\) where \(\epsilon = \) `jitter`.
+        labels (list, optional): x- and y-axis labels, if desired.
+        xticklabels (list, optional): Labels for the boxes, default to integers.
 
     Returns:
         `Axes` object on which the violins are plotted.
@@ -53,32 +54,39 @@ def boxplot(
         whiskerprops=boxstyle,
         capprops=boxstyle,
         medianprops=boxstyle,
+        showfliers=False,
     )
 
-    # Set xticks, xlabels, and x-axis limits.
+    # Set xticks, xlabels, and x-axis limits
+    if not xticklabels:
+        xticklabels = range(1, len(scores['ensemble']) + 1)
     ax.set_xticks(range(1, len(ensemble) + 1))
-    ax.set_xticklabels(labels, fontsize=ticksize, rotation=rotation)
+    ax.set_xticklabels(xticklabels, fontsize=ticksize, rotation=rotation)
     ax.set_xlim(0.5, len(ensemble) + 0.5)
 
     # Plot each proposed plan individually, adjusting its detail points by
     # a value drawn from the uniform distribution of specified width centered on
     # the index of the violin.
     if scores["proposed"]:
-        for i in range(len(scores["proposed"])):
-            for j, s in enumerate(scores["proposed"][i]):
+        for boxplot in range(len(scores["proposed"])):
+            for plan, score in enumerate(scores["proposed"][boxplot]):
                 # Horizontally jitter proposed scores if there are multiple scores
                 # at the same height.
-                jitter = random.uniform(-jitter, jitter) if scores["proposed"][i].count(s) > 1 else 0
+                jitter_val = random.uniform(-jitter, jitter) if scores["proposed"][boxplot].count(score) > 1 else 0
                 ax.scatter(
-                    i + 1 + jitter,
-                    s,
-                    color=districtr(j+1).pop(),
+                    boxplot + 1 + jitter_val,
+                    score,
+                    color=districtr(plan+1).pop(),
                     edgecolor='black',
                     s=100,
                     alpha=0.9,
-                    label=proposed_info["names"][j] if i == 0 else None,
+                    label=proposed_info["names"][plan] if boxplot == 0 else None,
                 )
         ax.legend()
         ax.grid(axis='x')
+
+    if labels:
+        ax.set_xlabel(labels[0], fontsize=24)
+        ax.set_ylabel(labels[1], fontsize=24)
     
     return ax
