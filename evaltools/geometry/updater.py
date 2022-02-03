@@ -1,6 +1,6 @@
 import geopandas as gpd
 import gerrychain
-from evaltools.numbering import minimize_dispersion, calculate_dispersion
+from .optimize import minimize_dispersion, calculate_dispersion
 
 def dispersion_updater_closure(units: gpd.GeoDataFrame, enacted_col: str, pop_col: str, verbose: bool = False):
     """
