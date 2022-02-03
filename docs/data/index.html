@@ -1,0 +1,1603 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>evaltools.data API documentation</title>
+<meta name="description" content="Facilities for processing data and districting plans in a standardized fashion." />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS_CHTML" integrity="sha256-kZafAc6mZvK3W3v1pHOcUix30OHQN6pU/NO2oFkqZVw=" crossorigin></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>evaltools.data</code></h1>
+</header>
+<section id="section-intro">
+<p>Facilities for processing data and districting plans in a standardized fashion.</p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">&#34;&#34;&#34;
+Facilities for processing data and districting plans in a standardized fashion.
+&#34;&#34;&#34;
+from .acs import cvap, acs5
+from .census import census, variables
+from .fetch import submissions, tabularized, Submission
+from .remap import remap
+from .URLs import ids, one, csvs
+from .AssignmentCompressor import AssignmentCompressor
+from gerrychain.graph import Graph
+from gerrychain.partition import Partition
+
+__all__ = [
+    &#34;submissions&#34;,
+    &#34;tabularized&#34;,
+    &#34;remap&#34;,
+    &#34;ids&#34;,
+    &#34;one&#34;,
+    &#34;csvs&#34;,
+    &#34;AssignmentCompressor&#34;,
+    &#34;Submission&#34;,
+    &#34;cvap&#34;,
+    &#34;acs5&#34;,
+    &#34;census&#34;,
+    &#34;variables&#34;
+]</code></pre>
+</details>
+</section>
+<section>
+<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+<dl>
+<dt><code class="name"><a title="evaltools.data.URLs" href="URLs.html">evaltools.data.URLs</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt><code class="name"><a title="evaltools.data.acs" href="acs.html">evaltools.data.acs</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt><code class="name"><a title="evaltools.data.fetch" href="fetch.html">evaltools.data.fetch</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="evaltools.data.acs5"><code class="name flex">
+<span>def <span class="ident">acs5</span></span>(<span>state, geometry='tract', year=2019, columns=[], white='NHWVAP19') ‑> pandas.core.frame.DataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Retrieves ACS 5-year population estimates for the provided state, geometry
+level, and year. Geometries are from the <strong>2010 Census</strong>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong> :&ensp;<code>us.State</code></dt>
+<dd><code>State</code> object for the desired state.</dd>
+<dt><strong><code>geometry</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Geometry level at which data is retrieved.
+Acceptable values are <code>"tract"</code> and <code>"block group"</code>. Defaults to
+<code>"tract"</code>, so data is retrieved at the 2010 Census tract level.</dd>
+<dt><strong><code>year</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Year for which data is retrieved. Defaults to 2019.</dd>
+<dt><strong><code>columns</code></strong> :&ensp;<code>list</code>, optional</dt>
+<dd>Columns to retrieve. If <code>None</code>, a default set
+of columns including total populations by race and ethnicity and voting-age
+populations by race and ethnicity are returned, along with a GEOID
+column.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A DataFrame containing the formatted data.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWVAP19&#34;) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;
+    Retrieves ACS 5-year population estimates for the provided state, geometry
+    level, and year. Geometries are from the **2010 Census**.
+    
+    Args:
+        state (us.State): `State` object for the desired state.
+        geometry (str, optional): Geometry level at which data is retrieved.
+            Acceptable values are `&#34;tract&#34;` and `&#34;block group&#34;`. Defaults to
+            `&#34;tract&#34;`, so data is retrieved at the 2010 Census tract level.
+        year (int, optional): Year for which data is retrieved. Defaults to 2019.
+        columns (list, optional): Columns to retrieve. If `None`, a default set
+            of columns including total populations by race and ethnicity and voting-age
+            populations by race and ethnicity are returned, along with a GEOID
+            column.
+
+    Returns:
+        A DataFrame containing the formatted data.
+    &#34;&#34;&#34;
+    # Columns for total populations.
+    popcolumns = {
+        &#34;B01001_001E&#34;: &#34;TOTPOP19&#34;,
+        &#34;B03002_003E&#34;: &#34;WHITE19&#34;,
+        &#34;B03002_004E&#34;: &#34;BLACK19&#34;,
+        &#34;B03002_005E&#34;: &#34;AMIN19&#34;,
+        &#34;B03002_006E&#34;: &#34;ASIAN19&#34;,
+        &#34;B03002_007E&#34;: &#34;NHPI19&#34;,
+        &#34;B03002_008E&#34;: &#34;OTH19&#34;,
+        &#34;B03002_009E&#34;: &#34;2MORE19&#34;,
+        &#34;B03002_002E&#34;: &#34;NHISP19&#34;,
+    }
+
+    # Create a dictionary of column groups.
+    groups = {}
+
+    # Get VAP columns. The columns listed here are by race, irrespective of ethnicity;
+    # for example, WVAP19 is the group of people who identified White as their *only*
+    # race, including people who identified as Hispanic and White.
+    vap_tables = list(zip(
+        [
+            &#34;WVAP19&#34;, &#34;BVAP19&#34;, &#34;AMINVAP19&#34;, &#34;ASIANVAP19&#34;, &#34;NHPIVAP19&#34;, &#34;OTHVAP19&#34;,
+            &#34;2MOREVAP19&#34;, &#34;NHWVAP19&#34;, &#34;HVAP19&#34;
+        ],
+        [&#34;A&#34;, &#34;B&#34;, &#34;C&#34;, &#34;D&#34;, &#34;E&#34;, &#34;F&#34;, &#34;G&#34;, &#34;H&#34;, &#34;I&#34;]
+    ))
+    groups.update({
+        column: variables(f&#34;B01001{table}&#34;, 7, 16) + variables(f&#34;B01001{table}&#34;, 22, 31)
+        for column, table in vap_tables
+    })
+
+    # Get CVAP columns; the same goes for these columns as does the above, except
+    # these columns are 18 years and older *and* citizens.
+    cvap_tables = list(zip(
+        [
+            &#34;WCVAP19&#34;, &#34;BCVAP19&#34;, &#34;AMINCVAP19&#34;, &#34;ASIANCVAP19&#34;, &#34;NHPICVAP19&#34;, &#34;OTHCVAP19&#34;,
+            &#34;2MORECVAP19&#34;, &#34;NHWCVAP19&#34;, &#34;HCVAP19&#34;
+        ],
+        [&#34;A&#34;, &#34;B&#34;, &#34;C&#34;, &#34;D&#34;, &#34;E&#34;, &#34;F&#34;, &#34;G&#34;, &#34;H&#34;, &#34;I&#34;]
+    ))
+    groups.update({
+        column: 
+            variables(f&#34;B05003{table}&#34;, 9, 9) + variables(f&#34;B05003{table}&#34;, 11, 11) + # men
+            variables(f&#34;B05003{table}&#34;, 15, 15) + variables(f&#34;B05003{table}&#34;, 17, 17) # women
+        for column, table in cvap_tables
+    })
+    
+    # Get all voting-age people and citizen voting-age people.
+    groups[&#34;VAP19&#34;] = variables(&#34;B01001&#34;, 7, 25) + variables(&#34;B01001&#34;, 31, 49)
+    groups[&#34;CVAP19&#34;] = variables(f&#34;B05003&#34;, 9, 9) + \
+        variables(f&#34;B05003&#34;, 11, 11) + \
+        variables(f&#34;B05003&#34;, 15, 15) + \
+        variables(f&#34;B05003&#34;, 17, 17)
+
+    # TODO: all variables used across the data submodule should be packaged up
+    # as a class, so we can access individual dictionaries of variables to add.
+    # For example, we should have a `Variables.acs5.vap` property which gives us
+    # the voting-age population variables for the ACS 5-year estimates.
+
+    # Get the list of all columns.
+    allcols = list(popcolumns.keys()) + [c for k in groups.values() for c in k] + columns
+
+    # Retrieve the data from the Census API.
+    data = censusdata.download(
+        &#34;acs5&#34;, year,
+        censusdata.censusgeo(
+            [(&#34;state&#34;, str(state.fips).zfill(2)), (&#34;county&#34;, &#34;*&#34;), (geometry, &#34;*&#34;)]
+        ),
+        [&#34;GEO_ID&#34;] + allcols
+    )
+
+    # Rework columns.
+    data = data.reset_index(drop=True)
+    data[&#34;GEO_ID&#34;] = data[&#34;GEO_ID&#34;].str.split(&#34;US&#34;).str[1]
+    data = data.rename({&#34;GEO_ID&#34;: geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;}, axis=1)
+    data = data.rename(popcolumns, axis=1)
+
+    # Collapse column groups.
+    for column, group in groups.items():
+        data[column] = data[group].sum(axis=1)
+        data = data.drop(group, axis=1)
+
+    # Create a POCVAP column.
+    data[&#34;POCVAP19&#34;] = data[&#34;VAP19&#34;] - data[white]
+    return data</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.census"><code class="name flex">
+<span>def <span class="ident">census</span></span>(<span>state, table='P1', columns={}, geometry='block', key='75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65') ‑> pandas.core.frame.DataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Retrieves geometry-level 2020 Decennial Census PL94-171 data via the Census
+API.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
+<dd><code>us.State</code> object (e.g. <code>us.states.WI</code>).</dd>
+<dt><strong><code>table</code></strong> :&ensp;<code>string</code>, optional</dt>
+<dd>Table from which we retrieve data. Defaults to
+the P1 table, which gets populations by race regardless of ethnicity.</dd>
+<dt><strong><code>columns</code></strong> :&ensp;<code>dict</code>, optional</dt>
+<dd>Dictionary which maps Census column names (from
+the correct table) to human-readable names. We require this to be a
+dictionary, <em>not</em> a list, as specifying human-readable names will
+implicitly protect against incorrect column names and excessive API
+calls.</dd>
+<dt><strong><code>geometry</code></strong> :&ensp;<code>string</code>, optional</dt>
+<dd>Geometry level at which we retrieve data.
+Defaults to <code>"block"</code>, to retrieve block-level data for the state
+provided.</dd>
+<dt><strong><code>key</code></strong> :&ensp;<code>string</code>, optional</dt>
+<dd>Census API key.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A DataFrame with columns renamed according to their Census description
+designation and a <code>GEOID20</code> column for joining to geometries.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def census(
+        state, table=&#34;P1&#34;, columns={}, geometry=&#34;block&#34;,
+        key=&#34;75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65&#34;
+    ) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;
+    Retrieves geometry-level 2020 Decennial Census PL94-171 data via the Census
+    API.
+
+    Args:
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        table (string, optional): Table from which we retrieve data. Defaults to
+            the P1 table, which gets populations by race regardless of ethnicity.
+        columns (dict, optional): Dictionary which maps Census column names (from
+            the correct table) to human-readable names. We require this to be a
+            dictionary, _not_ a list, as specifying human-readable names will
+            implicitly protect against incorrect column names and excessive API
+            calls.
+        geometry (string, optional): Geometry level at which we retrieve data.
+            Defaults to `&#34;block&#34;`, to retrieve block-level data for the state
+            provided.
+        key (string, optional): Census API key.
+
+    Returns:
+        A DataFrame with columns renamed according to their Census description
+        designation and a `GEOID20` column for joining to geometries.
+    &#34;&#34;&#34;
+    # Check whether the geometry is right. If not, warn the user and set it
+    # properly.
+    if geometry not in {&#34;block&#34;, &#34;tract&#34;, &#34;block group&#34;}:
+        print(f&#34;Geometry \&#34;{geometry}\&#34; not accepted; defaulting to \&#34;block\&#34;.&#34;)
+        geometry = &#34;block&#34;
+
+    # Check whether we&#39;re providing an appropriate table name.
+    if table not in {&#34;P1&#34;, &#34;P2&#34;, &#34;P3&#34;, &#34;P4&#34;}:
+        print(f&#34;Table \&#34;{table}\&#34; not accepted; defaulting to \&#34;P1.\&#34;&#34;)
+        table = &#34;P1&#34;
+
+    # Set the base Census API URL and get the keys for the provided table.
+    base = f&#34;https://api.census.gov/data/2020/dec/pl&#34;
+    varmap = columns if columns else variables(table)
+    vars = list(varmap.keys())
+
+    # Create the end part of the query string.
+    q = [
+        (&#34;key&#34;, key),
+        (&#34;for&#34;, f&#34;{geometry}:*&#34;),
+        (&#34;in&#34;, f&#34;state:{str(state.fips).zfill(2)}&#34;),
+        (&#34;in&#34;, &#34;county:*&#34;),
+    ]
+
+    # Based on the geometry type, add an additional entry; this is required to
+    # match the Census geographic hierarchy.
+    if geometry != &#34;block&#34;: q.append((&#34;in&#34;, &#34;tract:*&#34;))
+
+    # Now, since the Census doesn&#39;t allow us to request more than 50 variables
+    # at once, we request things in two parts and then merge them together.
+    mergeable = []
+
+    # Split up start and stop positions based on the number of variables.
+    if len(vars) &lt; 45: positions = [(0, len(vars))]
+    else: positions = [(0, 45), (45, len(vars))]
+
+    for start, stop in positions:
+        # Get the chunk of variables and create a tail of columns (geographic
+        # identifiers).
+        varchunk = vars[start:stop]
+        tail = [&#34;state&#34;, &#34;county&#34;, &#34;tract&#34;] + ([&#34;block&#34;] if geometry == &#34;block&#34; else [])
+
+        # Create an unescaped query string.
+        unescaped = q.copy()
+        unescaped.append((&#34;get&#34;, &#34;,&#34;.join(varchunk)))
+
+        # Create an escaped query string from the previous.
+        escaped = &#34;?&#34; + &#34;&amp;&#34;.join(
+            f&#34;{param}={value}&#34; for param, value in unescaped
+        )
+
+        # Send the request and create a dataframe.
+        req = requests.get(base + escaped).json()
+        header, data = req[0], req[1:]
+        chunk = pd.DataFrame(data, columns=header)
+
+        # Get a GEOID column and drop old columns.
+        chunk[&#34;GEOID20&#34;] = _rjoin(chunk[tail], tail)
+        chunk = chunk.drop(tail, axis=1)
+        mergeable.append(chunk)
+
+    # Merge the dataframes and rename.
+    merged = reduce(lambda l, r: pd.merge(l, r, on=&#34;GEOID20&#34;), mergeable)
+    return merged.rename(varmap, axis=1)</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.csvs"><code class="name flex">
+<span>def <span class="ident">csvs</span></span>(<span>state, ptype='plan')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>URL for accessing districtr plan metadata.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong></dt>
+<dd><code>us.States</code> object (e.g. <code>us.states.WI</code>)</dd>
+<dt><strong><code>ptype</code></strong></dt>
+<dd>Type of plan we're retrieving; defaults to <code>"plan"</code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>String with the appropriate URL.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def csvs(state, ptype=&#34;plan&#34;):
+    &#34;&#34;&#34;
+    URL for accessing districtr plan metadata.
+
+    Args:
+        state: `us.States` object (e.g. `us.states.WI`)
+        ptype: Type of plan we&#39;re retrieving; defaults to `&#34;plan&#34;`.
+
+    Returns:
+        String with the appropriate URL.
+    &#34;&#34;&#34;
+    prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/csv/&#34;
+    suffix = f&#34;?type={ptype}&amp;length=10000&#34;
+    return f&#34;{prefix}{state.name.lower()}{suffix}&#34;</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.cvap"><code class="name flex">
+<span>def <span class="ident">cvap</span></span>(<span>state, geometry='tract') ‑> pandas.core.frame.DataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
+the specified geometry level. Geometries from the <strong>2010 Census</strong>. Variables
+and descriptions are <a href="https://tinyurl.com/3mnrm56s&gt;">listed here</a>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong> :&ensp;<code>us.State</code></dt>
+<dd>The <code>State</code> object for which we're retrieving 2019 ACS
+CVAP Special Tab.</dd>
+<dt><strong><code>geometry</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Level of geometry for which we're getting data.
+Accepted values are <code>"block group"</code> for 2010 Census Block Groups, and
+<code>"tract"</code> for 2010 Census Tracts. Defaults to <code>"tract"</code>.</dd>
+</dl>
+<p>Returns
+A <code>DataFrame</code> with a <code>GEOID</code> column and corresponding CVAP columns from
+the 2019 ACS CVAP Special Tab.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def cvap(state, geometry=&#34;tract&#34;) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;
+    Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
+    the specified geometry level. Geometries from the **2010 Census**. Variables
+    and descriptions are [listed here](https://tinyurl.com/3mnrm56s&gt;).
+
+    Args:
+        state (us.State): The `State` object for which we&#39;re retrieving 2019 ACS
+            CVAP Special Tab.
+        geometry (str, optional): Level of geometry for which we&#39;re getting data.
+            Accepted values are `&#34;block group&#34;` for 2010 Census Block Groups, and
+            `&#34;tract&#34;` for 2010 Census Tracts. Defaults to `&#34;tract&#34;`.
+
+    Returns
+        A `DataFrame` with a `GEOID` column and corresponding CVAP columns from
+        the 2019 ACS CVAP Special Tab.
+    &#34;&#34;&#34;
+    # Maps line numbers to descriptors.
+    descriptions = {
+        1: &#34;CVAP&#34;,
+        2: &#34;NHCVAP&#34;,
+        3: &#34;NHAICVAP&#34;,
+        4: &#34;NHACVAP&#34;,
+        5: &#34;NHBCVAP&#34;,
+        6: &#34;NHNHPICVAP&#34;,
+        7: &#34;NHWCVAP&#34;,
+        8: &#34;NHAIWCVAP&#34;,
+        9: &#34;NHAWCVAP&#34;,
+        10: &#34;NHBWCVAP&#34;,
+        11: &#34;NHAIBCVAP&#34;,
+        12: &#34;NHOTHCVAP&#34;,
+        13: &#34;HCVAP&#34; 
+    }
+
+    # First, load the raw data requested; allowed geometry values are &#34;bg10&#34; and
+    # &#34;tract10.&#34;
+    if geometry not in {&#34;block group&#34;, &#34;tract&#34;}:
+        print(f&#34;Requested geometry \&#34;{geometry}\&#34; is not allowed; loading tracts.&#34;)
+        geometry = &#34;tract&#34;
+
+    # Load the raw data.
+    raw = _raw(geometry)
+
+    # Create a STATE column for filtering and remove all rows which don&#39;t match
+    # the state FIPS code.
+    raw[&#34;GEOID&#34;] = raw[&#34;geoid&#34;].str.split(&#34;US&#34;).str[1]
+    raw[&#34;STATE&#34;] = raw[&#34;GEOID&#34;].str[:2]
+    instate = raw[raw[&#34;STATE&#34;] == str(state.fips)]
+
+    # Now that we have the in-state data, we aim to pivot the table. Because the
+    # ACS data is in a line-numbered format (i.e. each chunk of 13 lines matches
+    # to an individual geometry, and each of the 13 lines describes an individual
+    # statistic) we need to first collapse each chunk of 13 lines, then build a
+    # dataframe from the resulting collapsed lines. First we send the dataframe
+    # to a list of records.
+    instate_records = instate.to_dict(orient=&#34;records&#34;)
+    collapsed = []
+
+    # Next, we collapse these records to a single record.
+    for i in range(0, len(instate_records), 13):
+        # Create an empty records.
+        record = {}
+
+        # For each of the records in the block, &#34;collapse&#34; them into a single
+        # record.
+        block = instate_records[i:i+13]
+        for line in block:
+            record[geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;] = line[&#34;GEOID&#34;]
+            record[descriptions[line[&#34;lnnumber&#34;]] + &#34;19&#34;] = line[&#34;cvap_est&#34;]
+
+        collapsed.append(record)
+
+    # Create a dataframe and a POCCVAP column; all people minus non-Hispanic
+    # White.
+    data = pd.DataFrame().from_records(collapsed)
+    data[&#34;POCCVAP19&#34;] = data[&#34;CVAP19&#34;] - data[&#34;NHWCVAP19&#34;]
+
+    return data</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.ids"><code class="name flex">
+<span>def <span class="ident">ids</span></span>(<span>state)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>URL for accessing districtr identifiers.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong></dt>
+<dd>Name of the state (e.g. <code>"wisconsin"</code>) for which we're retrieving
+districtr identifiers.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>String with the appropriate URL.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def ids(state):
+    &#34;&#34;&#34;
+    URL for accessing districtr identifiers.
+
+    Args:
+        state: Name of the state (e.g. `&#34;wisconsin&#34;`) for which we&#39;re retrieving
+            districtr identifiers.
+
+    Returns:
+        String with the appropriate URL.
+    &#34;&#34;&#34;
+    return f&#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/districtr-ids/{state.name.lower()}&#34;</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.one"><code class="name flex">
+<span>def <span class="ident">one</span></span>(<span>identifier)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>URL for accessing an individual districtr plan.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>identifier</code></strong></dt>
+<dd>distrivtr identifier.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>String with the appropriate URL.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def one(identifier):
+    &#34;&#34;&#34;
+    URL for accessing an individual districtr plan.
+
+    Args:
+        identifier: distrivtr identifier.
+
+    Returns:
+        String with the appropriate URL.
+    &#34;&#34;&#34;
+    return f&#34;https://districtr.org/.netlify/functions/planRead?id={identifier}&#34;</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.remap"><code class="name flex">
+<span>def <span class="ident">remap</span></span>(<span>plans, unitmaps, popmap=None) ‑> Callable</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Re-maps assignments to the specified set of units.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>plans</code></strong> :&ensp;<code>DataFrame</code></dt>
+<dd>The Pandas DataFrame produced by <code><a title="evaltools.data.tabularized" href="#evaltools.data.tabularized">tabularized()</a></code>.</dd>
+<dt><strong><code>unitmaps</code></strong> :&ensp;<code>dict</code></dt>
+<dd>A dictionary whose keys are unit types appearing in the
+<code>unitsType</code> column, and whose values are dictionaries mapping unique
+identifiers of one set of geometries to unique identifiers (or lists
+of unique identifiers) of another set of geometries; these correspond
+to mappings generated by <code>unitmap()</code> and the inverse mapping generated
+by <code>invert()</code>.</dd>
+<dt><strong><code>popmap</code></strong> :&ensp;<code>dict</code>, optional</dt>
+<dd>A mapping from unit unique identifiers to
+population values. Only applies when we are mapping from smaller
+units to larger ones.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A function</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def remap(plans, unitmaps, popmap=None) -&gt; Callable:
+    &#34;&#34;&#34;
+    Re-maps assignments to the specified set of units.
+
+    Args:
+        plans (DataFrame): The Pandas DataFrame produced by ``tabularized()``.
+        unitmaps (dict): A dictionary whose keys are unit types appearing in the
+            `unitsType` column, and whose values are dictionaries mapping unique
+            identifiers of one set of geometries to unique identifiers (or lists
+            of unique identifiers) of another set of geometries; these correspond
+            to mappings generated by `unitmap()` and the inverse mapping generated
+            by `invert()`.
+        popmap (dict, optional): A mapping from unit unique identifiers to
+            population values. Only applies when we are mapping from smaller
+            units to larger ones.
+
+    Returns:
+        A function 
+    &#34;&#34;&#34;
+    def _(row):
+        # Get the assignment for the row.
+        assignment = ast.literal_eval(row[&#34;plan&#34;])
+
+        # Attempt to get the type of units specified by the row; if we can&#39;t – i.e.
+        # the user didn&#39;t specify a unit mapping corresponding to that unit type
+        # in `unitmaps` – we leave the assignment alone and warn the user.
+        try:
+            unitsType = row[&#34;units&#34;]
+            unitmap = unitmaps[unitsType]
+        except:
+            print(f&#34;No unit mapping provided for {row[&#39;units&#39;]}; skipping.&#34;)
+            return assignment
+
+        # What kind of mapping do we have? If `mapping` is from a single key
+        # to a single value, then we&#39;re mapping units one-to-one (e.g. block IDs
+        # to VTD IDs); otherwise, we&#39;re mapping units one-to-many (e.g. VTD IDs
+        # to blocks). If `mapping` is of the former type, then it&#39;s possible that
+        # some larger units may comprise smaller units in multiple districts. If
+        # this is the case, then we assign larger units to the district in which
+        # most of the larger unit&#39;s population resides; otherwise, we simply
+        # assign all smaller units to whichever district the larger unit&#39;s in.
+        firstvalue = next(iter(unitmap.values()))
+        unitmapdirection = &#34;down&#34;
+
+        # Mark which kind of mapping we have.
+        if type(firstvalue) is list: unitmapdirection = &#34;down&#34;
+        else: unitmapdirection = &#34;up&#34;
+
+        # Now, based on the mapping type, return the appropriate mapping.
+        if unitmapdirection == &#34;down&#34;: return _down(unitmap, assignment)
+        return _up(unitmap, popmap, assignment)
+
+    plans[&#34;plan&#34;] = plans.apply(_, axis=1)
+    return plans</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.submissions"><code class="name flex">
+<span>def <span class="ident">submissions</span></span>(<span>state, sample=None) ‑> List[<a title="evaltools.data.fetch.Submission" href="fetch.html#evaltools.data.fetch.Submission">Submission</a>]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Retrieves raw districtr objects; this includes both plan- and COI-based
+submissions.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
+<dd><code>us.State</code> object (e.g. <code>us.states.WI</code>).</dd>
+<dt><strong><code>sample</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>The number of sample plans to retrieve.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A list of <code>Submissions</code>, either to be interpreted raw or tabularized.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def submissions(state, sample=None) -&gt; List[Submission]:
+    &#34;&#34;&#34;
+    Retrieves raw districtr objects; this includes both plan- and COI-based
+    submissions.
+
+    Args:
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        sample (int, optional): The number of sample plans to retrieve.
+
+    Returns:
+        A list of `Submissions`, either to be interpreted raw or tabularized.
+    &#34;&#34;&#34;
+    # Get the appropriate URL and send the request. Made some basic ASCII art with
+    # the second three variable names... it&#39;s like the request is loading letter
+    # by letter.
+    url = ids(state)
+    __w = requests.get(url).text
+    _aw = json.loads(__w)[&#34;ids&#34;]
+    raw = _aw[:sample] if sample else _aw
+
+    # Create `Submission` objects for each of the retrieved objects. Getting the
+    # individual plans is the bottleneck here, and unfortunately we can&#39;t retrieve
+    # them in bulk (... or can we?).
+    submissions = []
+    for entity in raw:
+        # Retrieve the required data points.
+        identifier = parse_id(entity[&#34;link&#34;], df=False)
+        districtr = individual(identifier)
+        
+        # Force all plan keys and values to strings.
+        plan = {
+            str(k): str(v) if type(v) is not list else str(v[0])
+            for k, v in districtr[&#34;plan&#34;][&#34;assignment&#34;].items()
+        }
+        units = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;name&#34;]
+        unitsType = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;unitType&#34;]
+        tileset = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;tilesets&#34;][0][&#34;sourceLayer&#34;]
+
+        # Create a new Submission.
+        submissions.append(Submission(
+            link=entity[&#34;link&#34;],
+            id=identifier,
+            plan=plan,
+            units=units,
+            unitsType=unitsType,
+            tileset=tileset,
+            type=entity[&#34;type&#34;]
+        ))
+
+    return submissions</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.tabularized"><code class="name flex">
+<span>def <span class="ident">tabularized</span></span>(<span>state, submissions) ‑> Tuple[pandas.core.frame.DataFrame, pandas.core.frame.DataFrame, pandas.core.frame.DataFrame]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns districtr submission information in a tabular format.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
+<dd><code>us.State</code> object (e.g. <code>us.states.WI</code>).</dd>
+<dt><strong><code>submissions</code></strong> :&ensp;<code>list</code></dt>
+<dd>List of <code><a title="evaltools.data.Submission" href="#evaltools.data.Submission">Submission</a></code> objects returned from a call to
+<code><a title="evaltools.data.submissions" href="#evaltools.data.submissions">submissions()</a></code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>Three dataframes corresponding to plan-based submissions, COI-based
+submissions, and written submissions to the provided state.</p>
+<h2 id="example">Example</h2>
+<p>Prototypical example usage.</p>
+<pre><code>import us
+from evaltools.retrieve import submissions, tabularized
+
+# Set the state.
+state = us.states.WI
+
+# Retrieve the raw districtr submissions, then tabularize them.
+subs = submissions(state)
+plans, cois, written = tabularized(state, subs)
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def tabularized(state, submissions) -&gt; Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    &#34;&#34;&#34;
+    Returns districtr submission information in a tabular format.
+
+    Args:
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        submissions (list): List of `Submission` objects returned from a call to
+            `submissions`.
+
+    Returns:
+        Three dataframes corresponding to plan-based submissions, COI-based
+        submissions, and written submissions to the provided state.
+
+    Example:
+        Prototypical example usage.
+        
+            import us
+            from evaltools.retrieve import submissions, tabularized
+
+            # Set the state.
+            state = us.states.WI
+
+            # Retrieve the raw districtr submissions, then tabularize them.
+            subs = submissions(state)
+            plans, cois, written = tabularized(state, subs)
+
+    &#34;&#34;&#34;
+    # Sort submissions. (Not sure why this is necessary? Holdover from previous
+    # fetching code.)
+    submissions = list(sorted(submissions, key=lambda s: s.id))
+
+    # Categorize into three categories: plan submissions, COI submissions, and
+    # written submissions (which are ignored as they don&#39;t appear in the list
+    # of submissions).
+    _plans = [s.dict() for s in submissions if s.type == &#34;plan&#34;]
+    _cois = [s.dict() for s in submissions if s.type == &#34;coi&#34;]
+    
+    # Create preliminary dataframes so we can do safe `merge`s rather than rely
+    # explicitly on sorting; this also allows us to specify a sample size if
+    # we&#39;re only looking to sample a specific number of plans.
+    subset_plans = pd.DataFrame.from_records(_plans)
+    subset_cois = pd.DataFrame.from_records(_cois)
+    
+    # Get appropriate URLs and create dataframes.
+    plans_url = csvs(state)
+    cois_url = csvs(state, ptype=&#34;coi&#34;)
+    written_url = csvs(state, ptype=&#34;written&#34;)
+
+    plans = as_dataframe(plans_url)
+    cois = as_dataframe(cois_url)
+    writtens = as_dataframe(written_url)
+
+    # Adjust column contents for the plan and COI dataframes.
+    for universe in [plans, cois]:
+        # Adjust the `link` column type and create an `id` column from it.
+        universe[&#34;link&#34;] = universe[&#34;link&#34;].astype(str)
+        universe[&#34;id&#34;] = parse_id(universe[&#34;link&#34;])
+
+    # Adjust column contents for all dataframes.
+    for df in [plans, cois, writtens]: df[&#34;datetime&#34;] = parse_datetime(df[&#34;datetime&#34;])
+
+    # Add the retrieved plan data to the dataframes *if the subset dataframes
+    # contain items*.
+
+    if not subset_plans.empty: plans = plans.merge(subset_plans, on=&#34;id&#34;)
+    else: plans = pd.DataFrame()
+    if not subset_cois.empty: cois = cois.merge(subset_cois, on=&#34;id&#34;)
+    else: cois = pd.DataFrame()
+
+    # Drop bad columns and rename. Not sure why we have to `inplace` things here,
+    # but... fine.
+    for df in [plans, cois]:
+        if not df.empty:
+            df.drop([&#34;type_x&#34;, &#34;link_x&#34;, &#34;coalition&#34;], axis=1, inplace=True)
+            df.rename({&#34;type_y&#34;: &#34;type&#34;, &#34;link_y&#34;: &#34;link&#34;}, axis=1, inplace=True)
+
+    return plans, cois, writtens</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.variables"><code class="name flex">
+<span>def <span class="ident">variables</span></span>(<span>table) ‑> dict</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Produces variable names for the 2020 Census PL94-171 tables. Variables are
+determined from patterns apparent in PL94 variable <a href="https://tinyurl.com/2s3btptn">lists for tables P1 through
+P4</a>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>table</code></strong> :&ensp;<code>string</code></dt>
+<dd>The table for which we're generating variables.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A dictionary mapping Census variable codes to human-readable ones.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def variables(table) -&gt; dict:
+    &#34;&#34;&#34;
+    Produces variable names for the 2020 Census PL94-171 tables. Variables are
+    determined from patterns apparent in PL94 variable [lists for tables P1 through
+    P4](https://tinyurl.com/2s3btptn).
+
+    Args:
+        table (string): The table for which we&#39;re generating variables.
+    
+    Returns:
+        A dictionary mapping Census variable codes to human-readable ones.
+    &#34;&#34;&#34;
+    # List the categories of Census variables and find the combinations in the
+    # correct order. This *should* be the original order in which they&#39;re listed,
+    # but these have been spot-checked to verify their correctness. These names
+    # are also modified based on the table passed; for example, if the table
+    # passed is P2 or P4, we prepend an &#34;NH&#34; to the beginning, as these columns
+    # are explicitly non-hispanic people. If the table passed is P3 or P4, we
+    # append a &#34;VAP&#34; to the end to signify these are people of voting age;
+    # otherwise, we add &#34;POP.&#34;
+    categories = [&#34;WHITE&#34;, &#34;BLACK&#34;, &#34;AMIN&#34;, &#34;ASIAN&#34;, &#34;NHPI&#34;, &#34;OTH&#34;]
+    prefix = &#34;NH&#34; if table in {&#34;P2&#34;, &#34;P4&#34;} else &#34;&#34;
+    suffix = &#34;VAP&#34; if table in {&#34;P3&#34;, &#34;P4&#34;} else &#34;POP&#34;
+    combos = list(pd.core.common.flatten(
+        [
+            prefix + &#34;&#34;.join(list(combo)) + suffix + &#34;20&#34;
+            for i in range(1, len(categories)+1)
+            for combo in list(combinations(categories, i))
+        ]
+    ))
+
+    # Now, for each of the combinations, we map the appropriate variable name to
+    # the descriptor. Each of these tranches should have a width of 6 choose i,
+    # where i is the number of categories in the combination. For example, the
+    # second tranch (from 13 to 27) has width 15, as 6C2=15.
+    if table in {&#34;P1&#34;, &#34;P3&#34;}: tranches = [(3, 8), (11, 25), (27, 46), (48, 62), (64, 69), (71, 71)]
+    else: tranches = [(5, 10), (13, 27), (29, 48), (50, 64), (66, 71), (73, 73)]
+
+    # Create variable numbers.
+    numbers = list(pd.core.common.flatten([list(range(i, j+1)) for i, j in tranches]))
+    
+    # Edit these for specific tables. For example, in tables P2 and P3, we want
+    # to get the total Hispanic population and the total population.
+    if table in {&#34;P2&#34;, &#34;P4&#34;}:
+        numbers = [1, 2] + numbers
+        hcol = &#34;HVAP20&#34; if table == &#34;P4&#34; else &#34;HISP20&#34;
+        tcol = &#34;VAP20&#34; if table == &#34;P4&#34; else &#34;TOTPOP20&#34;
+        combos = [tcol, hcol] + combos
+    else:
+        numbers = [1] + numbers
+        tcol = &#34;VAP20&#34; if table == &#34;P4&#34; else &#34;TOTPOP20&#34;
+        combos = [tcol] + combos
+    
+    # Create the variable names and zip the names together with the combinations.
+    names = [f&#34;{table}_{str(n).zfill(3)}N&#34; for n in numbers]
+    return dict(zip(names, combos))</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="evaltools.data.AssignmentCompressor"><code class="flex name class">
+<span>class <span class="ident">AssignmentCompressor</span></span>
+<span>(</span><span>identifiers, window=10, location='compressed.ac')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>A class for compressing and decompressing lots of assignments very, very
+quickly. Intended for use with <code>jsonlines</code>-like libraries (where assignments
+are read in line-by-line) or for network requests (where assignments are
+retrieved one-by-one). When decompressing, yields <code>dict</code>s where keys are
+in sorted order.</p>
+<p>The compression schema considers the set of unique identifiers, imposes an
+ordering (lexicographic order) on the identifiers, and matches the assignment
+to that ordering. We assign all unassigned units to <code>"-1"</code> and, once the
+default cache size is hit (or assignments are no longer being read in),
+compress all assignments in the cache. Assignments are read in and out in
+the same order, and the keys for each assignment are in the same order.</p>
+<h2 id="example">Example</h2>
+<p>To compress assignments, we need a set of unique identifiers such that
+each identifier maps one geometric unit to one district.</p>
+<pre><code>...
+
+geoids = blocks["GEOID20"].astype(str)
+ac = AssignmentCompressor(geoids, location="compressed-assignments.ac")
+
+with ac as compressor:
+    for assignment in assignments:
+        # Here, ensure that all assignments have string keys and
+        # string values; also ensure that an assignment's keys are
+        # a subset of geoids (or whatever IDs you're passing).
+        compressor.compress(assignment)
+
+...
+</code></pre>
+<p>To decompress assignments, we again must have a set of unique geometric
+identifiers which match the assignments. We can then iterate over the
+decompressed assignments as they're read out of the file.</p>
+<pre><code>...
+
+geoids = blocks["GEOID20"].astype(str)
+ac = AssignmentCompressor(geoids, location="compressed-assignments.ac")
+
+for assignment in ac.decompress():
+    &lt;do whatever!&gt;
+
+...
+</code></pre>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>DISTRICT_DELIMITER</code></strong> :&ensp;<code>bytes</code></dt>
+<dd>A bytestring which separates district
+identifiers in an assignment.</dd>
+<dt><strong><code>ASSIGNMENT_DELIMITER</code></strong> :&ensp;<code>bytes</code></dt>
+<dd>A bytestring which separates assignments from
+each other.</dd>
+<dt><strong><code>CHUNK_DELIMITER</code></strong> :&ensp;<code>bytes</code></dt>
+<dd>A bytestring which separates assignment chunks
+from each other.</dd>
+<dt><strong><code>CHUNK_SIZE</code></strong> :&ensp;<code>int</code></dt>
+<dd>Default number of bytes read in from the IO stream at each
+step.</dd>
+<dt><strong><code>ENCODING</code></strong> :&ensp;<code>str</code></dt>
+<dd>Default string encoding style.</dd>
+<dt><strong><code>identifiers</code></strong></dt>
+<dd>A sortable, iterable collection of unique items corresponding
+to geographic identifiers.</dd>
+<dt><strong><code>compressed</code></strong></dt>
+<dd>A pandas <code>Index</code> containing the identifiers; this is used
+to quickly perform vectorized identifier matchings, rather than using
+traditional iterative methods.</dd>
+<dt><strong><code>cache</code></strong></dt>
+<dd>Collection of assignments to be compressed. Assignments are loaded
+into the cache every time the <code>.compress()</code> method is called, and
+is cleared whenever the length of the cache exceeds the window width.</dd>
+<dt><strong><code>window</code></strong></dt>
+<dd>Maximum cache length before the cache is compressed, written to
+file, and emptied.</dd>
+<dt><strong><code>default</code></strong></dt>
+<dd>The default assignment which is updated each time an assignment
+is passed to the compressor.</dd>
+<dt><strong><code>location</code></strong></dt>
+<dd>The place to which compressed data is written or read.</dd>
+</dl>
+<p>Creates <code><a title="evaltools.data.AssignmentCompressor" href="#evaltools.data.AssignmentCompressor">AssignmentCompressor</a></code> instance.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>identifiers</code></strong> :&ensp;<code>list</code></dt>
+<dd>An iterable collection of string identifiers; any
+assignment's keys must be a subset of <code>identifiers</code>.</dd>
+<dt><strong><code>window</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>A positive integer representing the cache
+window size. Defaults to cache.</dd>
+<dt><strong><code>location</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The path to the compressed resource (read
+or write). Defaults to <code>compressed.ac</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class AssignmentCompressor:
+    &#34;&#34;&#34;
+    A class for compressing and decompressing lots of assignments very, very
+    quickly. Intended for use with ``jsonlines``-like libraries (where assignments
+    are read in line-by-line) or for network requests (where assignments are 
+    retrieved one-by-one). When decompressing, yields ``dict``s where keys are
+    in sorted order.
+
+    The compression schema considers the set of unique identifiers, imposes an
+    ordering (lexicographic order) on the identifiers, and matches the assignment
+    to that ordering. We assign all unassigned units to ``&#34;-1&#34;`` and, once the
+    default cache size is hit (or assignments are no longer being read in),
+    compress all assignments in the cache. Assignments are read in and out in
+    the same order, and the keys for each assignment are in the same order.
+
+    Example:
+        To compress assignments, we need a set of unique identifiers such that
+        each identifier maps one geometric unit to one district.
+
+            ...
+
+            geoids = blocks[&#34;GEOID20&#34;].astype(str)
+            ac = AssignmentCompressor(geoids, location=&#34;compressed-assignments.ac&#34;)
+
+            with ac as compressor:
+                for assignment in assignments:
+                    # Here, ensure that all assignments have string keys and
+                    # string values; also ensure that an assignment&#39;s keys are
+                    # a subset of geoids (or whatever IDs you&#39;re passing).
+                    compressor.compress(assignment)
+
+            ...
+
+        To decompress assignments, we again must have a set of unique geometric
+        identifiers which match the assignments. We can then iterate over the
+        decompressed assignments as they&#39;re read out of the file.
+
+            ...
+
+            geoids = blocks[&#34;GEOID20&#34;].astype(str)
+            ac = AssignmentCompressor(geoids, location=&#34;compressed-assignments.ac&#34;)
+
+            for assignment in ac.decompress():
+                &lt;do whatever!&gt;
+
+            ...
+
+    Attributes:
+        DISTRICT_DELIMITER (bytes): A bytestring which separates district
+            identifiers in an assignment.
+        ASSIGNMENT_DELIMITER (bytes): A bytestring which separates assignments from
+            each other.
+        CHUNK_DELIMITER (bytes): A bytestring which separates assignment chunks
+            from each other.
+        CHUNK_SIZE (int): Default number of bytes read in from the IO stream at each
+            step.
+        ENCODING (str): Default string encoding style.
+        identifiers: A sortable, iterable collection of unique items corresponding
+            to geographic identifiers.
+        compressed: A pandas `Index` containing the identifiers; this is used
+            to quickly perform vectorized identifier matchings, rather than using
+            traditional iterative methods.
+        cache: Collection of assignments to be compressed. Assignments are loaded
+            into the cache every time the ``.compress()`` method is called, and
+            is cleared whenever the length of the cache exceeds the window width.
+        window: Maximum cache length before the cache is compressed, written to
+            file, and emptied.
+        default: The default assignment which is updated each time an assignment
+            is passed to the compressor.
+        location: The place to which compressed data is written or read.
+    &#34;&#34;&#34;
+
+    def __init__(self, identifiers, window=10, location=&#34;compressed.ac&#34;):
+        &#34;&#34;&#34;
+        Creates `AssignmentCompressor` instance.
+
+        Args:
+            identifiers (list): An iterable collection of string identifiers; any
+                assignment&#39;s keys must be a subset of `identifiers`.
+            window (int, optional): A positive integer representing the cache
+                window size. Defaults to cache.
+            location (str, optional): The path to the compressed resource (read
+                or write). Defaults to `compressed.ac`.
+        &#34;&#34;&#34;
+        self.identifiers = SortedList(identifiers)
+        self.default = frozenset(zip(self.identifiers, [&#34;-1&#34;]*len(self.identifiers)))
+        self.cache = []
+        self.location = location
+
+        # Error to users if the window is nonexistent.
+        if type(window) != int or window &lt;= 0:
+            raise ValueError(&#34;Cache window width must be a positive integer.&#34;)
+
+        self.window = window
+
+        self.DISTRICT_DELIMITER = b&#34;,&#34;
+        self.ASSIGNMENT_DELIMITER = b&#34;&lt;&lt;&lt;*&gt;&gt;&gt;&#34;
+        self.CHUNK_DELIMITER = b&#34;(((*)))&#34;
+        self.CHUNK_SIZE = 16384
+        self.ENCODING = &#34;raw_unicode_escape&#34;
+
+    def match(self, assignment) -&gt; SortedDict:
+        &#34;&#34;&#34;
+        Matches an assignment to an index (the set of geometric identifiers)
+        and returns a `SortedDict`.
+
+        Args:
+            assignment (dict): Dictionary which matches geometric identifiers to
+                districts. All keys and values in this dictionary must be strings.
+
+        Returns:
+            A `SortedDict` with identifiers matched ti district assignments.s
+
+        &#34;&#34;&#34;
+        # Create a dictionary which maps identifiers to `-1`, and update our
+        # dictionary with assignment values.
+        indexer = SortedDict(self.default)
+        indexer.update(assignment)
+        
+        return indexer
+
+    def __enter__(self):
+        &#34;&#34;&#34;
+        A simple context-management method. Allows the user to use `with`
+        statements when compressing stuff so we don&#39;t have to worry about the
+        user specifying the last item they&#39;ll be compressing.
+        &#34;&#34;&#34;
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        &#34;&#34;&#34;
+        Teardown. Once we&#39;ve exited the `with` statement (i.e. the user&#39;s all done
+        feeding items to the compressor) we can force the remaining items to be
+        compressed and written to file.
+        &#34;&#34;&#34;
+        if self.cache: self._compress(force=True)
+
+    def compress_all(self, assignments):
+        &#34;&#34;&#34;
+        Compresses all assignments in `assignments`.
+
+        Args:
+            assignments (list): List of dictionaries which match geometric identifiers
+                to districts. All keys and values in these dictionaries must be
+                strings.
+        &#34;&#34;&#34;
+        self.window = len(assignments)
+
+        with self as ac:
+            for assignment in assignments:
+                ac.compress(assignment)
+
+    def compress(self, assignment):
+        &#34;&#34;&#34;
+        Compresses the assignment `assignment` using `zlib`.
+
+        Args:
+            assignment (dict): Dictionary which matches geometric identifiers to districts.
+                All keys and values in this dictionary must be strings.
+        &#34;&#34;&#34;
+        # If the user provides an empty assignment or the assignment&#39;s keys aren&#39;t
+        # a subset of `identifiers`, warn the user and skip the assignment.
+        skip = False
+
+        if not assignment:
+            skip = True
+            print(&#34;`assignment` is empty; skipping.&#34;)
+
+        if not set(assignment.keys()).issubset(self.identifiers):
+            skip = True
+            print(
+                &#34;`assignment`&#39;s keys are not a subset of `identifiers`; skipping. &#34; + \
+                &#34;Please ensure that all keys and values in `assignment` are strings.&#34;,
+            )
+
+        # Join the things on the district separator, encode the whole thing, and
+        # encode according to the default encoding.
+        if not skip:
+            indexed = self.match(assignment)
+            sep = self.DISTRICT_DELIMITER.decode()
+            encoded = bytes(sep.join(indexed.values()).encode(self.ENCODING))
+
+            # Compress.
+            self.cache += [encoded]
+            self._compress()
+
+    def _compress(self, force=False):
+        &#34;&#34;&#34;
+        Private method which actually does the compression.
+
+        Args:
+            force: If truthy, then the length of the cache is ignored, the data
+                in the cache are compressed, and the compressed data is written
+                to file. ``force`` is truthy when teardown logic is entered
+                (i.e. after ``__exit()__`` is called).
+        &#34;&#34;&#34;
+        # Check to see if the cache is full. If so, compress the data, write to
+        # file, and reset the cache.
+        if len(self.cache) == self.window or force:
+            with open(self.location, &#34;ab&#34;) as writer:
+                # Write compressed data to file.
+                compressed = zlib.compress(
+                    bytes(self.ASSIGNMENT_DELIMITER.join(self.cache))
+                )
+                writer.write(compressed)
+
+                # We only forcibly write the chunk separator to file if we&#39;ve
+                # entered teardown logic and the cache *is not empty*. If the
+                # cache is empty when we&#39;re entering teardown logic, that means
+                # (number of assignments compressed) == (window width), in which
+                # case we&#39;ve reached the end of compression and should not write
+                # a separator; doing so will produce an empty bytestring (which,
+                # in turn, produces a dictionary with one key, corresponding to
+                # a null assignment).
+                if not force: writer.write(self.CHUNK_DELIMITER)
+
+            # Reset the cache.
+            self.cache = []
+
+    def decompress(self):
+        &#34;&#34;&#34;
+        Decompresses the data at ``location``. A generator which ``yield``s
+        assignments.
+
+        Yields:
+            Decompressed assignment dictionaries.
+        &#34;&#34;&#34;
+        # Open the compressed file. Then we read it in chunks, loading until
+        # we hit our separator or until the end of the file.
+        with open(self.location, &#34;rb&#34;) as _compressed_fin:
+            for chunk in self._chunk(_compressed_fin):
+                if not chunk: break
+                for assignment in self._decompress(chunk): yield assignment
+
+    def _chunk(self, stream):
+        &#34;&#34;&#34;
+        Private method for reading chunks from file without holding the entire
+        file in memory. A generator for decompressed assignments.
+
+        Args:
+            stream: A ``BytesIO`` instance from which data is read.
+
+        Yields:
+            Buffered, compressed bytes to be fed into the decompressor.
+        &#34;&#34;&#34;
+        # Create a buffer.
+        _buffer = []
+
+        # Read until we hit the end of the file `yield`ing each chunk as we go.
+        while True:
+            # Read in a chunk of data.
+            chunk = stream.read(self.CHUNK_SIZE)
+            _buffer.append(chunk)
+
+            # Check if the chunk has our delimiter in it. If it contains our
+            # delimiter, then the buffer *up to the delimiter* contains compressed
+            # assignments; this should be `yield`ed and decompressed. We only
+            # want to get the part before the delimiter for decompression, but
+            # retain the rest.
+            if self.CHUNK_DELIMITER in chunk:
+                _buffered_bytes = b&#34;&#34;.join(_buffer)
+                part, _buffer_first = _buffered_bytes.split(self.CHUNK_DELIMITER, 1)
+                _buffer = [_buffer_first]
+                yield part
+
+            # If the chunk&#39;s empty, `yield` the remaining buffer and return.
+            if not chunk: yield b&#34;&#34;.join(_buffer); break
+
+    def _decompress(self, chunk) -&gt; List[dict]:
+        &#34;&#34;&#34;
+        Private method which decompresses assignments.
+
+        Args:
+            chunk: Compressed, byte-encoded data representing ``window``
+                assignments.
+
+        Returns:
+            List of decompressed assignment objects.
+        &#34;&#34;&#34;
+        # Decompress the chunk and split it on our delimiter.
+        decompressed = zlib.decompress(chunk)
+        decompressed_parts = decompressed.split(self.ASSIGNMENT_DELIMITER)
+        
+        # For each of the parts, decode the bytes, make them into lists, and
+        # match them to GEOIDs.
+        decoded_parts = [part.decode() for part in decompressed_parts]
+        split_parts = [part.split(self.DISTRICT_DELIMITER.decode()) for part in decoded_parts]
+        indexed_parts = [dict(zip(self.identifiers, part)) for part in split_parts]
+
+        return indexed_parts</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="evaltools.data.AssignmentCompressor.compress"><code class="name flex">
+<span>def <span class="ident">compress</span></span>(<span>self, assignment)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Compresses the assignment <code>assignment</code> using <code>zlib</code>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>assignment</code></strong> :&ensp;<code>dict</code></dt>
+<dd>Dictionary which matches geometric identifiers to districts.
+All keys and values in this dictionary must be strings.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def compress(self, assignment):
+    &#34;&#34;&#34;
+    Compresses the assignment `assignment` using `zlib`.
+
+    Args:
+        assignment (dict): Dictionary which matches geometric identifiers to districts.
+            All keys and values in this dictionary must be strings.
+    &#34;&#34;&#34;
+    # If the user provides an empty assignment or the assignment&#39;s keys aren&#39;t
+    # a subset of `identifiers`, warn the user and skip the assignment.
+    skip = False
+
+    if not assignment:
+        skip = True
+        print(&#34;`assignment` is empty; skipping.&#34;)
+
+    if not set(assignment.keys()).issubset(self.identifiers):
+        skip = True
+        print(
+            &#34;`assignment`&#39;s keys are not a subset of `identifiers`; skipping. &#34; + \
+            &#34;Please ensure that all keys and values in `assignment` are strings.&#34;,
+        )
+
+    # Join the things on the district separator, encode the whole thing, and
+    # encode according to the default encoding.
+    if not skip:
+        indexed = self.match(assignment)
+        sep = self.DISTRICT_DELIMITER.decode()
+        encoded = bytes(sep.join(indexed.values()).encode(self.ENCODING))
+
+        # Compress.
+        self.cache += [encoded]
+        self._compress()</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.AssignmentCompressor.compress_all"><code class="name flex">
+<span>def <span class="ident">compress_all</span></span>(<span>self, assignments)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Compresses all assignments in <code>assignments</code>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>assignments</code></strong> :&ensp;<code>list</code></dt>
+<dd>List of dictionaries which match geometric identifiers
+to districts. All keys and values in these dictionaries must be
+strings.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def compress_all(self, assignments):
+    &#34;&#34;&#34;
+    Compresses all assignments in `assignments`.
+
+    Args:
+        assignments (list): List of dictionaries which match geometric identifiers
+            to districts. All keys and values in these dictionaries must be
+            strings.
+    &#34;&#34;&#34;
+    self.window = len(assignments)
+
+    with self as ac:
+        for assignment in assignments:
+            ac.compress(assignment)</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.AssignmentCompressor.decompress"><code class="name flex">
+<span>def <span class="ident">decompress</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Decompresses the data at <code>location</code>. A generator which <code>yield</code>s
+assignments.</p>
+<h2 id="yields">Yields</h2>
+<p>Decompressed assignment dictionaries.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def decompress(self):
+    &#34;&#34;&#34;
+    Decompresses the data at ``location``. A generator which ``yield``s
+    assignments.
+
+    Yields:
+        Decompressed assignment dictionaries.
+    &#34;&#34;&#34;
+    # Open the compressed file. Then we read it in chunks, loading until
+    # we hit our separator or until the end of the file.
+    with open(self.location, &#34;rb&#34;) as _compressed_fin:
+        for chunk in self._chunk(_compressed_fin):
+            if not chunk: break
+            for assignment in self._decompress(chunk): yield assignment</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.AssignmentCompressor.match"><code class="name flex">
+<span>def <span class="ident">match</span></span>(<span>self, assignment) ‑> sortedcontainers.sorteddict.SortedDict</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Matches an assignment to an index (the set of geometric identifiers)
+and returns a <code>SortedDict</code>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>assignment</code></strong> :&ensp;<code>dict</code></dt>
+<dd>Dictionary which matches geometric identifiers to
+districts. All keys and values in this dictionary must be strings.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A <code>SortedDict</code> with identifiers matched ti district assignments.s</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def match(self, assignment) -&gt; SortedDict:
+    &#34;&#34;&#34;
+    Matches an assignment to an index (the set of geometric identifiers)
+    and returns a `SortedDict`.
+
+    Args:
+        assignment (dict): Dictionary which matches geometric identifiers to
+            districts. All keys and values in this dictionary must be strings.
+
+    Returns:
+        A `SortedDict` with identifiers matched ti district assignments.s
+
+    &#34;&#34;&#34;
+    # Create a dictionary which maps identifiers to `-1`, and update our
+    # dictionary with assignment values.
+    indexer = SortedDict(self.default)
+    indexer.update(assignment)
+    
+    return indexer</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="evaltools.data.Submission"><code class="flex name class">
+<span>class <span class="ident">Submission</span></span>
+<span>(</span><span>**data: Any)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Provides a base model for data retrieved from districtr. Allows us to use
+dot notation when accessing properties rather than dict notation.</p>
+<p>Create a new model by parsing and validating input data from keyword arguments.</p>
+<p>Raises ValidationError if the input data cannot be parsed to form a valid model.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Submission(BaseModel):
+    &#34;&#34;&#34;
+    Provides a base model for data retrieved from districtr. Allows us to use
+    dot notation when accessing properties rather than dict notation.
+    &#34;&#34;&#34;
+    link: str
+    &#34;&#34;&#34;A districtr URL.&#34;&#34;&#34;
+    plan: dict
+    &#34;&#34;&#34;districtr plan object.&#34;&#34;&#34;
+    id: str
+    &#34;&#34;&#34;districtr identifier.&#34;&#34;&#34;
+    units: str
+    &#34;&#34;&#34;Unit identifier (e.g. `GEOID`).&#34;&#34;&#34;
+    unitsType: str
+    &#34;&#34;&#34;Unit type (e.g. `blocks20`, `blockgroup`, etc.)&#34;&#34;&#34;
+    tileset: str
+    &#34;&#34;&#34;Mapbox tileset URL.&#34;&#34;&#34;
+    type: str
+    &#34;&#34;&#34;Not sure.&#34;&#34;&#34;</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>pydantic.main.BaseModel</li>
+<li>pydantic.utils.Representation</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="evaltools.data.Submission.id"><code class="name">var <span class="ident">id</span> : str</code></dt>
+<dd>
+<div class="desc"><p>districtr identifier.</p></div>
+</dd>
+<dt id="evaltools.data.Submission.link"><code class="name">var <span class="ident">link</span> : str</code></dt>
+<dd>
+<div class="desc"><p>A districtr URL.</p></div>
+</dd>
+<dt id="evaltools.data.Submission.plan"><code class="name">var <span class="ident">plan</span> : dict</code></dt>
+<dd>
+<div class="desc"><p>districtr plan object.</p></div>
+</dd>
+<dt id="evaltools.data.Submission.tileset"><code class="name">var <span class="ident">tileset</span> : str</code></dt>
+<dd>
+<div class="desc"><p>Mapbox tileset URL.</p></div>
+</dd>
+<dt id="evaltools.data.Submission.type"><code class="name">var <span class="ident">type</span> : str</code></dt>
+<dd>
+<div class="desc"><p>Not sure.</p></div>
+</dd>
+<dt id="evaltools.data.Submission.units"><code class="name">var <span class="ident">units</span> : str</code></dt>
+<dd>
+<div class="desc"><p>Unit identifier (e.g. <code>GEOID</code>).</p></div>
+</dd>
+<dt id="evaltools.data.Submission.unitsType"><code class="name">var <span class="ident">unitsType</span> : str</code></dt>
+<dd>
+<div class="desc"><p>Unit type (e.g. <code>blocks20</code>, <code>blockgroup</code>, etc.)</p></div>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<!-- include a script for adding stuff to the end of proofs. -->
+<script>
+// Get all the proofs in the document.
+proofs = document.getElementsByClassName("proof");
+// For each of the proofs, attach a floating child element in the bottom-right
+// corner.
+for (var proof of proofs) {
+// Create a proof-ending tombstone.
+square = document.createElement("div");
+square.className = "tombstone";
+square.innerHTML = "◼️";
+// Attach the tombstone to the proof.
+proof.appendChild(square);
+}
+</script>
+<header>
+<a class="homelink" rel="home" title="evaltools" href="https://github.com/mggg/plan-evaluation-processing">
+<style>
+header > h1 { display: none; }
+img.resize {
+max-width: 80%;
+max-height: 80%;
+display: block;
+margin: 0 auto;
+}
+div.proof {
+border: 1px solid black;
+padding: 0em 1em;
+width: 90%;
+margin: 1em auto;
+}
+.tombstone {
+margin-top: -2em;
+float: right;
+}
+</style>
+<img class="resize" src="https://mggg.org/assets/logo.svg" alt="MGGG Logo">
+</a>
+</header>
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="evaltools" href="../index.html">evaltools</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<ul>
+<li><code><a title="evaltools.data.URLs" href="URLs.html">evaltools.data.URLs</a></code></li>
+<li><code><a title="evaltools.data.acs" href="acs.html">evaltools.data.acs</a></code></li>
+<li><code><a title="evaltools.data.fetch" href="fetch.html">evaltools.data.fetch</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="two-column">
+<li><code><a title="evaltools.data.acs5" href="#evaltools.data.acs5">acs5</a></code></li>
+<li><code><a title="evaltools.data.census" href="#evaltools.data.census">census</a></code></li>
+<li><code><a title="evaltools.data.csvs" href="#evaltools.data.csvs">csvs</a></code></li>
+<li><code><a title="evaltools.data.cvap" href="#evaltools.data.cvap">cvap</a></code></li>
+<li><code><a title="evaltools.data.ids" href="#evaltools.data.ids">ids</a></code></li>
+<li><code><a title="evaltools.data.one" href="#evaltools.data.one">one</a></code></li>
+<li><code><a title="evaltools.data.remap" href="#evaltools.data.remap">remap</a></code></li>
+<li><code><a title="evaltools.data.submissions" href="#evaltools.data.submissions">submissions</a></code></li>
+<li><code><a title="evaltools.data.tabularized" href="#evaltools.data.tabularized">tabularized</a></code></li>
+<li><code><a title="evaltools.data.variables" href="#evaltools.data.variables">variables</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="evaltools.data.AssignmentCompressor" href="#evaltools.data.AssignmentCompressor">AssignmentCompressor</a></code></h4>
+<ul class="">
+<li><code><a title="evaltools.data.AssignmentCompressor.compress" href="#evaltools.data.AssignmentCompressor.compress">compress</a></code></li>
+<li><code><a title="evaltools.data.AssignmentCompressor.compress_all" href="#evaltools.data.AssignmentCompressor.compress_all">compress_all</a></code></li>
+<li><code><a title="evaltools.data.AssignmentCompressor.decompress" href="#evaltools.data.AssignmentCompressor.decompress">decompress</a></code></li>
+<li><code><a title="evaltools.data.AssignmentCompressor.match" href="#evaltools.data.AssignmentCompressor.match">match</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="evaltools.data.Submission" href="#evaltools.data.Submission">Submission</a></code></h4>
+<ul class="two-column">
+<li><code><a title="evaltools.data.Submission.id" href="#evaltools.data.Submission.id">id</a></code></li>
+<li><code><a title="evaltools.data.Submission.link" href="#evaltools.data.Submission.link">link</a></code></li>
+<li><code><a title="evaltools.data.Submission.plan" href="#evaltools.data.Submission.plan">plan</a></code></li>
+<li><code><a title="evaltools.data.Submission.tileset" href="#evaltools.data.Submission.tileset">tileset</a></code></li>
+<li><code><a title="evaltools.data.Submission.type" href="#evaltools.data.Submission.type">type</a></code></li>
+<li><code><a title="evaltools.data.Submission.units" href="#evaltools.data.Submission.units">units</a></code></li>
+<li><code><a title="evaltools.data.Submission.unitsType" href="#evaltools.data.Submission.unitsType">unitsType</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>

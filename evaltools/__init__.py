@@ -15,7 +15,6 @@ from .scoring import (
     splits, pieces, deviations, contiguous, unassigned_units,
     unassigned_population
 )
-from .utilities import rename, JSONtoObject, objectify
+from .utilities import rename, JSONtoObject, jsonify
 from .data import acs5, cvap, census
-from .utils import rename, JSON, jsonify
 

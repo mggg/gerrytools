@@ -34,7 +34,7 @@ def dualgraph(
     if colmap: geometries = geometries.rename(colmap, axis=1)
 
     # Generate the dual graph.
-    dg = Graph.from_geodataframe(geometries)
+    dg = Graph.from_geodataframe(geometries, adjacency="rook")
 
     # Add and remove extraneous edges.
     for add in edges_to_add: dg.add_edge(*add)

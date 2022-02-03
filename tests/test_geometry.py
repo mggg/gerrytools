@@ -1,11 +1,62 @@
 
-from evaltools.geometry import dissolve, dualgraph, unitmap, invert
+from gerrychain import (
+    GeographicPartition,
+    Graph,
+    MarkovChain,
+    updaters,
+    constraints,
+    accept,
+)
+from gerrychain.proposals import recom
+from functools import partial
+import geopandas as gpd
+from evaltools.geometry import dissolve, dualgraph, unitmap, invert, dispersion_updater_closure
 import geopandas as gpd
 from pathlib import Path
 import os
-import math
 
 root = Path(os.getcwd()) / Path("tests/test-resources/")
+
+def test_dispersion_calc():
+    gdf = gpd.read_file("tests/test-resources/test-precincts/test-precincts.shp")
+    graph = Graph.from_geodataframe(gdf)
+    print(list(gdf))
+
+    my_updaters = {
+        "population": updaters.Tally("TOTPOP", alias="population"), 
+        "dispersion": dispersion_updater_closure(gdf, "CONGRESS", "TOTPOP")
+    }
+
+    initial_partition = GeographicPartition(
+        graph, assignment="CONGRESS", updaters=my_updaters
+    )
+
+    ideal_population = sum(initial_partition["population"].values()) / len(
+        initial_partition
+    )
+
+    proposal = partial(
+        recom, pop_col="TOTPOP", pop_target=ideal_population, epsilon=0.10, node_repeats=2
+    )
+
+    pop_constraint = constraints.within_percent_of_ideal_population(initial_partition, 0.02)
+
+    chain = MarkovChain(
+        proposal=proposal,
+        constraints=[pop_constraint],
+        accept=accept.always_accept,
+        initial_state=initial_partition,
+        total_steps=100,
+    )
+
+    total_dispersion_over_run = 0
+    for count, partition in enumerate(chain):
+        if count == 0:
+            assert partition["dispersion"] == 0
+
+        total_dispersion_over_run += partition["dispersion"]
+
+    assert total_dispersion_over_run
 
 def test_dissolve():
     # Read in geometric data.
@@ -77,3 +128,4 @@ def test_unitmap():
 
 if __name__ == "__main__":
     root = Path(os.getcwd()) / Path("test-resources/")
+    test_dispersion_calc()
