@@ -11,7 +11,7 @@ from gerrychain.proposals import recom
 from functools import partial
 
 from networkx.algorithms.centrality.dispersion import dispersion
-import evaltools.numbering
+import evaltools.geometry
 import geopandas as gpd
 
 def test_dispersion_calc():
@@ -20,7 +20,7 @@ def test_dispersion_calc():
 
     my_updaters = {
         "population": updaters.Tally("TOTPOP", alias="population"), 
-        "dispersion": evaltools.numbering.dispersion_updater_closure(gdf, "CONGRESS", "TOTPOP")
+        "dispersion": evaltools.geometry.dispersion_updater_closure(gdf, "CONGRESS", "TOTPOP")
     }
 
     initial_partition = GeographicPartition(

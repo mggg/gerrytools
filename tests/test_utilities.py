@@ -1,5 +1,5 @@
 
-from evaltools.utils import rename
+from evaltools.utilities import rename
 from pathlib import Path
 import os
 import shutil

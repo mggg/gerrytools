@@ -4,7 +4,7 @@ from random import uniform
 from typing import Tuple
 import geopandas as gpd
 import json
-from ..geography import dissolve
+from ..geometry import dissolve
 
 
 class PlotSpecification:

@@ -1,5 +1,5 @@
 
-from ..processing import Graph
+from gerrychain.graph import Graph
 
 
 def dualgraph(
