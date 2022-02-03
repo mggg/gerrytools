@@ -1,5 +1,5 @@
 
-from evaltools.scores import (
+from evaltools.scoring import (
     deviations, splits, pieces, unassigned_units, unassigned_population,
     contiguous, reock
 )

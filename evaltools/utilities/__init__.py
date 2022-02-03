@@ -4,10 +4,10 @@ Oft-used utilities for working with geometric data.
 """
 
 from .rename import rename
-from .JSON import objectify, JSONtoObject
+from .JSON import jsonify, JSONtoObject
 
 __all__ = [
-    "objectify",
+    "jsonify",
     "JSONtoObject",
     "rename"
 ]
