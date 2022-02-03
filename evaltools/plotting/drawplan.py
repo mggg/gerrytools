@@ -2,9 +2,10 @@
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from .colors import districtr
+from .districtnumbers import districtnumbers
 
 def drawplan(
-        districts, assignment, overlays=None, colors=None, numbers=False, lw=1/2
+        districts, assignment, overlays=[], colors=None, numbers=False, lw=1/2
     ) -> Axes:
     """
     Visualizes the districting plan defined by `assignment`.
@@ -13,8 +14,8 @@ def drawplan(
         districts (GeoDataFrame): Geometries for the districting plan. Assumes
             there is one geometry for each district.
         assignment (str): Column of `districts` which defines the districting plan.
-        overlay (GeoDataFrame, optional): GeoDataFrame to be plotted over the
-            districts. Often is a gdf of counties.
+        overlays (list, optional): A list of GeoDataFrames to be plotted over the
+            districts.
         colors (str, optional): Column name which specifies colors for each district.
         numbers (bool, optional): If `True`, plots district names (as defined by
             `assignment`) at districts' centroids. Defaults to `False`.
@@ -48,16 +49,7 @@ def drawplan(
             overlay.plot(color="None", edgecolor="black", linewidth=1/8, ax=base)
     
     # If the `numbers` flag is passed, plot the numbers for each district.
-    if numbers:
-        for district, identifier in zip(districts["geometry"], districts[assignment]):
-            x, y = list(district.centroid.coords)[0]
-            base.annotate(
-                identifier, (x, y), xytext=(x,y), xycoords="data", fontsize=6,
-                ha="center", va="center",
-                bbox=dict(
-                    boxstyle="circle,pad=0.2", fc="white", ec="none", alpha=1
-                )
-            )
+    if numbers: base = districtnumbers(base, districts, assignment=assignment)
 
     # Turn plot axes off.
     plt.axis("off")
