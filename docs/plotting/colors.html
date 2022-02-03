@@ -44,6 +44,11 @@ Citizen Kane).
 &#34;&#34;&#34;
 citizenBlue = &#34;#4693b3&#34;
 
+&#34;&#34;&#34;
+Overlay colors for choropleth maps.
+&#34;&#34;&#34;
+overlays = [&#34;gainsboro&#34;, &#34;silver&#34;, &#34;darkgray&#34;, &#34;gray&#34;, &#34;dimgrey&#34;]
+
 def hexshift(color) -&gt; str:
     &#34;&#34;&#34;
     Randomly modifies the provided hexadecimal color.
@@ -117,6 +122,7 @@ def flare(n) -&gt; list:
     &#34;&#34;&#34;
     return list(sns.color_palette(&#34;flare&#34;, as_cmap=False, n_colors=n))
 
+
 def purples(n) -&gt; list:
     &#34;&#34;&#34;
     Returns a list of colors based on the `Purples` Matplotlib/seaborn colormap.
@@ -128,6 +134,7 @@ def purples(n) -&gt; list:
         List of RGB triples.
     &#34;&#34;&#34;
     return list(sns.color_palette(&#34;Purples&#34;, as_cmap=False, n_colors=n))
+
 
 def greens(n) -&gt; list:
     &#34;&#34;&#34;
@@ -147,6 +154,10 @@ def greens(n) -&gt; list:
 <section>
 <h2 class="section-title" id="header-variables">Global variables</h2>
 <dl>
+<dt id="evaltools.plotting.colors.citizenBlue"><code class="name">var <span class="ident">citizenBlue</span></code></dt>
+<dd>
+<div class="desc"><p>Overlay colors for choropleth maps.</p></div>
+</dd>
 <dt id="evaltools.plotting.colors.defaultGray"><code class="name">var <span class="ident">defaultGray</span></code></dt>
 <dd>
 <div class="desc"><p>Citizen ensemble blue color; used in histograms, violin plots, and arrows. (Aka
@@ -406,6 +417,7 @@ float: right;
 </li>
 <li><h3><a href="#header-variables">Global variables</a></h3>
 <ul class="">
+<li><code><a title="evaltools.plotting.colors.citizenBlue" href="#evaltools.plotting.colors.citizenBlue">citizenBlue</a></code></li>
 <li><code><a title="evaltools.plotting.colors.defaultGray" href="#evaltools.plotting.colors.defaultGray">defaultGray</a></code></li>
 </ul>
 </li>

@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>evaltools API documentation</title>
-<meta name="description" content="the redistricting analyst&#39;s toolkit …" />
+<title>evaltools.scores.contiguity API documentation</title>
+<meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -20,66 +20,155 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Package <code>evaltools</code></h1>
+<h1 class="title">Module <code>evaltools.scores.contiguity</code></h1>
 </header>
 <section id="section-intro">
-<h1 id="the-redistricting-analysts-toolkit">the redistricting analyst's toolkit.</h1>
-<p><code><a title="evaltools" href="#evaltools">evaltools</a></code> is a light package for redistricting analysis essentials,
-making geographic data operations, map visualizations, plan
-evaluation, and data retrieval a snap.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">&#34;&#34;&#34;
+<pre><code class="python">from typing import Union
 
-.. include:: ../docs/introduction.md
-&#34;&#34;&#34;
+import gerrychain
+from gerrychain.constraints import contiguous as ctgs
 
-from .plotting import (
-    drawplan, drawgraph, districtr, flare, purples, redbluecmap, PlotSpecification
-)
-from .geometry import (
-    dissolve, dualgraph, invert, unitmap, minimize_dispersion, minimize_parity,
-    minimize_dispersion_with_parity, calculate_dispersion, dispersion_updater_closure
-)
-from .scores import (
-    splits, pieces, deviations, contiguous, unassigned_units,
-    unassigned_population
-)
-from .utilities import rename, JSONtoObject, objectify
-from .data import acs5, cvap, census</code></pre>
+def contiguous(P: gerrychain.Partition) -&gt; bool:
+    &#34;&#34;&#34;
+    Determines whether the districting plan defined by the partition is
+    contiguous.
+
+    Args:
+        P (Partition): GerryChain Partition object.
+
+    Returns:
+        Whether the districting plan defined by the partition is contiguous.
+    &#34;&#34;&#34;
+    return ctgs(P)
+
+
+def unassigned_units(P: gerrychain.Partition, raw: bool = False) -&gt; Union[float, int]:
+    &#34;&#34;&#34;
+    Determines the proportion (or raw number) of units without a district
+    assignment. An unassigned unit is a unit without a districting assignment an
+    empty/corrupted assignment.
+
+    Args:
+        P (Partition): GerryChain Partition object.
+        raw (bool, optional): If `True`, report the raw number of unassigned
+            units. Defaults to `False`.
+    
+    Returns:
+        `float` representing the proportion of units that are unassigned (or
+        the whole number of unassigned units).
+    &#34;&#34;&#34;
+    assignment = P.assignment
+
+    # Retrive the length of the assignment; this corresponds to the number of
+    # units which have an assignment key.
+    total = len(P.graph.nodes())
+
+    # Next, check for &#34;bad&#34; assignments for units: this includes empty strings
+    # and NaNs, for now.
+    units_assigned_well = len({
+        k: v
+        for k, v in assignment.items() if v not in [&#34;nan&#34;, &#34;NaN&#34;, &#34;&#34;]
+    })
+
+    return 1-(units_assigned_well/total) if not raw else (total-units_assigned_well)</code></pre>
 </details>
 </section>
 <section>
-<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt><code class="name"><a title="evaltools.data" href="data/index.html">evaltools.data</a></code></dt>
+<dt id="evaltools.scores.contiguity.contiguous"><code class="name flex">
+<span>def <span class="ident">contiguous</span></span>(<span>P: gerrychain.partition.partition.Partition) ‑> bool</span>
+</code></dt>
 <dd>
-<div class="desc"><p>Facilities for processing data and districting plans in a standardized fashion.</p></div>
+<div class="desc"><p>Determines whether the districting plan defined by the partition is
+contiguous.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>P</code></strong> :&ensp;<code>Partition</code></dt>
+<dd>GerryChain Partition object.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>Whether the districting plan defined by the partition is contiguous.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def contiguous(P: gerrychain.Partition) -&gt; bool:
+    &#34;&#34;&#34;
+    Determines whether the districting plan defined by the partition is
+    contiguous.
+
+    Args:
+        P (Partition): GerryChain Partition object.
+
+    Returns:
+        Whether the districting plan defined by the partition is contiguous.
+    &#34;&#34;&#34;
+    return ctgs(P)</code></pre>
+</details>
 </dd>
-<dt><code class="name"><a title="evaltools.geometry" href="geometry/index.html">evaltools.geometry</a></code></dt>
+<dt id="evaltools.scores.contiguity.unassigned_units"><code class="name flex">
+<span>def <span class="ident">unassigned_units</span></span>(<span>P: gerrychain.partition.partition.Partition, raw: bool = False) ‑> Union[float, int]</span>
+</code></dt>
 <dd>
-<div class="desc"><p>Provides ease-of-use functionality for geographic and geometric operations.</p></div>
-</dd>
-<dt><code class="name"><a title="evaltools.plotting" href="plotting/index.html">evaltools.plotting</a></code></dt>
-<dd>
-<div class="desc"><p>Makes pretty pictures of districting plans, dual graphs, histograms, boxplots,
-and violin plots 🎻.</p></div>
-</dd>
-<dt><code class="name"><a title="evaltools.scores" href="scores/index.html">evaltools.scores</a></code></dt>
-<dd>
-<div class="desc"><p>Basic functionality for evaluating districting plans.</p></div>
-</dd>
-<dt><code class="name"><a title="evaltools.utilities" href="utilities/index.html">evaltools.utilities</a></code></dt>
-<dd>
-<div class="desc"><p>Oft-used utilities for working with geometric data.</p></div>
+<div class="desc"><p>Determines the proportion (or raw number) of units without a district
+assignment. An unassigned unit is a unit without a districting assignment an
+empty/corrupted assignment.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>P</code></strong> :&ensp;<code>Partition</code></dt>
+<dd>GerryChain Partition object.</dd>
+<dt><strong><code>raw</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>If <code>True</code>, report the raw number of unassigned
+units. Defaults to <code>False</code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p><code>float</code> representing the proportion of units that are unassigned (or
+the whole number of unassigned units).</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def unassigned_units(P: gerrychain.Partition, raw: bool = False) -&gt; Union[float, int]:
+    &#34;&#34;&#34;
+    Determines the proportion (or raw number) of units without a district
+    assignment. An unassigned unit is a unit without a districting assignment an
+    empty/corrupted assignment.
+
+    Args:
+        P (Partition): GerryChain Partition object.
+        raw (bool, optional): If `True`, report the raw number of unassigned
+            units. Defaults to `False`.
+    
+    Returns:
+        `float` representing the proportion of units that are unassigned (or
+        the whole number of unassigned units).
+    &#34;&#34;&#34;
+    assignment = P.assignment
+
+    # Retrive the length of the assignment; this corresponds to the number of
+    # units which have an assignment key.
+    total = len(P.graph.nodes())
+
+    # Next, check for &#34;bad&#34; assignments for units: this includes empty strings
+    # and NaNs, for now.
+    units_assigned_well = len({
+        k: v
+        for k, v in assignment.items() if v not in [&#34;nan&#34;, &#34;NaN&#34;, &#34;&#34;]
+    })
+
+    return 1-(units_assigned_well/total) if not raw else (total-units_assigned_well)</code></pre>
+</details>
 </dd>
 </dl>
-</section>
-<section>
-</section>
-<section>
 </section>
 <section>
 </section>
@@ -126,18 +215,18 @@ float: right;
 </header>
 <h1>Index</h1>
 <div class="toc">
-<ul>
-<li><a href="#the-redistricting-analysts-toolkit">the redistricting analyst's toolkit.</a></li>
-</ul>
+<ul></ul>
 </div>
 <ul id="index">
-<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<li><h3>Super-module</h3>
 <ul>
-<li><code><a title="evaltools.data" href="data/index.html">evaltools.data</a></code></li>
-<li><code><a title="evaltools.geometry" href="geometry/index.html">evaltools.geometry</a></code></li>
-<li><code><a title="evaltools.plotting" href="plotting/index.html">evaltools.plotting</a></code></li>
-<li><code><a title="evaltools.scores" href="scores/index.html">evaltools.scores</a></code></li>
-<li><code><a title="evaltools.utilities" href="utilities/index.html">evaltools.utilities</a></code></li>
+<li><code><a title="evaltools.scores" href="index.html">evaltools.scores</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="evaltools.scores.contiguity.contiguous" href="#evaltools.scores.contiguity.contiguous">contiguous</a></code></li>
+<li><code><a title="evaltools.scores.contiguity.unassigned_units" href="#evaltools.scores.contiguity.unassigned_units">unassigned_units</a></code></li>
 </ul>
 </li>
 </ul>

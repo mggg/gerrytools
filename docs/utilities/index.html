@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>evaltools API documentation</title>
-<meta name="description" content="the redistricting analyst&#39;s toolkit …" />
+<title>evaltools.utilities API documentation</title>
+<meta name="description" content="Oft-used utilities for working with geometric data." />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -20,68 +20,177 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Package <code>evaltools</code></h1>
+<h1 class="title">Module <code>evaltools.utilities</code></h1>
 </header>
 <section id="section-intro">
-<h1 id="the-redistricting-analysts-toolkit">the redistricting analyst's toolkit.</h1>
-<p><code><a title="evaltools" href="#evaltools">evaltools</a></code> is a light package for redistricting analysis essentials,
-making geographic data operations, map visualizations, plan
-evaluation, and data retrieval a snap.</p>
+<p>Oft-used utilities for working with geometric data.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">&#34;&#34;&#34;
-
-.. include:: ../docs/introduction.md
+Oft-used utilities for working with geometric data.
 &#34;&#34;&#34;
 
-from .plotting import (
-    drawplan, drawgraph, districtr, flare, purples, redbluecmap, PlotSpecification
-)
-from .geometry import (
-    dissolve, dualgraph, invert, unitmap, minimize_dispersion, minimize_parity,
-    minimize_dispersion_with_parity, calculate_dispersion, dispersion_updater_closure
-)
-from .scores import (
-    splits, pieces, deviations, contiguous, unassigned_units,
-    unassigned_population
-)
-from .utilities import rename, JSONtoObject, objectify
-from .data import acs5, cvap, census</code></pre>
+from .rename import rename
+from .JSON import objectify, JSONtoObject
+
+__all__ = [
+    &#34;objectify&#34;,
+    &#34;JSONtoObject&#34;,
+    &#34;rename&#34;
+]</code></pre>
 </details>
 </section>
 <section>
 <h2 class="section-title" id="header-submodules">Sub-modules</h2>
 <dl>
-<dt><code class="name"><a title="evaltools.data" href="data/index.html">evaltools.data</a></code></dt>
+<dt><code class="name"><a title="evaltools.utilities.JSON" href="JSON.html">evaltools.utilities.JSON</a></code></dt>
 <dd>
-<div class="desc"><p>Facilities for processing data and districting plans in a standardized fashion.</p></div>
-</dd>
-<dt><code class="name"><a title="evaltools.geometry" href="geometry/index.html">evaltools.geometry</a></code></dt>
-<dd>
-<div class="desc"><p>Provides ease-of-use functionality for geographic and geometric operations.</p></div>
-</dd>
-<dt><code class="name"><a title="evaltools.plotting" href="plotting/index.html">evaltools.plotting</a></code></dt>
-<dd>
-<div class="desc"><p>Makes pretty pictures of districting plans, dual graphs, histograms, boxplots,
-and violin plots 🎻.</p></div>
-</dd>
-<dt><code class="name"><a title="evaltools.scores" href="scores/index.html">evaltools.scores</a></code></dt>
-<dd>
-<div class="desc"><p>Basic functionality for evaluating districting plans.</p></div>
-</dd>
-<dt><code class="name"><a title="evaltools.utilities" href="utilities/index.html">evaltools.utilities</a></code></dt>
-<dd>
-<div class="desc"><p>Oft-used utilities for working with geometric data.</p></div>
+<div class="desc"></div>
 </dd>
 </dl>
 </section>
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="evaltools.utilities.objectify"><code class="name flex">
+<span>def <span class="ident">objectify</span></span>(<span>location) ‑> Union[List[<a title="evaltools.utilities.JSON.JSONtoObject" href="JSON.html#evaltools.utilities.JSON.JSONtoObject">JSONtoObject</a>], <a title="evaltools.utilities.JSON.JSONtoObject" href="JSON.html#evaltools.utilities.JSON.JSONtoObject">JSONtoObject</a>]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Reads in JSON data and creates a Python object out of it. If the JSON data
+read in is a list of JSON objects, a list of Python objects are returned.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>location</code></strong> :&ensp;<code>string</code></dt>
+<dd>Filepath.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A dot-notation-accessible object or list of dot-notation-accessible
+objects.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def objectify(location) -&gt; Union[List[JSONtoObject],JSONtoObject]:
+    &#34;&#34;&#34;
+    Reads in JSON data and creates a Python object out of it. If the JSON data
+    read in is a list of JSON objects, a list of Python objects are returned.
+
+    Args:
+        location (string): Filepath.
+
+    Returns:
+        A dot-notation-accessible object or list of dot-notation-accessible
+        objects.
+    &#34;&#34;&#34;
+    with open(location) as r:
+        data = json.load(r)
+
+        if type(data) is list: return [JSONtoObject(p) for p in data]
+        return JSONtoObject(data)</code></pre>
+</details>
+</dd>
+<dt id="evaltools.utilities.rename"><code class="name flex">
+<span>def <span class="ident">rename</span></span>(<span>old, new)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Renames all files in the path specified by <code>old</code> to <code>new</code>; intended for use
+with directories containing shapefiles. For example, if a directory called
+<code>blocks20/</code> contains no shapefile called <code>blocks20.shp</code>, this is (a) bad
+practice and (b) prevents GeoPandas from reading the shapefile from a partial
+filepath (e.g. <code>gpd.read_file("blocks20/")</code>).</p>
+<h2 id="example">Example</h2>
+<p>Basic usage.</p>
+<pre><code>from evaltools.utils import rename
+
+old = "./data/geometries/to-be-renamed"
+new = "blocks20"
+rename(old, new)
+</code></pre>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>old</code></strong> :&ensp;<code>str</code></dt>
+<dd><em>Directory</em> where files to be renamed are located.</dd>
+<dt><strong><code>new</code></strong> :&ensp;<code>str</code></dt>
+<dd>New name to be applied to the directory and all files in it.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def rename(old, new):
+    &#34;&#34;&#34;
+    Renames all files in the path specified by `old` to `new`; intended for use
+    with directories containing shapefiles. For example, if a directory called
+    `blocks20/` contains no shapefile called `blocks20.shp`, this is (a) bad
+    practice and (b) prevents GeoPandas from reading the shapefile from a partial
+    filepath (e.g. `gpd.read_file(&#34;blocks20/&#34;)`).
+
+    Example:
+        Basic usage.
+
+            from evaltools.utils import rename
+
+            old = &#34;./data/geometries/to-be-renamed&#34;
+            new = &#34;blocks20&#34;
+            rename(old, new)
+
+    Args:
+        old (str): _Directory_ where files to be renamed are located.
+        new (str): New name to be applied to the directory and all files in it.
+    &#34;&#34;&#34;
+    for file in os.listdir(old):
+        # Check whether the file has an extension.
+        if &#34;.&#34; in file:
+            extension = file[file.index(&#34;.&#34;):]
+            os.rename(path.join(old, file), path.join(old, new + extension))
+
+    # Rename the root directory.
+    split = old.split(&#34;/&#34;)
+    _base = split[:-1] if split[-1] != &#34;&#34; else split[:-2]
+    base = &#34;/&#34;.join(_base)
+    new_root = path.join(base, new)
+    os.rename(old, new_root)</code></pre>
+</details>
+</dd>
+</dl>
 </section>
 <section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="evaltools.utilities.JSONtoObject"><code class="flex name class">
+<span>class <span class="ident">JSONtoObject</span></span>
+<span>(</span><span>data)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>A class which represents JSON data as a Python object rather than a dict. If
+the JSON object is a list, returns a list of JSON-ified objects.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>string</code></dt>
+<dd>Data to jsonify.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class JSONtoObject(object):
+    &#34;&#34;&#34;
+    A class which represents JSON data as a Python object rather than a dict. If
+    the JSON object is a list, returns a list of JSON-ified objects.
+    &#34;&#34;&#34;
+    def __init__(self, data):
+        &#34;&#34;&#34;
+        Args:
+            data (string): Data to jsonify.
+        &#34;&#34;&#34;
+        for k, v in data.items(): self.__dict__[k] = v</code></pre>
+</details>
+</dd>
+</dl>
 </section>
 </article>
 <nav id="sidebar">
@@ -126,18 +235,30 @@ float: right;
 </header>
 <h1>Index</h1>
 <div class="toc">
-<ul>
-<li><a href="#the-redistricting-analysts-toolkit">the redistricting analyst's toolkit.</a></li>
-</ul>
+<ul></ul>
 </div>
 <ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="evaltools" href="../index.html">evaltools</a></code></li>
+</ul>
+</li>
 <li><h3><a href="#header-submodules">Sub-modules</a></h3>
 <ul>
-<li><code><a title="evaltools.data" href="data/index.html">evaltools.data</a></code></li>
-<li><code><a title="evaltools.geometry" href="geometry/index.html">evaltools.geometry</a></code></li>
-<li><code><a title="evaltools.plotting" href="plotting/index.html">evaltools.plotting</a></code></li>
-<li><code><a title="evaltools.scores" href="scores/index.html">evaltools.scores</a></code></li>
-<li><code><a title="evaltools.utilities" href="utilities/index.html">evaltools.utilities</a></code></li>
+<li><code><a title="evaltools.utilities.JSON" href="JSON.html">evaltools.utilities.JSON</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="evaltools.utilities.objectify" href="#evaltools.utilities.objectify">objectify</a></code></li>
+<li><code><a title="evaltools.utilities.rename" href="#evaltools.utilities.rename">rename</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="evaltools.utilities.JSONtoObject" href="#evaltools.utilities.JSONtoObject">JSONtoObject</a></code></h4>
+</li>
 </ul>
 </li>
 </ul>

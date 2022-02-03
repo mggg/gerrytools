@@ -36,6 +36,7 @@ def gif_multidimensional(data,
                          labels=[&#34;X values&#34;, &#34;Y values&#34;, &#34;Histogram values&#34;],
                          filename=&#34;testfile&#34;, 
                          folder=&#34;test&#34;, 
+                         limits=None,
                          DPI=150,
                          figsize=(12,8),
                          ):
@@ -66,7 +67,7 @@ def gif_multidimensional(data,
     x_limits = (lower_bound * min_of_min(xs), upper_bound * max_of_max(xs))
     y_limits = (lower_bound * min_of_min(ys), upper_bound * max_of_max(ys))
     hist_limits = (int(lower_bound * min_of_min(hists)), int(upper_bound * max_of_max(hists)))
-    limits = [x_limits, y_limits, hist_limits]
+    limits = [x_limits, y_limits, hist_limits] if not limits else limits
     
     save = {
         &#34;folder&#34;:folder,
@@ -110,7 +111,7 @@ def max_of_max(big_list):
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.plotting.gifs.gif_multidimensional"><code class="name flex">
-<span>def <span class="ident">gif_multidimensional</span></span>(<span>data, proposed_info={}, labels=['X values', 'Y values', 'Histogram values'], filename='testfile', folder='test', DPI=150, figsize=(12, 8))</span>
+<span>def <span class="ident">gif_multidimensional</span></span>(<span>data, proposed_info={}, labels=['X values', 'Y values', 'Histogram values'], filename='testfile', folder='test', limits=None, DPI=150, figsize=(12, 8))</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Plot many multidimensional figures in their own <code>{folder}/{filename}/</code> directory. Each
@@ -143,6 +144,7 @@ number of frames/ensembles, where each element is a list of all values in the en
                          labels=[&#34;X values&#34;, &#34;Y values&#34;, &#34;Histogram values&#34;],
                          filename=&#34;testfile&#34;, 
                          folder=&#34;test&#34;, 
+                         limits=None,
                          DPI=150,
                          figsize=(12,8),
                          ):
@@ -173,7 +175,7 @@ number of frames/ensembles, where each element is a list of all values in the en
     x_limits = (lower_bound * min_of_min(xs), upper_bound * max_of_max(xs))
     y_limits = (lower_bound * min_of_min(ys), upper_bound * max_of_max(ys))
     hist_limits = (int(lower_bound * min_of_min(hists)), int(upper_bound * max_of_max(hists)))
-    limits = [x_limits, y_limits, hist_limits]
+    limits = [x_limits, y_limits, hist_limits] if not limits else limits
     
     save = {
         &#34;folder&#34;:folder,
