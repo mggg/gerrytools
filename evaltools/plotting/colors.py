@@ -16,6 +16,11 @@ Citizen Kane).
 """
 citizenBlue = "#4693b3"
 
+"""
+Overlay colors for choropleth maps.
+"""
+overlays = ["gainsboro", "silver", "darkgray", "gray", "dimgrey"]
+
 def hexshift(color) -> str:
     """
     Randomly modifies the provided hexadecimal color.
@@ -89,6 +94,7 @@ def flare(n) -> list:
     """
     return list(sns.color_palette("flare", as_cmap=False, n_colors=n))
 
+
 def purples(n) -> list:
     """
     Returns a list of colors based on the `Purples` Matplotlib/seaborn colormap.
@@ -100,6 +106,7 @@ def purples(n) -> list:
         List of RGB triples.
     """
     return list(sns.color_palette("Purples", as_cmap=False, n_colors=n))
+
 
 def greens(n) -> list:
     """
