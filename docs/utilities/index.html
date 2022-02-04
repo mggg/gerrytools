@@ -92,7 +92,7 @@ information about districting plans.</p></div>
         # First, check whether `data` is a list; if it is, deal with all the
         # plans individually and return the list.
         if type(data) is list: return [
-            JSON(
+            JSONtoObject(
                 column=p[&#34;column&#34;],
                 locator=p[&#34;locator&#34;],
                 title=p[&#34;title&#34;] if p.get(&#34;title&#34;, False) else None
@@ -101,7 +101,7 @@ information about districting plans.</p></div>
         ]
 
         # Otherwise, return a singleton list with a single plan.
-        return [JSON(
+        return [JSONtoObject(
             column=data[&#34;column&#34;],
             locator=data[&#34;locator&#34;],
             title=data[&#34;title&#34;] if data.get(&#34;title&#34;, False) else None
