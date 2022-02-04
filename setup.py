@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 requirements = [
     "pandas", "scipy", "networkx", "geopandas", "shapely", "matplotlib",
     "gerrychain", "sortedcontainers", "gurobipy", "jsonlines", "opencv-python",
-    "imageio", "us", "pydantic" 
+    "imageio", "us", "pydantic", "censusdata", "seaborn"
 ]
 
 setup(
@@ -14,5 +14,10 @@ setup(
     description="Tools for processing and visualizing districting plans.",
     url="https://github.com/mggg/plan-evaluation-processing",
     packages=find_packages(exclude=["tests"]),
-    install_requires=requirements
+    install_requires=requirements,
+    extras_require={
+        "dev": [
+            "pdoc3"
+        ]
+    }
 )
