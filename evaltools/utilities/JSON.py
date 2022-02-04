@@ -68,7 +68,7 @@ def jsonify(location) -> list:
         # First, check whether `data` is a list; if it is, deal with all the
         # plans individually and return the list.
         if type(data) is list: return [
-            JSON(
+            JSONtoObject(
                 column=p["column"],
                 locator=p["locator"],
                 title=p["title"] if p.get("title", False) else None
@@ -77,7 +77,7 @@ def jsonify(location) -> list:
         ]
 
         # Otherwise, return a singleton list with a single plan.
-        return [JSON(
+        return [JSONtoObject(
             column=data["column"],
             locator=data["locator"],
             title=data["title"] if data.get("title", False) else None
