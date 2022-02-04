@@ -1,7 +1,7 @@
 
 # Generate documentation with pdoc; rsync to the immediate parent directory;
 # delete the old documentation directory.
-pdoc evaltools --html --output-dir=docs --force
+pdoc evaltools --template-dir docs/templates --html --output-dir=docs --force
 rsync -a docs/evaltools/ docs/
 rm -rf docs/evaltools
 

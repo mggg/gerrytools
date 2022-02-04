@@ -2,13 +2,13 @@
 import geopandas as gpd
 from evaltools import dualgraph
 
-vtds = gpd.read_file("./test-resources/test-vtds")
+vtds = gpd.read_file("./test-resources/test-precincts")
+vtds = vtds.to_crs("epsg:4326")
+vtds["LAT"] = vtds["geometry"].apply(lambda g: g.representative_point().coords[0][1]).astype(float)
+vtds["LON"] = vtds["geometry"].apply(lambda g: g.representative_point().coords[0][0]).astype(float)
 vtds = vtds[[
-    "COUNTYFP20", "GEOID20", "NAME20", "TOTPOP", "INTPTLAT20", "INTPTLON20",
-    "G20PREDBID", "CONGRESS", "geometry"
+    "COUNTYFP", "PRECINCT", "TOTPOP", "PRES16D", "CD", "geometry", "LAT", "LON"
 ]]
-vtds["INTPTLAT20"] = vtds["INTPTLAT20"].astype(float)
-vtds["INTPTLON20"] = vtds["INTPTLON20"].astype(float)
 
-dg = dualgraph(vtds, "GEOID20")
+dg = dualgraph(vtds, "PRECINCT")
 dg.to_json("./test-resources/test-graph.json")

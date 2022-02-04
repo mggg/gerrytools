@@ -6,3 +6,4 @@ __pycache__/
 # Ignore large testing files.
 tests/test-resources/*
 */**/*.png
+tests/*.ipynb

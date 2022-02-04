@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>evaltools API documentation</title>
-<meta name="description" content="the redistricting analyst&#39;s toolkit …" />
+<title>evaltools.data.URLs API documentation</title>
+<meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -20,66 +20,158 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Package <code>evaltools</code></h1>
+<h1 class="title">Module <code>evaltools.data.URLs</code></h1>
 </header>
 <section id="section-intro">
-<h1 id="the-redistricting-analysts-toolkit">the redistricting analyst's toolkit.</h1>
-<p><code><a title="evaltools" href="#evaltools">evaltools</a></code> is a light package for redistricting analysis essentials,
-making geographic data operations, map visualizations, plan
-evaluation, and data retrieval a snap.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">&#34;&#34;&#34;
+<pre><code class="python">def ids(state):
+    &#34;&#34;&#34;
+    URL for accessing districtr identifiers.
 
-.. include:: ../docs/introduction.md
-&#34;&#34;&#34;
+    Args:
+        state: Name of the state (e.g. `&#34;wisconsin&#34;`) for which we&#39;re retrieving
+            districtr identifiers.
 
-from .plotting import (
-    drawplan, drawgraph, districtr, flare, purples, redbluecmap, PlotSpecification
-)
-from .geometry import (
-    dissolve, dualgraph, invert, unitmap, minimize_dispersion, minimize_parity,
-    minimize_dispersion_with_parity, calculate_dispersion, dispersion_updater_closure
-)
-from .scoring import (
-    splits, pieces, deviations, contiguous, unassigned_units,
-    unassigned_population
-)
-from .utilities import rename, JSONtoObject, jsonify
-from .data import acs5, cvap, census</code></pre>
+    Returns:
+        String with the appropriate URL.
+    &#34;&#34;&#34;
+    return f&#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/districtr-ids/{state.name.lower()}&#34;
+
+
+def csvs(state, ptype=&#34;plan&#34;):
+    &#34;&#34;&#34;
+    URL for accessing districtr plan metadata.
+
+    Args:
+        state: `us.States` object (e.g. `us.states.WI`)
+        ptype: Type of plan we&#39;re retrieving; defaults to `&#34;plan&#34;`.
+
+    Returns:
+        String with the appropriate URL.
+    &#34;&#34;&#34;
+    prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/csv/&#34;
+    suffix = f&#34;?type={ptype}&amp;length=10000&#34;
+    return f&#34;{prefix}{state.name.lower()}{suffix}&#34;
+
+
+def one(identifier):
+    &#34;&#34;&#34;
+    URL for accessing an individual districtr plan.
+
+    Args:
+        identifier: distrivtr identifier.
+
+    Returns:
+        String with the appropriate URL.
+    &#34;&#34;&#34;
+    return f&#34;https://districtr.org/.netlify/functions/planRead?id={identifier}&#34;</code></pre>
 </details>
 </section>
 <section>
-<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt><code class="name"><a title="evaltools.data" href="data/index.html">evaltools.data</a></code></dt>
+<dt id="evaltools.data.URLs.csvs"><code class="name flex">
+<span>def <span class="ident">csvs</span></span>(<span>state, ptype='plan')</span>
+</code></dt>
 <dd>
-<div class="desc"><p>Facilities for processing data and districting plans in a standardized fashion.</p></div>
+<div class="desc"><p>URL for accessing districtr plan metadata.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong></dt>
+<dd><code>us.States</code> object (e.g. <code>us.states.WI</code>)</dd>
+<dt><strong><code>ptype</code></strong></dt>
+<dd>Type of plan we're retrieving; defaults to <code>"plan"</code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>String with the appropriate URL.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def csvs(state, ptype=&#34;plan&#34;):
+    &#34;&#34;&#34;
+    URL for accessing districtr plan metadata.
+
+    Args:
+        state: `us.States` object (e.g. `us.states.WI`)
+        ptype: Type of plan we&#39;re retrieving; defaults to `&#34;plan&#34;`.
+
+    Returns:
+        String with the appropriate URL.
+    &#34;&#34;&#34;
+    prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/csv/&#34;
+    suffix = f&#34;?type={ptype}&amp;length=10000&#34;
+    return f&#34;{prefix}{state.name.lower()}{suffix}&#34;</code></pre>
+</details>
 </dd>
-<dt><code class="name"><a title="evaltools.geometry" href="geometry/index.html">evaltools.geometry</a></code></dt>
+<dt id="evaltools.data.URLs.ids"><code class="name flex">
+<span>def <span class="ident">ids</span></span>(<span>state)</span>
+</code></dt>
 <dd>
-<div class="desc"><p>Provides ease-of-use functionality for geographic and geometric operations.</p></div>
+<div class="desc"><p>URL for accessing districtr identifiers.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong></dt>
+<dd>Name of the state (e.g. <code>"wisconsin"</code>) for which we're retrieving
+districtr identifiers.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>String with the appropriate URL.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def ids(state):
+    &#34;&#34;&#34;
+    URL for accessing districtr identifiers.
+
+    Args:
+        state: Name of the state (e.g. `&#34;wisconsin&#34;`) for which we&#39;re retrieving
+            districtr identifiers.
+
+    Returns:
+        String with the appropriate URL.
+    &#34;&#34;&#34;
+    return f&#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/districtr-ids/{state.name.lower()}&#34;</code></pre>
+</details>
 </dd>
-<dt><code class="name"><a title="evaltools.plotting" href="plotting/index.html">evaltools.plotting</a></code></dt>
+<dt id="evaltools.data.URLs.one"><code class="name flex">
+<span>def <span class="ident">one</span></span>(<span>identifier)</span>
+</code></dt>
 <dd>
-<div class="desc"><p>Makes pretty pictures of districting plans, dual graphs, histograms, boxplots,
-and violin plots 🎻.</p></div>
-</dd>
-<dt><code class="name"><a title="evaltools.scoring" href="scoring/index.html">evaltools.scoring</a></code></dt>
-<dd>
-<div class="desc"><p>Basic functionality for evaluating districting plans.</p></div>
-</dd>
-<dt><code class="name"><a title="evaltools.utilities" href="utilities/index.html">evaltools.utilities</a></code></dt>
-<dd>
-<div class="desc"><p>Oft-used utilities for working with geometric data.</p></div>
+<div class="desc"><p>URL for accessing an individual districtr plan.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>identifier</code></strong></dt>
+<dd>distrivtr identifier.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>String with the appropriate URL.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def one(identifier):
+    &#34;&#34;&#34;
+    URL for accessing an individual districtr plan.
+
+    Args:
+        identifier: distrivtr identifier.
+
+    Returns:
+        String with the appropriate URL.
+    &#34;&#34;&#34;
+    return f&#34;https://districtr.org/.netlify/functions/planRead?id={identifier}&#34;</code></pre>
+</details>
 </dd>
 </dl>
-</section>
-<section>
-</section>
-<section>
 </section>
 <section>
 </section>
@@ -126,18 +218,19 @@ float: right;
 </header>
 <h1>Index</h1>
 <div class="toc">
-<ul>
-<li><a href="#the-redistricting-analysts-toolkit">the redistricting analyst's toolkit.</a></li>
-</ul>
+<ul></ul>
 </div>
 <ul id="index">
-<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<li><h3>Super-module</h3>
 <ul>
-<li><code><a title="evaltools.data" href="data/index.html">evaltools.data</a></code></li>
-<li><code><a title="evaltools.geometry" href="geometry/index.html">evaltools.geometry</a></code></li>
-<li><code><a title="evaltools.plotting" href="plotting/index.html">evaltools.plotting</a></code></li>
-<li><code><a title="evaltools.scoring" href="scoring/index.html">evaltools.scoring</a></code></li>
-<li><code><a title="evaltools.utilities" href="utilities/index.html">evaltools.utilities</a></code></li>
+<li><code><a title="evaltools.data" href="index.html">evaltools.data</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="evaltools.data.URLs.csvs" href="#evaltools.data.URLs.csvs">csvs</a></code></li>
+<li><code><a title="evaltools.data.URLs.ids" href="#evaltools.data.URLs.ids">ids</a></code></li>
+<li><code><a title="evaltools.data.URLs.one" href="#evaltools.data.URLs.one">one</a></code></li>
 </ul>
 </li>
 </ul>
