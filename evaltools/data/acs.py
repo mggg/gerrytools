@@ -38,8 +38,8 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
         13: "HCVAP" 
     }
 
-    # First, load the raw data requested; allowed geometry values are "bg10" and
-    # "tract10."
+    # First, load the raw data requested; allowed geometry values are "block group"
+    # and "tract."
     if geometry not in {"block group", "tract"}:
         print(f"Requested geometry \"{geometry}\" is not allowed; loading tracts.")
         geometry = "tract"
@@ -73,6 +73,7 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
         for line in block:
             record[geometry.replace(" ", "").upper() + "10"] = line["GEOID"]
             record[descriptions[line["lnnumber"]] + "19"] = line["cvap_est"]
+            record[descriptions[line["lnnumber"]] + "19e"] = line["cvap_moe"]
 
         collapsed.append(record)
 
@@ -86,7 +87,10 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
 def acs5(state, geometry="tract", year=2019, columns=[], white="NHWVAP19") -> pd.DataFrame:
     """
     Retrieves ACS 5-year population estimates for the provided state, geometry
-    level, and year. Geometries are from the **2010 Census**.
+    level, and year. Geometries are from the **2010 Census**. Also retrieves
+    ACS-reported CVAP data, which closely matches that reported by the CVAP
+    special tabulation; CVAP data are only returned at the tract level, and are
+    otherwise reported as 0.
     
     Args:
         state (us.State): `State` object for the desired state.
@@ -145,7 +149,7 @@ def acs5(state, geometry="tract", year=2019, columns=[], white="NHWVAP19") -> pd
     groups.update({
         column: 
             variables(f"B05003{table}", 9, 9) + variables(f"B05003{table}", 11, 11) + # men
-            variables(f"B05003{table}", 15, 15) + variables(f"B05003{table}", 17, 17) # women
+            variables(f"B05003{table}", 20, 20) + variables(f"B05003{table}", 22, 22) # women
         for column, table in cvap_tables
     })
     
@@ -153,8 +157,8 @@ def acs5(state, geometry="tract", year=2019, columns=[], white="NHWVAP19") -> pd
     groups["VAP19"] = variables("B01001", 7, 25) + variables("B01001", 31, 49)
     groups["CVAP19"] = variables(f"B05003", 9, 9) + \
         variables(f"B05003", 11, 11) + \
-        variables(f"B05003", 15, 15) + \
-        variables(f"B05003", 17, 17)
+        variables(f"B05003", 20, 20) + \
+        variables(f"B05003", 22, 22)
 
     # TODO: all variables used across the data submodule should be packaged up
     # as a class, so we can access individual dictionaries of variables to add.

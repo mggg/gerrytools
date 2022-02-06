@@ -66,8 +66,8 @@ def cvap(state, geometry=&#34;tract&#34;) -&gt; pd.DataFrame:
         13: &#34;HCVAP&#34; 
     }
 
-    # First, load the raw data requested; allowed geometry values are &#34;bg10&#34; and
-    # &#34;tract10.&#34;
+    # First, load the raw data requested; allowed geometry values are &#34;block group&#34;
+    # and &#34;tract.&#34;
     if geometry not in {&#34;block group&#34;, &#34;tract&#34;}:
         print(f&#34;Requested geometry \&#34;{geometry}\&#34; is not allowed; loading tracts.&#34;)
         geometry = &#34;tract&#34;
@@ -101,6 +101,7 @@ def cvap(state, geometry=&#34;tract&#34;) -&gt; pd.DataFrame:
         for line in block:
             record[geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;] = line[&#34;GEOID&#34;]
             record[descriptions[line[&#34;lnnumber&#34;]] + &#34;19&#34;] = line[&#34;cvap_est&#34;]
+            record[descriptions[line[&#34;lnnumber&#34;]] + &#34;19e&#34;] = line[&#34;cvap_moe&#34;]
 
         collapsed.append(record)
 
@@ -114,7 +115,10 @@ def cvap(state, geometry=&#34;tract&#34;) -&gt; pd.DataFrame:
 def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWVAP19&#34;) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves ACS 5-year population estimates for the provided state, geometry
-    level, and year. Geometries are from the **2010 Census**.
+    level, and year. Geometries are from the **2010 Census**. Also retrieves
+    ACS-reported CVAP data, which closely matches that reported by the CVAP
+    special tabulation; CVAP data are only returned at the tract level, and are
+    otherwise reported as 0.
     
     Args:
         state (us.State): `State` object for the desired state.
@@ -173,7 +177,7 @@ def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWV
     groups.update({
         column: 
             variables(f&#34;B05003{table}&#34;, 9, 9) + variables(f&#34;B05003{table}&#34;, 11, 11) + # men
-            variables(f&#34;B05003{table}&#34;, 15, 15) + variables(f&#34;B05003{table}&#34;, 17, 17) # women
+            variables(f&#34;B05003{table}&#34;, 20, 20) + variables(f&#34;B05003{table}&#34;, 22, 22) # women
         for column, table in cvap_tables
     })
     
@@ -181,8 +185,8 @@ def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWV
     groups[&#34;VAP19&#34;] = variables(&#34;B01001&#34;, 7, 25) + variables(&#34;B01001&#34;, 31, 49)
     groups[&#34;CVAP19&#34;] = variables(f&#34;B05003&#34;, 9, 9) + \
         variables(f&#34;B05003&#34;, 11, 11) + \
-        variables(f&#34;B05003&#34;, 15, 15) + \
-        variables(f&#34;B05003&#34;, 17, 17)
+        variables(f&#34;B05003&#34;, 20, 20) + \
+        variables(f&#34;B05003&#34;, 22, 22)
 
     # TODO: all variables used across the data submodule should be packaged up
     # as a class, so we can access individual dictionaries of variables to add.
@@ -274,7 +278,10 @@ def _raw(geometry) -&gt; pd.DataFrame:
 </code></dt>
 <dd>
 <div class="desc"><p>Retrieves ACS 5-year population estimates for the provided state, geometry
-level, and year. Geometries are from the <strong>2010 Census</strong>.</p>
+level, and year. Geometries are from the <strong>2010 Census</strong>. Also retrieves
+ACS-reported CVAP data, which closely matches that reported by the CVAP
+special tabulation; CVAP data are only returned at the tract level, and are
+otherwise reported as 0.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>state</code></strong> :&ensp;<code>us.State</code></dt>
@@ -300,7 +307,10 @@ column.</dd>
 <pre><code class="python">def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWVAP19&#34;) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves ACS 5-year population estimates for the provided state, geometry
-    level, and year. Geometries are from the **2010 Census**.
+    level, and year. Geometries are from the **2010 Census**. Also retrieves
+    ACS-reported CVAP data, which closely matches that reported by the CVAP
+    special tabulation; CVAP data are only returned at the tract level, and are
+    otherwise reported as 0.
     
     Args:
         state (us.State): `State` object for the desired state.
@@ -359,7 +369,7 @@ column.</dd>
     groups.update({
         column: 
             variables(f&#34;B05003{table}&#34;, 9, 9) + variables(f&#34;B05003{table}&#34;, 11, 11) + # men
-            variables(f&#34;B05003{table}&#34;, 15, 15) + variables(f&#34;B05003{table}&#34;, 17, 17) # women
+            variables(f&#34;B05003{table}&#34;, 20, 20) + variables(f&#34;B05003{table}&#34;, 22, 22) # women
         for column, table in cvap_tables
     })
     
@@ -367,8 +377,8 @@ column.</dd>
     groups[&#34;VAP19&#34;] = variables(&#34;B01001&#34;, 7, 25) + variables(&#34;B01001&#34;, 31, 49)
     groups[&#34;CVAP19&#34;] = variables(f&#34;B05003&#34;, 9, 9) + \
         variables(f&#34;B05003&#34;, 11, 11) + \
-        variables(f&#34;B05003&#34;, 15, 15) + \
-        variables(f&#34;B05003&#34;, 17, 17)
+        variables(f&#34;B05003&#34;, 20, 20) + \
+        variables(f&#34;B05003&#34;, 22, 22)
 
     # TODO: all variables used across the data submodule should be packaged up
     # as a class, so we can access individual dictionaries of variables to add.
@@ -461,8 +471,8 @@ the 2019 ACS CVAP Special Tab.</p></div>
         13: &#34;HCVAP&#34; 
     }
 
-    # First, load the raw data requested; allowed geometry values are &#34;bg10&#34; and
-    # &#34;tract10.&#34;
+    # First, load the raw data requested; allowed geometry values are &#34;block group&#34;
+    # and &#34;tract.&#34;
     if geometry not in {&#34;block group&#34;, &#34;tract&#34;}:
         print(f&#34;Requested geometry \&#34;{geometry}\&#34; is not allowed; loading tracts.&#34;)
         geometry = &#34;tract&#34;
@@ -496,6 +506,7 @@ the 2019 ACS CVAP Special Tab.</p></div>
         for line in block:
             record[geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;] = line[&#34;GEOID&#34;]
             record[descriptions[line[&#34;lnnumber&#34;]] + &#34;19&#34;] = line[&#34;cvap_est&#34;]
+            record[descriptions[line[&#34;lnnumber&#34;]] + &#34;19e&#34;] = line[&#34;cvap_moe&#34;]
 
         collapsed.append(record)
 
