@@ -102,31 +102,38 @@ def test_acs5_bgs():
     assert set(list(data)) == columns
 
 
+# These test statistics are taken from the Alabama 2020 PL94-171 P1 through P4
+# tables from the Census Data Explorer (https://data.census.gov/cedsci/). We then
+# use the `census()` method to retrieve Alabama 2020 PL94-171 at all three levels
+# of geography, checking that the columns on the data and the columns below sum
+# to the same values.
+CENSUSTESTDATA = {
+    "P1": [
+        ("TOTPOP20", 5024279),
+        ("WHITEASIANPOP20", 18510)
+    ],
+    "P2": [
+        ("NHWHITEAMINASIANPOP20", 821),
+        ("HPOP20", 264047)
+    ],
+    "P3": [
+        ("WHITEASIANOTHVAP20", 201),
+        ("VAP20", 3917166)
+    ],
+    "P4": [
+        ("NHBLACKASIANOTHVAP20", 31),
+        ("HVAP20", 166856)
+    ]
+}
+
+
 def test_census_tracts():
     # Get a test set of data on Alabama.
     AL = us.states.AL
     tracts = 1437
-    tests = {
-        "P1": [
-            ("TOTPOP20", 5024279),
-            ("WHITEASIANPOP20", 18510)
-        ],
-        "P2": [
-            ("NHWHITEAMINASIANPOP20", 821),
-            ("HPOP20", 264047)
-        ],
-        "P3": [
-            ("WHITEASIANOTHVAP20", 201),
-            ("VAP20", 3917166)
-        ],
-        "P4": [
-            ("NHBLACKASIANOTHVAP20", 31),
-            ("HVAP20", 166856)
-        ]
-    }
 
     # Get the data for each table and verify that the values are correct.
-    for table, cases in tests.items():
+    for table, cases in CENSUSTESTDATA.items():
         data = census(AL, table=table, geometry="tract")
         columns = set(variables(table).values()) | {"GEOID20"}
         
@@ -142,27 +149,9 @@ def test_census_bgs():
     # Get a test set of data on Alabama.
     AL = us.states.AL
     bgs = 3925
-    tests = {
-        "P1": [
-            ("TOTPOP20", 5024279),
-            ("WHITEASIANPOP20", 18510)
-        ],
-        "P2": [
-            ("NHWHITEAMINASIANPOP20", 821),
-            ("HPOP20", 264047)
-        ],
-        "P3": [
-            ("WHITEASIANOTHVAP20", 201),
-            ("VAP20", 3917166)
-        ],
-        "P4": [
-            ("NHBLACKASIANOTHVAP20", 31),
-            ("HVAP20", 166856)
-        ]
-    }
 
     # Get the data for each table and verify that the values are correct.
-    for table, cases in tests.items():
+    for table, cases in CENSUSTESTDATA.items():
         data = census(AL, table=table, geometry="block group")
         columns = set(variables(table).values()) | {"GEOID20"}
         
@@ -178,27 +167,8 @@ def test_census_blocks():
     AL = us.states.AL
     blocks = 185976
 
-    tests = {
-        "P1": [
-            ("TOTPOP20", 5024279),
-            ("WHITEASIANPOP20", 18510)
-        ],
-        "P2": [
-            ("NHWHITEAMINASIANPOP20", 821),
-            ("HPOP20", 264047)
-        ],
-        "P3": [
-            ("WHITEASIANOTHVAP20", 201),
-            ("VAP20", 3917166)
-        ],
-        "P4": [
-            ("NHBLACKASIANOTHVAP20", 31),
-            ("HVAP20", 166856)
-        ]
-    }
-
     # Get the data for each table and verify that the values are correct.
-    for table, cases in tests.items():
+    for table, cases in CENSUSTESTDATA.items():
         data = census(AL, table=table, geometry="block")
         columns = set(variables(table).values()) | {"GEOID20"}
         
