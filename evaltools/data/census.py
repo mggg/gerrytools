@@ -112,6 +112,10 @@ def census(
     merged = reduce(lambda l, r: pd.merge(l, r, on="GEOID20"), mergeable)
     merged = merged.rename(varmap, axis=1)
     merged = merged.astype({var: int for var in varmap.values()})
+
+    # Make the GEOID20 column the first column.
+    merged = merged[["GEOID20"] + list(varmap.values())]
+
     return merged
 
 
