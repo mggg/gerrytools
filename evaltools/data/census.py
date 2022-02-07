@@ -38,8 +38,8 @@ def census(
             implicitly protect against incorrect column names and excessive API
             calls.
         geometry (string, optional): Geometry level at which we retrieve data.
-            Defaults to `"block"`, to retrieve block-level data for the state
-            provided.
+            Defaults to `"block"` to retrieve block-level data for the state
+            provided. Accepted values are `"block"`, `"block group`", and `"tract"`.
         key (string, optional): Census API key.
 
     Returns:
