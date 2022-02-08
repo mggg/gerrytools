@@ -38,8 +38,8 @@ def census(
             implicitly protect against incorrect column names and excessive API
             calls.
         geometry (string, optional): Geometry level at which we retrieve data.
-            Defaults to `"block"`, to retrieve block-level data for the state
-            provided.
+            Defaults to `"block"` to retrieve block-level data for the state
+            provided. Accepted values are `"block"`, `"block group`", and `"tract"`.
         key (string, optional): Census API key.
 
     Returns:
@@ -65,14 +65,14 @@ def census(
     # Create the end part of the query string.
     q = [
         ("key", key),
-        ("for", f"{geometry}:*"),
+        ("for", f"{geometry.replace(' ', r'%20')}:*"),
         ("in", f"state:{str(state.fips).zfill(2)}"),
         ("in", "county:*"),
     ]
 
     # Based on the geometry type, add an additional entry; this is required to
     # match the Census geographic hierarchy.
-    if geometry != "block": q.append(("in", "tract:*"))
+    if geometry in {"block", "block group"}: q.append(("in", "tract:*"))
 
     # Now, since the Census doesn't allow us to request more than 50 variables
     # at once, we request things in two parts and then merge them together.
@@ -86,7 +86,8 @@ def census(
         # Get the chunk of variables and create a tail of columns (geographic
         # identifiers).
         varchunk = vars[start:stop]
-        tail = ["state", "county", "tract"] + (["block"] if geometry == "block" else [])
+        last = [geometry] if geometry in {"block group", "block"} else []
+        tail = ["state", "county", "tract"] + last
 
         # Create an unescaped query string.
         unescaped = q.copy()
@@ -107,9 +108,15 @@ def census(
         chunk = chunk.drop(tail, axis=1)
         mergeable.append(chunk)
 
-    # Merge the dataframes and rename.
+    # Merge the dataframes, rename everything, make the columns ints, and return.
     merged = reduce(lambda l, r: pd.merge(l, r, on="GEOID20"), mergeable)
-    return merged.rename(varmap, axis=1)
+    merged = merged.rename(varmap, axis=1)
+    merged = merged.astype({var: int for var in varmap.values()})
+
+    # Make the GEOID20 column the first column.
+    merged = merged[["GEOID20"] + list(varmap.values())]
+
+    return merged
 
 
 def variables(table) -> dict:
@@ -157,12 +164,12 @@ def variables(table) -> dict:
     # to get the total Hispanic population and the total population.
     if table in {"P2", "P4"}:
         numbers = [1, 2] + numbers
-        hcol = "HVAP20" if table == "P4" else "HISP20"
+        hcol = "HVAP20" if table == "P4" else "HPOP20"
         tcol = "VAP20" if table == "P4" else "TOTPOP20"
         combos = [tcol, hcol] + combos
     else:
         numbers = [1] + numbers
-        tcol = "VAP20" if table == "P4" else "TOTPOP20"
+        tcol = "VAP20" if table in {"P3", "P4"} else "TOTPOP20"
         combos = [tcol] + combos
     
     # Create the variable names and zip the names together with the combinations.
