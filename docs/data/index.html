@@ -79,11 +79,14 @@ __all__ = [
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.data.acs5"><code class="name flex">
-<span>def <span class="ident">acs5</span></span>(<span>state, geometry='tract', year=2019, columns=[], white='NHWVAP19') ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">acs5</span></span>(<span>state, geometry='tract', year=2019, columns=[], white='NHWVAP') ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Retrieves ACS 5-year population estimates for the provided state, geometry
-level, and year. Geometries are from the <strong>2010 Census</strong>.</p>
+level, and year. Geometries are from the <strong>2010 Census</strong>. Also retrieves
+ACS-reported CVAP data, which closely matches that reported by the CVAP
+special tabulation; CVAP data are only returned at the tract level, and are
+otherwise reported as 0.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>state</code></strong> :&ensp;<code>us.State</code></dt>
@@ -99,6 +102,9 @@ Acceptable values are <code>"tract"</code> and <code>"block group"</code>. Defau
 of columns including total populations by race and ethnicity and voting-age
 populations by race and ethnicity are returned, along with a GEOID
 column.</dd>
+<dt><strong><code>white</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The column removed from totals when calculating
+POC populations.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A DataFrame containing the formatted data.</p></div>
@@ -106,10 +112,13 @@ column.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWVAP19&#34;) -&gt; pd.DataFrame:
+<pre><code class="python">def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWVAP&#34;) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves ACS 5-year population estimates for the provided state, geometry
-    level, and year. Geometries are from the **2010 Census**.
+    level, and year. Geometries are from the **2010 Census**. Also retrieves
+    ACS-reported CVAP data, which closely matches that reported by the CVAP
+    special tabulation; CVAP data are only returned at the tract level, and are
+    otherwise reported as 0.
     
     Args:
         state (us.State): `State` object for the desired state.
@@ -121,21 +130,24 @@ column.</dd>
             of columns including total populations by race and ethnicity and voting-age
             populations by race and ethnicity are returned, along with a GEOID
             column.
+        white (str, optional): The column removed from totals when calculating
+            POC populations.
 
     Returns:
         A DataFrame containing the formatted data.
     &#34;&#34;&#34;
     # Columns for total populations.
+    yearsuffix = str(year)[-2:]
     popcolumns = {
-        &#34;B01001_001E&#34;: &#34;TOTPOP19&#34;,
-        &#34;B03002_003E&#34;: &#34;WHITE19&#34;,
-        &#34;B03002_004E&#34;: &#34;BLACK19&#34;,
-        &#34;B03002_005E&#34;: &#34;AMIN19&#34;,
-        &#34;B03002_006E&#34;: &#34;ASIAN19&#34;,
-        &#34;B03002_007E&#34;: &#34;NHPI19&#34;,
-        &#34;B03002_008E&#34;: &#34;OTH19&#34;,
-        &#34;B03002_009E&#34;: &#34;2MORE19&#34;,
-        &#34;B03002_002E&#34;: &#34;NHISP19&#34;,
+        &#34;B01001_001E&#34;: &#34;TOTPOP&#34; + yearsuffix,
+        &#34;B03002_003E&#34;: &#34;WHITE&#34; + yearsuffix,
+        &#34;B03002_004E&#34;: &#34;BLACK&#34; + yearsuffix,
+        &#34;B03002_005E&#34;: &#34;AMIN&#34; + yearsuffix,
+        &#34;B03002_006E&#34;: &#34;ASIAN&#34; + yearsuffix,
+        &#34;B03002_007E&#34;: &#34;NHPI&#34; + yearsuffix,
+        &#34;B03002_008E&#34;: &#34;OTH&#34; + yearsuffix,
+        &#34;B03002_009E&#34;: &#34;2MORE&#34; + yearsuffix,
+        &#34;B03002_002E&#34;: &#34;NHISP&#34; + yearsuffix,
     }
 
     # Create a dictionary of column groups.
@@ -144,40 +156,42 @@ column.</dd>
     # Get VAP columns. The columns listed here are by race, irrespective of ethnicity;
     # for example, WVAP19 is the group of people who identified White as their *only*
     # race, including people who identified as Hispanic and White.
-    vap_tables = list(zip(
-        [
-            &#34;WVAP19&#34;, &#34;BVAP19&#34;, &#34;AMINVAP19&#34;, &#34;ASIANVAP19&#34;, &#34;NHPIVAP19&#34;, &#34;OTHVAP19&#34;,
-            &#34;2MOREVAP19&#34;, &#34;NHWVAP19&#34;, &#34;HVAP19&#34;
-        ],
+    vapnames = [
+        &#34;WVAP&#34;, &#34;BVAP&#34;, &#34;AMINVAP&#34;, &#34;ASIANVAP&#34;, &#34;NHPIVAP&#34;, &#34;OTHVAP&#34;, &#34;2MOREVAP&#34;,
+        &#34;NHWVAP&#34;, &#34;HVAP&#34;
+    ]
+    vaptables = list(zip(
+        [column + yearsuffix for column in vapnames],
         [&#34;A&#34;, &#34;B&#34;, &#34;C&#34;, &#34;D&#34;, &#34;E&#34;, &#34;F&#34;, &#34;G&#34;, &#34;H&#34;, &#34;I&#34;]
     ))
     groups.update({
-        column: variables(f&#34;B01001{table}&#34;, 7, 16) + variables(f&#34;B01001{table}&#34;, 22, 31)
-        for column, table in vap_tables
+        column: _variables(f&#34;B01001{table}&#34;, 7, 16) + _variables(f&#34;B01001{table}&#34;, 22, 31)
+        for column, table in vaptables
     })
 
     # Get CVAP columns; the same goes for these columns as does the above, except
     # these columns are 18 years and older *and* citizens.
-    cvap_tables = list(zip(
-        [
-            &#34;WCVAP19&#34;, &#34;BCVAP19&#34;, &#34;AMINCVAP19&#34;, &#34;ASIANCVAP19&#34;, &#34;NHPICVAP19&#34;, &#34;OTHCVAP19&#34;,
-            &#34;2MORECVAP19&#34;, &#34;NHWCVAP19&#34;, &#34;HCVAP19&#34;
-        ],
+    cvapnames = [
+        &#34;WCVAP&#34;, &#34;BCVAP&#34;, &#34;AMINCVAP&#34;, &#34;ASIANCVAP&#34;, &#34;NHPICVAP&#34;, &#34;OTHCVAP&#34;,
+        &#34;2MORECVAP&#34;, &#34;NHWCVAP&#34;, &#34;HCVAP&#34;
+    ]
+    cvaptables = list(zip(
+        [name + yearsuffix for name in cvapnames],
         [&#34;A&#34;, &#34;B&#34;, &#34;C&#34;, &#34;D&#34;, &#34;E&#34;, &#34;F&#34;, &#34;G&#34;, &#34;H&#34;, &#34;I&#34;]
     ))
     groups.update({
         column: 
-            variables(f&#34;B05003{table}&#34;, 9, 9) + variables(f&#34;B05003{table}&#34;, 11, 11) + # men
-            variables(f&#34;B05003{table}&#34;, 15, 15) + variables(f&#34;B05003{table}&#34;, 17, 17) # women
-        for column, table in cvap_tables
+            _variables(f&#34;B05003{table}&#34;, 9, 9) + _variables(f&#34;B05003{table}&#34;, 11, 11) + # men
+            _variables(f&#34;B05003{table}&#34;, 20, 20) + _variables(f&#34;B05003{table}&#34;, 22, 22) # women
+        for column, table in cvaptables
     })
     
     # Get all voting-age people and citizen voting-age people.
-    groups[&#34;VAP19&#34;] = variables(&#34;B01001&#34;, 7, 25) + variables(&#34;B01001&#34;, 31, 49)
-    groups[&#34;CVAP19&#34;] = variables(f&#34;B05003&#34;, 9, 9) + \
-        variables(f&#34;B05003&#34;, 11, 11) + \
-        variables(f&#34;B05003&#34;, 15, 15) + \
-        variables(f&#34;B05003&#34;, 17, 17)
+    groups[&#34;VAP&#34; + yearsuffix] = _variables(&#34;B01001&#34;, 7, 25) + _variables(&#34;B01001&#34;, 31, 49)
+    groups[&#34;CVAP&#34; + yearsuffix] = _variables(f&#34;B05003&#34;, 9, 9) + \
+        _variables(f&#34;B05003&#34;, 11, 11) + \
+        _variables(f&#34;B05003&#34;, 20, 20) + \
+        _variables(f&#34;B05003&#34;, 22, 22)
 
     # TODO: all variables used across the data submodule should be packaged up
     # as a class, so we can access individual dictionaries of variables to add.
@@ -208,7 +222,7 @@ column.</dd>
         data = data.drop(group, axis=1)
 
     # Create a POCVAP column.
-    data[&#34;POCVAP19&#34;] = data[&#34;VAP19&#34;] - data[white]
+    data[&#34;POCVAP&#34; + yearsuffix] = data[&#34;VAP&#34; + yearsuffix] - data[white + yearsuffix]
     return data</code></pre>
 </details>
 </dd>
@@ -233,8 +247,8 @@ implicitly protect against incorrect column names and excessive API
 calls.</dd>
 <dt><strong><code>geometry</code></strong> :&ensp;<code>string</code>, optional</dt>
 <dd>Geometry level at which we retrieve data.
-Defaults to <code>"block"</code>, to retrieve block-level data for the state
-provided.</dd>
+Defaults to <code>"block"</code> to retrieve block-level data for the state
+provided. Accepted values are <code>"block"</code>, <code>"block group</code>", and <code>"tract"</code>.</dd>
 <dt><strong><code>key</code></strong> :&ensp;<code>string</code>, optional</dt>
 <dd>Census API key.</dd>
 </dl>
@@ -263,8 +277,8 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
             implicitly protect against incorrect column names and excessive API
             calls.
         geometry (string, optional): Geometry level at which we retrieve data.
-            Defaults to `&#34;block&#34;`, to retrieve block-level data for the state
-            provided.
+            Defaults to `&#34;block&#34;` to retrieve block-level data for the state
+            provided. Accepted values are `&#34;block&#34;`, `&#34;block group`&#34;, and `&#34;tract&#34;`.
         key (string, optional): Census API key.
 
     Returns:
@@ -290,14 +304,14 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
     # Create the end part of the query string.
     q = [
         (&#34;key&#34;, key),
-        (&#34;for&#34;, f&#34;{geometry}:*&#34;),
+        (&#34;for&#34;, f&#34;{geometry.replace(&#39; &#39;, r&#39;%20&#39;)}:*&#34;),
         (&#34;in&#34;, f&#34;state:{str(state.fips).zfill(2)}&#34;),
         (&#34;in&#34;, &#34;county:*&#34;),
     ]
 
     # Based on the geometry type, add an additional entry; this is required to
     # match the Census geographic hierarchy.
-    if geometry != &#34;block&#34;: q.append((&#34;in&#34;, &#34;tract:*&#34;))
+    if geometry in {&#34;block&#34;, &#34;block group&#34;}: q.append((&#34;in&#34;, &#34;tract:*&#34;))
 
     # Now, since the Census doesn&#39;t allow us to request more than 50 variables
     # at once, we request things in two parts and then merge them together.
@@ -311,7 +325,8 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
         # Get the chunk of variables and create a tail of columns (geographic
         # identifiers).
         varchunk = vars[start:stop]
-        tail = [&#34;state&#34;, &#34;county&#34;, &#34;tract&#34;] + ([&#34;block&#34;] if geometry == &#34;block&#34; else [])
+        last = [geometry] if geometry in {&#34;block group&#34;, &#34;block&#34;} else []
+        tail = [&#34;state&#34;, &#34;county&#34;, &#34;tract&#34;] + last
 
         # Create an unescaped query string.
         unescaped = q.copy()
@@ -332,9 +347,15 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
         chunk = chunk.drop(tail, axis=1)
         mergeable.append(chunk)
 
-    # Merge the dataframes and rename.
+    # Merge the dataframes, rename everything, make the columns ints, and return.
     merged = reduce(lambda l, r: pd.merge(l, r, on=&#34;GEOID20&#34;), mergeable)
-    return merged.rename(varmap, axis=1)</code></pre>
+    merged = merged.rename(varmap, axis=1)
+    merged = merged.astype({var: int for var in varmap.values()})
+
+    # Make the GEOID20 column the first column.
+    merged = merged[[&#34;GEOID20&#34;] + list(varmap.values())]
+
+    return merged</code></pre>
 </details>
 </dd>
 <dt id="evaltools.data.csvs"><code class="name flex">
@@ -429,8 +450,8 @@ the 2019 ACS CVAP Special Tab.</p></div>
         13: &#34;HCVAP&#34; 
     }
 
-    # First, load the raw data requested; allowed geometry values are &#34;bg10&#34; and
-    # &#34;tract10.&#34;
+    # First, load the raw data requested; allowed geometry values are &#34;block group&#34;
+    # and &#34;tract.&#34;
     if geometry not in {&#34;block group&#34;, &#34;tract&#34;}:
         print(f&#34;Requested geometry \&#34;{geometry}\&#34; is not allowed; loading tracts.&#34;)
         geometry = &#34;tract&#34;
@@ -464,6 +485,7 @@ the 2019 ACS CVAP Special Tab.</p></div>
         for line in block:
             record[geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;] = line[&#34;GEOID&#34;]
             record[descriptions[line[&#34;lnnumber&#34;]] + &#34;19&#34;] = line[&#34;cvap_est&#34;]
+            record[descriptions[line[&#34;lnnumber&#34;]] + &#34;19e&#34;] = line[&#34;cvap_moe&#34;]
 
         collapsed.append(record)
 
@@ -863,12 +885,12 @@ P4</a>.</p>
     # to get the total Hispanic population and the total population.
     if table in {&#34;P2&#34;, &#34;P4&#34;}:
         numbers = [1, 2] + numbers
-        hcol = &#34;HVAP20&#34; if table == &#34;P4&#34; else &#34;HISP20&#34;
+        hcol = &#34;HVAP20&#34; if table == &#34;P4&#34; else &#34;HPOP20&#34;
         tcol = &#34;VAP20&#34; if table == &#34;P4&#34; else &#34;TOTPOP20&#34;
         combos = [tcol, hcol] + combos
     else:
         numbers = [1] + numbers
-        tcol = &#34;VAP20&#34; if table == &#34;P4&#34; else &#34;TOTPOP20&#34;
+        tcol = &#34;VAP20&#34; if table in {&#34;P3&#34;, &#34;P4&#34;} else &#34;TOTPOP20&#34;
         combos = [tcol] + combos
     
     # Create the variable names and zip the names together with the combinations.

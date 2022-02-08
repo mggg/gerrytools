@@ -5,7 +5,6 @@ from pathlib import Path
 import os
 import pandas as pd
 import cProfile
-import gzip
 import json
 from evaltools.data import (
     cvap, acs5, census, variables, submissions, tabularized, AssignmentCompressor,
@@ -17,19 +16,23 @@ root = Path(os.getcwd()) / Path("tests/test-resources/")
 
 def test_cvap_tracts():
     al = us.states.AL
-    data = cvap(al, geometry="tract")
-
+    special = cvap(al, geometry="tract")
+    acs = acs5(al, geometry="tract")
+    
     # Set some testing variables.
     columns = {
         "TRACT10", "CVAP19", "NHCVAP19", "NHAICVAP19", "NHACVAP19", "NHBCVAP19",
         "NHNHPICVAP19", "NHWCVAP19", "NHAIWCVAP19", "NHAWCVAP19", "NHBWCVAP19",
-        "NHAIBCVAP19", "NHOTHCVAP19", "HCVAP19", "POCCVAP19"
+        "NHAIBCVAP19", "NHOTHCVAP19", "HCVAP19", "POCCVAP19", "CVAP19e", "NHCVAP19e",
+        "NHAICVAP19e", "NHACVAP19e", "NHBCVAP19e", "NHNHPICVAP19e", "NHWCVAP19e",
+        "NHAIWCVAP19e", "NHAWCVAP19e", "NHBWCVAP19e", "NHAIBCVAP19e", "NHOTHCVAP19e", 
+        "HCVAP19e",
     }
     tracts = 1181
 
     # Do some assert-ing.
-    assert set(list(data)) == columns
-    assert len(data) == tracts
+    assert set(list(special)) == columns
+    assert len(special) == tracts
 
 def test_cvap_bgs():
     al = us.states.AL
@@ -39,7 +42,10 @@ def test_cvap_bgs():
     columns = {
         "BLOCKGROUP10", "CVAP19", "NHCVAP19", "NHAICVAP19", "NHACVAP19", "NHBCVAP19",
         "NHNHPICVAP19", "NHWCVAP19", "NHAIWCVAP19", "NHAWCVAP19", "NHBWCVAP19",
-        "NHAIBCVAP19", "NHOTHCVAP19", "HCVAP19", "POCCVAP19"
+        "NHAIBCVAP19", "NHOTHCVAP19", "HCVAP19", "POCCVAP19", "CVAP19e", "NHCVAP19e",
+        "NHAICVAP19e", "NHACVAP19e", "NHBCVAP19e", "NHNHPICVAP19e", "NHWCVAP19e",
+        "NHAIWCVAP19e", "NHAWCVAP19e", "NHBWCVAP19e", "NHAIBCVAP19e", "NHOTHCVAP19e", 
+        "HCVAP19e",
     }
     bgs = 3438
 
@@ -48,8 +54,8 @@ def test_cvap_bgs():
     assert len(data) == bgs
 
 def test_acs5_tracts():
-    state = us.states.AL
-    data = acs5(state, geometry="tract")
+    AL = us.states.AL
+    data = acs5(AL, geometry="tract")
 
     tracts = 1181
     columns = {
@@ -63,6 +69,21 @@ def test_acs5_tracts():
     # Assert some stuff.
     assert len(data) == tracts
     assert set(list(data)) == columns
+
+    # Also verify that the CVAP data reported from the ACS are within the margin
+    # of error reported by the ACS Special Tabulation.
+    special = cvap(AL)
+    cvapcols = [c for c in list(data) if "CVAP" in c]
+    data = data.rename({c: c + "ACS" for c in cvapcols}, axis=1)
+    joined = special.merge(data, on="TRACT10")
+
+    # Create a column for the absolute difference between the ACS-reported and
+    # Special-Tab reported CVAP numbers, and assert whether the difference falls
+    # within the margin of error.
+    joined["DIFF"] = (joined["CVAP19"] - joined["CVAP19ACS"]).abs()
+    joined["WITHINMOE"] = joined["DIFF"] <= joined["CVAP19e"]
+
+    assert joined["WITHINMOE"].all()
 
 def test_acs5_bgs():
     AL = us.states.AL
@@ -80,36 +101,83 @@ def test_acs5_bgs():
     assert len(data) == bgs
     assert set(list(data)) == columns
 
+
+# These test statistics are taken from the Alabama 2020 PL94-171 P1 through P4
+# tables from the Census Data Explorer (https://data.census.gov/cedsci/). We then
+# use the `census()` method to retrieve Alabama 2020 PL94-171 at all three levels
+# of geography, checking that the columns on the data and the columns below sum
+# to the same values.
+CENSUSTESTDATA = {
+    "P1": [
+        ("TOTPOP20", 5024279),
+        ("WHITEASIANPOP20", 18510)
+    ],
+    "P2": [
+        ("NHWHITEAMINASIANPOP20", 821),
+        ("HPOP20", 264047)
+    ],
+    "P3": [
+        ("WHITEASIANOTHVAP20", 201),
+        ("VAP20", 3917166)
+    ],
+    "P4": [
+        ("NHBLACKASIANOTHVAP20", 31),
+        ("HVAP20", 166856)
+    ]
+}
+
+
 def test_census_tracts():
+    # Get a test set of data on Alabama.
     AL = us.states.AL
-    data = census(AL, geometry="tract", table="P4")
-    columns = {"GEOID20"} | set(variables("P4").values())
     tracts = 1437
 
-    assert len(data) == tracts
-    assert set(list(data)) == columns
-    
-    # Download additional variables and verify whether they match appropriately.
-    data = census(AL, table="P2", columns={"P2_003N": "NHISP"}, geometry="tract")
-    columns = {"GEOID20", "NHISP"}
+    # Get the data for each table and verify that the values are correct.
+    for table, cases in CENSUSTESTDATA.items():
+        data = census(AL, table=table, geometry="tract")
+        columns = set(variables(table).values()) | {"GEOID20"}
+        
+        # Assert we have the correct number of values and the correct columns.
+        assert len(data) == tracts
+        assert set(list(data)) == columns
 
-    assert len(data) == tracts
-    assert set(list(data)) == columns
+        # For each test case, confirm that we have the correct sum.
+        for column, correct in cases: assert data[column].sum() == correct
 
-    # Now download *more* additional data and verify whether they match
-    # appropriately.
-    vars = variables("P3")
-    varnames = {
-        var: name
-        for var, name in vars.items() if "WHITE" in name or "BLACK" in name
-    }
-    columns = {"GEOID20"} | set(varnames.values())
 
-    # Get the data.
-    data = census(AL, table="P3", columns=varnames, geometry="tract")
+def test_census_bgs():
+    # Get a test set of data on Alabama.
+    AL = us.states.AL
+    bgs = 3925
 
-    assert len(data) == tracts
-    assert set(list(data)) == columns
+    # Get the data for each table and verify that the values are correct.
+    for table, cases in CENSUSTESTDATA.items():
+        data = census(AL, table=table, geometry="block group")
+        columns = set(variables(table).values()) | {"GEOID20"}
+        
+        # Assert we have the correct number of values and the correct columns.
+        assert len(data) == bgs
+        assert set(list(data)) == columns
+
+        # For each test case, confirm that we have the correct sum.
+        for column, correct in cases: assert data[column].sum() == correct
+
+
+def test_census_blocks():
+    AL = us.states.AL
+    blocks = 185976
+
+    # Get the data for each table and verify that the values are correct.
+    for table, cases in CENSUSTESTDATA.items():
+        data = census(AL, table=table, geometry="block")
+        columns = set(variables(table).values()) | {"GEOID20"}
+        
+        # Assert we have the correct number of values and the correct columns.
+        assert len(data) == blocks
+        assert set(list(data)) == columns
+
+        # For each test case, confirm that we have the correct sum.
+        for column, correct in cases: assert data[column].sum() == correct
 
 def test_assignmentcompressor_compress():
     # Get the GEOIDs from the blocks.
@@ -281,5 +349,5 @@ def test_remap():
     plans = remap(plans, unitmaps)
 
 if __name__ == "__main__":
-    test_cvap_bgs()
+    test_census_tracts()
  

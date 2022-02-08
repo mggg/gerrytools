@@ -38,8 +38,8 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
         13: "HCVAP" 
     }
 
-    # First, load the raw data requested; allowed geometry values are "bg10" and
-    # "tract10."
+    # First, load the raw data requested; allowed geometry values are "block group"
+    # and "tract."
     if geometry not in {"block group", "tract"}:
         print(f"Requested geometry \"{geometry}\" is not allowed; loading tracts.")
         geometry = "tract"
@@ -73,6 +73,7 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
         for line in block:
             record[geometry.replace(" ", "").upper() + "10"] = line["GEOID"]
             record[descriptions[line["lnnumber"]] + "19"] = line["cvap_est"]
+            record[descriptions[line["lnnumber"]] + "19e"] = line["cvap_moe"]
 
         collapsed.append(record)
 
@@ -83,10 +84,13 @@ def cvap(state, geometry="tract") -> pd.DataFrame:
 
     return data
 
-def acs5(state, geometry="tract", year=2019, columns=[], white="NHWVAP19") -> pd.DataFrame:
+def acs5(state, geometry="tract", year=2019, columns=[], white="NHWVAP") -> pd.DataFrame:
     """
     Retrieves ACS 5-year population estimates for the provided state, geometry
-    level, and year. Geometries are from the **2010 Census**.
+    level, and year. Geometries are from the **2010 Census**. Also retrieves
+    ACS-reported CVAP data, which closely matches that reported by the CVAP
+    special tabulation; CVAP data are only returned at the tract level, and are
+    otherwise reported as 0.
     
     Args:
         state (us.State): `State` object for the desired state.
@@ -98,21 +102,24 @@ def acs5(state, geometry="tract", year=2019, columns=[], white="NHWVAP19") -> pd
             of columns including total populations by race and ethnicity and voting-age
             populations by race and ethnicity are returned, along with a GEOID
             column.
+        white (str, optional): The column removed from totals when calculating
+            POC populations.
 
     Returns:
         A DataFrame containing the formatted data.
     """
     # Columns for total populations.
+    yearsuffix = str(year)[-2:]
     popcolumns = {
-        "B01001_001E": "TOTPOP19",
-        "B03002_003E": "WHITE19",
-        "B03002_004E": "BLACK19",
-        "B03002_005E": "AMIN19",
-        "B03002_006E": "ASIAN19",
-        "B03002_007E": "NHPI19",
-        "B03002_008E": "OTH19",
-        "B03002_009E": "2MORE19",
-        "B03002_002E": "NHISP19",
+        "B01001_001E": "TOTPOP" + yearsuffix,
+        "B03002_003E": "WHITE" + yearsuffix,
+        "B03002_004E": "BLACK" + yearsuffix,
+        "B03002_005E": "AMIN" + yearsuffix,
+        "B03002_006E": "ASIAN" + yearsuffix,
+        "B03002_007E": "NHPI" + yearsuffix,
+        "B03002_008E": "OTH" + yearsuffix,
+        "B03002_009E": "2MORE" + yearsuffix,
+        "B03002_002E": "NHISP" + yearsuffix,
     }
 
     # Create a dictionary of column groups.
@@ -121,40 +128,42 @@ def acs5(state, geometry="tract", year=2019, columns=[], white="NHWVAP19") -> pd
     # Get VAP columns. The columns listed here are by race, irrespective of ethnicity;
     # for example, WVAP19 is the group of people who identified White as their *only*
     # race, including people who identified as Hispanic and White.
-    vap_tables = list(zip(
-        [
-            "WVAP19", "BVAP19", "AMINVAP19", "ASIANVAP19", "NHPIVAP19", "OTHVAP19",
-            "2MOREVAP19", "NHWVAP19", "HVAP19"
-        ],
+    vapnames = [
+        "WVAP", "BVAP", "AMINVAP", "ASIANVAP", "NHPIVAP", "OTHVAP", "2MOREVAP",
+        "NHWVAP", "HVAP"
+    ]
+    vaptables = list(zip(
+        [column + yearsuffix for column in vapnames],
         ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
     ))
     groups.update({
-        column: variables(f"B01001{table}", 7, 16) + variables(f"B01001{table}", 22, 31)
-        for column, table in vap_tables
+        column: _variables(f"B01001{table}", 7, 16) + _variables(f"B01001{table}", 22, 31)
+        for column, table in vaptables
     })
 
     # Get CVAP columns; the same goes for these columns as does the above, except
     # these columns are 18 years and older *and* citizens.
-    cvap_tables = list(zip(
-        [
-            "WCVAP19", "BCVAP19", "AMINCVAP19", "ASIANCVAP19", "NHPICVAP19", "OTHCVAP19",
-            "2MORECVAP19", "NHWCVAP19", "HCVAP19"
-        ],
+    cvapnames = [
+        "WCVAP", "BCVAP", "AMINCVAP", "ASIANCVAP", "NHPICVAP", "OTHCVAP",
+        "2MORECVAP", "NHWCVAP", "HCVAP"
+    ]
+    cvaptables = list(zip(
+        [name + yearsuffix for name in cvapnames],
         ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
     ))
     groups.update({
         column: 
-            variables(f"B05003{table}", 9, 9) + variables(f"B05003{table}", 11, 11) + # men
-            variables(f"B05003{table}", 15, 15) + variables(f"B05003{table}", 17, 17) # women
-        for column, table in cvap_tables
+            _variables(f"B05003{table}", 9, 9) + _variables(f"B05003{table}", 11, 11) + # men
+            _variables(f"B05003{table}", 20, 20) + _variables(f"B05003{table}", 22, 22) # women
+        for column, table in cvaptables
     })
     
     # Get all voting-age people and citizen voting-age people.
-    groups["VAP19"] = variables("B01001", 7, 25) + variables("B01001", 31, 49)
-    groups["CVAP19"] = variables(f"B05003", 9, 9) + \
-        variables(f"B05003", 11, 11) + \
-        variables(f"B05003", 15, 15) + \
-        variables(f"B05003", 17, 17)
+    groups["VAP" + yearsuffix] = _variables("B01001", 7, 25) + _variables("B01001", 31, 49)
+    groups["CVAP" + yearsuffix] = _variables(f"B05003", 9, 9) + \
+        _variables(f"B05003", 11, 11) + \
+        _variables(f"B05003", 20, 20) + \
+        _variables(f"B05003", 22, 22)
 
     # TODO: all variables used across the data submodule should be packaged up
     # as a class, so we can access individual dictionaries of variables to add.
@@ -185,10 +194,10 @@ def acs5(state, geometry="tract", year=2019, columns=[], white="NHWVAP19") -> pd
         data = data.drop(group, axis=1)
 
     # Create a POCVAP column.
-    data["POCVAP19"] = data["VAP19"] - data[white]
+    data["POCVAP" + yearsuffix] = data["VAP" + yearsuffix] - data[white + yearsuffix]
     return data
 
-def variables(prefix, start, stop, suffix="E") -> list:
+def _variables(prefix, start, stop, suffix="E") -> list:
     """
     Returns the ACS variable names from the provided prefix, start, stop, and
     suffix parameters. Used to generate batches of names, especially for things
