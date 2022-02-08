@@ -1,4 +1,3 @@
-from xml.dom.minidom import Identified
 from gerrychain import Partition
 from gerrychain.updaters import CountySplit, county_splits
 from typing import List, Union
