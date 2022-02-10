@@ -1,14 +1,8 @@
 from gerrychain import Partition
-from score_types import *
-
-## demographic tallys
-## demographic shares
-## demographic num gingles districts.
-
+from .score_types import *
 
 def _tally_pop(pop_col: str, part: Partition) -> DistrictWideScoreValue:
     return part[pop_col]
-
 
 def _pop_shares(subpop_col: str, totpop_col: str, part: Partition) -> DistrictWideScoreValue:
     total_pops = part[totpop_col]

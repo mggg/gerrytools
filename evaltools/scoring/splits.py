@@ -2,7 +2,7 @@ from gerrychain import Partition
 from gerrychain.updaters import CountySplit, county_splits
 from typing import List, Union
 
-def splits(P: Partition, unit: str, names: bool = False) -> Union[int, List[str]]:
+def _splits(P: Partition, unit: str, names: bool = False) -> Union[int, List[str]]:
     """
     Determines the number of units split by the districting plan.
     
@@ -31,7 +31,7 @@ def splits(P: Partition, unit: str, names: bool = False) -> Union[int, List[str]
     return geometrysplits if names else len(geometrysplits)
 
 
-def pieces(P: Partition, unit: str, names: bool = False) -> Union[int, List[str]]:
+def _pieces(P: Partition, unit: str, names: bool = False) -> Union[int, List[str]]:
     """
     Determines the number of "unit pieces" produced by the plan. For example,
     consider a state with 100 counties. Suppose that one county is split twice,
