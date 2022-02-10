@@ -1,3 +1,4 @@
+from cv2 import groupRectangles
 import pandas as pd
 import geopandas as gpd
 import numpy as np
@@ -8,7 +9,7 @@ import glob
 import requests
 import zipfile
 from io import BytesIO
-from acs import acs5, cvap
+from evaltools.data import acs
 from evaltools.geometry import unitmap
 
 def fetchgeom(geometry10, state): 
@@ -61,13 +62,20 @@ def mapbase(base, geometry10, state):
 
     return base
 
-def estimatecvap(base, state, percentage_cap, zero_fill, geometry10="tract") -> DataFrame:
+def estimatecvap(base, state, cvap_groups, percentage_cap, zero_fill, geometry10="tract") -> DataFrame:
     """
+    Function for turning old (2019) CVAP data on 2010 geometries into estimates for current CVAP data
+    on 2020 geometries. We must supply a base GeoDataFrame representing their chosen U.S. state.
+    Additionally, we'll need to specify the demographic groups whose CVAP numbers we wants
+    to estimate. For each group, we want to specify a triple (X, Y, Z) where X is the old CVAP column
+    for that group, Y is the old VAP column for that group, and Z is the new VAP column for that group
+    (Z must be a column in our base geodataframe). Then, the estimated new CVAP for that group will 
+    be constructed by multiplying (X / Y) * Z for each new geometry.
+
     Arguments:
        base (GeoDataFrame): A dataframe containing population values for a state on the desired geographical units.
-                         Must contain a column for cvap_source units. 
-       
        state (us.state): The `State` object for which CVAP data is being retrieved. 
+       cvap_groups (list): (X, Y, Z) triples for each desired CVAP group to be estimated.
        percentage_cap (float): Number representing where to cap the weighting ratio of CVAP to VAP20. After 
                                this percentage barrier is passed, the percentage will be set to 1. 
        zero_fill (float): Fill in ratio for CVAP to VAP20 when there is 0 CVAP in the area. 
@@ -80,25 +88,27 @@ def estimatecvap(base, state, percentage_cap, zero_fill, geometry10="tract") -> 
         print(f"Requested geometry \"{geometry10}\" is not allowed; loading tracts.")
         geometry10="tract"
 
+    # Grab ACS and CVAP special-tab data, and make sure our triples are correct
     cvap_geoid = "TRACT10" if geometry10 == "tract" else "BLOCKGROUP10"
-    geomname = "tract" if geometry10 == "tract" else "block group"
+    acs_source = acs.acs5(state, geometry10)
+    cvap_source = acs.cvap(state, geometry10)
+    for (cvap, vap, new_vap) in cvap_groups:
+        assert cvap in acs_source or cvap in cvap_source
+        assert vap in acs_source
+        assert new_vap in base
+    
+    # Remove ACS 5 columns that overlap with special-tab ones
+    non_overlaps = list(set(acs_source).difference(set(cvap_source)))
+    acs_source = acs_source[[cvap_geoid] + non_overlaps]
+    source = cvap_source.merge(acs_source, on=cvap_geoid)
 
+    geomname = "tract" if geometry10 == "tract" else "block group"
     base = base[[col for col in list(base) if "POP" in col or "VAP" in col or "geometry" in col or "GEOID" in col]]
-    cvap_source = acs5(state, geometry10)
     base = mapbase(base, geomname, state)
 
-    # Get VAP and CVAP columns.
-    vaps = [c for c in list(base) if "VAP20" in c]
-    cvaps = [c for c in list(cvap_source) if "CVAP19" in c]
-
-
     # Compute weights.
-    names = list(zip(
-        ["CVAP19", "BCVAP19", "HCVAP19", "ASIANCVAP19", "WCVAP19"],
-        ["VAP19", "BVAP19", "HVAP19", "ASIANVAP19", "WVAP19"]
-    ))
-    for cvap, vap in names: 
-       cvap_source[cvap + "%"] = cvap_source[cvap]/cvap_source[vap]
+    for (cvap, vap, _) in cvap_groups: 
+       source[cvap + "%"] = source[cvap]/source[vap]
 
     # Fill in values according to the following rules:
     # 
@@ -107,52 +117,48 @@ def estimatecvap(base, state, percentage_cap, zero_fill, geometry10="tract") -> 
     #   2.  if there are 0 *CVAP reported and *VAP > 0, we set the weight to zero_fill;
     #   3.  if *CVAP > 0 but *VAP = 0 or *CVAP/*VAP > percentage_cap, we set the weight to 1.
     statewide = {
-        cvap + "%": cvap_source[cvap].sum()/cvap_source[vap].sum() if cvap_source[vap].sum() != 0 else 0
-        for cvap, vap in names
+        cvap + "%": source[cvap].sum()/source[vap].sum() if source[vap].sum() != 0 else 0
+        for (cvap, vap, _) in cvap_groups
     }
 
-    cvappcts = [cvap + "%" for cvap, _ in names]
+    cvappcts = [cvap + "%" for (cvap, _, _) in cvap_groups]
 
     for pct in cvappcts:        
-        for ix, row in cvap_source.iterrows():
+        for ix, row in source.iterrows():
             if pd.isna(row[pct]):
                 county = row[cvap_geoid][2:5]
-                county_avg = np.mean(cvap_source[pct][cvap_source[cvap_geoid].str[2:5] == county])
-                cvap_source.at[ix, pct] = county_avg if not pd.isna(county_avg) else statewide[pct]
+                county_avg = np.mean(source[pct][source[cvap_geoid].str[2:5] == county])
+                source.at[ix, pct] = county_avg if not pd.isna(county_avg) else statewide[pct]
         
-        cvap_source[pct] = cvap_source[pct] \
+        source[pct] = source[pct] \
             .replace(0, zero_fill)  \
             .apply(lambda c: 1 if c > percentage_cap else c)
 
     # Assert we don't have any percentages over percentage_cap.
     assert all(
-        np.all(cvap_source[p + "%"] <= percentage_cap)
-        for p, _ in names
+        np.all(source[p + "%"] <= percentage_cap)
+        for (p, _, _) in cvap_groups
     )
     # Set indices and create a mapping from IDs to weights.
 
-    cvap_source = cvap_source.set_index(cvap_geoid)    
-    cvap_source = cvap_source[[p + "%" for p, _ in names]]
-    weights = cvap_source.to_dict(orient="index")
+    source = source.set_index(cvap_geoid)    
+    source = source[[p + "%" for (p, _, _)in cvap_groups]]
+    weights = source.to_dict(orient="index")
 
     # Weight base!
-    basepairs = list(zip(
-        ["CVAP20_EST", "BCVAP20_EST", "HCVAP20_EST", "ACVAP20_EST", "WCVAP20_EST"],
-        ["CVAP19%", "BCVAP19%", "HCVAP19%", "ASIANCVAP19%", "WCVAP19%"],
-        ["VAP20", "APBVAP20", "HVAP20", "ASIANVAP20", "WVAP20"]
-    ))
-
     groups = list(base.groupby(cvap_geoid))
   
     for ix, group in groups:
-        for name, weight, source in basepairs:
+        for (cvap, vap, new_vap) in cvap_groups:
+            weight = cvap + "%"
+            cvap_est = cvap.replace("19", "20_EST")
             group[weight] = weights[ix][weight]
-            group[name] = group[weight] * group[source]
+            group[cvap_est] = group[weight] * group[new_vap]
 
     # Re-create a dataframe.
     weightedbase = pd.concat(frame for _, frame in groups)
 
     return weightedbase
-my_blocks = gpd.read_file("../../../NC_alt/sc_block_20/sc_block.shp")
-estimate = estimatecvap(my_blocks, us.states.SC, 1, 0.05)
-estimate.to_csv("final_test.csv", index=False)
+# my_blocks = gpd.read_file("../../../NC_alt/sc_block_20/sc_block.shp")
+# estimate = estimatecvap(my_blocks, us.states.SC, 1, 0.05)
+# estimate.to_csv("final_test.csv", index=False)
