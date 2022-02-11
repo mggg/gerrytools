@@ -21,6 +21,7 @@ from .scores import (
     demographic_tallies,
     demographic_shares,
     gingles_districts,
+    eguia,
 )
 from .population import deviations, unassigned_population
 from .contiguity import unassigned_units, contiguous
@@ -50,4 +51,5 @@ __all__ = [
     "demographic_tallies",
     "demographic_shares",
     "gingles_districts",
+    "eguia",
 ]

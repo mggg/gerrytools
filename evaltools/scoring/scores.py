@@ -15,10 +15,11 @@ from .partisan import (
     _mean_median,
     _partisan_bias,
     _partisan_gini,
+    _eguia
 )
 from functools import partial
-from gerrychain import Partition
-from typing import Iterable, List
+from gerrychain import Partition, Graph
+from typing import Iterable, List, Mapping
 from .score_types import *
 
 """
@@ -58,7 +59,8 @@ def pieces(unit: str, names:bool = False, alias: str = None) -> Score:
     return Score(f"{alias}_pieces", partial(_pieces, unit=unit, names=names))
 
 def competitive_districts(election_cols: Iterable[str], party: str, points_within: float) -> Score:
-    return Score("competitive_districts", partial(_competitive_districts, election_cols=election_cols, party=party, points_within=points_within))
+    return Score("competitive_districts", partial(_competitive_districts, election_cols=election_cols,
+                                                  party=party, points_within=points_within))
 
 def swing_districts(election_cols: Iterable[str], party: str) -> Score:
     return Score("swing_districts", partial(_swing_districts, election_cols=election_cols, party=party))
@@ -87,6 +89,15 @@ def partisan_bias(election_cols: Iterable[str]) -> Score:
 def partisan_gini(election_cols: Iterable[str]) -> Score:
     return Score("partisan_gini", partial(_partisan_gini, election_cols=election_cols))
 
+def eguia(election_cols: Iterable[str], party: str, graph: Graph, updaters: Mapping[str, Callable[[Partition], Any]],
+          county_col: str, totpop_col: str = "population") -> Score:
+    """
+    """
+    county_part = Partition(graph, county_col, updaters=updaters)
+    return Score("eguia", partial(_eguia, election_cols=election_cols, party=party, 
+                                  county_part=county_part, totpop_col=totpop_col))
+
+
 def demographic_tallies(population_cols: Iterable[str]) -> List[Score]:
     return [
             Score(col, partial(_tally_pop, pop_col=col))
@@ -108,7 +119,8 @@ def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: f
 
     for totalpop_col, subpop_cols in population_cols.items():
         scores.extend([
-            Score(f"{col}_gingles_districts", partial(_gingles_districts, subpop_col=col, totpop_col=totalpop_col, threshold=threshold))
+            Score(f"{col}_gingles_districts", partial(_gingles_districts, subpop_col=col, 
+                                                      totpop_col=totalpop_col, threshold=threshold))
             for col in subpop_cols
         ])
     return scores
