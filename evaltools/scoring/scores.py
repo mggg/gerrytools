@@ -1,5 +1,9 @@
 from .splits import _splits, _pieces
-from .demographics import *
+from .demographics import (
+    _pop_shares,
+    _tally_pop,
+    _gingles_districts,
+)
 from .partisan import (
     _competitive_districts,
     _swing_districts,
@@ -85,7 +89,7 @@ def partisan_gini(election_cols: Iterable[str]) -> Score:
 
 def demographic_tallies(population_cols: Iterable[str]) -> List[Score]:
     return [
-            Score(col, partial(_tally_pop(pop_col=col)))
+            Score(col, partial(_tally_pop, pop_col=col))
             for col in population_cols
         ]
 
@@ -93,8 +97,8 @@ def demographic_shares(population_cols: Mapping[str, Iterable[str]]) -> List[Sco
     scores = []
 
     for totalpop_col, subpop_cols in population_cols.items():
-        scores.append([
-            Score(f"{col}_share", partial(_pop_shares(subpop_col=col, totpop_col=totalpop_col)))
+        scores.extend([
+            Score(f"{col}_share", partial(_pop_shares, subpop_col=col, totpop_col=totalpop_col))
             for col in subpop_cols
         ])
     return scores
@@ -103,8 +107,8 @@ def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: f
     scores = []
 
     for totalpop_col, subpop_cols in population_cols.items():
-        scores.append([
-            Score(f"{col}_gingles_districts", partial(_gingles_districts(subpop_col=col, totpop_col=totalpop_col, threshold=threshold)))
+        scores.extend([
+            Score(f"{col}_gingles_districts", partial(_gingles_districts, subpop_col=col, totpop_col=totalpop_col, threshold=threshold))
             for col in subpop_cols
         ])
     return scores

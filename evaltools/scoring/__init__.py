@@ -18,9 +18,13 @@ from .scores import (
     partisan_bias,
     partisan_gini,
     summarize,
+    demographic_tallies,
+    demographic_shares,
+    gingles_districts,
 )
 from .population import deviations, unassigned_population
 from .contiguity import unassigned_units, contiguous
+from .demographics import demographic_updaters
 from .reock import reock
 
 __all__ = [
@@ -41,5 +45,9 @@ __all__ = [
     "unassigned_population",
     "unassigned_units",
     "contiguous",
-    "reock"
+    "reock",
+    "demographic_updaters",
+    "demographic_tallies",
+    "demographic_shares",
+    "gingles_districts",
 ]
