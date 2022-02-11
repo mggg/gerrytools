@@ -89,7 +89,7 @@ def partisan_bias(election_cols: Iterable[str]) -> Score:
 def partisan_gini(election_cols: Iterable[str]) -> Score:
     return Score("partisan_gini", partial(_partisan_gini, election_cols=election_cols))
 
-def eguia(election_cols: Iterable[str], party: str, graph: Graph, updaters: Mapping[str, Callable[[Partition], Any]],
+def eguia(election_cols: Iterable[str], party: str, graph: Graph, updaters: Mapping[str, Callable[[Partition], ScoreValue]],
           county_col: str, totpop_col: str = "population") -> Score:
     """
     """
