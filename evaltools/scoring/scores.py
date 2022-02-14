@@ -15,7 +15,9 @@ from .partisan import (
     _mean_median,
     _partisan_bias,
     _partisan_gini,
-    _eguia
+    _eguia,
+    _absolute_proportionality,
+    _signed_proportionality,
 )
 from functools import partial
 from gerrychain import Partition, Graph
@@ -76,6 +78,12 @@ def party_wins_by_district(election_cols: Iterable[str], party: str) -> Score:
 
 def seats(election_cols: Iterable[str], party: str) -> Score:
     return Score("seats", partial(_seats, election_cols=election_cols, party=party))
+
+def signed_proportionality(election_cols: Iterable[str], party: str) -> Score:
+    return Score("signed_proportionality", partial(_signed_proportionality, election_cols=election_cols, party=party))
+
+def absolute_proportionality(election_cols: Iterable[str], party: str) -> Score:
+    return Score("absolute_proportionality", partial(_signed_proportionality, election_cols=election_cols, party=party))
 
 def efficiency_gap(election_cols: Iterable[str]) -> Score:
     return Score("efficiency_gap", partial(_efficiency_gap, election_cols=election_cols))
