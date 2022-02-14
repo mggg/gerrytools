@@ -83,7 +83,7 @@ def signed_proportionality(election_cols: Iterable[str], party: str) -> Score:
     return Score("signed_proportionality", partial(_signed_proportionality, election_cols=election_cols, party=party))
 
 def absolute_proportionality(election_cols: Iterable[str], party: str) -> Score:
-    return Score("absolute_proportionality", partial(_signed_proportionality, election_cols=election_cols, party=party))
+    return Score("absolute_proportionality", partial(_absolute_proportionality, election_cols=election_cols, party=party))
 
 def efficiency_gap(election_cols: Iterable[str]) -> Score:
     return Score("efficiency_gap", partial(_efficiency_gap, election_cols=election_cols))
