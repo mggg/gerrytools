@@ -19,6 +19,8 @@ __all__ = [
     "opp_party_districts",
     "party_wins_by_district",
     "seats",
+    "signed_proportionality",
+    "absolute_proportionality",
     "efficiency_gap",
     "mean_median",
     "partisan_bias",

@@ -40,6 +40,12 @@ def _party_wins_by_district(part: Partition, election_cols: Iterable[str], party
 def _seats(part: Partition, election_cols: Iterable[str], party: str) -> ElectionWideScoreValue:
     return {part[e].election.name: sum([part[e].won(party, d) for d in part.parts.keys() if d != -1]) for e in election_cols}
 
+def _signed_proportionality(part: Partition, election_cols: Iterable[str], party: str) -> ElectionWideScoreValue:
+    return {part[e].election.name: part[e].seats(party) - (part[e].percent(party) * len(part)) for e in election_cols}
+
+def _absolute_proportionality(part: Partition, election_cols: Iterable[str], party: str) -> ElectionWideScoreValue:
+    return {part[e].election.name: abs(part[e].seats(party) - (part[e].percent(party) * len(part))) for e in election_cols}
+
 def _efficiency_gap(part: Partition, election_cols: Iterable[str]) -> ElectionWideScoreValue:
     return {part[e].election.name: part[e].efficiency_gap() for e in election_cols}
 
