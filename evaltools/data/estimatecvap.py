@@ -3,7 +3,6 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 from pandas import DataFrame
-import us
 import os
 import glob
 import requests
@@ -95,6 +94,8 @@ def estimatecvap(base, state, cvap_groups, percentage_cap, zero_fill, geometry10
     acs_source = acs.acs5(state, geometry10)
     cvap_source = acs.cvap(state, geometry10)
     for (cvap, vap, new_vap) in cvap_groups:
+        if any(substring in cvap for substring in ["AIW", "AW", "BW", "AIB"]):
+            print(f"Warning: Estimating CVAP among {cvap} is not advisable, since there isn't a reasonable VAP column from which to construct _CVAP / _VAP rates (because you seem to be combining two racial groups).")
         if not (cvap in acs_source or cvap in cvap_source):
             possible_columns = set(acs_source).union(set(cvap_source))
             raise ValueError(f"Your CVAP column '{cvap}' must be contained in either the ACS or Special Tab columns: {possible_columns}")
