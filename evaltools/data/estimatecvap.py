@@ -78,7 +78,9 @@ def estimatecvap(base, state, cvap_groups, percentage_cap, zero_fill, geometry10
        cvap_groups (list): (X, Y, Z) triples for each desired CVAP group to be estimated.
        percentage_cap (float): Number representing where to cap the weighting ratio of CVAP to VAP20. After 
                                this percentage barrier is passed, the percentage will be set to 1. 
+                               Suggested choice: 1.
        zero_fill (float): Fill in ratio for CVAP to VAP20 when there is 0 CVAP in the area. 
+                          Suggested choice: 0.1
        geometry10 (string): The 2010 geometry on which cvap will be pulled. Will be "tract" or "block group".
 
     Returns: 
@@ -93,9 +95,13 @@ def estimatecvap(base, state, cvap_groups, percentage_cap, zero_fill, geometry10
     acs_source = acs.acs5(state, geometry10)
     cvap_source = acs.cvap(state, geometry10)
     for (cvap, vap, new_vap) in cvap_groups:
-        assert cvap in acs_source or cvap in cvap_source
-        assert vap in acs_source
-        assert new_vap in base
+        if not (cvap in acs_source or cvap in cvap_source):
+            possible_columns = set(acs_source).union(set(cvap_source))
+            raise ValueError(f"Your CVAP column '{cvap}' must be contained in either the ACS or Special Tab columns: {possible_columns}")
+        if not vap in acs_source:
+            raise ValueError(f"Your old VAP column '{vap}' must be contained in the ACS columns: {set(acs_source)}")
+        if not new_vap in base:
+            raise ValueError(f"Your new VAP column '{new_vap}' must be contained in your base dataframe: {set(base)}")
     
     # Remove ACS 5 columns that overlap with special-tab ones
     non_overlaps = list(set(acs_source).difference(set(cvap_source)))
@@ -139,8 +145,8 @@ def estimatecvap(base, state, cvap_groups, percentage_cap, zero_fill, geometry10
         np.all(source[p + "%"] <= percentage_cap)
         for (p, _, _) in cvap_groups
     )
-    # Set indices and create a mapping from IDs to weights.
 
+    # Set indices and create a mapping from IDs to weights.
     source = source.set_index(cvap_geoid)    
     source = source[[p + "%" for (p, _, _)in cvap_groups]]
     weights = source.to_dict(orient="index")
@@ -155,10 +161,8 @@ def estimatecvap(base, state, cvap_groups, percentage_cap, zero_fill, geometry10
             group[weight] = weights[ix][weight]
             group[cvap_est] = group[weight] * group[new_vap]
 
-    # Re-create a dataframe.
+    # Re-create a dataframe and strip out % columns
     weightedbase = pd.concat(frame for _, frame in groups)
+    weightedbase = weightedbase.drop(columns=[p + "%" for (p, _, _) in cvap_groups])
 
     return weightedbase
-# my_blocks = gpd.read_file("../../../NC_alt/sc_block_20/sc_block.shp")
-# estimate = estimatecvap(my_blocks, us.states.SC, 1, 0.05)
-# estimate.to_csv("final_test.csv", index=False)
