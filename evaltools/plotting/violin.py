@@ -8,7 +8,7 @@ def violin(
         ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1,99), rotation=0,
         ticksize=12, jitter=1/3
     ) -> Axes:
-    """
+    r"""
     Plot a violin plot, which takes `scores` — a dictionary where each value (corresponding to 
     an ensemble, citizens' ensemble, or proposed plans), will be a list of lists, where each 
     sublist will be its own violin. Proposed scores will be plotted as colored circles on
