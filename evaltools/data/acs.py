@@ -3,7 +3,6 @@ import pandas as pd
 import censusdata
 from pathlib import Path
 
-
 def cvap(state, geometry="tract") -> pd.DataFrame:
     """
     Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
