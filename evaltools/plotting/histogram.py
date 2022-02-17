@@ -14,7 +14,7 @@ def histogram(ax,
               fontsize=24,
               jitter=False,
               bin_width=None) -> Axes:
-    """
+    r"""
     Plot a histogram with the ensemble scores in bins and the proposed plans'
     scores as vertical lines. If there are many unique values, use a white border
     on the bins to distinguish, otherwise reduce the bin width to 80%.

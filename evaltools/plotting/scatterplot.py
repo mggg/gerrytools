@@ -9,7 +9,7 @@ def scatterplot(ax,
                 proposed_info={}, 
                 bins=None, 
                 axis_range=None) -> Axes:
-    """
+    r"""
     Plot a scatterplot comparing two scores, with the proposed plans'
     scores as points.
 
