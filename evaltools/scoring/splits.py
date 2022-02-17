@@ -1,7 +1,8 @@
+from gerrychain import Partition
+from gerrychain.updaters import CountySplit, county_splits
+from typing import List, Union
 
-from gerrychain.updaters import county_splits
-
-def splits(P, units, names=False) -> dict:
+def _splits(P: Partition, unit: str, names: bool = False) -> Union[int, List[str]]:
     """
     Determines the number of units split by the districting plan.
     
@@ -13,38 +14,24 @@ def splits(P, units, names=False) -> dict:
 
     Args:
         P (Partition): GerryChain Partition object.
-        units (list): List of data columns; each assigns a vertex to a unit.
+        unit (str): Data column; each assigns a vertex to a unit.
             Generally, these units are counties, VTDs, precincts, etc.
         names (bool, optional): Whether we return the identifiers of the things
             being split.
     
     Returns:
-        A dictionary mapping column names to the number of splits or the list
-        of things split.
+        The number of splits or the list of things split.
     """
-    if not names:
-        geometrysplits = {
-            unit: sum(
-                1
-                for split in county_splits("", unit)(P).values()
-                if len(split.contains) > 1
-            )
-            for unit in units
-        }
-    else:
-        geometrysplits = {
-            unit: [
-                identifier
-                for identifier, split in county_splits("", unit)(P).items()
-                if len(split.contains) > 1
-            ]
-            for unit in units
-        }
+    geometrysplits = [
+                        identifier 
+                        for identifier, split in county_splits("", unit)(P).items()
+                        if split.split != CountySplit.NOT_SPLIT
+                    ]
 
-    return geometrysplits
+    return geometrysplits if names else len(geometrysplits)
 
 
-def pieces(P, units, names=False) -> dict:
+def _pieces(P: Partition, unit: str, names: bool = False) -> Union[int, List[str]]:
     """
     Determines the number of "unit pieces" produced by the plan. For example,
     consider a state with 100 counties. Suppose that one county is split twice,
@@ -59,32 +46,22 @@ def pieces(P, units, names=False) -> dict:
 
     Args:
         P (Partition): GerryChain Partition object.
-        units (list): List of data columns; each assigns a vertex to a unit.
+        unit (list): Data column; each assigns a vertex to a unit.
             Generally, these units are counties, VTDs, precincts, etc.
         names (bool, optional): Whether we return the identifiers of the things
             being pieced.
 
     Returns:
-        A dictionary mapping column names to the number of pieces *or* the number
-        of things being split.
+        The number of pieces or the list of things split.
     """
-    if not names:
-        geometrypieces = {
-            unit: sum(
-                len(split.contains)
-                for split in county_splits("", unit)(P).values()
-                if len(split.contains) > 1
-            )
-            for unit in units
-        }
-    else:
-        geometrypieces = {
-            unit: [
-                identifier
-                for identifier, split in county_splits("", unit)(P).items()
-                if len(split.contains) > 1
-            ]
-            for unit in units
-        }
 
+    if names:
+        return splits(P, unit, names)
+
+    geometrypieces = sum(
+            len(split.contains)
+            for split in county_splits("", unit)(P).values()
+            if split.split != CountySplit.NOT_SPLIT
+        )
     return geometrypieces
+
