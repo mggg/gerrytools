@@ -77,8 +77,8 @@ def estimatecvap(
     representing their chosen U.S. state. Additionally, users must specify the
     demographic groups whose CVAP statistics are to be estimated. For each group,
     users specify a triple \((X, Y, Z)\) where \(X\) is the old CVAP column for
-    that group, \(Y\) is the old VAP column for that group, and Z is the new VAP
-    column for that group (\(Z\) must be a column in our base geodataframe). Then,
+    that group, \(Y\) is the old VAP column for that group, and \(Z\) is the new VAP
+    column for that group, which must be an existing column on `base`.  Then,
     the estimated new CVAP for that group will be constructed by multiplying
     \((X / Y) \cdot Z\) for each new geometry.
 
