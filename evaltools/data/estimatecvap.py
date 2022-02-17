@@ -64,7 +64,7 @@ def mapbase(base, state, geometry, baseindex="GEOID20"):
     # the Census. If the `base` passed has been sliced or could possibly be a
     # copy, *this will throw a SettingWithCopy warning*.
     mapping = unitmap((base, baseindex), (geometry10, geometry10id))
-    base.loc[:, geometry10id] = base[baseindex].map(mapping)
+    base[geometry10id] = base[baseindex].map(mapping)
 
     return base
 
