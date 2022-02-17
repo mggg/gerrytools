@@ -690,33 +690,57 @@ blocks fit neatly into the 2010 Census tracts.</dd>
         chunk = source[source[&#34;_county&#34;] == county]
         
         for cvap19, vap19, _ in groups:
+            # Calculate the CVAP19-to-VAP19 ratio. Set numpy to ignore runtimewarnings,
+            # but warn the user if one is encountered. We do this so that the user
+            # doesn&#39;t get spooked by a numpy warning, but we&#39;re still noisy about
+            # the weird value encountered.
             cvap19total = chunk[cvap19].sum()
             vap19total = chunk[vap19].sum()
-            countyaverages[cvap19 + &#34;%&#34;][county] = cvap19total/vap19total
 
+            np.seterr(divide=&#34;ignore&#34;, invalid=&#34;ignore&#34;)
+            ratio = cvap19total/vap19total
 
+            # Check whether the ratio of the above is less than the ceiling.
+            if not np.isfinite(ratio):
+                print(
+                    f&#34;Encountered an invalid ratio: there are {cvap19total} {cvap19} &#34;
+                    f&#34;persons and {vap19total} {vap19} persons, for a ratio of &#34;
+                    f&#34;{cvap19total}/{vap19total}. &#34;
+                    f&#34;we have substituted it for the statewide {cvap19}-to-{vap19} &#34;
+                    f&#34;share of {statewide[cvap19 + &#39;%&#39;]}.&#34;
+                )
+                ratio = statewide[cvap19 + &#34;%&#34;]
+
+            # Set the county-average ratio.
+            countyaverages[cvap19 + &#34;%&#34;][county] = ratio
+    
+    # Reset the numpy error catching thing.
+    np.seterr(all=&#34;warn&#34;)
+    
     # For each of the percentage columns, we want to apply the rules specified
     # by the user.
     for pct in cvappcts:
         # Fill NaNs with the *county-wide* average.
         countywidepcts = countyaverages[pct]
+
+        source[pct] = source[pct].replace(np.inf, np.nan)
         nanindices = source[source[pct].isna()].index
         source.loc[nanindices, pct] = source.loc[nanindices, &#34;_county&#34;].map(countywidepcts)
         
         # Fill zeroes with the `zfill` value, and cap all the percentages.
         source[pct] = source[pct] \
-            .replace(0, zfill)  \
+            .replace(0, zfill) \
             .apply(lambda c: 1 if c &gt; ceiling else c)
 
     # Assert we don&#39;t have any percentages over percentage_cap.
     assert all(
         np.all(source[p + &#34;%&#34;] &lt;= ceiling)
-        for (p, _, _) in groups
+        for (p, _, __) in groups
     )
     
-    # Assert we don&#39;t have any NaNs or zeros.
-    assert not all(
-        source[p + &#34;%&#34;].isnull().values.any() and np.all(source[p + &#34;%&#34;] &gt; 0)
+    # Assert we don&#39;t have any zeros. 
+    assert all(
+        np.all(source[p + &#34;%&#34;] &gt; 0)
         for (p, _, __) in groups
     )
 
@@ -742,7 +766,6 @@ blocks fit neatly into the 2010 Census tracts.</dd>
     # columns.
     weightedbase = pd.concat(frame for _, frame in groupedtogeometry)
     weightedbase = weightedbase.drop(columns=[p + &#34;%&#34; for (p, _, _) in groups])
-
     return weightedbase</code></pre>
 </details>
 </dd>

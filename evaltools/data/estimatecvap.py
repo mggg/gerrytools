@@ -202,33 +202,57 @@ def estimatecvap(
         chunk = source[source["_county"] == county]
         
         for cvap19, vap19, _ in groups:
+            # Calculate the CVAP19-to-VAP19 ratio. Set numpy to ignore runtimewarnings,
+            # but warn the user if one is encountered. We do this so that the user
+            # doesn't get spooked by a numpy warning, but we're still noisy about
+            # the weird value encountered.
             cvap19total = chunk[cvap19].sum()
             vap19total = chunk[vap19].sum()
-            countyaverages[cvap19 + "%"][county] = cvap19total/vap19total
 
+            np.seterr(divide="ignore", invalid="ignore")
+            ratio = cvap19total/vap19total
 
+            # Check whether the ratio of the above is less than the ceiling.
+            if not np.isfinite(ratio):
+                print(
+                    f"Encountered an invalid ratio: there are {cvap19total} {cvap19} "
+                    f"persons and {vap19total} {vap19} persons, for a ratio of "
+                    f"{cvap19total}/{vap19total}. "
+                    f"we have substituted it for the statewide {cvap19}-to-{vap19} "
+                    f"share of {statewide[cvap19 + '%']}."
+                )
+                ratio = statewide[cvap19 + "%"]
+
+            # Set the county-average ratio.
+            countyaverages[cvap19 + "%"][county] = ratio
+    
+    # Reset the numpy error catching thing.
+    np.seterr(all="warn")
+    
     # For each of the percentage columns, we want to apply the rules specified
     # by the user.
     for pct in cvappcts:
         # Fill NaNs with the *county-wide* average.
         countywidepcts = countyaverages[pct]
+
+        source[pct] = source[pct].replace(np.inf, np.nan)
         nanindices = source[source[pct].isna()].index
         source.loc[nanindices, pct] = source.loc[nanindices, "_county"].map(countywidepcts)
         
         # Fill zeroes with the `zfill` value, and cap all the percentages.
         source[pct] = source[pct] \
-            .replace(0, zfill)  \
+            .replace(0, zfill) \
             .apply(lambda c: 1 if c > ceiling else c)
 
     # Assert we don't have any percentages over percentage_cap.
     assert all(
         np.all(source[p + "%"] <= ceiling)
-        for (p, _, _) in groups
+        for (p, _, __) in groups
     )
     
-    # Assert we don't have any NaNs or zeros.
-    assert not all(
-        source[p + "%"].isnull().values.any() and np.all(source[p + "%"] > 0)
+    # Assert we don't have any zeros. 
+    assert all(
+        np.all(source[p + "%"] > 0)
         for (p, _, __) in groups
     )
 
@@ -254,5 +278,4 @@ def estimatecvap(
     # columns.
     weightedbase = pd.concat(frame for _, frame in groupedtogeometry)
     weightedbase = weightedbase.drop(columns=[p + "%" for (p, _, _) in groups])
-
     return weightedbase
