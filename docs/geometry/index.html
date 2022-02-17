@@ -617,6 +617,7 @@ Unique identifiers will be values in the resulting dictionary.</dd>
     # Set a progress bar; filter out all warnings; create the mapping.
     maup.progress.enabled = True
     warnings.simplefilter(&#34;ignore&#34;, UserWarning)
+    warnings.simplefilter(&#34;ignore&#34;, FutureWarning)
     mapping = maup.assign(source_shapes, target_shapes)
 
     # Reset the mapping&#39;s index, zip, and return.

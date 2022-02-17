@@ -36,6 +36,7 @@ def unitmap(source, target) -> dict:
     # Set a progress bar; filter out all warnings; create the mapping.
     maup.progress.enabled = True
     warnings.simplefilter("ignore", UserWarning)
+    warnings.simplefilter("ignore", FutureWarning)
     mapping = maup.assign(source_shapes, target_shapes)
 
     # Reset the mapping's index, zip, and return.
