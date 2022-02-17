@@ -26,6 +26,7 @@ __all__ = [
     "partisan_bias",
     "partisan_gini",
     "summarize",
+    "summarize_many",
     "deviations",
     "unassigned_population",
     "unassigned_units",
