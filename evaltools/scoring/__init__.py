@@ -13,7 +13,7 @@ from .reock import reock
 __all__ = [
     "splits",
     "pieces",
-    "competitive_districts",
+    "competitive_contests",
     "swing_districts",
     "party_districts",
     "opp_party_districts",
@@ -22,6 +22,7 @@ __all__ = [
     "signed_proportionality",
     "absolute_proportionality",
     "efficiency_gap",
+    "simplified_efficiency_gap",
     "mean_median",
     "partisan_bias",
     "partisan_gini",

@@ -5,13 +5,14 @@ from .demographics import (
     _gingles_districts,
 )
 from .partisan import (
-    _competitive_districts,
+    _competitive_contests,
     _swing_districts,
     _party_districts,
     _opp_party_districts,
     _party_wins_by_district,
     _seats,
     _efficiency_gap,
+    _simplified_efficiency_gap,
     _mean_median,
     _partisan_bias,
     _partisan_gini,
@@ -139,9 +140,9 @@ def pieces(unit: str, names:bool = False, alias: str = None) -> Score:
         alias = unit
     return Score(f"{alias}_pieces", partial(_pieces, unit=unit, names=names))
 
-def competitive_districts(election_cols: Iterable[str], party: str, points_within: float = 0.03) -> Score:
+def competitive_contests(election_cols: Iterable[str], party: str, points_within: float = 0.03, alias: str = None) -> Score:
     """
-    Score representing the number of competitive districts in a plan.
+    Score representing the number of competitive contests in a plan.
 
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
@@ -154,7 +155,9 @@ def competitive_districts(election_cols: Iterable[str], party: str, points_withi
         A score object with name `"competitive_districts"` and associated function that takes a
         partition and returns a PlanWideScoreValue for the number of competitive districts.
     """
-    return Score("competitive_districts", partial(_competitive_districts, election_cols=election_cols,
+    if alias is None:
+        alias = "competitive_contests_{points_within}"
+    return Score(alias, partial(_competitive_contests, election_cols=election_cols,
                                                   party=party, points_within=points_within))
 
 def swing_districts(election_cols: Iterable[str], party: str) -> Score:
@@ -286,6 +289,23 @@ def efficiency_gap(election_cols: Iterable[str]) -> Score:
         and returns a PlanWideScoreValue for efficiency gap metric.
     """
     return Score("efficiency_gap", partial(_efficiency_gap, election_cols=election_cols))
+
+def simplified_efficiency_gap(election_cols: Iterable[str], party: str) -> Score:
+    """
+    Score representing the simplified efficiency gap metric of a plan with respect to a set of elections.
+    The original formulation of efficiency gap quantifies the difference in "wasted" votes for the two
+    parties across the state, as a share of votes cast. This is sensitive to turnout effects. The 
+    simplified score is equal to standard efficiency gap when the districts have equal turnout.
+
+    Args:
+        election_cols (Iterable[str]): The names of the election updaters over which to compute
+            results for.
+
+    Returns:
+        A score object with name `"efficiency_gap"`  and associated function that takes a partition
+        and returns a PlanWideScoreValue for efficiency gap metric.
+    """
+    return Score("simplified_efficiency_gap", partial(_simplified_efficiency_gap, election_cols=election_cols, party=party))
 
 def mean_median(election_cols: Iterable[str]) -> Score:
     """
