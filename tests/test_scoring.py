@@ -16,43 +16,59 @@ root = Path(os.getcwd()) / Path("tests/test-resources/")
 
 def test_splits():
     # Read in an existing dual graph.
-    dg = Graph.from_json(root / "test-graph.json")
+    dg = Graph.from_json(root / "IN-vtds.json")
     P = Partition(dg, "CONGRESS")
-    units = ["COUNTYFP20"]
-    geometricsplits = splits(P, ["COUNTYFP20"])
-    geometricsplitsnames = splits(P, ["COUNTYFP20"], names=True)
+
+    geometricsplits = splits("COUNTYFP20", popcol="TOTPOP").apply(P)
+    geometricsplitsnames = splits("COUNTYFP20", popcol="TOTPOP", names=True).apply(P)
+    geometricsplitsgc = splits("COUNTYFP20", popcol="TOTPOP", how="gerrychain").apply(P)
+    geometricsplitsnamesgc = splits("COUNTYFP20", popcol="TOTPOP", how="gerrychain", names=True).apply(P)
 
     split = {'005', '135', '085', '067', '091', '045', '097', '017'}
 
-    # Assert that we have a dictionary and that we have the right keys in it.
-    assert type(geometricsplits) is dict
-    assert set(units) == set(geometricsplits.keys())
+    pairs = [
+        (geometricsplits, geometricsplitsnames),
+        (geometricsplitsgc, geometricsplitsnamesgc)
+    ]
 
-    # Make sure that we're counting the number of splits correctly – Indiana's
-    # enacted Congressional plan should split counties 8 times.
-    assert geometricsplits["COUNTYFP20"] == 8
-    assert len(geometricsplitsnames["COUNTYFP20"]) == 8
-    assert set(geometricsplitsnames["COUNTYFP20"]) == split
+    for unnamed, named in pairs:
+        # Assert that we have a dictionary and that we have the right keys in it.
+        assert type(unnamed) is int
+        assert unnamed == 8
+
+        # Make sure that we're counting the number of splits correctly – Indiana's
+        # enacted Congressional plan should split counties 8 times.
+        assert len(named) == 8
+        assert set(split) == set(named)
+
 
 
 def test_pieces():
     # Read in an existing dual graph.
-    dg = Graph.from_json(root / "test-graph.json")
+    dg = Graph.from_json(root / "IN-vtds.json")
     P = Partition(dg, "CONGRESS")
-    units = ["COUNTYFP20"]
-    geometricpieces = pieces(P, ["COUNTYFP20"])
-    geometricpiecesnames = pieces(P, ["COUNTYFP20"], names=True)
+
+    geometricpieces = pieces("COUNTYFP20", popcol="TOTPOP").apply(P)
+    geometricpiecesnames = pieces("COUNTYFP20", popcol="TOTPOP", names=True).apply(P)
+    geometricpiecesgc = pieces("COUNTYFP20", popcol="TOTPOP", how="gerrychain").apply(P)
+    geometricpiecesnamesgc = pieces("COUNTYFP20", popcol="TOTPOP", how="gerrychain", names=True).apply(P)
 
     split = {'005', '135', '085', '067', '091', '045', '097', '017'}
 
-    # Assert that we have a dictionary and that we have the right keys in it.
-    assert type(geometricpieces) is dict
-    assert set(units) == set(geometricpieces.keys())
-    
-    # Make sure that we're counting the number of splits correctly – Indiana's
-    # enacted Congressional plan should split counties 8 times.
-    assert geometricpieces["COUNTYFP20"] == 16
-    assert set(geometricpiecesnames["COUNTYFP20"]) == split
+    pairs = [
+        (geometricpieces, geometricpiecesnames),
+        (geometricpiecesgc, geometricpiecesnamesgc)
+    ]
+
+    for unnamed, named in pairs:
+        # Assert that we have a dictionary and that we have the right keys in it.
+        assert type(unnamed) is int
+        assert unnamed == 16
+
+        # Make sure that we're counting the number of splits correctly – Indiana's
+        # enacted Congressional plan should split counties 8 times.
+        assert len(named) == 8
+        assert set(split) == set(named)
 
 
 def test_deviations():
@@ -141,4 +157,4 @@ def test_reock_score_disconnected():
 
 if __name__ == "__main__":
     root = Path(os.getcwd()) / Path("test-resources/")
-    test_pieces()
+    test_splits()

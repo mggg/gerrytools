@@ -88,7 +88,10 @@ def summarize_many(parts: Iterable[Partition], scores: Iterable[Score], plan_nam
     Commonly used score definitions
 """
 
-def splits(unit: str, names : bool = False, alias: str = None) -> Score:
+def splits(
+        unit:str, names:bool=False, popcol:str=None, how:str="pandas",
+        alias:str=None
+    ) -> Score:
     """
     Score representing the number of units split by the districting plan.
     
@@ -101,6 +104,12 @@ def splits(unit: str, names : bool = False, alias: str = None) -> Score:
     Args:
         unit (str): Data column; each assigns a vertex to a unit.
             Generally, these units are counties, VTDs, precincts, etc.
+        popcol (str, optional): The population column on the `Partition`'s dual
+            graph. If this is passed, then a unit is only considered "split" if
+            the _populated_ base units end up in different districts.
+        how (str, optional): How do we perform these calculations on the back
+            end? Acceptable values are `"pandas"` and `"gerrychain"`; defaults to
+            `"pandas"`.
         names (bool, optional): Whether we return the identifiers of the things
             being split.
     
@@ -108,11 +117,17 @@ def splits(unit: str, names : bool = False, alias: str = None) -> Score:
         A score object with the name `"{alias}_splits"` and associated function that takes a
         partition and returns a PlanWideScoreValue for the number of splits.
     """
-    if alias is None:
-        alias = unit
-    return Score(f"{alias}_splits", partial(_splits, unit=unit, names=names))
+    if alias is None: alias = unit
+    
+    return Score(
+        f"{alias}_splits",
+        partial(_splits, unit=unit, how=how, popcol=popcol, names=names)
+    )
 
-def pieces(unit: str, names:bool = False, alias: str = None) -> Score:
+def pieces(
+        unit:str, names:bool=False, popcol:str=None, how:str="pandas",
+        alias:str=None
+    ) -> Score:
     """
     Score representing the number of "unit pieces" produced by the plan. For example,
     consider a state with 100 counties. Suppose that one county is split twice,
@@ -128,6 +143,12 @@ def pieces(unit: str, names:bool = False, alias: str = None) -> Score:
     Args:
         unit (str): Data column; each assigns a vertex to a unit.
             Generally, these units are counties, VTDs, precincts, etc.
+        popcol (str, optional): The population column on the `Partition`'s dual
+            graph. If this is passed, then a unit is only considered "split" if
+            the _populated_ base units end up in different districts.
+        how (str, optional): How do we perform these calculations on the back
+            end? Acceptable values are `"pandas"` and `"gerrychain"`; defaults to
+            `"pandas"`.
         names (bool, optional): Whether we return the identifiers of the things
             being split.
     
@@ -135,9 +156,12 @@ def pieces(unit: str, names:bool = False, alias: str = None) -> Score:
         A score object with the name `"{alias}_pieces"` and associated function that takes a
         partition and returns a PlanWideScoreValue for the number of pieces.
     """
-    if alias is None:
-        alias = unit
-    return Score(f"{alias}_pieces", partial(_pieces, unit=unit, names=names))
+    if alias is None: alias = unit
+    
+    return Score(
+        f"{alias}_pieces",
+        partial(_pieces, unit=unit, how=how, popcol=popcol, names=names)
+    )
 
 def competitive_districts(election_cols: Iterable[str], party: str, points_within: float = 0.03) -> Score:
     """

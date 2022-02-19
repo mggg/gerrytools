@@ -23,4 +23,4 @@ ScoreValue = Union[PlanWideScoreValue, DistrictWideScoreValue, ElectionWideScore
 
 class Score(NamedTuple):
     name: str
-    function: Callable[[Partition], ScoreValue]
+    apply: Callable[[Partition], ScoreValue]
