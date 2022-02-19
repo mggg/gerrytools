@@ -3,6 +3,7 @@ import numpy as np
 from .score_types import *
 from cv2 import minEnclosingCircle
 from gerrychain import GeographicPartition, Partition
+from gerrychain.metrics import polsby_popper
 from gerrychain.updaters import boundary_nodes
 from shapely.ops import unary_union
 from math import pi
@@ -31,7 +32,7 @@ def _reock(part: GeographicPartition) -> ScoreValue:
     return part_scores
 
 def _polsby_popper(part: GeographicPartition) -> ScoreValue:
-    return part.polsby_popper()
+    return polsby_popper(part)
 
 def _cut_edges(part: Partition) -> ScoreValue:
     return len(part.cut_edges)
