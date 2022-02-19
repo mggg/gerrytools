@@ -74,8 +74,8 @@ def _traversals(part: Partition, unit: str) -> PlanWideScoreValue:
     for (n1, n2) in part.graph.edges:
         if (n1, n2) not in part.cut_edges:
             district = part.assignment[n1]
-            region1 = part.graph.nodes[n1][self.unit]
-            region2 = part.graph.nodes[n2][self.unit]
+            region1 = part.graph.nodes[n1][unit]
+            region2 = part.graph.nodes[n2][unit]
             if region1 != region2: 
                 region_pair = tuple(sorted([region1, region2]))
                 unique_region_pairs[district].add(region_pair)
