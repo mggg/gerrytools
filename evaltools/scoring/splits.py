@@ -1,6 +1,7 @@
 from gerrychain import Partition
 from gerrychain.updaters import CountySplit, county_splits
 from typing import List, Union
+from .score_types import *
 
 def _splits(P: Partition, unit: str, names: bool = False) -> Union[int, List[str]]:
     """
@@ -65,3 +66,18 @@ def _pieces(P: Partition, unit: str, names: bool = False) -> Union[int, List[str
         )
     return geometrypieces
 
+def _traversals(part: Partition, unit: str) -> PlanWideScoreValue:
+    """
+    TODO: Document.
+    """
+    unique_region_pairs = {district: set() for district in part.assignment.values()}
+    for (n1, n2) in part.graph.edges:
+        if (n1, n2) not in part.cut_edges:
+            district = part.assignment[n1]
+            region1 = part.graph.nodes[n1][self.unit]
+            region2 = part.graph.nodes[n2][self.unit]
+            if region1 != region2: 
+                region_pair = tuple(sorted([region1, region2]))
+                unique_region_pairs[district].add(region_pair)
+    num_traversals = sum([len(pair_set) for district, pair_set in unique_region_pairs.items()])
+    return num_traversals

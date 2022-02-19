@@ -1,4 +1,13 @@
-from .splits import _splits, _pieces
+from .splits import (
+    _splits, 
+    _pieces,
+    _traversals,
+)
+from .compactness import (
+    _reock,
+    _polsby_popper,
+    _cut_edges,
+)
 from .demographics import (
     _pop_shares,
     _tally_pop,
@@ -139,6 +148,11 @@ def pieces(unit: str, names:bool = False, alias: str = None) -> Score:
     if alias is None:
         alias = unit
     return Score(f"{alias}_pieces", partial(_pieces, unit=unit, names=names))
+
+def traversals(unit: str, alias: str = None) -> Score:
+    if alias is None:
+        alias = unit
+    return Score(f"{alias}_traversals", partial(_traversals, unit=unit))
 
 def competitive_contests(election_cols: Iterable[str], party: str, points_within: float = 0.03, alias: str = None) -> Score:
     """
@@ -442,3 +456,21 @@ def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: f
             for col in subpop_cols
         ])
     return scores
+
+def reock() -> Score:
+    """
+    TODO: Document.
+    """
+    return Score("reock", partial(_reock))
+
+def polsby_popper() -> Score:
+    """
+    TODO: Document.
+    """
+    return Score("polsby_popper", partial(_polsby_popper))
+
+def cut_edges() -> Score:
+    """
+    TODO: Document.
+    """
+    return Score("cut_edges", partial(_cut_edges))

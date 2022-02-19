@@ -8,11 +8,11 @@ from .scores import *
 from .population import deviations, unassigned_population
 from .contiguity import unassigned_units, contiguous
 from .demographics import demographic_updaters
-from .reock import reock
 
 __all__ = [
     "splits",
     "pieces",
+    "traversals",
     "competitive_contests",
     "swing_districts",
     "party_districts",
@@ -33,6 +33,8 @@ __all__ = [
     "unassigned_units",
     "contiguous",
     "reock",
+    "polsby_popper",
+    "cut_edges",
     "demographic_updaters",
     "demographic_tallies",
     "demographic_shares",
