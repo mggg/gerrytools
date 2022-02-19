@@ -29,6 +29,11 @@ class JSONtoObject(BaseModel):
     Official title of the plan.
     """
 
+    type: str = None
+    """
+    The "type" of plan; could denote a party affiliation, a chamber, whatever.
+    """
+
     @validator("column")
     def _validate_column(cls, column):
         """
@@ -71,7 +76,8 @@ def jsonify(location) -> list:
             JSONtoObject(
                 column=p["column"],
                 locator=p["locator"],
-                title=p["title"] if p.get("title", False) else None
+                title=p["title"] if p.get("title", False) else None,
+                type=p["type"] if p.get("type", False) else None
             )
             for p in data
         ]
