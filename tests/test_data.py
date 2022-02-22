@@ -4,15 +4,54 @@ import jsonlines
 from pathlib import Path
 import os
 import pandas as pd
-import cProfile
 import json
 from evaltools.data import (
     cvap, acs5, census, variables, submissions, tabularized, AssignmentCompressor,
-    remap
+    remap, estimatecvap
 )
 import us
+import geopandas as gpd
+import math
 
 root = Path(os.getcwd()) / Path("tests/test-resources/")
+
+def test_estimate_cvap():
+    al = us.states.AL
+    base = gpd.read_file(root/"AL-bgs")
+
+    triplets = [
+        ("NHBCVAP19", "BVAP19", "APBVAP20"),
+        ("NHACVAP19", "ASIANVAP19", "ASIANVAP20")
+    ]
+
+    # Try estimating some CVAP! More rigorous tests should be added later.
+    estimated = estimatecvap(base, al, triplets, 1, 1/10)
+
+    # Set the test cases for two random block groups. These were hand-calculated
+    # from the set of Alabama test data retrieved from data.mggg.org.
+    tests = {
+        "010950307012": 19.6857142,
+        "010770113001": 2
+    }
+
+    # Check two random block groups to check whether they're correct; we ask
+    # whether the test value and the reported value are within one millionth of
+    # each other.
+    for bgid, ground in tests.items():
+        row = estimated.loc[estimated["GEOID20"] == bgid]
+        assert math.isclose(list(row["NHBCVAP20_EST"])[0], ground, abs_tol=1e-6)
+
+    tests = {
+        "010919733003": 0.5993019060318456*0
+    }
+
+    # Check that there are no NaNs in the columns. This is important to check because
+    # Alabama has a county where there are 0 Asian CVAP19 and 0 Asian VAP19 people.
+    assert not estimated["NHACVAP20_EST"].isnull().any()
+
+    for bgid, ground in tests.items():
+        assert math.isclose(list(row["NHACVAP20_EST"])[0], ground, abs_tol=1e-6)
+
 
 def test_cvap_tracts():
     al = us.states.AL
@@ -349,5 +388,6 @@ def test_remap():
     plans = remap(plans, unitmaps)
 
 if __name__ == "__main__":
-    test_census_tracts()
+    root = Path(os.getcwd()) / Path("test-resources/")
+    test_estimate_cvap()
  

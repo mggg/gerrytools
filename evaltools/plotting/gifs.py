@@ -11,7 +11,7 @@ def gif_multidimensional(data,
                          DPI=150,
                          figsize=(12,8),
                          ):
-    """
+    r"""
     Plot many multidimensional figures in their own `{folder}/{filename}/` directory. Each
     file will represent one ensemble of plans, and this will be stitched together to create
     a gif.
