@@ -6,6 +6,7 @@ Provides ease-of-use functionality for geographic and geometric operations.
 from .dissolve import dissolve
 from .dualgraph import dualgraph
 from .unitmap import unitmap, invert
+from .dataframe import dataframe
 from gerrychain import Graph, Partition
 
 from .optimize import (
@@ -25,4 +26,5 @@ __all__ = [
     "dualgraph",
     "unitmap",
     "invert",
+    "dataframe"
 ]

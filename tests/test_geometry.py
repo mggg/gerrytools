@@ -1,6 +1,7 @@
 
 from gerrychain import (
     GeographicPartition,
+    Partition,
     Graph,
     MarkovChain,
     updaters,
@@ -10,7 +11,10 @@ from gerrychain import (
 from gerrychain.proposals import recom
 from functools import partial
 import geopandas as gpd
-from evaltools.geometry import dissolve, dualgraph, unitmap, invert, dispersion_updater_closure
+from evaltools.geometry import (
+    dissolve, dualgraph, unitmap, invert, dispersion_updater_closure, dataframe
+)
+import random
 import geopandas as gpd
 from pathlib import Path
 import os
@@ -126,6 +130,12 @@ def test_unitmap():
     assert type(inverse) is dict
     assert len(inverse) == len(counties)
 
+def test_dataframe():
+    G = Graph.from_json(root/"IN-vtds.json")
+    P = Partition(graph=G, assignment={v:d["CONGRESS"] for v, d in G.nodes(data=True)})
+    df = dataframe(P, assignment="CONGRESS")
+    df = df.rename({"id": "GEOID20"}, axis=1)
+
 if __name__ == "__main__":
     root = Path(os.getcwd()) / Path("test-resources/")
-    test_dispersion_calc()
+    test_dataframe()

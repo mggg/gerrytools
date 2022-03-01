@@ -95,7 +95,8 @@ information about districting plans.</p></div>
             JSONtoObject(
                 column=p[&#34;column&#34;],
                 locator=p[&#34;locator&#34;],
-                title=p[&#34;title&#34;] if p.get(&#34;title&#34;, False) else None
+                title=p[&#34;title&#34;] if p.get(&#34;title&#34;, False) else None,
+                type=p[&#34;type&#34;] if p.get(&#34;type&#34;, False) else None
             )
             for p in data
         ]
@@ -218,6 +219,11 @@ across all data products.</p>
     Official title of the plan.
     &#34;&#34;&#34;
 
+    type: str = None
+    &#34;&#34;&#34;
+    The &#34;type&#34; of plan; could denote a party affiliation, a chamber, whatever.
+    &#34;&#34;&#34;
+
     @validator(&#34;column&#34;)
     def _validate_column(cls, column):
         &#34;&#34;&#34;
@@ -258,6 +264,10 @@ districting plan.</p></div>
 <dt id="evaltools.utilities.JSONtoObject.title"><code class="name">var <span class="ident">title</span> : Any</code></dt>
 <dd>
 <div class="desc"><p>Official title of the plan.</p></div>
+</dd>
+<dt id="evaltools.utilities.JSONtoObject.type"><code class="name">var <span class="ident">type</span> : str</code></dt>
+<dd>
+<div class="desc"><p>The "type" of plan; could denote a party affiliation, a chamber, whatever.</p></div>
 </dd>
 </dl>
 </dd>
@@ -333,6 +343,7 @@ float: right;
 <li><code><a title="evaltools.utilities.JSONtoObject.column" href="#evaltools.utilities.JSONtoObject.column">column</a></code></li>
 <li><code><a title="evaltools.utilities.JSONtoObject.locator" href="#evaltools.utilities.JSONtoObject.locator">locator</a></code></li>
 <li><code><a title="evaltools.utilities.JSONtoObject.title" href="#evaltools.utilities.JSONtoObject.title">title</a></code></li>
+<li><code><a title="evaltools.utilities.JSONtoObject.type" href="#evaltools.utilities.JSONtoObject.type">type</a></code></li>
 </ul>
 </li>
 </ul>

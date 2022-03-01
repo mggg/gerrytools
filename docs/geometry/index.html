@@ -35,6 +35,7 @@ Provides ease-of-use functionality for geographic and geometric operations.
 from .dissolve import dissolve
 from .dualgraph import dualgraph
 from .unitmap import unitmap, invert
+from .dataframe import dataframe
 from gerrychain import Graph, Partition
 
 from .optimize import (
@@ -54,6 +55,7 @@ __all__ = [
     &#34;dualgraph&#34;,
     &#34;unitmap&#34;,
     &#34;invert&#34;,
+    &#34;dataframe&#34;
 ]</code></pre>
 </details>
 </section>
@@ -113,6 +115,62 @@ and a column with proposed numberings. Used in WI.</p>
         raise TypeError(&#34;Your enacted and proposed columns must have the same type!&#34;)
 
     return units[units[enacted_col] != units[proposed_col]][pop_col].sum()</code></pre>
+</details>
+</dd>
+<dt id="evaltools.geometry.dataframe"><code class="name flex">
+<span>def <span class="ident">dataframe</span></span>(<span>P: gerrychain.partition.partition.Partition, index: str = 'id', assignment: str = 'DISTRICT', columns: list = None) ‑> pandas.core.frame.DataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Converts a <code>Partition</code> into a <code>DataFrame</code>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>P</code></strong> :&ensp;<code>Partition</code></dt>
+<dd>GerryChain <code>Partition</code> object to have its data framed.</dd>
+<dt><strong><code>index</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Graph attribute to use as an index. The <code>networkx</code>
+default name is <code>"id"</code>.</dd>
+<dt><strong><code>assignment</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Column name for assignment.</dd>
+<dt><strong><code>columns</code></strong> :&ensp;<code>list</code>, optional</dt>
+<dd>List of columns to add to the dataframe, not
+including the index. If <code>None</code> (or another falsy value), gets all
+columns.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p><code>DataFrame</code> with attached graph data.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def dataframe(
+        P: Partition, index:str=&#34;id&#34;, assignment:str=&#34;DISTRICT&#34;, columns:list=None
+    ) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;
+    Converts a `Partition` into a `DataFrame`.
+
+    Args:
+        P (Partition): GerryChain `Partition` object to have its data framed.
+        index (str, optional): Graph attribute to use as an index. The `networkx`
+            default name is `&#34;id&#34;`.
+        assignment (str, optional): Column name for assignment.
+        columns (list, optional): List of columns to add to the dataframe, not
+            including the index. If `None` (or another falsy value), gets all
+            columns.
+
+    Returns:
+        `DataFrame` with attached graph data.
+    &#34;&#34;&#34;
+    # Create dataframe.
+    gdf = pd.DataFrame.from_records({index: v, **d} for v, d in P.graph.nodes(data=True))
+
+    # Assign vertices.
+    assignedvertices = P.assignment.to_dict()
+    gdf[assignment] = gdf[index].map(assignedvertices)
+
+    # Drop columns if necessary.
+    if columns: gdf = gdf[[assignment, index] + columns]
+
+    return gdf</code></pre>
 </details>
 </dd>
 <dt id="evaltools.geometry.dispersion_updater_closure"><code class="name flex">
@@ -692,6 +750,7 @@ float: right;
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="evaltools.geometry.calculate_dispersion" href="#evaltools.geometry.calculate_dispersion">calculate_dispersion</a></code></li>
+<li><code><a title="evaltools.geometry.dataframe" href="#evaltools.geometry.dataframe">dataframe</a></code></li>
 <li><code><a title="evaltools.geometry.dispersion_updater_closure" href="#evaltools.geometry.dispersion_updater_closure">dispersion_updater_closure</a></code></li>
 <li><code><a title="evaltools.geometry.dissolve" href="#evaltools.geometry.dissolve">dissolve</a></code></li>
 <li><code><a title="evaltools.geometry.dualgraph" href="#evaltools.geometry.dualgraph">dualgraph</a></code></li>

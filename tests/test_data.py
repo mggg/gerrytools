@@ -12,6 +12,8 @@ from evaltools.data import (
 import us
 import geopandas as gpd
 import math
+from gerrychain import Graph, Partition
+import random
 
 root = Path(os.getcwd()) / Path("tests/test-resources/")
 
@@ -389,5 +391,3 @@ def test_remap():
 
 if __name__ == "__main__":
     root = Path(os.getcwd()) / Path("test-resources/")
-    test_estimate_cvap()
- 
