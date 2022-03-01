@@ -21,9 +21,13 @@ def _grouper(P:Partition, unit:str, popcol:str=None) -> list:
             being split.
     
     Returns:
-        A list of `(identifier, DataFrame)` pairs which represent each of the
-        units in the 
+        A list of `(identifier, DataFrame)` pairs which represent the set of
+        child geometries of a single parent geometry; for example, the identifier
+        could be a VTD identifier, and the `DataFrame` the data attached to blocks
+        belonging to that VTD.
     """
+    # Not to be confused with a probability distribution function. That's not what
+    # this is.
     pdf = dataframe(
         P, index="id", assignment="DISTRICT",
         columns=[unit]+([popcol] if popcol else [])
