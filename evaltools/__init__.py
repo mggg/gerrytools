@@ -3,4 +3,3 @@
 
 .. include:: ../docs/introduction.md
 """
-
