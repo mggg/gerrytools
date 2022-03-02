@@ -2,7 +2,7 @@
 import pandas as pd
 import censusdata
 from pathlib import Path
-import us
+
 def cvap(state, geometry="tract", year=2019) -> pd.DataFrame:
     """
     Retrieves and CSV-formats 5-year CVAP data for the provided state at
@@ -242,5 +242,3 @@ def _raw(geometry, yearsuffix) -> pd.DataFrame:
     # it to the caller.
     local = Path(__file__).parent.absolute()
     return pd.read_csv(local/f"local/{geometry}10-{yearsuffix}.zip", encoding="ISO-8859-1")
-my_estimate = cvap(us.states.TX, geometry="tract")
-my_estimate.to_csv("test.csv", index=False)
