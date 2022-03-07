@@ -1,4 +1,4 @@
-# plan-evaluation-processing
+# evaltools 
 A set of tools and resources for evaluating and visualizing proposed districting plans.
 
 ## Installation
@@ -12,9 +12,9 @@ check out this [complementary library](https://github.com/mggg/plan-evaluation-r
 If you want to use this package to evaluate districting plans, the recommended
 way to install is by running
 ```
-$ git clone https://github.com/mggg/plan-evaluation-processing.git
+$ git clone https://github.com/mggg/evaltools.git
 ```
-then navigate into the `plan-evaluation-processing` repository and run
+then navigate into the `evaltools` repository and run
 ```
 $ python setup.py install
 ```
@@ -22,7 +22,7 @@ in your favorite CLI. This way, whenever changes are made, you can simply
 `git pull` and they will be immediately usable by all programs importing
 `evaltools`. Alternatively, you can install through pip using
 ```
-$ pip install git+https://github.com/mggg/plan-evaluation-processing
+$ pip install git+https://github.com/mggg/evaltools
 ```
 although this may require frequent updating as the package iterates rapidly.
 
