@@ -42,7 +42,7 @@ from .reock import reock
 __all__ = [
     &#34;splits&#34;,
     &#34;pieces&#34;,
-    &#34;competitive_districts&#34;,
+    &#34;competitive_contests&#34;,
     &#34;swing_districts&#34;,
     &#34;party_districts&#34;,
     &#34;opp_party_districts&#34;,
@@ -51,6 +51,7 @@ __all__ = [
     &#34;signed_proportionality&#34;,
     &#34;absolute_proportionality&#34;,
     &#34;efficiency_gap&#34;,
+    &#34;simplified_efficiency_gap&#34;,
     &#34;mean_median&#34;,
     &#34;partisan_bias&#34;,
     &#34;partisan_gini&#34;,
@@ -141,11 +142,11 @@ elections.</p></div>
     return Score(&#34;absolute_proportionality&#34;, partial(_absolute_proportionality, election_cols=election_cols, party=party))</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.competitive_districts"><code class="name flex">
-<span>def <span class="ident">competitive_districts</span></span>(<span>election_cols: Iterable[str], party: str, points_within: float = 0.03) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
+<dt id="evaltools.scoring.competitive_contests"><code class="name flex">
+<span>def <span class="ident">competitive_contests</span></span>(<span>election_cols: Iterable[str], party: str, points_within: float = 0.03) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
 </code></dt>
 <dd>
-<div class="desc"><p>Score representing the number of competitive districts in a plan.</p>
+<div class="desc"><p>Score representing the number of competitive contests in a plan.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>election_cols</code></strong> :&ensp;<code>Iterable[str]</code></dt>
@@ -158,15 +159,15 @@ results for.</dd>
 Default is 0.03, corresponding to a competitive range of 47%-53%.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>A score object with name <code>"competitive_districts"</code> and associated function that takes a
+<p>A score object with name <code>"competitive_contests_0.03"</code> and associated function that takes a
 partition and returns a PlanWideScoreValue for the number of competitive districts.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def competitive_districts(election_cols: Iterable[str], party: str, points_within: float = 0.03) -&gt; Score:
+<pre><code class="python">def competitive_contests(election_cols: Iterable[str], party: str, points_within: float = 0.03) -&gt; Score:
     &#34;&#34;&#34;
-    Score representing the number of competitive districts in a plan.
+    Score representing the number of competitive contests in a plan.
 
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
@@ -176,10 +177,12 @@ partition and returns a PlanWideScoreValue for the number of competitive distric
             Default is 0.03, corresponding to a competitive range of 47%-53%.
     
     Returns:
-        A score object with name `&#34;competitive_districts&#34;` and associated function that takes a
+        A score object with name `&#34;competitive_contests_0.03&#34;` and associated function that takes a
         partition and returns a PlanWideScoreValue for the number of competitive districts.
     &#34;&#34;&#34;
-    return Score(&#34;competitive_districts&#34;, partial(_competitive_districts, election_cols=election_cols,
+    if alias is None:
+        alias = f&#34;competitive_contests_{points_within}&#34;
+    return Score(alias, partial(_competitive_contests, election_cols=election_cols,
                                                   party=party, points_within=points_within))</code></pre>
 </details>
 </dd>
@@ -1160,6 +1163,44 @@ elections.</p></div>
     return Score(&#34;signed_proportionality&#34;, partial(_signed_proportionality, election_cols=election_cols, party=party))</code></pre>
 </details>
 </dd>
+<dt id="evaltools.scoring.simplified_efficiency_gap"><code class="name flex">
+<span>def <span class="ident">simplified_efficiency_gap</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Score representing the simplified efficiency gap metric of a plan with respect to a set of elections.
+The original formulation of efficiency gap quantifies the difference in "wasted" votes for the two
+parties across the state, as a share of votes cast. This is sensitive to turnout effects. The
+simplified score is equal to standard efficiency gap when the districts have equal turnout.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>election_cols</code></strong> :&ensp;<code>Iterable[str]</code></dt>
+<dd>The names of the election updaters over which to compute
+results for.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A score object with name <code>"efficiency_gap"</code>
+and associated function that takes a partition
+and returns a PlanWideScoreValue for efficiency gap metric.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def simplified_efficiency_gap(election_cols: Iterable[str], party: str) -&gt; Score:
+    &#34;&#34;&#34;
+    Score representing the simplified efficiency gap metric of a plan with respect to a set of elections.
+    The original formulation of efficiency gap quantifies the difference in &#34;wasted&#34; votes for the two
+    parties across the state, as a share of votes cast. This is sensitive to turnout effects. The 
+    simplified score is equal to standard efficiency gap when the districts have equal turnout.
+    Args:
+        election_cols (Iterable[str]): The names of the election updaters over which to compute
+            results for.
+    Returns:
+        A score object with name `&#34;efficiency_gap&#34;`  and associated function that takes a partition
+        and returns a PlanWideScoreValue for efficiency gap metric.
+    &#34;&#34;&#34;
+    return Score(&#34;simplified_efficiency_gap&#34;, partial(_simplified_efficiency_gap, election_cols=election_cols, party=party))</code></pre>
+</details>
+</dd>
 <dt id="evaltools.scoring.splits"><code class="name flex">
 <span>def <span class="ident">splits</span></span>(<span>unit: str, names: bool = False, popcol: str = None, how: str = 'pandas', alias: str = None) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
 </code></dt>
@@ -1269,7 +1310,7 @@ applied to the plan.</p>
     &#34;&#34;&#34;
     summary = {}
     for score in scores:
-        summary[score.name] = score.function(part)
+        summary[score.name] = score.apply(part)
     return summary</code></pre>
 </details>
 </dd>
@@ -1533,7 +1574,7 @@ float: right;
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="evaltools.scoring.absolute_proportionality" href="#evaltools.scoring.absolute_proportionality">absolute_proportionality</a></code></li>
-<li><code><a title="evaltools.scoring.competitive_districts" href="#evaltools.scoring.competitive_districts">competitive_districts</a></code></li>
+<li><code><a title="evaltools.scoring.competitive_contests" href="#evaltools.scoring.competitive_contests">competitive_contests</a></code></li>
 <li><code><a title="evaltools.scoring.contiguous" href="#evaltools.scoring.contiguous">contiguous</a></code></li>
 <li><code><a title="evaltools.scoring.demographic_shares" href="#evaltools.scoring.demographic_shares">demographic_shares</a></code></li>
 <li><code><a title="evaltools.scoring.demographic_tallies" href="#evaltools.scoring.demographic_tallies">demographic_tallies</a></code></li>
@@ -1552,6 +1593,7 @@ float: right;
 <li><code><a title="evaltools.scoring.reock" href="#evaltools.scoring.reock">reock</a></code></li>
 <li><code><a title="evaltools.scoring.seats" href="#evaltools.scoring.seats">seats</a></code></li>
 <li><code><a title="evaltools.scoring.signed_proportionality" href="#evaltools.scoring.signed_proportionality">signed_proportionality</a></code></li>
+<li><code><a title="evaltools.scoring.simplified_efficiency_gap" href="#evaltools.scoring.simplified_efficiency_gap">simplified_efficiency_gap</a></code></li>
 <li><code><a title="evaltools.scoring.splits" href="#evaltools.scoring.splits">splits</a></code></li>
 <li><code><a title="evaltools.scoring.summarize" href="#evaltools.scoring.summarize">summarize</a></code></li>
 <li><code><a title="evaltools.scoring.summarize_many" href="#evaltools.scoring.summarize_many">summarize_many</a></code></li>
