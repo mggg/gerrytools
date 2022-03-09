@@ -47,7 +47,7 @@ def summarize(part: Partition, scores: Iterable[Score]) -> Dict[str, ScoreValue]
     """
     summary = {}
     for score in scores:
-        summary[score.name] = score.apply(part)
+        summary[score.name] = score.function(part)
     return summary
 
 def summarize_many(parts: Iterable[Partition], scores: Iterable[Score], plan_names: List[str] = [],
