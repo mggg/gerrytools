@@ -8,7 +8,6 @@ from .scores import *
 from .population import deviations, unassigned_population
 from .contiguity import unassigned_units, contiguous
 from .demographics import demographic_updaters
-from .reock import reock
 
 __all__ = [
     "splits",

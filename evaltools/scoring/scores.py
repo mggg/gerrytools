@@ -1,3 +1,6 @@
+from evaltools.geometry.compactness import (
+    _reock,
+)
 from .splits import _splits, _pieces
 from .demographics import (
     _pop_shares,
@@ -21,6 +24,7 @@ from .partisan import (
 )
 from functools import partial
 from gerrychain import Partition, Graph
+from geopandas import GeoDataFrame
 from typing import Iterable, List, Mapping, Dict, Union, Any
 import gzip
 import json
@@ -446,3 +450,9 @@ def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: f
             for col in subpop_cols
         ])
     return scores
+
+def reock(gdf: GeoDataFrame, crs: str) -> Score:
+    """
+    TODO: Document.
+    """
+    return Score("reock", partial(_reock, gdf=gdf, crs=crs))

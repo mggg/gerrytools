@@ -7,6 +7,7 @@ from .dissolve import dissolve
 from .dualgraph import dualgraph
 from .unitmap import unitmap, invert
 from .dataframe import dataframe
+from .compactness import _reock
 from gerrychain import Graph, Partition
 
 from .optimize import (
@@ -26,5 +27,6 @@ __all__ = [
     "dualgraph",
     "unitmap",
     "invert",
-    "dataframe"
+    "dataframe",
+    "_reock"
 ]
