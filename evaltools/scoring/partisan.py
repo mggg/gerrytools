@@ -15,7 +15,7 @@ def _election_stability(part: Partition, election_cols: Tuple[str], party: str):
     return (_election_results(part, election_cols, party) > 0.5).sum(axis=0)
 
 
-def _competitive_districts(part: Partition, election_cols: Iterable[str], party: str,
+def _competitive_contests(part: Partition, election_cols: Iterable[str], party: str,
                           points_within: float = 0.03) -> PlanWideScoreValue:
     results = _election_results(part, tuple(election_cols), party)
     return int(np.logical_and(results > 0.5 - points_within, results < 0.5 + points_within).sum())
@@ -48,6 +48,14 @@ def _absolute_proportionality(part: Partition, election_cols: Iterable[str], par
 
 def _efficiency_gap(part: Partition, election_cols: Iterable[str]) -> ElectionWideScoreValue:
     return {part[e].election.name: part[e].efficiency_gap() for e in election_cols}
+
+def _simplified_efficiency_gap(part: Partition, election_cols: Iterable[str], party: str) -> ElectionWideScoreValue:
+    result = {}
+    for e in election_cols:
+        V = part[e].percent(party)
+        S = part[e].seats(party) / len(part)
+        result[part[e].election.name] = S + 0.5 - 2*V
+    return result
 
 def _mean_median(part: Partition, election_cols: Iterable[str]) -> ElectionWideScoreValue:
     return {part[e].election.name: part[e].mean_median() for e in election_cols}
