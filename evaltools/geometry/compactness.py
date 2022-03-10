@@ -10,6 +10,7 @@ from gerrychain.updaters import (
 from geopandas import GeoDataFrame
 from cv2 import minEnclosingCircle
 from shapely.ops import unary_union
+from .dissolve import dissolve
 from math import pi
 import numpy as np
 
@@ -42,3 +43,23 @@ def _reock(partition: Partition, gdf: GeoDataFrame, crs: str):
         assert 0 < score < 1
         part_scores[part] = score
     return part_scores
+
+def _convex_hull(partition: Partition, gdf: GeoDataFrame, crs: str, index: str = "GEOID20"):
+    """
+    TODO: Add documentation.
+    """
+    gdf = gdf.to_crs(crs)
+    gdf = gdf.set_index(index)
+    assignment = {partition.graph.nodes[n][index]:
+                  partition.assignment[n] for n in partition.graph.nodes}
+    gdf["assignment"] = assignment
+    dissolved_gdf = dissolve(gdf, by="assignment")
+    state_geom = dissolved_gdf.dissolve().iloc[0].geometry
+
+    # Boundary-clipped convex hulls
+    dissolved_convex_hull_areas = dissolved_gdf.geometry.apply(
+        lambda g: g.convex_hull.intersection(state_geom).area
+    )
+    dissolved_areas = dissolved_gdf.geometry.apply(lambda g: g.area)
+    convex_hull_scores = dissolved_areas / dissolved_convex_hull_areas
+    return convex_hull_scores

@@ -1,5 +1,6 @@
 from evaltools.geometry.compactness import (
     _reock,
+    _convex_hull,
 )
 from .splits import _splits, _pieces
 from .demographics import (
@@ -456,3 +457,9 @@ def reock(gdf: GeoDataFrame, crs: str) -> Score:
     TODO: Document.
     """
     return Score("reock", partial(_reock, gdf=gdf, crs=crs))
+
+def convex_hull(gdf: GeoDataFrame, crs: str, index: str = "GEOID20") -> Score:
+    """
+    TODO: Document.
+    """
+    return Score("convex_hull", partial(_convex_hull, gdf=gdf, crs=crs, index=index))

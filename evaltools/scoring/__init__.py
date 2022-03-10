@@ -31,6 +31,7 @@ __all__ = [
     "unassigned_units",
     "contiguous",
     "reock",
+    "convex_hull",
     "demographic_updaters",
     "demographic_tallies",
     "demographic_shares",
