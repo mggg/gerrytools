@@ -1,6 +1,6 @@
 from gerrychain import (
-    Graph, 
-    Partition, 
+    Graph,
+    Partition,
 )
 from gerrychain.updaters import (
     boundary_nodes,
@@ -42,6 +42,32 @@ def _reock(partition: Partition, gdf: GeoDataFrame, crs: str):
         score = float(geo_partition['area'][part] / (pi * radius**2))
         assert 0 < score < 1
         part_scores[part] = score
+    return part_scores
+
+def _polsby_popper(partition: Partition, gdf: GeoDataFrame, crs: str):
+    """
+    TODO : Add documentation
+    """
+    gdf = gdf.to_crs(crs)
+    gdf_graph = Graph.from_geodataframe(gdf)
+    geo_partition = Partition(graph=gdf_graph,
+                              assignment=partition.assignment,
+                              updaters={
+                                "area": Tally("area", alias="area"),
+                                "perimeter": "perimeter"
+                              })
+    part_scores = {}
+    for part, nodes in geo_partition.parts.items():
+        part_scores[part] = (4*pi*geo_partition['area'][part])/(
+        geo_partition['perimeter'][part] ** 2)
+    return part_scores
+
+def _schwartzberg(partition: Partition, gdf: GeoDataFrame, crs: str):
+    """
+    TODO: Add documentation
+    """
+    polsby_scores = _polsby_popper(partition, gdf, crs)
+    part_scores = {k : 1/sqrt(polsby_scores[k]) for k in polsby_scores.keys()}
     return part_scores
 
 def _convex_hull(partition: Partition, gdf: GeoDataFrame, crs: str, index: str = "GEOID20"):
