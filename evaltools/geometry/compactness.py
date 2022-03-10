@@ -50,9 +50,8 @@ def _convex_hull(partition: Partition, gdf: GeoDataFrame, crs: str, index: str =
     """
     gdf = gdf.to_crs(crs)
     gdf = gdf.set_index(index)
-    assignment = {partition.graph.nodes[n][index]:
-                  partition.assignment[n] for n in partition.graph.nodes}
-    gdf["assignment"] = assignment
+    assignment = {partition.graph.nodes[n][index]:partition.assignment[n] for n in partition.graph.nodes}
+    gdf["assignment"] = gdf.index.map(assignment)
     dissolved_gdf = dissolve(gdf, by="assignment")
     state_geom = dissolved_gdf.dissolve().iloc[0].geometry
 
