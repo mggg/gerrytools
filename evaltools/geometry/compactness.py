@@ -88,3 +88,6 @@ def _convex_hull(partition: Partition, gdf: GeoDataFrame, crs: str, index: str =
     dissolved_areas = dissolved_gdf.geometry.apply(lambda g: g.area)
     convex_hull_scores = dissolved_areas / dissolved_convex_hull_areas
     return convex_hull_scores
+
+def _cut_edges(partition: Partition):
+    return len(partition["cut_edges"])

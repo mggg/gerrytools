@@ -2,7 +2,8 @@ from evaltools.geometry.compactness import (
     _reock,
     _convex_hull,
     _polsby_popper,
-    _schwartzberg
+    _schwartzberg,
+    _cut_edges,
 )
 from .splits import _splits, _pieces
 from .demographics import (
@@ -486,10 +487,21 @@ def schwartzberg(gdf: GeoDataFrame, crs:str) -> Score:
     Returns:
         A dictionary with districts as keys and schwartzberg scores as values.
     """
-    return Score("reock", partial(_reock, gdf=gdf, crs=crs))
+    return Score("schwartzberg", partial(_schwartzberg, gdf=gdf, crs=crs))
 
 def convex_hull(gdf: GeoDataFrame, crs: str, index: str = "GEOID20") -> Score:
     """
-    TODO: Document.
+    Returns the convex-hull score for each district in a plan.
+    Args:
+        gdf (GeoDataFrame): Dissolved geodataframe for the plan.
+        crs (str): Desired projection for the geodataframe.
+    Returns:
+        A dictionary with districts as keys and convex-hull scores as values.
     """
     return Score("convex_hull", partial(_convex_hull, gdf=gdf, crs=crs, index=index))
+
+def cut_edges() -> Score:
+    """
+    Returns the number of cut edges in a plan.
+    """
+    return Score("cut_edges", partial(_cut_edges))
