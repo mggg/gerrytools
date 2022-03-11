@@ -3,6 +3,7 @@ from .demographics import (
     _pop_shares,
     _tally_pop,
     _gingles_districts,
+    _max_deviation,
 )
 from .partisan import (
     _competitive_contests,
@@ -268,7 +269,7 @@ def seats(election_cols: Iterable[str], party: str, mean: bool = False) -> Score
         returns an ElectionWideScoreValue for the number of seats won by the POV party for each
         election.
     """
-    return Score(f"{party}_seats", partial(_seats, election_cols=election_cols, party=party))
+    return Score(f"{party}_seats", partial(_seats, election_cols=election_cols, party=party, mean=mean))
 
 def signed_proportionality(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
     """
@@ -286,7 +287,7 @@ def signed_proportionality(election_cols: Iterable[str], party: str, mean: bool 
         partition and returns an PlanWideScoreValue for the responsive proportionality across the
         elections.
     """
-    return Score("signed_proportionality", partial(_signed_proportionality, election_cols=election_cols, party=party))
+    return Score("signed_proportionality", partial(_signed_proportionality, election_cols=election_cols, party=party, mean=mean))
 
 def absolute_proportionality(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
     """
@@ -304,7 +305,7 @@ def absolute_proportionality(election_cols: Iterable[str], party: str, mean: boo
         partition and returns an PlanWideScoreValue for the stable proportionality across the
         elections.
     """
-    return Score("absolute_proportionality", partial(_absolute_proportionality, election_cols=election_cols, party=party))
+    return Score("absolute_proportionality", partial(_absolute_proportionality, election_cols=election_cols, party=party, mean=mean))
 
 def efficiency_gap(election_cols: Iterable[str], mean: bool = False) -> Score:
     """
@@ -320,7 +321,7 @@ def efficiency_gap(election_cols: Iterable[str], mean: bool = False) -> Score:
         A score object with name `"efficiency_gap"`  and associated function that takes a partition
         and returns a PlanWideScoreValue for efficiency gap metric.
     """
-    return Score("efficiency_gap", partial(_efficiency_gap, election_cols=election_cols))
+    return Score("efficiency_gap", partial(_efficiency_gap, election_cols=election_cols, mean=mean))
 
 def simplified_efficiency_gap(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
     """
@@ -338,7 +339,7 @@ def simplified_efficiency_gap(election_cols: Iterable[str], party: str, mean: bo
         A score object with name `"efficiency_gap"`  and associated function that takes a partition
         and returns a PlanWideScoreValue for efficiency gap metric.
     """
-    return Score("simplified_efficiency_gap", partial(_simplified_efficiency_gap, election_cols=election_cols, party=party))
+    return Score("simplified_efficiency_gap", partial(_simplified_efficiency_gap, election_cols=election_cols, party=party, mean=mean))
 
 def mean_median(election_cols: Iterable[str], mean: bool = False) -> Score:
     """
@@ -354,7 +355,7 @@ def mean_median(election_cols: Iterable[str], mean: bool = False) -> Score:
         A score object with name `"mean_median"` and associated function that takes a partition and
         returns a PlanWideScoreValue for the mean median metric.
     """
-    return Score("mean_median", partial(_mean_median, election_cols=election_cols))
+    return Score("mean_median", partial(_mean_median, election_cols=election_cols, mean=mean))
 
 def partisan_bias(election_cols: Iterable[str], mean: bool = False) -> Score:
     """
@@ -369,7 +370,7 @@ def partisan_bias(election_cols: Iterable[str], mean: bool = False) -> Score:
         A score object with name `"partisan_bias"` and associated function that takes a partition and
         returns a PlanWideScoreValue for partisan bias metric.
     """
-    return Score("partisan_bias", partial(_partisan_bias, election_cols=election_cols))
+    return Score("partisan_bias", partial(_partisan_bias, election_cols=election_cols, mean=mean))
 
 def partisan_gini(election_cols: Iterable[str], mean: bool = False) -> Score:
     """
@@ -386,7 +387,7 @@ def partisan_gini(election_cols: Iterable[str], mean: bool = False) -> Score:
         A score object with name `"partisan_gini"` and associated function that takes a partition and
         returns a PlanWideScoreValue for the partisan gini metric.
     """
-    return Score("partisan_gini", partial(_partisan_gini, election_cols=election_cols))
+    return Score("partisan_gini", partial(_partisan_gini, election_cols=election_cols, mean=mean))
 
 def eguia(election_cols: Iterable[str], party: str, graph: Graph, updaters: Mapping[str, Callable[[Partition], ScoreValue]],
           county_col: str, totpop_col: str = "population", mean: bool = False) -> Score:
@@ -415,7 +416,7 @@ def eguia(election_cols: Iterable[str], party: str, graph: Graph, updaters: Mapp
     """
     county_part = Partition(graph, county_col, updaters=updaters)
     return Score("eguia", partial(_eguia, election_cols=election_cols, party=party, 
-                                  county_part=county_part, totpop_col=totpop_col))
+                                  county_part=county_part, totpop_col=totpop_col, mean=mean))
 
 
 def demographic_tallies(population_cols: Iterable[str]) -> List[Score]:
@@ -483,3 +484,16 @@ def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: f
             for col in subpop_cols
         ])
     return scores
+
+def max_deviation(totpop_col: str, pct: bool = False) -> Score:
+    """
+    Returns the maximum deviation from ideal population size among all the districts.
+    If `pct`, return the deviation as a percentage of ideal population size.
+
+    Args:
+        totpop_col (str, optional): The name of the updater that computes total population by
+            district.
+        pct (bool): Whether to return the maximum deviation as a count or as a percentage of 
+                    ideal district size.
+    """
+    return Score(f"{totpop_col}_max_deviation", partial(_max_deviation, totpop_col=totpop_col, pct=pct))
