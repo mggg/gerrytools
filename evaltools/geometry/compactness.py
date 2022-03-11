@@ -88,3 +88,22 @@ def _convex_hull(partition: Partition, gdf: GeoDataFrame, crs: str, index: str =
     dissolved_areas = dissolved_gdf.geometry.apply(lambda g: g.area)
     convex_hull_scores = dissolved_areas / dissolved_convex_hull_areas
     return convex_hull_scores
+
+def _pop_polygon(partition: Partition, block_gdf: GeoDataFrame, gdf: GeoDataFrame, pop_col: str, crs: str):
+    block_gdf = block_gdf.to_crs(crs)  
+
+    gdf_graph = Graph.from_geodataframe(gdf)
+
+    geo_partition = Partition(graph = gdf_graph,
+                              assignment = partition.assignment,
+                              updaters = {"population":Tally(pop_col, alias="population")})
+
+    district_hulls = dict(gdf.geometry.apply(lambda p : p.convex_hull))
+
+    pop_polygon_scores = {}
+    for part, nodes in geo_partition.parts.items():
+        hull_gdf = gpd.clip(block_gdf, district_hulls[part-1])
+        pop_polygon_scores[part] = geo_partition["population"][part]/
+                                sum(hull_gdf[pop_col])
+
+    return pop_polygon_scores

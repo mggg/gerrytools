@@ -490,6 +490,27 @@ def schwartzberg(gdf: GeoDataFrame, crs:str) -> Score:
 
 def convex_hull(gdf: GeoDataFrame, crs: str, index: str = "GEOID20") -> Score:
     """
-    TODO: Document.
+    Returns the convex hull compactness metric for each district in a plan.
+    Args:
+        gdf (GeoDataFrame): Dissolved geodataframe for the plan.
+        crs (str): Desired projection for the geodataframe.
+        index (str):
+    Returns:
+        A dictionary with districts as keys and schwartzberg scores as values.
+
     """
     return Score("convex_hull", partial(_convex_hull, gdf=gdf, crs=crs, index=index))
+
+def pop_polygon(block_gdf: GeoDataFrame, gdf: GeoDataFrame, crs: str, pop_col: str = "TOTPOP20") -> Score:
+    """
+    Returns the population polygon compactness metric for each district in a plan.
+    Args:
+        block_gdf (GeoDataFrame): Block level shapefile for the state.
+        gdf (GeoDataFrame): Dissolved geodataframe for the plan.
+        crs (str): Desired projection for the geodataframe.
+        pop_col (str): Population column reflected in block_gdf and gdf.
+    Returns:
+        A dictionary with districts as keys and population polygon scores as values.
+
+    """
+    return Score("pop_polygon", partial(_pop_polygon, block_gdf=block_gdf, gdf=gdf, crs=crs, pop_col=pop_col))
