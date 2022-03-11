@@ -4,6 +4,8 @@ from gerrychain import (
 )
 from gerrychain.updaters import (
     boundary_nodes,
+    perimeter,
+    exterior_boundaries,
     Tally, # TODO: ask why this isn't already in GeographicPartition
 )
 
@@ -54,7 +56,8 @@ def _polsby_popper(partition: Partition, gdf: GeoDataFrame, crs: str):
                               assignment=partition.assignment,
                               updaters={
                                 "area": Tally("area", alias="area"),
-                                "perimeter": "perimeter"
+                                "perimeter": perimeter,
+                                "exterior_boundaries": exterior_boundaries,
                               })
     part_scores = {}
     for part, nodes in geo_partition.parts.items():
