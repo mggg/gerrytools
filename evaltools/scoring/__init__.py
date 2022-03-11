@@ -37,5 +37,6 @@ __all__ = [
     "demographic_tallies",
     "demographic_shares",
     "gingles_districts",
+    "max_deviation",
     "eguia",
 ]
