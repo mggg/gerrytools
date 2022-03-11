@@ -459,7 +459,7 @@ def reock(gdf: GeoDataFrame, crs: str) -> Score:
     """
     Returns the reock score for each district in a plan.
     Args:
-        gdf (GeoDataFrame): Dissolved geodataframe for the plan.
+        gdf (GeoDataFrame): Geodataframe for the plan.
         crs (str): Desired projection for the geodataframe.
     Returns:
         A dictionary with districts as keys and reock scores as values.
@@ -470,7 +470,7 @@ def polsby_popper(gdf: GeoDataFrame, crs: str) -> Score:
     """
     Returns the polsby-popper score for each district in a plan.
     Args:
-        gdf (GeoDataFrame): Dissolved geodataframe for the plan.
+        gdf (GeoDataFrame): Geodataframe for the plan.
         crs (str): Desired projection for the geodataframe.
     Returns:
         A dictionary with districts as keys and polsby-popper scores as values.
@@ -482,7 +482,7 @@ def schwartzberg(gdf: GeoDataFrame, crs:str) -> Score:
     """
     Returns the schwartzberg score for each district in a plan.
     Args:
-        gdf (GeoDataFrame): Dissolved geodataframe for the plan.
+        gdf (GeoDataFrame): Geodataframe for the plan.
         crs (str): Desired projection for the geodataframe.
     Returns:
         A dictionary with districts as keys and schwartzberg scores as values.
