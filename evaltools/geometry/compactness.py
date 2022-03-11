@@ -19,7 +19,7 @@ def _reock(partition: Partition, gdf: GeoDataFrame, crs: str):
     TODO: Add documentation.
     """
     gdf = gdf.to_crs(crs)
-    gdf_graph = Graph.from_geodataframe(gdf)
+    gdf_graph = Graph.from_geodataframe(gdf, ignore_errors=True)
     geo_partition = Partition(graph=gdf_graph,
                               assignment=partition.assignment,
                               updaters={
@@ -49,7 +49,7 @@ def _polsby_popper(partition: Partition, gdf: GeoDataFrame, crs: str):
     TODO : Add documentation
     """
     gdf = gdf.to_crs(crs)
-    gdf_graph = Graph.from_geodataframe(gdf)
+    gdf_graph = Graph.from_geodataframe(gdf, ignore_errors=True)
     geo_partition = Partition(graph=gdf_graph,
                               assignment=partition.assignment,
                               updaters={
