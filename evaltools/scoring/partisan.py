@@ -37,35 +37,41 @@ def _party_wins_by_district(part: Partition, election_cols: Iterable[str], party
     districts = [d for d in sorted(part.parts.keys()) if d != -1]
     return {d: int(d_wins) for d, d_wins in zip(districts, stability)}
 
-def _seats(part: Partition, election_cols: Iterable[str], party: str) -> ElectionWideScoreValue:
-    return {part[e].election.name: sum([part[e].won(party, d) for d in part.parts.keys() if d != -1]) for e in election_cols}
+def _seats(part: Partition, election_cols: Iterable[str], party: str, mean: bool = False) -> ScoreValue:
+    result = {part[e].election.name: sum([part[e].won(party, d) for d in part.parts.keys() if d != -1]) for e in election_cols}
+    return np.mean(result.values()) if mean else result
 
-def _signed_proportionality(part: Partition, election_cols: Iterable[str], party: str) -> ElectionWideScoreValue:
-    return {part[e].election.name: part[e].seats(party) - (part[e].percent(party) * len(part)) for e in election_cols}
+def _signed_proportionality(part: Partition, election_cols: Iterable[str], party: str, mean: bool = False) -> ScoreValue:
+    result = {part[e].election.name: part[e].seats(party) - (part[e].percent(party) * len(part)) for e in election_cols}
+    return np.mean(result.values()) if mean else result
 
-def _absolute_proportionality(part: Partition, election_cols: Iterable[str], party: str) -> ElectionWideScoreValue:
-    return {part[e].election.name: abs(part[e].seats(party) - (part[e].percent(party) * len(part))) for e in election_cols}
+def _absolute_proportionality(part: Partition, election_cols: Iterable[str], party: str, mean: bool = False) -> ScoreValue:
+    result = {part[e].election.name: abs(part[e].seats(party) - (part[e].percent(party) * len(part))) for e in election_cols}
+    return np.mean(result.values()) if mean else result
 
-def _efficiency_gap(part: Partition, election_cols: Iterable[str]) -> ElectionWideScoreValue:
-    return {part[e].election.name: part[e].efficiency_gap() for e in election_cols}
+def _efficiency_gap(part: Partition, election_cols: Iterable[str], mean: bool = False) -> ScoreValue:
+    result = {part[e].election.name: part[e].efficiency_gap() for e in election_cols}
+    return np.mean(result.values()) if mean else result
 
-def _simplified_efficiency_gap(part: Partition, election_cols: Iterable[str], party: str) -> ElectionWideScoreValue:
+def _simplified_efficiency_gap(part: Partition, election_cols: Iterable[str], party: str, mean: bool = False) -> ScoreValue:
     result = {}
     for e in election_cols:
         V = part[e].percent(party)
         S = part[e].seats(party) / len(part)
         result[part[e].election.name] = S + 0.5 - 2*V
-    return result
+    return np.mean(result.values()) if mean else result
 
-def _mean_median(part: Partition, election_cols: Iterable[str]) -> ElectionWideScoreValue:
-    return {part[e].election.name: part[e].mean_median() for e in election_cols}
+def _mean_median(part: Partition, election_cols: Iterable[str], mean: bool = False) -> ScoreValue:
+    result = {part[e].election.name: part[e].mean_median() for e in election_cols}
+    return np.mean(result.values()) if mean else result
 
-def _partisan_bias(part: Partition, election_cols: Iterable[str]) -> ElectionWideScoreValue:
-    return {part[e].election.name: part[e].partisan_bias() for e in election_cols}
+def _partisan_bias(part: Partition, election_cols: Iterable[str], mean: bool = False) -> ScoreValue:
+    result = {part[e].election.name: part[e].partisan_bias() for e in election_cols}
+    return np.mean(result.values()) if mean else result
 
-def _partisan_gini(part: Partition, election_cols: Iterable[str]) -> ElectionWideScoreValue:
-    return {part[e].election.name: part[e].partisan_gini() for e in election_cols}
-
+def _partisan_gini(part: Partition, election_cols: Iterable[str], mean: bool = False) -> ScoreValue:
+    result = {part[e].election.name: part[e].partisan_gini() for e in election_cols}
+    return np.mean(result.values()) if mean else result
 
 def _eguia_election(part: Partition, e: str, party: str, county_part: Partition, totpop_col: str) -> Numeric:
         seat_share = part[e].seats(party) / len(part.parts)
@@ -76,5 +82,6 @@ def _eguia_election(part: Partition, e: str, party: str, county_part: Partition,
         return seat_share - ideal
 
 
-def _eguia(part: Partition, election_cols: Iterable[str], party: str, county_part: Partition, totpop_col: str) -> ElectionWideScoreValue:
-    return {part[e].election.name: _eguia_election(part, e, party, county_part, totpop_col) for e in election_cols}
+def _eguia(part: Partition, election_cols: Iterable[str], party: str, county_part: Partition, totpop_col: str, mean: bool = False) -> ScoreValue:
+    result = {part[e].election.name: _eguia_election(part, e, party, county_part, totpop_col) for e in election_cols}
+    return np.mean(result.values()) if mean else result

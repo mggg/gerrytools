@@ -251,7 +251,7 @@ def party_wins_by_district(election_cols: Iterable[str], party: str) -> Score:
     """
     return Score("party_wins_by_district", partial(_party_wins_by_district, election_cols=election_cols, party=party))
 
-def seats(election_cols: Iterable[str], party: str) -> Score:
+def seats(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
     """
     Score representing how many seats (districts) within a given plan the POV party won in each
     election 
@@ -260,6 +260,8 @@ def seats(election_cols: Iterable[str], party: str) -> Score:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
         party (str): The "point of view" political party.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `"{party}_seats"` and associated function that takes a partition and
@@ -268,7 +270,7 @@ def seats(election_cols: Iterable[str], party: str) -> Score:
     """
     return Score(f"{party}_seats", partial(_seats, election_cols=election_cols, party=party))
 
-def signed_proportionality(election_cols: Iterable[str], party: str) -> Score:
+def signed_proportionality(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
     """
     Score representing how many the responsive proportionality across a set of elections.
 
@@ -276,6 +278,8 @@ def signed_proportionality(election_cols: Iterable[str], party: str) -> Score:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
         party (str): The "point of view" political party.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `"signed_proportionality"` and associated function that takes a
@@ -284,7 +288,7 @@ def signed_proportionality(election_cols: Iterable[str], party: str) -> Score:
     """
     return Score("signed_proportionality", partial(_signed_proportionality, election_cols=election_cols, party=party))
 
-def absolute_proportionality(election_cols: Iterable[str], party: str) -> Score:
+def absolute_proportionality(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
     """
     Score representing how many the stable proportionality across a set of elections.
 
@@ -292,6 +296,8 @@ def absolute_proportionality(election_cols: Iterable[str], party: str) -> Score:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
         party (str): The "point of view" political party.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `"absolute_proportionality"` and associated function that takes a
@@ -300,13 +306,15 @@ def absolute_proportionality(election_cols: Iterable[str], party: str) -> Score:
     """
     return Score("absolute_proportionality", partial(_absolute_proportionality, election_cols=election_cols, party=party))
 
-def efficiency_gap(election_cols: Iterable[str]) -> Score:
+def efficiency_gap(election_cols: Iterable[str], mean: bool = False) -> Score:
     """
     Score representing the efficiency gap metric of a plan with respect to a set of elections.
 
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `"efficiency_gap"`  and associated function that takes a partition
@@ -314,7 +322,7 @@ def efficiency_gap(election_cols: Iterable[str]) -> Score:
     """
     return Score("efficiency_gap", partial(_efficiency_gap, election_cols=election_cols))
 
-def simplified_efficiency_gap(election_cols: Iterable[str], party: str) -> Score:
+def simplified_efficiency_gap(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
     """
     Score representing the simplified efficiency gap metric of a plan with respect to a set of elections.
     The original formulation of efficiency gap quantifies the difference in "wasted" votes for the two
@@ -323,19 +331,24 @@ def simplified_efficiency_gap(election_cols: Iterable[str], party: str) -> Score
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
+        party (str): The "point of view" political party.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
     Returns:
         A score object with name `"efficiency_gap"`  and associated function that takes a partition
         and returns a PlanWideScoreValue for efficiency gap metric.
     """
     return Score("simplified_efficiency_gap", partial(_simplified_efficiency_gap, election_cols=election_cols, party=party))
 
-def mean_median(election_cols: Iterable[str]) -> Score:
+def mean_median(election_cols: Iterable[str], mean: bool = False) -> Score:
     """
     Score representing the mean median metric of a plan with respect to a set of elections.
 
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `"mean_median"` and associated function that takes a partition and
@@ -343,20 +356,22 @@ def mean_median(election_cols: Iterable[str]) -> Score:
     """
     return Score("mean_median", partial(_mean_median, election_cols=election_cols))
 
-def partisan_bias(election_cols: Iterable[str]) -> Score:
+def partisan_bias(election_cols: Iterable[str], mean: bool = False) -> Score:
     """
     Score representing the partitisan bias metric of a plan with respect to a set of elections.
 
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
     Returns:
         A score object with name `"partisan_bias"` and associated function that takes a partition and
         returns a PlanWideScoreValue for partisan bias metric.
     """
     return Score("partisan_bias", partial(_partisan_bias, election_cols=election_cols))
 
-def partisan_gini(election_cols: Iterable[str]) -> Score:
+def partisan_gini(election_cols: Iterable[str], mean: bool = False) -> Score:
     """
     Score representing the partisan gini metric of a plan with respect to a set of elections.
 
@@ -364,6 +379,8 @@ def partisan_gini(election_cols: Iterable[str]) -> Score:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
         party (str): The "point of view" political party.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `"partisan_gini"` and associated function that takes a partition and
@@ -372,7 +389,7 @@ def partisan_gini(election_cols: Iterable[str]) -> Score:
     return Score("partisan_gini", partial(_partisan_gini, election_cols=election_cols))
 
 def eguia(election_cols: Iterable[str], party: str, graph: Graph, updaters: Mapping[str, Callable[[Partition], ScoreValue]],
-          county_col: str, totpop_col: str = "population") -> Score:
+          county_col: str, totpop_col: str = "population", mean: bool = False) -> Score:
     """
     Score representing the Equia metric of a plan with respect to a set of elections.
 
@@ -389,6 +406,8 @@ def eguia(election_cols: Iterable[str], party: str, graph: Graph, updaters: Mapp
             each unit.
         totpop_col (str, optional): The name of the updater that computes total population by
             district.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `"eguia"` and associated function that takes a partition and returns
