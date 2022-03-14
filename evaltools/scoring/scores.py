@@ -466,17 +466,19 @@ def reock(gdf: GeoDataFrame, crs: str) -> Score:
     """
     return Score("reock", partial(_reock, gdf=gdf, crs=crs))
 
-def polsby_popper(gdf: GeoDataFrame, crs: str) -> Score:
+def polsby_popper(gdf: GeoDataFrame, crs: str, assignment_col: str = "assignment") -> Score:
     """
     Returns the polsby-popper score for each district in a plan.
     Args:
         gdf (GeoDataFrame): Geodataframe for the plan.
         crs (str): Desired projection for the geodataframe.
+        assignment_col (str, optional): Name of the district assignment column within the
+            GeoDataFrame. Defaults to `assignment`
     Returns:
         A dictionary with districts as keys and polsby-popper scores as values.
     """
 
-    return Score("polsby_popper", partial(_polsby_popper, gdf=gdf, crs=crs))
+    return Score("polsby_popper", partial(_polsby_popper, gdf=gdf, crs=crs, assignment_col=assignment_col))
 
 def schwartzberg(gdf: GeoDataFrame, crs:str) -> Score:
     """
