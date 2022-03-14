@@ -1,6 +1,7 @@
 from gerrychain import (
     Graph,
     Partition,
+    GeographicPartition
 )
 from gerrychain.updaters import (
     boundary_nodes,
@@ -44,18 +45,18 @@ def _reock(partition: Partition, gdf: GeoDataFrame, crs: str):
         part_scores[part] = score
     return part_scores
 
-def _polsby_popper(partition: Partition, gdf: GeoDataFrame, crs: str):
+def _polsby_popper(partition: Partition, gdf: GeoDataFrame, crs: str, assignment_col:str):
     """
     TODO : Add documentation
     """
     gdf = gdf.to_crs(crs)
+    
+    assignment = gdf.to_dict()[assignment_col]
+    
     gdf_graph = Graph.from_geodataframe(gdf)
-    geo_partition = Partition(graph=gdf_graph,
-                              assignment=partition.assignment,
-                              updaters={
-                                "area": Tally("area", alias="area"),
-                                "perimeter": "perimeter"
-                              })
+    geo_partition = GeographicPartition(graph=gdf_graph,
+                              assignment=assignment,
+                              updaters={})
     part_scores = {}
     for part, nodes in geo_partition.parts.items():
         part_scores[part] = (4*pi*geo_partition['area'][part])/(
