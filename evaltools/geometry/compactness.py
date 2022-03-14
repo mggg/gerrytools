@@ -5,7 +5,11 @@ from gerrychain import (
 )
 from gerrychain.updaters import (
     boundary_nodes,
-    Tally, # TODO: ask why this isn't already in GeographicPartition
+    Tally,
+    perimeter, 
+    exterior_boundaries, 
+    interior_boundaries, 
+    cut_edges_by_part# TODO: ask why this isn't already in GeographicPartition
 )
 
 from geopandas import GeoDataFrame
@@ -54,9 +58,15 @@ def _polsby_popper(partition: Partition, gdf: GeoDataFrame, crs: str, assignment
     assignment = gdf.to_dict()[assignment_col]
     
     gdf_graph = Graph.from_geodataframe(gdf)
-    geo_partition = GeographicPartition(graph=gdf_graph,
+    geo_partition = Partition(graph=gdf_graph,
                               assignment=assignment,
-                              updaters={})
+                              updaters={
+                                  "boundary_nodes": boundary_nodes,
+                                  "area": Tally("area", alias="area"),
+                                  "perimeter": perimeter, 
+                                  "exterior_boundaries": exterior_boundaries, 
+                                  "interior_boundaries": interior_boundaries, 
+                                  "cut_edges_by_part": cut_edges_by_part})
     part_scores = {}
     for part, nodes in geo_partition.parts.items():
         part_scores[part] = (4*pi*geo_partition['area'][part])/(
@@ -104,7 +114,6 @@ def _pop_polygon(partition: Partition, block_gdf: GeoDataFrame, gdf: GeoDataFram
     pop_polygon_scores = {}
     for part, nodes in geo_partition.parts.items():
         hull_gdf = gpd.clip(block_gdf, district_hulls[part-1])
-        pop_polygon_scores[part] = geo_partition["population"][part]/
-                                sum(hull_gdf[pop_col])
+        pop_polygon_scores[part] = geo_partition["population"][part]/sum(hull_gdf[pop_col])
 
     return pop_polygon_scores
