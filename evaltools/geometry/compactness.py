@@ -15,7 +15,7 @@ from geopandas import GeoDataFrame
 from cv2 import minEnclosingCircle
 from shapely.ops import unary_union
 from .dissolve import dissolve
-from math import pi
+from math import pi, sqrt
 import numpy as np
 
 def _reock(partition: Partition, gdf: GeoDataFrame, crs: str):
