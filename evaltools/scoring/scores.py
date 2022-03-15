@@ -466,39 +466,39 @@ def reock(gdf: GeoDataFrame, crs: str) -> Score:
     """
     return Score("reock", partial(_reock, gdf=gdf, crs=crs))
 
-def polsby_popper(gdf: GeoDataFrame, crs: str) -> Score:
+def polsby_popper(dissolved_gdf: GeoDataFrame, crs: str) -> Score:
     """
     Returns the polsby-popper score for each district in a plan.
     Args:
-        gdf (GeoDataFrame): Geodataframe for the plan.
+        dissolved_gdf (GeoDataFrame): Dissolved geodataframe for the plan.
         crs (str): Desired projection for the geodataframe.
     Returns:
         A dictionary with districts as keys and polsby-popper scores as values.
     """
 
-    return Score("polsby_popper", partial(_polsby_popper, gdf=gdf, crs=crs))
+    return Score("polsby_popper", partial(_polsby_popper, dissolved_gdf=dissolved_gdf, crs=crs))
 
-def schwartzberg(gdf: GeoDataFrame, crs:str) -> Score:
+def schwartzberg(dissolved_gdf: GeoDataFrame, crs:str) -> Score:
     """
     Returns the schwartzberg score for each district in a plan.
     Args:
-        gdf (GeoDataFrame): Geodataframe for the plan.
+        dissolved_gdf (GeoDataFrame): Dissolved geodataframe for the plan.
         crs (str): Desired projection for the geodataframe.
     Returns:
         A dictionary with districts as keys and schwartzberg scores as values.
     """
-    return Score("schwartzberg", partial(_schwartzberg, gdf=gdf, crs=crs))
+    return Score("schwartzberg", partial(_schwartzberg, dissolved_gdf=dissolved_gdf, crs=crs))
 
-def convex_hull(gdf: GeoDataFrame, crs: str, index: str = "GEOID20") -> Score:
+def convex_hull(dissolved_gdf: GeoDataFrame, crs: str, index: str = "GEOID20") -> Score:
     """
     Returns the convex-hull score for each district in a plan.
     Args:
-        gdf (GeoDataFrame): Dissolved geodataframe for the plan.
+        disolved_gdf (GeoDataFrame): Dissolved geodataframe for the plan.
         crs (str): Desired projection for the geodataframe.
     Returns:
         A dictionary with districts as keys and convex-hull scores as values.
     """
-    return Score("convex_hull", partial(_convex_hull, gdf=gdf, crs=crs, index=index))
+    return Score("convex_hull", partial(_convex_hull, dissolved_gdf=dissolved_gdf, crs=crs, index=index))
 
 def cut_edges() -> Score:
     """
