@@ -7,6 +7,7 @@ from gerrychain.updaters import (
     exterior_boundaries,
     interior_boundaries,
     boundary_nodes,
+    cut_edges_by_part,
     Tally, # TODO: ask why this isn't already in GeographicPartition
 )
 
@@ -61,6 +62,7 @@ def _polsby_popper(partition: Partition, dissolved_gdf: GeoDataFrame, crs: str):
                                 "exterior_boundaries": exterior_boundaries,
                                 "interior_boundaries": interior_boundaries,
                                 "boundary_nodes": boundary_nodes,
+                                "cut_edges_by_part": cut_edges_by_part,
                               })
     part_scores = {}
     for part, _ in geo_partition.parts.items():
