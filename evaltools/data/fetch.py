@@ -94,7 +94,6 @@ def tabularized(state, submissions) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Data
 
     # Add the retrieved plan data to the dataframes *if the subset dataframes
     # contain items*.
-
     if not subset_plans.empty: plans = plans.merge(subset_plans, on="id")
     else: plans = pd.DataFrame()
     if not subset_cois.empty: cois = cois.merge(subset_cois, on="id")
@@ -104,7 +103,11 @@ def tabularized(state, submissions) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Data
     # but... fine.
     for df in [plans, cois]:
         if not df.empty:
-            df.drop(["type_x", "link_x", "coalition"], axis=1, inplace=True)
+            # Remove columns we don't necessarily care about.
+            for col in ["type_x", "link_x", "coalition"]:
+                if col in list(df): df.drop(col, axis=1, inplace=True)
+
+            # Rename the columns we do care about.
             df.rename({"type_y": "type", "link_y": "link"}, axis=1, inplace=True)
 
     return plans, cois, writtens
@@ -140,25 +143,27 @@ def submissions(state, sample=None) -> List[Submission]:
         districtr = individual(identifier)
         
         # Force all plan keys and values to strings.
-        plan = {
-            str(k): str(v) if type(v) is not list else str(v[0])
-            for k, v in districtr["plan"]["assignment"].items()
-        }
-        units = districtr["plan"]["units"]["name"]
-        unitsType = districtr["plan"]["units"]["unitType"]
-        tileset = districtr["plan"]["units"]["tilesets"][0]["sourceLayer"]
+        try:
+            plan = {
+                str(k): str(v) if type(v) is not list else str(v[0])
+                for k, v in districtr["plan"]["assignment"].items()
+            }
+            units = districtr["plan"]["units"]["name"]
+            unitsType = districtr["plan"]["units"]["unitType"]
+            tileset = districtr["plan"]["units"]["tilesets"][0]["sourceLayer"]
 
-        # Create a new Submission.
-        submissions.append(Submission(
-            link=entity["link"],
-            id=identifier,
-            plan=plan,
-            units=units,
-            unitsType=unitsType,
-            tileset=tileset,
-            type=entity["type"]
-        ))
-
+            # Create a new Submission.
+            submissions.append(Submission(
+                link=entity["link"],
+                id=identifier,
+                plan=plan,
+                units=units,
+                unitsType=unitsType,
+                tileset=tileset,
+                type=entity["type"]
+            ))
+        except: pass
+    
     return submissions
 
 

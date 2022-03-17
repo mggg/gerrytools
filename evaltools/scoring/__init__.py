@@ -12,7 +12,7 @@ from .demographics import demographic_updaters
 __all__ = [
     "splits",
     "pieces",
-    "competitive_districts",
+    "competitive_contests",
     "swing_districts",
     "party_districts",
     "opp_party_districts",
@@ -21,6 +21,7 @@ __all__ = [
     "signed_proportionality",
     "absolute_proportionality",
     "efficiency_gap",
+    "simplified_efficiency_gap",
     "mean_median",
     "partisan_bias",
     "partisan_gini",
@@ -36,5 +37,6 @@ __all__ = [
     "demographic_tallies",
     "demographic_shares",
     "gingles_districts",
+    "max_deviation",
     "eguia",
 ]
