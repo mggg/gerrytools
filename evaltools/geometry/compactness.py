@@ -6,9 +6,9 @@ from gerrychain import (
 from gerrychain.updaters import (
     boundary_nodes,
     Tally,
-    perimeter, 
-    exterior_boundaries, 
-    interior_boundaries, 
+    perimeter,
+    exterior_boundaries,
+    interior_boundaries,
     cut_edges_by_part# TODO: ask why this isn't already in GeographicPartition
 )
 
@@ -54,18 +54,18 @@ def _polsby_popper(partition: Partition, gdf: GeoDataFrame, crs: str, assignment
     TODO : Add documentation
     """
     gdf = gdf.to_crs(crs)
-    
+
     assignment = gdf.to_dict()[assignment_col]
-    
+
     gdf_graph = Graph.from_geodataframe(gdf)
     geo_partition = Partition(graph=gdf_graph,
                               assignment=assignment,
                               updaters={
                                   "boundary_nodes": boundary_nodes,
                                   "area": Tally("area", alias="area"),
-                                  "perimeter": perimeter, 
-                                  "exterior_boundaries": exterior_boundaries, 
-                                  "interior_boundaries": interior_boundaries, 
+                                  "perimeter": perimeter,
+                                  "exterior_boundaries": exterior_boundaries,
+                                  "interior_boundaries": interior_boundaries,
                                   "cut_edges_by_part": cut_edges_by_part})
     part_scores = {}
     for part, nodes in geo_partition.parts.items():
@@ -73,11 +73,11 @@ def _polsby_popper(partition: Partition, gdf: GeoDataFrame, crs: str, assignment
         geo_partition['perimeter'][part] ** 2)
     return part_scores
 
-def _schwartzberg(partition: Partition, gdf: GeoDataFrame, crs: str):
+def _schwartzberg(partition: Partition, gdf: GeoDataFrame, crs: str, assignment_col: str):
     """
     TODO: Add documentation
     """
-    polsby_scores = _polsby_popper(partition, gdf, crs)
+    polsby_scores = _polsby_popper(partition, gdf, crs, assignment_col)
     part_scores = {k : 1/sqrt(polsby_scores[k]) for k in polsby_scores.keys()}
     return part_scores
 
@@ -89,8 +89,7 @@ def _convex_hull(partition: Partition, gdf: GeoDataFrame, crs: str, index: str =
     gdf = gdf.set_index(index)
     assignment = {partition.graph.nodes[n][index]:partition.assignment[n] for n in partition.graph.nodes}
     gdf["assignment"] = gdf.index.map(assignment)
-    dissolved_gdf = dissolve(gdf, by="assignment")
-    state_geom = dissolved_gdf.dissolve().iloc[0].geometry
+    state_geom = gdf.dissolve().iloc[0].geometry
 
     # Boundary-clipped convex hulls
     dissolved_convex_hull_areas = dissolved_gdf.geometry.apply(
@@ -101,7 +100,7 @@ def _convex_hull(partition: Partition, gdf: GeoDataFrame, crs: str, index: str =
     return convex_hull_scores
 
 def _pop_polygon(partition: Partition, block_gdf: GeoDataFrame, gdf: GeoDataFrame, pop_col: str, crs: str):
-    block_gdf = block_gdf.to_crs(crs)  
+    block_gdf = block_gdf.to_crs(crs)
 
     gdf_graph = Graph.from_geodataframe(gdf)
 
@@ -110,10 +109,19 @@ def _pop_polygon(partition: Partition, block_gdf: GeoDataFrame, gdf: GeoDataFram
                               updaters = {"population":Tally(pop_col, alias="population")})
 
     district_hulls = dict(gdf.geometry.apply(lambda p : p.convex_hull))
-
+    block_areas = dict(block_gdf.set_index("GEOID20").geometry.apply(lambda g: g.area))
     pop_polygon_scores = {}
+
     for part, nodes in geo_partition.parts.items():
         hull_gdf = gpd.clip(block_gdf, district_hulls[part-1])
+        district_pop = geo_partition["population"][part]
+
+        contained = []
+        for row in hull_gdf.itertuples():
+             if abs(block_areas[row.GEOID20]- row.geometry.area) < 1E-6:
+                 contained.append(getattr(row, "Index"))
+        hull_gdf = hull_gdf.loc[contained]
+        
         pop_polygon_scores[part] = geo_partition["population"][part]/sum(hull_gdf[pop_col])
 
     return pop_polygon_scores
