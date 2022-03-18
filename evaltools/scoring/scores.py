@@ -553,7 +553,7 @@ def convex_hull(gdf: GeoDataFrame, crs: str, assignment_col: str = "assignment""
         A dictionary with districts as keys and schwartzberg scores as values.
 
     """
-    return Score("convex_hull", partial(_convex_hull, gdf=gdf, crs=crs, index=index))
+    return Score("convex_hull", partial(_convex_hull, gdf=gdf, crs=crs))
 
 def pop_polygon(block_gdf: GeoDataFrame, gdf: GeoDataFrame, crs: str, pop_col: str = "TOTPOP20", assignment_col: str = "assignment") -> Score:
     """
