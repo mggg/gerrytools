@@ -541,7 +541,7 @@ def schwartzberg(gdf: GeoDataFrame, crs:str, assignment_col: str = "assignment")
     """
     return Score("reock", partial(_reock, gdf=gdf, crs=crs, assignment_col=assignment_col))
 
-def convex_hull(gdf: GeoDataFrame, crs: str, assignment_col: str = "assignment"") -> Score:
+def convex_hull(gdf: GeoDataFrame, crs: str, assignment_col: str = "assignment") -> Score:
     """
     Returns the convex hull compactness metric for each district in a plan.
     Args:
@@ -553,7 +553,7 @@ def convex_hull(gdf: GeoDataFrame, crs: str, assignment_col: str = "assignment""
         A dictionary with districts as keys and schwartzberg scores as values.
 
     """
-    return Score("convex_hull", partial(_convex_hull, gdf=gdf, crs=crs))
+    return Score("convex_hull", partial(_convex_hull, gdf=gdf, crs=crs, assignment_col=assignment_col))
 
 def pop_polygon(block_gdf: GeoDataFrame, gdf: GeoDataFrame, crs: str, pop_col: str = "TOTPOP20", assignment_col: str = "assignment") -> Score:
     """
