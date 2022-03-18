@@ -2,7 +2,8 @@ from evaltools.geometry.compactness import (
     _reock,
     _convex_hull,
     _polsby_popper,
-    _schwartzberg
+    _schwartzberg,
+    _pop_polygon
 )
 from .splits import _splits, _pieces
 from .demographics import (
@@ -502,7 +503,7 @@ def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: f
     return scores
 
 
-def reock(gdf: GeoDataFrame, crs: str) -> Score:
+def reock(gdf: GeoDataFrame, crs: str, assignment_col: str = "assignment") -> Score:
     """
     Returns the reock score for each district in a plan.
     Args:
@@ -511,7 +512,7 @@ def reock(gdf: GeoDataFrame, crs: str) -> Score:
     Returns:
         A dictionary with districts as keys and reock scores as values.
     """
-    return Score("reock", partial(_reock, gdf=gdf, crs=crs))
+    return Score("reock", partial(_reock, gdf=gdf, crs=crs, assignment_col=assignment_col))
 
 def polsby_popper(gdf: GeoDataFrame, crs: str, assignment_col: str = "assignment") -> Score:
     """
@@ -520,37 +521,41 @@ def polsby_popper(gdf: GeoDataFrame, crs: str, assignment_col: str = "assignment
         gdf (GeoDataFrame): Dissolved geodataframe for the plan.
         crs (str): Desired projection for the geodataframe.
         assignment_col (str, optional): Column of the geodataframe with the district assignment.
+            Defaults to `GEOID20`.
     Returns:
         A dictionary with districts as keys and polsby-popper scores as values.
     """
 
     return Score("polsby_popper", partial(_polsby_popper, gdf=gdf, crs=crs, assignment_col=assignment_col))
 
-def schwartzberg(gdf: GeoDataFrame, crs:str) -> Score:
+def schwartzberg(gdf: GeoDataFrame, crs:str, assignment_col: str = "assignment") -> Score:
     """
     Returns the schwartzberg score for each district in a plan.
     Args:
         gdf (GeoDataFrame): Dissolved geodataframe for the plan.
         crs (str): Desired projection for the geodataframe.
+        assignment_col (str, optional): Column of the geodataframe with the district assignment.
+            Defaults to `GEOID20`.
     Returns:
         A dictionary with districts as keys and schwartzberg scores as values.
     """
-    return Score("reock", partial(_reock, gdf=gdf, crs=crs))
+    return Score("reock", partial(_reock, gdf=gdf, crs=crs, assignment_col=assignment_col))
 
-def convex_hull(gdf: GeoDataFrame, crs: str, index: str = "GEOID20") -> Score:
+def convex_hull(gdf: GeoDataFrame, crs: str, assignment_col: str = "assignment"") -> Score:
     """
     Returns the convex hull compactness metric for each district in a plan.
     Args:
         gdf (GeoDataFrame): Dissolved geodataframe for the plan.
         crs (str): Desired projection for the geodataframe.
-        index (str):
+        assignment_col (str, optional): Column of the geodataframe with the district assignment.
+            Defaults to `GEOID20`.
     Returns:
         A dictionary with districts as keys and schwartzberg scores as values.
 
     """
     return Score("convex_hull", partial(_convex_hull, gdf=gdf, crs=crs, index=index))
 
-def pop_polygon(block_gdf: GeoDataFrame, gdf: GeoDataFrame, crs: str, pop_col: str = "TOTPOP20") -> Score:
+def pop_polygon(block_gdf: GeoDataFrame, gdf: GeoDataFrame, crs: str, pop_col: str = "TOTPOP20", assignment_col: str = "assignment") -> Score:
     """
     Returns the population polygon compactness metric for each district in a plan.
     Args:
@@ -558,11 +563,14 @@ def pop_polygon(block_gdf: GeoDataFrame, gdf: GeoDataFrame, crs: str, pop_col: s
         gdf (GeoDataFrame): Dissolved geodataframe for the plan.
         crs (str): Desired projection for the geodataframe.
         pop_col (str): Population column reflected in block_gdf and gdf.
+        assignment_col (str, optional): Column of the geodataframe with the district assignment.
+            Defaults to `GEOID20`.
     Returns:
         A dictionary with districts as keys and population polygon scores as values.
 
     """
-    return Score("pop_polygon", partial(_pop_polygon, block_gdf=block_gdf, gdf=gdf, crs=crs, pop_col=pop_col))
+    return Score("pop_polygon", partial(_pop_polygon, block_gdf=block_gdf, gdf=gdf, crs=crs, pop_col=pop_col, assignment_col=assignment_col))
+
 def max_deviation(totpop_col: str, pct: bool = False) -> Score:
     """
     Returns the maximum deviation from ideal population size among all the districts.
