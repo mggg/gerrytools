@@ -161,7 +161,7 @@ def _pieces(
             unit_info_updater_col = unit
         geometrypieces = sum(
             len(split.contains)
-            for split in P[unit_info_updater_col].items()
+            for split in P[unit_info_updater_col].values()
             if split.split != CountySplit.NOT_SPLIT
         )
     
