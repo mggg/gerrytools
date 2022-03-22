@@ -122,7 +122,6 @@ def tabularized(state, submissions) -&gt; Tuple[pd.DataFrame, pd.DataFrame, pd.D
 
     # Add the retrieved plan data to the dataframes *if the subset dataframes
     # contain items*.
-
     if not subset_plans.empty: plans = plans.merge(subset_plans, on=&#34;id&#34;)
     else: plans = pd.DataFrame()
     if not subset_cois.empty: cois = cois.merge(subset_cois, on=&#34;id&#34;)
@@ -132,7 +131,11 @@ def tabularized(state, submissions) -&gt; Tuple[pd.DataFrame, pd.DataFrame, pd.D
     # but... fine.
     for df in [plans, cois]:
         if not df.empty:
-            df.drop([&#34;type_x&#34;, &#34;link_x&#34;, &#34;coalition&#34;], axis=1, inplace=True)
+            # Remove columns we don&#39;t necessarily care about.
+            for col in [&#34;type_x&#34;, &#34;link_x&#34;, &#34;coalition&#34;]:
+                if col in list(df): df.drop(col, axis=1, inplace=True)
+
+            # Rename the columns we do care about.
             df.rename({&#34;type_y&#34;: &#34;type&#34;, &#34;link_y&#34;: &#34;link&#34;}, axis=1, inplace=True)
 
     return plans, cois, writtens
@@ -168,25 +171,27 @@ def submissions(state, sample=None) -&gt; List[Submission]:
         districtr = individual(identifier)
         
         # Force all plan keys and values to strings.
-        plan = {
-            str(k): str(v) if type(v) is not list else str(v[0])
-            for k, v in districtr[&#34;plan&#34;][&#34;assignment&#34;].items()
-        }
-        units = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;name&#34;]
-        unitsType = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;unitType&#34;]
-        tileset = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;tilesets&#34;][0][&#34;sourceLayer&#34;]
+        try:
+            plan = {
+                str(k): str(v) if type(v) is not list else str(v[0])
+                for k, v in districtr[&#34;plan&#34;][&#34;assignment&#34;].items()
+            }
+            units = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;name&#34;]
+            unitsType = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;unitType&#34;]
+            tileset = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;tilesets&#34;][0][&#34;sourceLayer&#34;]
 
-        # Create a new Submission.
-        submissions.append(Submission(
-            link=entity[&#34;link&#34;],
-            id=identifier,
-            plan=plan,
-            units=units,
-            unitsType=unitsType,
-            tileset=tileset,
-            type=entity[&#34;type&#34;]
-        ))
-
+            # Create a new Submission.
+            submissions.append(Submission(
+                link=entity[&#34;link&#34;],
+                id=identifier,
+                plan=plan,
+                units=units,
+                unitsType=unitsType,
+                tileset=tileset,
+                type=entity[&#34;type&#34;]
+            ))
+        except: pass
+    
     return submissions
 
 
@@ -434,25 +439,27 @@ submissions.</p>
         districtr = individual(identifier)
         
         # Force all plan keys and values to strings.
-        plan = {
-            str(k): str(v) if type(v) is not list else str(v[0])
-            for k, v in districtr[&#34;plan&#34;][&#34;assignment&#34;].items()
-        }
-        units = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;name&#34;]
-        unitsType = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;unitType&#34;]
-        tileset = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;tilesets&#34;][0][&#34;sourceLayer&#34;]
+        try:
+            plan = {
+                str(k): str(v) if type(v) is not list else str(v[0])
+                for k, v in districtr[&#34;plan&#34;][&#34;assignment&#34;].items()
+            }
+            units = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;name&#34;]
+            unitsType = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;unitType&#34;]
+            tileset = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;tilesets&#34;][0][&#34;sourceLayer&#34;]
 
-        # Create a new Submission.
-        submissions.append(Submission(
-            link=entity[&#34;link&#34;],
-            id=identifier,
-            plan=plan,
-            units=units,
-            unitsType=unitsType,
-            tileset=tileset,
-            type=entity[&#34;type&#34;]
-        ))
-
+            # Create a new Submission.
+            submissions.append(Submission(
+                link=entity[&#34;link&#34;],
+                id=identifier,
+                plan=plan,
+                units=units,
+                unitsType=unitsType,
+                tileset=tileset,
+                type=entity[&#34;type&#34;]
+            ))
+        except: pass
+    
     return submissions</code></pre>
 </details>
 </dd>
@@ -551,7 +558,6 @@ plans, cois, written = tabularized(state, subs)
 
     # Add the retrieved plan data to the dataframes *if the subset dataframes
     # contain items*.
-
     if not subset_plans.empty: plans = plans.merge(subset_plans, on=&#34;id&#34;)
     else: plans = pd.DataFrame()
     if not subset_cois.empty: cois = cois.merge(subset_cois, on=&#34;id&#34;)
@@ -561,7 +567,11 @@ plans, cois, written = tabularized(state, subs)
     # but... fine.
     for df in [plans, cois]:
         if not df.empty:
-            df.drop([&#34;type_x&#34;, &#34;link_x&#34;, &#34;coalition&#34;], axis=1, inplace=True)
+            # Remove columns we don&#39;t necessarily care about.
+            for col in [&#34;type_x&#34;, &#34;link_x&#34;, &#34;coalition&#34;]:
+                if col in list(df): df.drop(col, axis=1, inplace=True)
+
+            # Rename the columns we do care about.
             df.rename({&#34;type_y&#34;: &#34;type&#34;, &#34;link_y&#34;: &#34;link&#34;}, axis=1, inplace=True)
 
     return plans, cois, writtens</code></pre>
