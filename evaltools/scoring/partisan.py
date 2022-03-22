@@ -43,7 +43,7 @@ def _aggregate_seats(part: Partition, election_cols: Iterable[str], party: str) 
 
 def _seats(part: Partition, election_cols: Iterable[str], party: str, mean: bool = False) -> ScoreValue:
     result = {e: sum([part[e].won(party, d) for d in part.parts.keys() if d != -1]) for e in election_cols}
-    return int(np.mean(list(result.values()))) if mean else result
+    return float(np.mean(list(result.values()))) if mean else result
 
 def _responsive_proportionality(part: Partition, election_cols: Iterable[str], party: str) -> PlanWideScoreValue:
     result = [(part[e].seats(party) / len(part)) - (part[e].percent(party)) for e in election_cols]
