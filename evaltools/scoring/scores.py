@@ -166,7 +166,7 @@ def pieces(
         partial(_pieces, unit=unit, how=how, popcol=popcol, names=names)
     )
 
-def competitive_contests(election_cols: Iterable[str], party: str, points_within: float = 0.03) -> Score:
+def competitive_contests(election_cols: Iterable[str], party: str, points_within: float = 0.03, alias: str = None) -> Score:
     """
     Score representing the number of competitive contests in a plan.
 
