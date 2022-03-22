@@ -12,14 +12,15 @@ from .partisan import (
     _opp_party_districts,
     _party_wins_by_district,
     _seats,
+    _aggregate_seats,
     _efficiency_gap,
     _simplified_efficiency_gap,
     _mean_median,
     _partisan_bias,
     _partisan_gini,
     _eguia,
-    _absolute_proportionality,
-    _signed_proportionality,
+    _stable_proportionality,
+    _responsive_proportionality,
 )
 from functools import partial
 from gerrychain import Partition, Graph
@@ -272,7 +273,25 @@ def seats(election_cols: Iterable[str], party: str, mean: bool = False) -> Score
     prefix = "mean_" if mean else ""
     return Score(f"{prefix}{party}_seats", partial(_seats, election_cols=election_cols, party=party, mean=mean))
 
-def signed_proportionality(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
+def aggregate_seats(election_cols: Iterable[str], party: str) -> Score:
+    """
+    Score representing how many total seats (districts) within a given plan the POV party won across
+    elections.
+
+    Args:
+        election_cols (Iterable[str]): The names of the election updaters over which to compute
+            results for.
+        party (str): The "point of view" political party.
+
+    Returns:
+        A score object with name `"aggregate_{party}_seats"` and associated function that takes a
+        partition and returns an PlanWideScoreValue for the total number of seats won by the POV
+        party across elections.
+    """
+    return Score(f"aggregate_{party}_seats", partial(_aggregate_seats, election_cols=election_cols, party=party))
+
+
+def responsive_proportionality(election_cols: Iterable[str], party: str) -> Score:
     """
     Score representing how many the responsive proportionality across a set of elections.
 
@@ -280,18 +299,15 @@ def signed_proportionality(election_cols: Iterable[str], party: str, mean: bool 
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
         party (str): The "point of view" political party.
-        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
-                     of the score for each election.
 
     Returns:
-        A score object with name `"signed_proportionality"` and associated function that takes a
+        A score object with name `"responsive_proportionality"` and associated function that takes a
         partition and returns an PlanWideScoreValue for the responsive proportionality across the
         elections.
     """
-    prefix = "mean_" if mean else ""
-    return Score(f"{prefix}signed_proportionality", partial(_signed_proportionality, election_cols=election_cols, party=party, mean=mean))
+    return Score(f"responsive_proportionality", partial(_responsive_proportionality, election_cols=election_cols, party=party))
 
-def absolute_proportionality(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
+def stable_proportionality(election_cols: Iterable[str], party: str) -> Score:
     """
     Score representing how many the stable proportionality across a set of elections.
 
@@ -299,16 +315,13 @@ def absolute_proportionality(election_cols: Iterable[str], party: str, mean: boo
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
         party (str): The "point of view" political party.
-        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
-                     of the score for each election.
 
     Returns:
-        A score object with name `"absolute_proportionality"` and associated function that takes a
+        A score object with name `"stable_proportionality"` and associated function that takes a
         partition and returns an PlanWideScoreValue for the stable proportionality across the
         elections.
     """
-    prefix = "mean_" if mean else ""
-    return Score(f"{prefix}absolute_proportionality", partial(_absolute_proportionality, election_cols=election_cols, party=party, mean=mean))
+    return Score(f"stable_proportionality", partial(_stable_proportionality, election_cols=election_cols, party=party))
 
 def efficiency_gap(election_cols: Iterable[str], mean: bool = False) -> Score:
     """

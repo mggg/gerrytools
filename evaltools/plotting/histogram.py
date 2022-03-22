@@ -2,7 +2,7 @@
 from matplotlib.axes import Axes
 import random
 from .bins import bins
-from .colors import defaultGray, citizenBlue
+from .colors import defaultGray, citizenBlue, districtr
 
 
 def histogram(ax, 
@@ -80,7 +80,7 @@ def histogram(ax,
             # Plot vertical line.
             ax.axvline(
                 s + bin_width / 2 + jitter_val,
-                color=proposed_info['colors'][i],
+                color=districtr(i+1).pop(),
                 lw=2,
                 label=f"{proposed_info['names'][i]}: {round(s,2)}",
             )

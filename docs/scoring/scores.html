@@ -32,6 +32,7 @@ from .demographics import (
     _pop_shares,
     _tally_pop,
     _gingles_districts,
+    _max_deviation,
 )
 from .partisan import (
     _competitive_contests,
@@ -40,14 +41,15 @@ from .partisan import (
     _opp_party_districts,
     _party_wins_by_district,
     _seats,
+    _aggregate_seats,
     _efficiency_gap,
     _simplified_efficiency_gap,
     _mean_median,
     _partisan_bias,
     _partisan_gini,
     _eguia,
-    _absolute_proportionality,
-    _signed_proportionality,
+    _stable_proportionality,
+    _responsive_proportionality,
 )
 from functools import partial
 from gerrychain import Partition, Graph
@@ -280,7 +282,7 @@ def party_wins_by_district(election_cols: Iterable[str], party: str) -&gt; Score
     &#34;&#34;&#34;
     return Score(&#34;party_wins_by_district&#34;, partial(_party_wins_by_district, election_cols=election_cols, party=party))
 
-def seats(election_cols: Iterable[str], party: str) -&gt; Score:
+def seats(election_cols: Iterable[str], party: str, mean: bool = False) -&gt; Score:
     &#34;&#34;&#34;
     Score representing how many seats (districts) within a given plan the POV party won in each
     election 
@@ -289,15 +291,36 @@ def seats(election_cols: Iterable[str], party: str) -&gt; Score:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
         party (str): The &#34;point of view&#34; political party.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `&#34;{party}_seats&#34;` and associated function that takes a partition and
         returns an ElectionWideScoreValue for the number of seats won by the POV party for each
         election.
     &#34;&#34;&#34;
-    return Score(f&#34;{party}_seats&#34;, partial(_seats, election_cols=election_cols, party=party))
+    prefix = &#34;mean_&#34; if mean else &#34;&#34;
+    return Score(f&#34;{prefix}{party}_seats&#34;, partial(_seats, election_cols=election_cols, party=party, mean=mean))
 
-def signed_proportionality(election_cols: Iterable[str], party: str) -&gt; Score:
+def aggregate_seats(election_cols: Iterable[str], party: str) -&gt; Score:
+    &#34;&#34;&#34;
+    Score representing how many total seats (districts) within a given plan the POV party won across
+    elections.
+
+    Args:
+        election_cols (Iterable[str]): The names of the election updaters over which to compute
+            results for.
+        party (str): The &#34;point of view&#34; political party.
+
+    Returns:
+        A score object with name `&#34;aggregate_{party}_seats&#34;` and associated function that takes a
+        partition and returns an PlanWideScoreValue for the total number of seats won by the POV
+        party across elections.
+    &#34;&#34;&#34;
+    return Score(f&#34;aggregate_{party}_seats&#34;, partial(_aggregate_seats, election_cols=election_cols, party=party))
+
+
+def responsive_proportionality(election_cols: Iterable[str], party: str) -&gt; Score:
     &#34;&#34;&#34;
     Score representing how many the responsive proportionality across a set of elections.
 
@@ -307,13 +330,13 @@ def signed_proportionality(election_cols: Iterable[str], party: str) -&gt; Score
         party (str): The &#34;point of view&#34; political party.
 
     Returns:
-        A score object with name `&#34;signed_proportionality&#34;` and associated function that takes a
+        A score object with name `&#34;responsive_proportionality&#34;` and associated function that takes a
         partition and returns an PlanWideScoreValue for the responsive proportionality across the
         elections.
     &#34;&#34;&#34;
-    return Score(&#34;signed_proportionality&#34;, partial(_signed_proportionality, election_cols=election_cols, party=party))
+    return Score(f&#34;responsive_proportionality&#34;, partial(_responsive_proportionality, election_cols=election_cols, party=party))
 
-def absolute_proportionality(election_cols: Iterable[str], party: str) -&gt; Score:
+def stable_proportionality(election_cols: Iterable[str], party: str) -&gt; Score:
     &#34;&#34;&#34;
     Score representing how many the stable proportionality across a set of elections.
 
@@ -323,27 +346,30 @@ def absolute_proportionality(election_cols: Iterable[str], party: str) -&gt; Sco
         party (str): The &#34;point of view&#34; political party.
 
     Returns:
-        A score object with name `&#34;absolute_proportionality&#34;` and associated function that takes a
+        A score object with name `&#34;stable_proportionality&#34;` and associated function that takes a
         partition and returns an PlanWideScoreValue for the stable proportionality across the
         elections.
     &#34;&#34;&#34;
-    return Score(&#34;absolute_proportionality&#34;, partial(_absolute_proportionality, election_cols=election_cols, party=party))
+    return Score(f&#34;stable_proportionality&#34;, partial(_stable_proportionality, election_cols=election_cols, party=party))
 
-def efficiency_gap(election_cols: Iterable[str]) -&gt; Score:
+def efficiency_gap(election_cols: Iterable[str], mean: bool = False) -&gt; Score:
     &#34;&#34;&#34;
     Score representing the efficiency gap metric of a plan with respect to a set of elections.
 
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `&#34;efficiency_gap&#34;`  and associated function that takes a partition
         and returns a PlanWideScoreValue for efficiency gap metric.
     &#34;&#34;&#34;
-    return Score(&#34;efficiency_gap&#34;, partial(_efficiency_gap, election_cols=election_cols))
+    prefix = &#34;mean_&#34; if mean else &#34;&#34;
+    return Score(f&#34;{prefix}efficiency_gap&#34;, partial(_efficiency_gap, election_cols=election_cols, mean=mean))
 
-def simplified_efficiency_gap(election_cols: Iterable[str], party: str) -&gt; Score:
+def simplified_efficiency_gap(election_cols: Iterable[str], party: str, mean: bool = False) -&gt; Score:
     &#34;&#34;&#34;
     Score representing the simplified efficiency gap metric of a plan with respect to a set of elections.
     The original formulation of efficiency gap quantifies the difference in &#34;wasted&#34; votes for the two
@@ -352,40 +378,50 @@ def simplified_efficiency_gap(election_cols: Iterable[str], party: str) -&gt; Sc
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
+        party (str): The &#34;point of view&#34; political party.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
     Returns:
         A score object with name `&#34;efficiency_gap&#34;`  and associated function that takes a partition
         and returns a PlanWideScoreValue for efficiency gap metric.
     &#34;&#34;&#34;
-    return Score(&#34;simplified_efficiency_gap&#34;, partial(_simplified_efficiency_gap, election_cols=election_cols, party=party))
+    prefix = &#34;mean_&#34; if mean else &#34;&#34;
+    return Score(f&#34;{prefix}simplified_efficiency_gap&#34;, partial(_simplified_efficiency_gap, election_cols=election_cols, party=party, mean=mean))
 
-def mean_median(election_cols: Iterable[str]) -&gt; Score:
+def mean_median(election_cols: Iterable[str], mean: bool = False) -&gt; Score:
     &#34;&#34;&#34;
     Score representing the mean median metric of a plan with respect to a set of elections.
 
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `&#34;mean_median&#34;` and associated function that takes a partition and
         returns a PlanWideScoreValue for the mean median metric.
     &#34;&#34;&#34;
-    return Score(&#34;mean_median&#34;, partial(_mean_median, election_cols=election_cols))
+    prefix = &#34;mean_&#34; if mean else &#34;&#34;
+    return Score(f&#34;{prefix}mean_median&#34;, partial(_mean_median, election_cols=election_cols, mean=mean))
 
-def partisan_bias(election_cols: Iterable[str]) -&gt; Score:
+def partisan_bias(election_cols: Iterable[str], mean: bool = False) -&gt; Score:
     &#34;&#34;&#34;
     Score representing the partitisan bias metric of a plan with respect to a set of elections.
 
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
     Returns:
         A score object with name `&#34;partisan_bias&#34;` and associated function that takes a partition and
         returns a PlanWideScoreValue for partisan bias metric.
     &#34;&#34;&#34;
-    return Score(&#34;partisan_bias&#34;, partial(_partisan_bias, election_cols=election_cols))
+    prefix = &#34;mean_&#34; if mean else &#34;&#34;
+    return Score(f&#34;{prefix}partisan_bias&#34;, partial(_partisan_bias, election_cols=election_cols, mean=mean))
 
-def partisan_gini(election_cols: Iterable[str]) -&gt; Score:
+def partisan_gini(election_cols: Iterable[str], mean: bool = False) -&gt; Score:
     &#34;&#34;&#34;
     Score representing the partisan gini metric of a plan with respect to a set of elections.
 
@@ -393,15 +429,18 @@ def partisan_gini(election_cols: Iterable[str]) -&gt; Score:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
         party (str): The &#34;point of view&#34; political party.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `&#34;partisan_gini&#34;` and associated function that takes a partition and
         returns a PlanWideScoreValue for the partisan gini metric.
     &#34;&#34;&#34;
-    return Score(&#34;partisan_gini&#34;, partial(_partisan_gini, election_cols=election_cols))
+    prefix = &#34;mean_&#34; if mean else &#34;&#34;
+    return Score(f&#34;{prefix}partisan_gini&#34;, partial(_partisan_gini, election_cols=election_cols, mean=mean))
 
 def eguia(election_cols: Iterable[str], party: str, graph: Graph, updaters: Mapping[str, Callable[[Partition], ScoreValue]],
-          county_col: str, totpop_col: str = &#34;population&#34;) -&gt; Score:
+          county_col: str, totpop_col: str = &#34;population&#34;, mean: bool = False) -&gt; Score:
     &#34;&#34;&#34;
     Score representing the Equia metric of a plan with respect to a set of elections.
 
@@ -418,14 +457,17 @@ def eguia(election_cols: Iterable[str], party: str, graph: Graph, updaters: Mapp
             each unit.
         totpop_col (str, optional): The name of the updater that computes total population by
             district.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `&#34;eguia&#34;` and associated function that takes a partition and returns
         a PlanWideScoreValue for the eguia metric. 
     &#34;&#34;&#34;
     county_part = Partition(graph, county_col, updaters=updaters)
-    return Score(&#34;eguia&#34;, partial(_eguia, election_cols=election_cols, party=party, 
-                                  county_part=county_part, totpop_col=totpop_col))
+    prefix = &#34;mean_&#34; if mean else &#34;&#34;
+    return Score(f&#34;{prefix}eguia&#34;, partial(_eguia, election_cols=election_cols, party=party, 
+                                  county_part=county_part, totpop_col=totpop_col, mean=mean))
 
 
 def demographic_tallies(population_cols: Iterable[str]) -&gt; List[Score]:
@@ -492,7 +534,20 @@ def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: f
                                                       totpop_col=totalpop_col, threshold=threshold))
             for col in subpop_cols
         ])
-    return scores</code></pre>
+    return scores
+
+def max_deviation(totpop_col: str, pct: bool = False) -&gt; Score:
+    &#34;&#34;&#34;
+    Returns the maximum deviation from ideal population size among all the districts.
+    If `pct`, return the deviation as a percentage of ideal population size.
+
+    Args:
+        totpop_col (str, optional): The name of the updater that computes total population by
+            district.
+        pct (bool): Whether to return the maximum deviation as a count or as a percentage of 
+                    ideal district size.
+    &#34;&#34;&#34;
+    return Score(f&#34;{totpop_col}_max_deviation&#34;, partial(_max_deviation, totpop_col=totpop_col, pct=pct))</code></pre>
 </details>
 </section>
 <section>
@@ -502,11 +557,12 @@ def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: f
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="evaltools.scoring.scores.absolute_proportionality"><code class="name flex">
-<span>def <span class="ident">absolute_proportionality</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
+<dt id="evaltools.scoring.scores.aggregate_seats"><code class="name flex">
+<span>def <span class="ident">aggregate_seats</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
 </code></dt>
 <dd>
-<div class="desc"><p>Score representing how many the stable proportionality across a set of elections.</p>
+<div class="desc"><p>Score representing how many total seats (districts) within a given plan the POV party won across
+elections.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>election_cols</code></strong> :&ensp;<code>Iterable[str]</code></dt>
@@ -516,16 +572,17 @@ results for.</dd>
 <dd>The "point of view" political party.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>A score object with name <code>"absolute_proportionality"</code> and associated function that takes a
-partition and returns an PlanWideScoreValue for the stable proportionality across the
-elections.</p></div>
+<p>A score object with name <code>"aggregate_{party}_seats"</code> and associated function that takes a
+partition and returns an PlanWideScoreValue for the total number of seats won by the POV
+party across elections.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def absolute_proportionality(election_cols: Iterable[str], party: str) -&gt; Score:
+<pre><code class="python">def aggregate_seats(election_cols: Iterable[str], party: str) -&gt; Score:
     &#34;&#34;&#34;
-    Score representing how many the stable proportionality across a set of elections.
+    Score representing how many total seats (districts) within a given plan the POV party won across
+    elections.
 
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
@@ -533,11 +590,11 @@ elections.</p></div>
         party (str): The &#34;point of view&#34; political party.
 
     Returns:
-        A score object with name `&#34;absolute_proportionality&#34;` and associated function that takes a
-        partition and returns an PlanWideScoreValue for the stable proportionality across the
-        elections.
+        A score object with name `&#34;aggregate_{party}_seats&#34;` and associated function that takes a
+        partition and returns an PlanWideScoreValue for the total number of seats won by the POV
+        party across elections.
     &#34;&#34;&#34;
-    return Score(&#34;absolute_proportionality&#34;, partial(_absolute_proportionality, election_cols=election_cols, party=party))</code></pre>
+    return Score(f&#34;aggregate_{party}_seats&#34;, partial(_aggregate_seats, election_cols=election_cols, party=party))</code></pre>
 </details>
 </dd>
 <dt id="evaltools.scoring.scores.competitive_contests"><code class="name flex">
@@ -666,7 +723,7 @@ and return a DistrictWideScoreValue for the demographic totals of each district.
 </details>
 </dd>
 <dt id="evaltools.scoring.scores.efficiency_gap"><code class="name flex">
-<span>def <span class="ident">efficiency_gap</span></span>(<span>election_cols: Iterable[str]) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
+<span>def <span class="ident">efficiency_gap</span></span>(<span>election_cols: Iterable[str], mean: bool = False) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the efficiency gap metric of a plan with respect to a set of elections.</p>
@@ -675,6 +732,9 @@ and return a DistrictWideScoreValue for the demographic totals of each district.
 <dt><strong><code>election_cols</code></strong> :&ensp;<code>Iterable[str]</code></dt>
 <dd>The names of the election updaters over which to compute
 results for.</dd>
+<dt><strong><code>mean</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Whether to return the mean of the score over all elections, or a dictionary
+of the score for each election.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A score object with name <code>"efficiency_gap"</code>
@@ -684,23 +744,26 @@ and returns a PlanWideScoreValue for efficiency gap metric.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def efficiency_gap(election_cols: Iterable[str]) -&gt; Score:
+<pre><code class="python">def efficiency_gap(election_cols: Iterable[str], mean: bool = False) -&gt; Score:
     &#34;&#34;&#34;
     Score representing the efficiency gap metric of a plan with respect to a set of elections.
 
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `&#34;efficiency_gap&#34;`  and associated function that takes a partition
         and returns a PlanWideScoreValue for efficiency gap metric.
     &#34;&#34;&#34;
-    return Score(&#34;efficiency_gap&#34;, partial(_efficiency_gap, election_cols=election_cols))</code></pre>
+    prefix = &#34;mean_&#34; if mean else &#34;&#34;
+    return Score(f&#34;{prefix}efficiency_gap&#34;, partial(_efficiency_gap, election_cols=election_cols, mean=mean))</code></pre>
 </details>
 </dd>
 <dt id="evaltools.scoring.scores.eguia"><code class="name flex">
-<span>def <span class="ident">eguia</span></span>(<span>election_cols: Iterable[str], party: str, graph: gerrychain.graph.graph.Graph, updaters: Mapping[str, Callable[[gerrychain.partition.partition.Partition], Union[float, int, Mapping[Union[int, str], Union[float, int]], Mapping[str, Union[float, int]]]]], county_col: str, totpop_col: str = 'population') ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
+<span>def <span class="ident">eguia</span></span>(<span>election_cols: Iterable[str], party: str, graph: gerrychain.graph.graph.Graph, updaters: Mapping[str, Callable[[gerrychain.partition.partition.Partition], Union[float, int, Mapping[Union[int, str], Union[float, int]], Mapping[str, Union[float, int]]]]], county_col: str, totpop_col: str = 'population', mean: bool = False) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the Equia metric of a plan with respect to a set of elections.</p>
@@ -725,6 +788,9 @@ each unit.</dd>
 <dt><strong><code>totpop_col</code></strong> :&ensp;<code>str</code>, optional</dt>
 <dd>The name of the updater that computes total population by
 district.</dd>
+<dt><strong><code>mean</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Whether to return the mean of the score over all elections, or a dictionary
+of the score for each election.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A score object with name <code>"eguia"</code> and associated function that takes a partition and returns
@@ -734,7 +800,7 @@ a PlanWideScoreValue for the eguia metric.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def eguia(election_cols: Iterable[str], party: str, graph: Graph, updaters: Mapping[str, Callable[[Partition], ScoreValue]],
-          county_col: str, totpop_col: str = &#34;population&#34;) -&gt; Score:
+          county_col: str, totpop_col: str = &#34;population&#34;, mean: bool = False) -&gt; Score:
     &#34;&#34;&#34;
     Score representing the Equia metric of a plan with respect to a set of elections.
 
@@ -751,14 +817,17 @@ a PlanWideScoreValue for the eguia metric.</p></div>
             each unit.
         totpop_col (str, optional): The name of the updater that computes total population by
             district.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `&#34;eguia&#34;` and associated function that takes a partition and returns
         a PlanWideScoreValue for the eguia metric. 
     &#34;&#34;&#34;
     county_part = Partition(graph, county_col, updaters=updaters)
-    return Score(&#34;eguia&#34;, partial(_eguia, election_cols=election_cols, party=party, 
-                                  county_part=county_part, totpop_col=totpop_col))</code></pre>
+    prefix = &#34;mean_&#34; if mean else &#34;&#34;
+    return Score(f&#34;{prefix}eguia&#34;, partial(_eguia, election_cols=election_cols, party=party, 
+                                  county_part=county_part, totpop_col=totpop_col, mean=mean))</code></pre>
 </details>
 </dd>
 <dt id="evaltools.scoring.scores.gingles_districts"><code class="name flex">
@@ -812,8 +881,41 @@ districts above the population share threshold.</p></div>
     return scores</code></pre>
 </details>
 </dd>
+<dt id="evaltools.scoring.scores.max_deviation"><code class="name flex">
+<span>def <span class="ident">max_deviation</span></span>(<span>totpop_col: str, pct: bool = False) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the maximum deviation from ideal population size among all the districts.
+If <code>pct</code>, return the deviation as a percentage of ideal population size.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>totpop_col</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The name of the updater that computes total population by
+district.</dd>
+<dt><strong><code>pct</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Whether to return the maximum deviation as a count or as a percentage of
+ideal district size.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def max_deviation(totpop_col: str, pct: bool = False) -&gt; Score:
+    &#34;&#34;&#34;
+    Returns the maximum deviation from ideal population size among all the districts.
+    If `pct`, return the deviation as a percentage of ideal population size.
+
+    Args:
+        totpop_col (str, optional): The name of the updater that computes total population by
+            district.
+        pct (bool): Whether to return the maximum deviation as a count or as a percentage of 
+                    ideal district size.
+    &#34;&#34;&#34;
+    return Score(f&#34;{totpop_col}_max_deviation&#34;, partial(_max_deviation, totpop_col=totpop_col, pct=pct))</code></pre>
+</details>
+</dd>
 <dt id="evaltools.scoring.scores.mean_median"><code class="name flex">
-<span>def <span class="ident">mean_median</span></span>(<span>election_cols: Iterable[str]) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
+<span>def <span class="ident">mean_median</span></span>(<span>election_cols: Iterable[str], mean: bool = False) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the mean median metric of a plan with respect to a set of elections.</p>
@@ -822,6 +924,9 @@ districts above the population share threshold.</p></div>
 <dt><strong><code>election_cols</code></strong> :&ensp;<code>Iterable[str]</code></dt>
 <dd>The names of the election updaters over which to compute
 results for.</dd>
+<dt><strong><code>mean</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Whether to return the mean of the score over all elections, or a dictionary
+of the score for each election.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A score object with name <code>"mean_median"</code> and associated function that takes a partition and
@@ -830,19 +935,22 @@ returns a PlanWideScoreValue for the mean median metric.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def mean_median(election_cols: Iterable[str]) -&gt; Score:
+<pre><code class="python">def mean_median(election_cols: Iterable[str], mean: bool = False) -&gt; Score:
     &#34;&#34;&#34;
     Score representing the mean median metric of a plan with respect to a set of elections.
 
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `&#34;mean_median&#34;` and associated function that takes a partition and
         returns a PlanWideScoreValue for the mean median metric.
     &#34;&#34;&#34;
-    return Score(&#34;mean_median&#34;, partial(_mean_median, election_cols=election_cols))</code></pre>
+    prefix = &#34;mean_&#34; if mean else &#34;&#34;
+    return Score(f&#34;{prefix}mean_median&#34;, partial(_mean_median, election_cols=election_cols, mean=mean))</code></pre>
 </details>
 </dd>
 <dt id="evaltools.scoring.scores.opp_party_districts"><code class="name flex">
@@ -891,7 +999,7 @@ partition and returns a PlanWideScoreValue for the number of safe opposition par
 </details>
 </dd>
 <dt id="evaltools.scoring.scores.partisan_bias"><code class="name flex">
-<span>def <span class="ident">partisan_bias</span></span>(<span>election_cols: Iterable[str]) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
+<span>def <span class="ident">partisan_bias</span></span>(<span>election_cols: Iterable[str], mean: bool = False) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the partitisan bias metric of a plan with respect to a set of elections.</p>
@@ -900,6 +1008,9 @@ partition and returns a PlanWideScoreValue for the number of safe opposition par
 <dt><strong><code>election_cols</code></strong> :&ensp;<code>Iterable[str]</code></dt>
 <dd>The names of the election updaters over which to compute
 results for.</dd>
+<dt><strong><code>mean</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Whether to return the mean of the score over all elections, or a dictionary
+of the score for each election.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A score object with name <code>"partisan_bias"</code> and associated function that takes a partition and
@@ -908,22 +1019,25 @@ returns a PlanWideScoreValue for partisan bias metric.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def partisan_bias(election_cols: Iterable[str]) -&gt; Score:
+<pre><code class="python">def partisan_bias(election_cols: Iterable[str], mean: bool = False) -&gt; Score:
     &#34;&#34;&#34;
     Score representing the partitisan bias metric of a plan with respect to a set of elections.
 
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
     Returns:
         A score object with name `&#34;partisan_bias&#34;` and associated function that takes a partition and
         returns a PlanWideScoreValue for partisan bias metric.
     &#34;&#34;&#34;
-    return Score(&#34;partisan_bias&#34;, partial(_partisan_bias, election_cols=election_cols))</code></pre>
+    prefix = &#34;mean_&#34; if mean else &#34;&#34;
+    return Score(f&#34;{prefix}partisan_bias&#34;, partial(_partisan_bias, election_cols=election_cols, mean=mean))</code></pre>
 </details>
 </dd>
 <dt id="evaltools.scoring.scores.partisan_gini"><code class="name flex">
-<span>def <span class="ident">partisan_gini</span></span>(<span>election_cols: Iterable[str]) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
+<span>def <span class="ident">partisan_gini</span></span>(<span>election_cols: Iterable[str], mean: bool = False) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the partisan gini metric of a plan with respect to a set of elections.</p>
@@ -934,6 +1048,9 @@ returns a PlanWideScoreValue for partisan bias metric.</p></div>
 results for.</dd>
 <dt><strong><code>party</code></strong> :&ensp;<code>str</code></dt>
 <dd>The "point of view" political party.</dd>
+<dt><strong><code>mean</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Whether to return the mean of the score over all elections, or a dictionary
+of the score for each election.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A score object with name <code>"partisan_gini"</code> and associated function that takes a partition and
@@ -942,7 +1059,7 @@ returns a PlanWideScoreValue for the partisan gini metric.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def partisan_gini(election_cols: Iterable[str]) -&gt; Score:
+<pre><code class="python">def partisan_gini(election_cols: Iterable[str], mean: bool = False) -&gt; Score:
     &#34;&#34;&#34;
     Score representing the partisan gini metric of a plan with respect to a set of elections.
 
@@ -950,12 +1067,15 @@ returns a PlanWideScoreValue for the partisan gini metric.</p></div>
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
         party (str): The &#34;point of view&#34; political party.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
 
     Returns:
         A score object with name `&#34;partisan_gini&#34;` and associated function that takes a partition and
         returns a PlanWideScoreValue for the partisan gini metric.
     &#34;&#34;&#34;
-    return Score(&#34;partisan_gini&#34;, partial(_partisan_gini, election_cols=election_cols))</code></pre>
+    prefix = &#34;mean_&#34; if mean else &#34;&#34;
+    return Score(f&#34;{prefix}partisan_gini&#34;, partial(_partisan_gini, election_cols=election_cols, mean=mean))</code></pre>
 </details>
 </dd>
 <dt id="evaltools.scoring.scores.party_districts"><code class="name flex">
@@ -1111,48 +1231,8 @@ partition and returns a PlanWideScoreValue for the number of pieces.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.scores.seats"><code class="name flex">
-<span>def <span class="ident">seats</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
-</code></dt>
-<dd>
-<div class="desc"><p>Score representing how many seats (districts) within a given plan the POV party won in each
-election </p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>election_cols</code></strong> :&ensp;<code>Iterable[str]</code></dt>
-<dd>The names of the election updaters over which to compute
-results for.</dd>
-<dt><strong><code>party</code></strong> :&ensp;<code>str</code></dt>
-<dd>The "point of view" political party.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<p>A score object with name <code>"{party}_seats"</code> and associated function that takes a partition and
-returns an ElectionWideScoreValue for the number of seats won by the POV party for each
-election.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def seats(election_cols: Iterable[str], party: str) -&gt; Score:
-    &#34;&#34;&#34;
-    Score representing how many seats (districts) within a given plan the POV party won in each
-    election 
-
-    Args:
-        election_cols (Iterable[str]): The names of the election updaters over which to compute
-            results for.
-        party (str): The &#34;point of view&#34; political party.
-
-    Returns:
-        A score object with name `&#34;{party}_seats&#34;` and associated function that takes a partition and
-        returns an ElectionWideScoreValue for the number of seats won by the POV party for each
-        election.
-    &#34;&#34;&#34;
-    return Score(f&#34;{party}_seats&#34;, partial(_seats, election_cols=election_cols, party=party))</code></pre>
-</details>
-</dd>
-<dt id="evaltools.scoring.scores.signed_proportionality"><code class="name flex">
-<span>def <span class="ident">signed_proportionality</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
+<dt id="evaltools.scoring.scores.responsive_proportionality"><code class="name flex">
+<span>def <span class="ident">responsive_proportionality</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing how many the responsive proportionality across a set of elections.</p>
@@ -1165,14 +1245,14 @@ results for.</dd>
 <dd>The "point of view" political party.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>A score object with name <code>"signed_proportionality"</code> and associated function that takes a
+<p>A score object with name <code>"responsive_proportionality"</code> and associated function that takes a
 partition and returns an PlanWideScoreValue for the responsive proportionality across the
 elections.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def signed_proportionality(election_cols: Iterable[str], party: str) -&gt; Score:
+<pre><code class="python">def responsive_proportionality(election_cols: Iterable[str], party: str) -&gt; Score:
     &#34;&#34;&#34;
     Score representing how many the responsive proportionality across a set of elections.
 
@@ -1182,15 +1262,61 @@ elections.</p></div>
         party (str): The &#34;point of view&#34; political party.
 
     Returns:
-        A score object with name `&#34;signed_proportionality&#34;` and associated function that takes a
+        A score object with name `&#34;responsive_proportionality&#34;` and associated function that takes a
         partition and returns an PlanWideScoreValue for the responsive proportionality across the
         elections.
     &#34;&#34;&#34;
-    return Score(&#34;signed_proportionality&#34;, partial(_signed_proportionality, election_cols=election_cols, party=party))</code></pre>
+    return Score(f&#34;responsive_proportionality&#34;, partial(_responsive_proportionality, election_cols=election_cols, party=party))</code></pre>
+</details>
+</dd>
+<dt id="evaltools.scoring.scores.seats"><code class="name flex">
+<span>def <span class="ident">seats</span></span>(<span>election_cols: Iterable[str], party: str, mean: bool = False) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Score representing how many seats (districts) within a given plan the POV party won in each
+election </p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>election_cols</code></strong> :&ensp;<code>Iterable[str]</code></dt>
+<dd>The names of the election updaters over which to compute
+results for.</dd>
+<dt><strong><code>party</code></strong> :&ensp;<code>str</code></dt>
+<dd>The "point of view" political party.</dd>
+<dt><strong><code>mean</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Whether to return the mean of the score over all elections, or a dictionary
+of the score for each election.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A score object with name <code>"{party}_seats"</code> and associated function that takes a partition and
+returns an ElectionWideScoreValue for the number of seats won by the POV party for each
+election.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def seats(election_cols: Iterable[str], party: str, mean: bool = False) -&gt; Score:
+    &#34;&#34;&#34;
+    Score representing how many seats (districts) within a given plan the POV party won in each
+    election 
+
+    Args:
+        election_cols (Iterable[str]): The names of the election updaters over which to compute
+            results for.
+        party (str): The &#34;point of view&#34; political party.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
+
+    Returns:
+        A score object with name `&#34;{party}_seats&#34;` and associated function that takes a partition and
+        returns an ElectionWideScoreValue for the number of seats won by the POV party for each
+        election.
+    &#34;&#34;&#34;
+    prefix = &#34;mean_&#34; if mean else &#34;&#34;
+    return Score(f&#34;{prefix}{party}_seats&#34;, partial(_seats, election_cols=election_cols, party=party, mean=mean))</code></pre>
 </details>
 </dd>
 <dt id="evaltools.scoring.scores.simplified_efficiency_gap"><code class="name flex">
-<span>def <span class="ident">simplified_efficiency_gap</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
+<span>def <span class="ident">simplified_efficiency_gap</span></span>(<span>election_cols: Iterable[str], party: str, mean: bool = False) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the simplified efficiency gap metric of a plan with respect to a set of elections.
@@ -1202,6 +1328,11 @@ simplified score is equal to standard efficiency gap when the districts have equ
 <dt><strong><code>election_cols</code></strong> :&ensp;<code>Iterable[str]</code></dt>
 <dd>The names of the election updaters over which to compute
 results for.</dd>
+<dt><strong><code>party</code></strong> :&ensp;<code>str</code></dt>
+<dd>The "point of view" political party.</dd>
+<dt><strong><code>mean</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Whether to return the mean of the score over all elections, or a dictionary
+of the score for each election.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A score object with name <code>"efficiency_gap"</code>
@@ -1211,7 +1342,7 @@ and returns a PlanWideScoreValue for efficiency gap metric.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def simplified_efficiency_gap(election_cols: Iterable[str], party: str) -&gt; Score:
+<pre><code class="python">def simplified_efficiency_gap(election_cols: Iterable[str], party: str, mean: bool = False) -&gt; Score:
     &#34;&#34;&#34;
     Score representing the simplified efficiency gap metric of a plan with respect to a set of elections.
     The original formulation of efficiency gap quantifies the difference in &#34;wasted&#34; votes for the two
@@ -1220,11 +1351,15 @@ and returns a PlanWideScoreValue for efficiency gap metric.</p></div>
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
+        party (str): The &#34;point of view&#34; political party.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
     Returns:
         A score object with name `&#34;efficiency_gap&#34;`  and associated function that takes a partition
         and returns a PlanWideScoreValue for efficiency gap metric.
     &#34;&#34;&#34;
-    return Score(&#34;simplified_efficiency_gap&#34;, partial(_simplified_efficiency_gap, election_cols=election_cols, party=party))</code></pre>
+    prefix = &#34;mean_&#34; if mean else &#34;&#34;
+    return Score(f&#34;{prefix}simplified_efficiency_gap&#34;, partial(_simplified_efficiency_gap, election_cols=election_cols, party=party, mean=mean))</code></pre>
 </details>
 </dd>
 <dt id="evaltools.scoring.scores.splits"><code class="name flex">
@@ -1296,6 +1431,44 @@ partition and returns a PlanWideScoreValue for the number of splits.</p></div>
         f&#34;{alias}_splits&#34;,
         partial(_splits, unit=unit, how=how, popcol=popcol, names=names)
     )</code></pre>
+</details>
+</dd>
+<dt id="evaltools.scoring.scores.stable_proportionality"><code class="name flex">
+<span>def <span class="ident">stable_proportionality</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Score representing how many the stable proportionality across a set of elections.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>election_cols</code></strong> :&ensp;<code>Iterable[str]</code></dt>
+<dd>The names of the election updaters over which to compute
+results for.</dd>
+<dt><strong><code>party</code></strong> :&ensp;<code>str</code></dt>
+<dd>The "point of view" political party.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A score object with name <code>"stable_proportionality"</code> and associated function that takes a
+partition and returns an PlanWideScoreValue for the stable proportionality across the
+elections.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def stable_proportionality(election_cols: Iterable[str], party: str) -&gt; Score:
+    &#34;&#34;&#34;
+    Score representing how many the stable proportionality across a set of elections.
+
+    Args:
+        election_cols (Iterable[str]): The names of the election updaters over which to compute
+            results for.
+        party (str): The &#34;point of view&#34; political party.
+
+    Returns:
+        A score object with name `&#34;stable_proportionality&#34;` and associated function that takes a
+        partition and returns an PlanWideScoreValue for the stable proportionality across the
+        elections.
+    &#34;&#34;&#34;
+    return Score(f&#34;stable_proportionality&#34;, partial(_stable_proportionality, election_cols=election_cols, party=party))</code></pre>
 </details>
 </dd>
 <dt id="evaltools.scoring.scores.summarize"><code class="name flex">
@@ -1504,13 +1677,14 @@ float: right;
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="evaltools.scoring.scores.absolute_proportionality" href="#evaltools.scoring.scores.absolute_proportionality">absolute_proportionality</a></code></li>
+<li><code><a title="evaltools.scoring.scores.aggregate_seats" href="#evaltools.scoring.scores.aggregate_seats">aggregate_seats</a></code></li>
 <li><code><a title="evaltools.scoring.scores.competitive_contests" href="#evaltools.scoring.scores.competitive_contests">competitive_contests</a></code></li>
 <li><code><a title="evaltools.scoring.scores.demographic_shares" href="#evaltools.scoring.scores.demographic_shares">demographic_shares</a></code></li>
 <li><code><a title="evaltools.scoring.scores.demographic_tallies" href="#evaltools.scoring.scores.demographic_tallies">demographic_tallies</a></code></li>
 <li><code><a title="evaltools.scoring.scores.efficiency_gap" href="#evaltools.scoring.scores.efficiency_gap">efficiency_gap</a></code></li>
 <li><code><a title="evaltools.scoring.scores.eguia" href="#evaltools.scoring.scores.eguia">eguia</a></code></li>
 <li><code><a title="evaltools.scoring.scores.gingles_districts" href="#evaltools.scoring.scores.gingles_districts">gingles_districts</a></code></li>
+<li><code><a title="evaltools.scoring.scores.max_deviation" href="#evaltools.scoring.scores.max_deviation">max_deviation</a></code></li>
 <li><code><a title="evaltools.scoring.scores.mean_median" href="#evaltools.scoring.scores.mean_median">mean_median</a></code></li>
 <li><code><a title="evaltools.scoring.scores.opp_party_districts" href="#evaltools.scoring.scores.opp_party_districts">opp_party_districts</a></code></li>
 <li><code><a title="evaltools.scoring.scores.partisan_bias" href="#evaltools.scoring.scores.partisan_bias">partisan_bias</a></code></li>
@@ -1518,10 +1692,11 @@ float: right;
 <li><code><a title="evaltools.scoring.scores.party_districts" href="#evaltools.scoring.scores.party_districts">party_districts</a></code></li>
 <li><code><a title="evaltools.scoring.scores.party_wins_by_district" href="#evaltools.scoring.scores.party_wins_by_district">party_wins_by_district</a></code></li>
 <li><code><a title="evaltools.scoring.scores.pieces" href="#evaltools.scoring.scores.pieces">pieces</a></code></li>
+<li><code><a title="evaltools.scoring.scores.responsive_proportionality" href="#evaltools.scoring.scores.responsive_proportionality">responsive_proportionality</a></code></li>
 <li><code><a title="evaltools.scoring.scores.seats" href="#evaltools.scoring.scores.seats">seats</a></code></li>
-<li><code><a title="evaltools.scoring.scores.signed_proportionality" href="#evaltools.scoring.scores.signed_proportionality">signed_proportionality</a></code></li>
 <li><code><a title="evaltools.scoring.scores.simplified_efficiency_gap" href="#evaltools.scoring.scores.simplified_efficiency_gap">simplified_efficiency_gap</a></code></li>
 <li><code><a title="evaltools.scoring.scores.splits" href="#evaltools.scoring.scores.splits">splits</a></code></li>
+<li><code><a title="evaltools.scoring.scores.stable_proportionality" href="#evaltools.scoring.scores.stable_proportionality">stable_proportionality</a></code></li>
 <li><code><a title="evaltools.scoring.scores.summarize" href="#evaltools.scoring.scores.summarize">summarize</a></code></li>
 <li><code><a title="evaltools.scoring.scores.summarize_many" href="#evaltools.scoring.scores.summarize_many">summarize_many</a></code></li>
 <li><code><a title="evaltools.scoring.scores.swing_districts" href="#evaltools.scoring.scores.swing_districts">swing_districts</a></code></li>
