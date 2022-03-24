@@ -43,8 +43,10 @@ def sealevel(ax, scores, num_districts, proposed_info, ticksize=12):
                )
     ax.legend()
     if num_districts <= 20:
-        yticks = np.arange(0, 1 + 1/num_districts, 1/num_districts)
+        yticks = np.arange(0, 1 + 0.5/num_districts, 1/num_districts)
         yticklabels = [f"{i}/{num_districts}" for i in range(num_districts + 1)]
+        print(yticks)
+        print(yticklabels)
         ax.set_yticks(yticks)
         ax.set_yticklabels(yticklabels)
     ax.axhline(0.5, color=defaultGray, label="50%")
