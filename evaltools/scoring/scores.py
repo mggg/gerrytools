@@ -274,7 +274,7 @@ def seats(election_cols: Iterable[str], party: str, mean: bool = False) -> Score
     prefix = "mean_" if mean else ""
     return Score(f"{prefix}{party}_seats", partial(_seats, election_cols=election_cols, party=party, mean=mean))
 
-def seats(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
+def percents(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
     """
     Score representing how the percent of the vote the POV party won in each election (this is
     constant regardless of districting plan).
