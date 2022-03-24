@@ -26,6 +26,7 @@ from .partisan import (
 from functools import partial
 from gerrychain import Partition, Graph
 from typing import Iterable, List, Mapping, Dict, Union, Any
+from tqdm import tqdm
 import gzip
 import json
 from .score_types import *
@@ -55,7 +56,7 @@ def summarize(part: Partition, scores: Iterable[Score]) -> Dict[str, ScoreValue]
     return summary
 
 def summarize_many(parts: Iterable[Partition], scores: Iterable[Score], plan_names: List[str] = [],
-                   output_file: str = None, compress: bool = False) -> Union[List[Dict[str, ScoreValue]], None]:
+                   output_file: str = None, compress: bool = False, verbose : bool = False) -> Union[List[Dict[str, ScoreValue]], None]:
     """
     Summarize the given partitions by the passed scores.
 
@@ -77,10 +78,16 @@ def summarize_many(parts: Iterable[Partition], scores: Iterable[Score], plan_nam
         is void.
     """
     if output_file is None:
+        if verbose:
+            result = []
+            for part in tqdm(parts):
+                result.append(summarize(part, scores=scores))
+            return result
         return [summarize(part, scores=scores) for part in parts]
     else:
         with gzip.open(f"{output_file}.gz", "wt") if compress else open(output_file, "w") as fout:
-            for i, part in enumerate(parts):
+            iterator = tqdm(enumerate(parts)) if verbose else enumerate(parts)
+            for i, part in iterator:
                 plan_details = summarize(part, scores=scores)
                 try:
                     plan_details["id"] = plan_names[i]
