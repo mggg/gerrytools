@@ -12,6 +12,7 @@ from .partisan import (
     _opp_party_districts,
     _party_wins_by_district,
     _seats,
+    _percents,
     _aggregate_seats,
     _efficiency_gap,
     _simplified_efficiency_gap,
@@ -272,6 +273,26 @@ def seats(election_cols: Iterable[str], party: str, mean: bool = False) -> Score
     """
     prefix = "mean_" if mean else ""
     return Score(f"{prefix}{party}_seats", partial(_seats, election_cols=election_cols, party=party, mean=mean))
+
+def seats(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
+    """
+    Score representing how the percent of the vote the POV party won in each election (this is
+    constant regardless of districting plan).
+
+    Args:
+        election_cols (Iterable[str]): The names of the election updaters over which to compute
+            results for.
+        party (str): The "point of view" political party.
+        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
+                     of the score for each election.
+
+    Returns:
+        A score object with name `"{party}_percents"` and associated function that takes a partition and
+        returns an ScoreValue for the percent of the statewide vote won by the POV party for each
+        election.
+    """
+    prefix = "mean_" if mean else ""
+    return Score(f"{prefix}{party}_percents", partial(_percents, election_cols=election_cols, party=party, mean=mean))
 
 def aggregate_seats(election_cols: Iterable[str], party: str) -> Score:
     """
