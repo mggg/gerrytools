@@ -76,7 +76,7 @@ def boxplot(
                 ax.scatter(
                     boxplot + 1 + jitter_val,
                     score,
-                    color=proposed_info['colors'][i],
+                    color=proposed_info['colors'][plan],
                     edgecolor='black',
                     s=100,
                     alpha=0.9,
