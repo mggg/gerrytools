@@ -19,6 +19,7 @@ __all__ = [
     "opp_party_districts",
     "party_wins_by_district",
     "seats",
+    "percents",
     "aggregate_seats",
     "responsive_proportionality",
     "stable_proportionality",

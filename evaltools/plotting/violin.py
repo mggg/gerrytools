@@ -82,7 +82,7 @@ def violin(
                 ax.scatter(
                     violin + 1 + jitter_val,
                     score,
-                    color=districtr(plan+1).pop(),
+                    color=proposed_info['colors'][plan],
                     edgecolor='black',
                     s=100,
                     alpha=0.9,
