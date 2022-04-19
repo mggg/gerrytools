@@ -3,7 +3,7 @@ import pandas as pd
 import censusdata
 from pathlib import Path
 
-def cvap(state, geometry="tract", year=2019) -> pd.DataFrame:
+def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
     """
     Retrieves and CSV-formats 5-year CVAP data for the provided state at
     the specified geometry level. Geometries from the **2010 Census**. Variables
@@ -44,9 +44,8 @@ def cvap(state, geometry="tract", year=2019) -> pd.DataFrame:
         print(f"Requested geometry \"{geometry}\" is not allowed; loading tracts.")
         geometry = "tract"
 
-    yearsuffix = str(year)[-2:]
     # Load the raw data.
-    raw = _raw(geometry, yearsuffix)
+    raw = _raw(geometry, year)
 
     # Create a STATE column for filtering and remove all rows which don't match
     # the state FIPS code.
@@ -63,6 +62,10 @@ def cvap(state, geometry="tract", year=2019) -> pd.DataFrame:
     instate_records = instate.to_dict(orient="records")
     collapsed = []
 
+    # Get year stuff.
+    decade = "10" if year < 2020 else "20"
+    yearsuffix = str(year)[:-2]
+
     # Next, we collapse these records to a single record.
     for i in range(0, len(instate_records), 13):
         # Create an empty records.
@@ -72,7 +75,7 @@ def cvap(state, geometry="tract", year=2019) -> pd.DataFrame:
         # record.
         block = instate_records[i:i+13]
         for line in block:
-            record[geometry.replace(" ", "").upper() + "10"] = line["GEOID"]
+            record[geometry.replace(" ", "").upper() + decade] = line["GEOID"]
             record[descriptions[line["lnnumber"]] + yearsuffix] = line["cvap_est"]
             record[descriptions[line["lnnumber"]] + f"{yearsuffix}e"] = line["cvap_moe"]
 
@@ -85,20 +88,19 @@ def cvap(state, geometry="tract", year=2019) -> pd.DataFrame:
 
     return data
 
-def acs5(state, geometry="tract", year=2019, columns=[], white="NHWVAP") -> pd.DataFrame:
+def acs5(state, geometry="tract", year=2020, columns=[], white="NHWVAP") -> pd.DataFrame:
     """
     Retrieves ACS 5-year population estimates for the provided state, geometry
-    level, and year. Geometries are from the **2010 Census**. Also retrieves
-    ACS-reported CVAP data, which closely matches that reported by the CVAP
-    special tabulation; CVAP data are only returned at the tract level, and are
-    otherwise reported as 0.
+    level, and year. Also retrieves ACS-reported CVAP data, which closely matches
+    that reported by the CVAP special tabulation; CVAP data are only returned at
+    the tract level, and are otherwise reported as 0.
     
     Args:
         state (us.State): `State` object for the desired state.
         geometry (str, optional): Geometry level at which data is retrieved.
             Acceptable values are `"tract"` and `"block group"`. Defaults to
-            `"tract"`, so data is retrieved at the 2010 Census tract level.
-        year (int, optional): Year for which data is retrieved. Defaults to 2019.
+            `"tract"`, so data is retrieved at the 2020 Census tract level.
+        year (int, optional): Year for which data is retrieved. Defaults to 2020.
         columns (list, optional): Columns to retrieve. If `None`, a default set
             of columns including total populations by race and ethnicity and voting-age
             populations by race and ethnicity are returned, along with a GEOID
@@ -186,7 +188,7 @@ def acs5(state, geometry="tract", year=2019, columns=[], white="NHWVAP") -> pd.D
     # Rework columns.
     data = data.reset_index(drop=True)
     data["GEO_ID"] = data["GEO_ID"].str.split("US").str[1]
-    data = data.rename({"GEO_ID": geometry.replace(" ", "").upper() + "10"}, axis=1)
+    data = data.rename({"GEO_ID": geometry.replace(" ", "").upper() + ("10" if year < 2020 else "20")}, axis=1)
     data = data.rename(popcolumns, axis=1)
 
     # Collapse column groups.
@@ -225,13 +227,13 @@ def _variables(prefix, start, stop, suffix="E") -> list:
         for t in range(start, stop+1)
     ]
 
-def _raw(geometry, yearsuffix) -> pd.DataFrame:
+def _raw(geometry, year) -> pd.DataFrame:
     """
     Reads raw CVAP data from the local repository.
 
     Args:
         geometry (str): Level of geometry for which we're getting 2019 CVAP data.
-        yearsuffix(str): Last 2 digits of year for which data is retrieved.
+        year (int): Year for which data is retrieved.
     Returns:
         A DataFrame, where each block of 13 rows corresponds to an individual
         geometric unit (2010 Census Block Group, 2010 Census Tract) and each row
@@ -241,4 +243,8 @@ def _raw(geometry, yearsuffix) -> pd.DataFrame:
     # Get the filepath local to the repository, load in the raw data, and return
     # it to the caller.
     local = Path(__file__).parent.absolute()
-    return pd.read_csv(local/f"local/{geometry}10-{yearsuffix}.zip", encoding="ISO-8859-1")
+
+    decade = "10" if year < 2020 else "20"
+    yearsuffix = str(year)[:-2]
+
+    return pd.read_csv(local/f"local/{geometry}{decade}-{yearsuffix}.zip", encoding="ISO-8859-1")
