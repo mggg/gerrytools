@@ -44,8 +44,10 @@ def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
         print(f"Requested geometry \"{geometry}\" is not allowed; loading tracts.")
         geometry = "tract"
 
+    abbrv = geometry if geometry == "tract" else "bg"
+
     # Load the raw data.
-    raw = _raw(geometry, year)
+    raw = _raw(abbrv, year)
 
     # Create a STATE column for filtering and remove all rows which don't match
     # the state FIPS code.
