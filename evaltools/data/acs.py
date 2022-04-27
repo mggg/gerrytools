@@ -25,15 +25,15 @@ def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
     descriptions = {
         1: "CVAP",
         2: "NHCVAP",
-        3: "NHAICVAP",
-        4: "NHACVAP",
-        5: "NHBCVAP",
+        3: "NHAMINCVAP",
+        4: "NHASIANCVAP",
+        5: "NHBLACKCVAP",
         6: "NHNHPICVAP",
-        7: "NHWCVAP",
-        8: "NHAIWCVAP",
-        9: "NHAWCVAP",
-        10: "NHBWCVAP",
-        11: "NHAIBCVAP",
+        7: "NHWHITECVAP",
+        8: "NHWHITEAMINCVAP",
+        9: "NHWHITEASIANCVAP",
+        10: "NHWHITEBLACKCVAP",
+        11: "NHBLACKAMINCVAP",
         12: "NHOTHCVAP",
         13: "HCVAP" 
     }
@@ -149,8 +149,8 @@ def acs5(state, geometry="tract", year=2020, columns=[], white="NHWVAP") -> pd.D
     # Get CVAP columns; the same goes for these columns as does the above, except
     # these columns are 18 years and older *and* citizens.
     cvapnames = [
-        "WCVAP", "BCVAP", "AMINCVAP", "ASIANCVAP", "NHPICVAP", "OTHCVAP",
-        "2MORECVAP", "NHWCVAP", "HCVAP"
+        "WHITECVAP", "BLACKCVAP", "AMINCVAP", "ASIANCVAP", "NHPICVAP", "OTHCVAP",
+        "2MORECVAP", "NHWHITECVAP", "HCVAP"
     ]
     cvaptables = list(zip(
         [name + yearsuffix for name in cvapnames],
