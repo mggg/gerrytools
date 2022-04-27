@@ -86,7 +86,7 @@ def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
     # Create a dataframe and a POCCVAP column; all people minus non-Hispanic
     # White.
     data = pd.DataFrame().from_records(collapsed)
-    data[f"POCCVAP{yearsuffix}"] = data[f"CVAP{yearsuffix}"] - data[f"NHWCVAP{yearsuffix}"]
+    data[f"POCCVAP{yearsuffix}"] = data[f"CVAP{yearsuffix}"] - data[f"NHWHITECVAP{yearsuffix}"]
 
     return data
 

@@ -7,7 +7,7 @@ import pandas as pd
 import json
 from evaltools.data import (
     cvap, acs5, census, variables, submissions, tabularized, AssignmentCompressor,
-    remap, estimatecvap
+    remap, estimatecvap2010, estimatecvap2020
 )
 import us
 import geopandas as gpd
@@ -17,7 +17,29 @@ import random
 
 root = Path(os.getcwd()) / Path("tests/test-resources/")
 
-def test_estimate_cvap():
+def test_estimate_cvap2020():
+    al = us.states.AL
+    estimated = estimatecvap2020(al)
+
+    # Set the test cases for two random block groups. These were hand-calculated
+    # from the set of Alabama test data retrieved from data.mggg.org.
+    tests = {
+        "010379610003": ("010379610003012", 17, 698, 565)
+    }
+
+    # Check two random block groups to check whether they're correct; we ask
+    # whether the test value and the reported value are within one millionth of
+    # each other.
+    for bgid, (blockid, blockvap, bgvap, bgcvap) in tests.items():
+        # Calculate the estimated BCVAP for the block and check whether it matches
+        # that in the dataframe.
+        est = bgcvap*(blockvap/bgvap)
+        reported = estimated[estimated["GEOID20"] == blockid]["NHBLACKCVAP20"]
+
+        # Check that they're close.
+        assert math.isclose(est, reported, abs_tol=1e-6)
+
+def test_estimate_cvap2010():
     al = us.states.AL
     base = gpd.read_file(root/"AL-bgs")
 
@@ -27,7 +49,7 @@ def test_estimate_cvap():
     ]
 
     # Try estimating some CVAP! More rigorous tests should be added later.
-    estimated = estimatecvap(base, al, triplets, 1, 1/10)
+    estimated = estimatecvap2010(base, al, triplets, 1, 1/10)
 
     # Set the test cases for two random block groups. These were hand-calculated
     # from the set of Alabama test data retrieved from data.mggg.org.

@@ -4,7 +4,93 @@ import geopandas as gpd
 import numpy as np
 from pandas import DataFrame
 from .acs import acs5, cvap
+from .census import census
 from ..geometry import unitmap
+
+
+def estimatecvap2020(state) -> pd.DataFrame:
+    """
+    Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data.
+
+    Args:
+        state (State): The `us.State` for which CVAP will be estimated.
+
+    Returns:
+        A `DataFrame` of combined Census and ACS data at the Census block level.
+    """
+
+    # First, get the Census data for blocks and block groups.
+    bg = census(state, table="P4", geometry="block group")
+    block = census(state, table="P4", geometry="block")
+
+    # Now, get 2020 Census data at the block group level and merging it with the
+    # block group-level Census data.
+    cvap20 = cvap(state, geometry="block group", year=2020)
+    bg = bg.merge(cvap20, left_on="GEOID20", right_on="BLOCKGROUP20")
+
+    # Name the VAP columns.
+    vapcolumns = [
+        "NHWHITEVAP20", "NHASIANVAP20", "NHBLACKVAP20", "NHNHPIVAP20", "NHAMINVAP20",
+        "NHWHITEASIANVAP20", "NHWHITEAMINVAP20", "NHWHITEBLACKVAP20", "NHBLACKAMINVAP20"
+    ]
+
+    # Create "remainder" column.
+    for universe in [block, bg]:
+        universe["NHVAP20"] = universe["VAP20"]-universe["HVAP20"]
+        universe["OTHVAP20"] = universe["NHVAP20"]-universe[vapcolumns].sum(axis=1)
+    
+    # Get the block group ID for blocks.
+    block["BLOCKGROUP20"] = block["GEOID20"].astype(str).str[:-3]
+
+    # Mapping from block group IDs to block group total populations.
+    bgtotalvapmap = dict(zip(bg["BLOCKGROUP20"].astype(str), bg["VAP20"]))
+
+    # Add all columns.
+    allvapcols = vapcolumns + ["VAP20", "NHVAP20", "HVAP20", "NHOTHVAP20"]
+
+    # Estimate CVAP data for all VAP columns.
+    for vapcolumn in allvapcols:
+        # Crete a mapping from block group names to totals for the VAP column.
+        popmap = dict(zip(bg["GEOID20"].astype(str), bg[vapcolumn]))
+        
+        # Create column names.
+        colpct = vapcolumn+"%"
+        cvapcolumn = vapcolumn.replace("VAP", "CVAP")
+
+        # Calculate ratios.
+        block[colpct] = block["BLOCKGROUP20"].map(popmap)
+        block[colpct] = block[vapcolumn]/block[colpct]
+
+        # Create a mapping from block group IDs to CVAP groups.
+        cvapcolumn = vapcolumn.replace("VAP", "CVAP")
+        cvapmap = dict(zip(bg["BLOCKGROUP20"].astype(str), bg[cvapcolumn]))
+
+        # Create two temporary columns: the first sets the block's CVAP to the
+        # total CVAP for its block group; the second sets the block's VAP to the
+        # total VAP for its block group. (Note: each of these C/VAP columns are
+        # with respect to the current VAP column.)
+        block["tmp"] = block["BLOCKGROUP20"].map(cvapmap)
+        block["BGVAP20"] = block["BLOCKGROUP20"].map(bgtotalvapmap)
+
+        # Next, compute the estimated CVAP by multiplying the VAP column percent
+        # for the block group by the total CVAP population of the block group.
+        block[cvapcolumn] = block[colpct]*block["tmp"]
+
+        # If the above doesn't work — which is the case if the VAP column percent
+        # is NaN (0/0) or inf (k/0), we estimate the CVAP of the block using the
+        # VAP ratio outright rather than the column-specific VAP ratio.
+        ni = block[block[colpct].isna()].index
+        block.loc[ni,cvapcolumn] = (block.loc[ni,"VAP20"]/block.loc[ni,"BGVAP20"])*block.loc[ni,"tmp"]
+
+        # Assert that our summed disaggregated numbers and totals are close!
+        assert np.isclose(bg[cvapcolumn].sum()-block[cvapcolumn].sum(), 0)
+
+    # Fill NaNs with 0 and drop unnecessary columns.
+    block = block.fillna(0)
+    block = block.drop(["tmp", "BGVAP20"], axis=1)
+
+    # Return!
+    return block
 
 
 def fetchgeometries(state, geometry) -> gpd.GeoDataFrame: 
@@ -68,7 +154,7 @@ def mapbase(base, state, geometry, baseindex="GEOID20"):
 
     return base
 
-def estimatecvap(
+def estimatecvap2010(
         base, state, groups, ceiling, zfill, geometry10="tract"
     ) -> DataFrame:
     r"""
