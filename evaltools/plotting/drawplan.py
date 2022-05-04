@@ -5,7 +5,8 @@ from .colors import districtr
 from .districtnumbers import districtnumbers
 
 def drawplan(
-        districts, assignment, overlays=[], colors=None, numbers=False, lw=1/2
+        districts, assignment, overlays=[], colors=None, numbers=False, lw=1/2,
+        numberfontsize=15
     ) -> Axes:
     """
     Visualizes the districting plan defined by `assignment`.
@@ -49,7 +50,7 @@ def drawplan(
             overlay.plot(color="None", edgecolor="black", linewidth=1/8, ax=base)
     
     # If the `numbers` flag is passed, plot the numbers for each district.
-    if numbers: base = districtnumbers(base, districts, assignment=assignment)
+    if numbers: base = districtnumbers(base, districts, assignment=assignment, fontsize=numberfontsize)
 
     # Turn plot axes off.
     plt.axis("off")
