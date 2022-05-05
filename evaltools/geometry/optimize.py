@@ -1,9 +1,104 @@
-from typing import Dict, List, Any, Callable
+
+from typing import Dict, List, Any, Callable, Tuple
 import geopandas as gpd
 import tqdm
 import gurobipy as gp
 from gurobipy import GRB
+from scipy.optimize import linear_sum_assignment as lsa
 import math
+import pandas as pd
+
+
+def populationoverlap(
+        left: pd.DataFrame, right: pd.DataFrame, identifier="GEOID20",
+        population="TOTPOP20", assignment="DISTRICT"
+    ) -> pd.DataFrame:
+    """
+    Given two unit-level districting assignments with some population attached,
+    report the amount of population shared by district \(k\) in `left` and district
+    \(k\) in `right`.
+
+    Args:
+        left (pd.DataFrame): DataFrame whose labels are the domain of the relabeling.
+        right (pd.DataFrame): DataFrame whose labels are the image of the relabeling.
+        identifier (str): Column on `left` and `right` which contains the unique
+            identifier for each unit.
+        population (str): Column on `left` and `right` which contains the population
+            total for each unit. This can be modified to be `any` population.
+        assignment (str): Column on `left` and `right` that denotes district membership.
+
+    Returns:
+        A DataFrame whose row names are the domain of the relabeling, column names
+        are the image of the relabeling, and values edge weights.
+    """
+    # Identify the district labels in the right dataframe (i.e. the district labels
+    # we're mapping to).
+    left[assignment] = left[assignment].astype(str)
+    right[assignment] = right[assignment].astype(str)
+
+    # The domain is the intersection of the available districts on each plan.
+    domain = list(set(left[assignment]) & set(right[assignment]))
+
+    # Create a bucket for results. This should be a list of dictionaries mapping
+    # column names to weights.
+    records = []
+
+    # For each district in the image, identify the overlap and report weights.
+    for fromdistrict in domain:
+        # First, get all the rows in the left dataframe in the desired district.
+        # Then, get all the same geometries in the right dataframe.
+        subleft = left[left[assignment] == fromdistrict]
+        subright = right[right[identifier].isin(subleft[identifier])]
+
+        # Now, aggregate each.
+        rightaggregate = subright[[assignment, population]].groupby(assignment, as_index=False).sum()
+        leftaggregate = subleft[[assignment, population]].groupby(assignment, as_index=False).sum()
+
+        # Get the total population and sum; there should be exactly one row in
+        # `leftaggregate`.
+        totpop = leftaggregate[population].sum()
+
+        # Create a record.
+        record = {}
+
+        # Iterate over (district, totpop) pairs to create weighted edges.
+        for todistrict, subpopulation in zip(rightaggregate[assignment], rightaggregate[population]):
+            record[todistrict] = subpopulation/totpop
+
+        records.append(record)
+    
+    # Set up a dataframe from the records.
+    weighting = pd.DataFrame.from_records(records)
+    weighting.index = domain
+    weighting = weighting.fillna(0)
+
+    return weighting
+
+
+def optimalrelabeling(left, right, maximize=True, cost=populationoverlap):
+    """
+    Given two dataframes, each with three columns --- one for unique geometric
+    identifiers, one for districts, and one for some score (e.g. total population)
+    --- we compute an optimal relabeling, where "optimal" is the relabeling which
+    maximizes(/minimizes) the population overlap between two districts.
+
+    Args:
+        left: 
+    """
+    # Our cost function should compute the weights between left and right. First,
+    # we want to identify the indices tho.
+    C = populationoverlap(left, right)
+    domain, image = list(C.index), list(C)
+    
+    # Now we do our linear sum assignment, getting back the indices which maximize
+    # the total weight on the edges!
+    domainindices, imageindices = lsa(C, maximize=maximize)
+    domain = [domain[i] for i in domainindices]
+    image = [image[i] for i in imageindices]
+
+    # Zip the domain and image into a dict, and we're done!
+    return dict(zip(domain, image))
+
 
 def ensure_column_types(units: gpd.GeoDataFrame, columns: List[str], expression: Callable[[Any], bool] = lambda x: x.startswith("int")) -> bool:
     """
