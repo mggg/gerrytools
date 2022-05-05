@@ -1,5 +1,5 @@
 
-from typing import Dict, List, Any, Callable, Tuple
+from typing import Dict, List, Any, Callable
 import geopandas as gpd
 import tqdm
 import gurobipy as gp
@@ -10,10 +10,10 @@ import pandas as pd
 
 
 def populationoverlap(
-        left: pd.DataFrame, right: pd.DataFrame, identifier="GEOID20",
-        population="TOTPOP20", assignment="DISTRICT"
+        left: pd.DataFrame, right: pd.DataFrame, identifier: str="GEOID20",
+        population: str="TOTPOP20", assignment: str="DISTRICT"
     ) -> pd.DataFrame:
-    """
+    r"""
     Given two unit-level districting assignments with some population attached,
     report the amount of population shared by district \(k\) in `left` and district
     \(k\) in `right`.
@@ -29,7 +29,7 @@ def populationoverlap(
 
     Returns:
         A DataFrame whose row names are the domain of the relabeling, column names
-        are the image of the relabeling, and values edge weights.
+        are the image of the relabeling, and values edge weights; a cost matrix.
     """
     # Identify the district labels in the right dataframe (i.e. the district labels
     # we're mapping to).
@@ -37,7 +37,7 @@ def populationoverlap(
     right[assignment] = right[assignment].astype(str)
 
     # The domain is the intersection of the available districts on each plan.
-    domain = list(set(left[assignment]) & set(right[assignment]))
+    domain = list(set(left[assignment]))
 
     # Create a bucket for results. This should be a list of dictionaries mapping
     # column names to weights.
@@ -75,19 +75,31 @@ def populationoverlap(
     return weighting
 
 
-def optimalrelabeling(left, right, maximize=True, cost=populationoverlap):
-    """
+def optimalrelabeling(
+        left: pd.DataFrame, right: pd.DataFrame, maximize: bool=True,
+        costmatrix: Callable=populationoverlap
+    ) -> dict:
+    r"""
     Given two dataframes, each with three columns --- one for unique geometric
     identifiers, one for districts, and one for some score (e.g. total population)
-    --- we compute an optimal relabeling, where "optimal" is the relabeling which
-    maximizes(/minimizes) the population overlap between two districts.
+    --- we compute an optimal relabeling.
 
     Args:
-        left: 
+        left (pd.DataFrame): DataFrame with columns handleable by `costmatrix`.
+        right (pd.DataFrame): DataFrame with columns handleable by `costmatrix`.
+        maximize (bool): Are we finding the largest or smallest linear sum over
+            the cost matrix? Defaults to `maximize=True`.
+        costmatrix (Callable): The function (or partial function) which consumes
+            `left` and `right` and spits out a cost matrix. This cost matrix is
+            assumed to be a Dataframe, with row indices old district labels and
+            column names new district labels.
+    
+    Returns:
+        A dictionary which maps old labels to new ones.
     """
     # Our cost function should compute the weights between left and right. First,
-    # we want to identify the indices tho.
-    C = populationoverlap(left, right)
+    # we want to identify the indices of the domain (row index) and column
+    C = costmatrix(left, right)
     domain, image = list(C.index), list(C)
     
     # Now we do our linear sum assignment, getting back the indices which maximize
