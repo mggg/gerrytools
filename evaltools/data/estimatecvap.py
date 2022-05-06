@@ -4,7 +4,7 @@ import geopandas as gpd
 import numpy as np
 from pandas import DataFrame
 from .acs import acs5, cvap
-from .census import census
+from .census import census20
 from ..geometry import unitmap
 
 
@@ -20,8 +20,8 @@ def estimatecvap2020(state) -> pd.DataFrame:
     """
 
     # First, get the Census data for blocks and block groups.
-    bg = census(state, table="P4", geometry="block group")
-    block = census(state, table="P4", geometry="block")
+    bg = census20(state, table="P4", geometry="block group")
+    block = census20(state, table="P4", geometry="block")
 
     # Now, get 2020 Census data at the block group level and merging it with the
     # block group-level Census data.
@@ -110,10 +110,11 @@ def fetchgeometries(state, geometry) -> gpd.GeoDataFrame:
     clocator = state.name.replace(" ", "_")
     
     # Validate geometry level indicators.
-    if geometry not in {"block group", "tract"}:
+    if geometry not in {"block group", "tract", "block"}:
         raise ValueError(f"Geometry level {geometry} not supported; aborting.")
     
     if geometry == "block group": geometry = "bg"
+    if geometry == "block": geometry = "tabblock"
 
     # Construct the Census URL.
     fips = state.fips
@@ -155,7 +156,7 @@ def mapbase(base, state, geometry, baseindex="GEOID20"):
     return base
 
 def estimatecvap2010(
-        base, state, groups, ceiling, zfill, geometry10="tract"
+        base, state, groups, ceiling, zfill, geometry10="tract", year=2019
     ) -> DataFrame:
     r"""
     Function for turning old (2019) CVAP data on 2010 geometries into estimates
@@ -207,8 +208,8 @@ def estimatecvap2010(
 
     # Grab ACS and CVAP special-tab data, and make sure our triples are correct
     cvap_geoid = "TRACT10" if geometry10 == "tract" else "BLOCKGROUP10"
-    acs_source = acs5(state, geometry10)
-    cvap_source = cvap(state, geometry10)
+    acs_source = acs5(state, geometry10, year=year)
+    cvap_source = cvap(state, geometry10, year=year)
 
     # Validate the columns passed, issuing user warnings when it's inadvisable
     # to estimate CVAP given the passed columns.
@@ -257,6 +258,10 @@ def estimatecvap2010(
     # instead.
     correct = ["geometry"] + [col for col in list(base) if any(sub in col for sub in ["POP", "VAP", "GEOID"])]
     bads = list(set(base) - set(correct))
+
+    # Warn the user of column removal:
+    print(f"Removing the following columns: " + ", ".join(bads))
+
     pared = base.drop(bads, axis=1)
     pared = mapbase(pared, state, geometry10)
 
@@ -300,7 +305,7 @@ def estimatecvap2010(
 
             # Check whether the ratio of the above is less than the ceiling.
             if not np.isfinite(ratio):
-                print(
+                print(county, 
                     f"Encountered an invalid ratio: there are {cvap19total} {cvap19} "
                     f"persons and {vap19total} {vap19} persons, for a ratio of "
                     f"{cvap19total}/{vap19total}. "
@@ -350,13 +355,16 @@ def estimatecvap2010(
     # Group by the CVAP GEOID.
     groupedtogeometry = list(pared.groupby(cvap_geoid))
 
+    # Get the year suffix so we can replace columns.
+    yearsuffix = str(year)[2:]
+
     # For each of the geometry groups (e.g. a set of rows of blocks corresponding
     # to a single tract), and for each of the CVAP groups, apply the appropriate
     # weight to the blocks' 2020 VAP populations.
     for ix, group in groupedtogeometry:
         for (cvap10, vap10, vap20) in groups:
             weight = cvap10 + "%"
-            cvap20 = cvap10.replace("19", "20_EST")
+            cvap20 = cvap10.replace(yearsuffix, "20_EST")
             group[weight] = weights[ix][weight]
             group[cvap20] = group[weight]*group[vap20]
 

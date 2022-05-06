@@ -66,7 +66,7 @@ def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
 
     # Get year stuff.
     decade = "10" if year < 2020 else "20"
-    yearsuffix = str(year)[:-2]
+    yearsuffix = str(year)[2:]
 
     # Next, we collapse these records to a single record.
     for i in range(0, len(instate_records), 13):
@@ -90,7 +90,7 @@ def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
 
     return data
 
-def acs5(state, geometry="tract", year=2020, columns=[], white="NHWVAP") -> pd.DataFrame:
+def acs5(state, geometry="tract", year=2020, columns=[], white="NHWHITEVAP") -> pd.DataFrame:
     """
     Retrieves ACS 5-year population estimates for the provided state, geometry
     level, and year. Also retrieves ACS-reported CVAP data, which closely matches
@@ -134,8 +134,8 @@ def acs5(state, geometry="tract", year=2020, columns=[], white="NHWVAP") -> pd.D
     # for example, WVAP19 is the group of people who identified White as their *only*
     # race, including people who identified as Hispanic and White.
     vapnames = [
-        "WVAP", "BVAP", "AMINVAP", "ASIANVAP", "NHPIVAP", "OTHVAP", "2MOREVAP",
-        "NHWVAP", "HVAP"
+        "WHITEVAP", "BLACKVAP", "AMINVAP", "ASIANVAP", "NHPIVAP", "OTHVAP", "2MOREVAP",
+        "NHWHITEVAP", "HVAP"
     ]
     vaptables = list(zip(
         [column + yearsuffix for column in vapnames],
@@ -247,6 +247,6 @@ def _raw(geometry, year) -> pd.DataFrame:
     local = Path(__file__).parent.absolute()
 
     decade = "10" if year < 2020 else "20"
-    yearsuffix = str(year)[:-2]
+    yearsuffix = str(year)[2:]
 
     return pd.read_csv(local/f"local/{geometry}{decade}-{yearsuffix}.zip", encoding="ISO-8859-1")

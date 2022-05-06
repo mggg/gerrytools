@@ -3,7 +3,7 @@
 Facilities for processing data and districting plans in a standardized fashion.
 """
 from .acs import cvap, acs5
-from .census import census, variables
+from .census import census20, census10, variables
 from .estimatecvap import estimatecvap2010, estimatecvap2020, fetchgeometries
 from .fetch import submissions, tabularized, Submission
 from .remap import remap
@@ -21,9 +21,10 @@ __all__ = [
     "Submission",
     "cvap",
     "acs5",
-    "census",
+    "census20",
     "variables",
     "estimatecvap2010",
     "estimatecvap2020",
-    "fetchgeometries"
+    "fetchgeometries",
+    "census10"
 ]

@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import json
 from evaltools.data import (
-    cvap, acs5, census, variables, submissions, tabularized, AssignmentCompressor,
+    cvap, acs5, census20, variables, submissions, tabularized, AssignmentCompressor,
     remap, estimatecvap2010, estimatecvap2020
 )
 import us
@@ -197,7 +197,7 @@ def test_census_tracts():
 
     # Get the data for each table and verify that the values are correct.
     for table, cases in CENSUSTESTDATA.items():
-        data = census(AL, table=table, geometry="tract")
+        data = census20(AL, table=table, geometry="tract")
         columns = set(variables(table).values()) | {"GEOID20"}
         
         # Assert we have the correct number of values and the correct columns.
@@ -215,7 +215,7 @@ def test_census_bgs():
 
     # Get the data for each table and verify that the values are correct.
     for table, cases in CENSUSTESTDATA.items():
-        data = census(AL, table=table, geometry="block group")
+        data = census20(AL, table=table, geometry="block group")
         columns = set(variables(table).values()) | {"GEOID20"}
         
         # Assert we have the correct number of values and the correct columns.
@@ -232,7 +232,7 @@ def test_census_blocks():
 
     # Get the data for each table and verify that the values are correct.
     for table, cases in CENSUSTESTDATA.items():
-        data = census(AL, table=table, geometry="block")
+        data = census20(AL, table=table, geometry="block")
         columns = set(variables(table).values()) | {"GEOID20"}
         
         # Assert we have the correct number of values and the correct columns.
