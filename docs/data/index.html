@@ -33,13 +33,11 @@ Facilities for processing data and districting plans in a standardized fashion.
 &#34;&#34;&#34;
 from .acs import cvap, acs5
 from .census import census, variables
-from .estimatecvap import estimatecvap, fetchgeometries
+from .estimatecvap import estimatecvap2010, estimatecvap2020, fetchgeometries
 from .fetch import submissions, tabularized, Submission
 from .remap import remap
 from .URLs import ids, one, csvs
 from .AssignmentCompressor import AssignmentCompressor
-from gerrychain.graph import Graph
-from gerrychain.partition import Partition
 
 __all__ = [
     &#34;submissions&#34;,
@@ -54,7 +52,8 @@ __all__ = [
     &#34;acs5&#34;,
     &#34;census&#34;,
     &#34;variables&#34;,
-    &#34;estimatecvap&#34;,
+    &#34;estimatecvap2010&#34;,
+    &#34;estimatecvap2020&#34;,
     &#34;fetchgeometries&#34;
 ]</code></pre>
 </details>
@@ -70,6 +69,10 @@ __all__ = [
 <dd>
 <div class="desc"></div>
 </dd>
+<dt><code class="name"><a title="evaltools.data.estimatecvap" href="estimatecvap.html">evaltools.data.estimatecvap</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
 <dt><code class="name"><a title="evaltools.data.fetch" href="fetch.html">evaltools.data.fetch</a></code></dt>
 <dd>
 <div class="desc"></div>
@@ -82,14 +85,13 @@ __all__ = [
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.data.acs5"><code class="name flex">
-<span>def <span class="ident">acs5</span></span>(<span>state, geometry='tract', year=2019, columns=[], white='NHWVAP') ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">acs5</span></span>(<span>state, geometry='tract', year=2020, columns=[], white='NHWVAP') ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Retrieves ACS 5-year population estimates for the provided state, geometry
-level, and year. Geometries are from the <strong>2010 Census</strong>. Also retrieves
-ACS-reported CVAP data, which closely matches that reported by the CVAP
-special tabulation; CVAP data are only returned at the tract level, and are
-otherwise reported as 0.</p>
+level, and year. Also retrieves ACS-reported CVAP data, which closely matches
+that reported by the CVAP special tabulation; CVAP data are only returned at
+the tract level, and are otherwise reported as 0.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>state</code></strong> :&ensp;<code>us.State</code></dt>
@@ -97,9 +99,9 @@ otherwise reported as 0.</p>
 <dt><strong><code>geometry</code></strong> :&ensp;<code>str</code>, optional</dt>
 <dd>Geometry level at which data is retrieved.
 Acceptable values are <code>"tract"</code> and <code>"block group"</code>. Defaults to
-<code>"tract"</code>, so data is retrieved at the 2010 Census tract level.</dd>
+<code>"tract"</code>, so data is retrieved at the 2020 Census tract level.</dd>
 <dt><strong><code>year</code></strong> :&ensp;<code>int</code>, optional</dt>
-<dd>Year for which data is retrieved. Defaults to 2019.</dd>
+<dd>Year for which data is retrieved. Defaults to 2020.</dd>
 <dt><strong><code>columns</code></strong> :&ensp;<code>list</code>, optional</dt>
 <dd>Columns to retrieve. If <code>None</code>, a default set
 of columns including total populations by race and ethnicity and voting-age
@@ -115,20 +117,19 @@ POC populations.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWVAP&#34;) -&gt; pd.DataFrame:
+<pre><code class="python">def acs5(state, geometry=&#34;tract&#34;, year=2020, columns=[], white=&#34;NHWVAP&#34;) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves ACS 5-year population estimates for the provided state, geometry
-    level, and year. Geometries are from the **2010 Census**. Also retrieves
-    ACS-reported CVAP data, which closely matches that reported by the CVAP
-    special tabulation; CVAP data are only returned at the tract level, and are
-    otherwise reported as 0.
+    level, and year. Also retrieves ACS-reported CVAP data, which closely matches
+    that reported by the CVAP special tabulation; CVAP data are only returned at
+    the tract level, and are otherwise reported as 0.
     
     Args:
         state (us.State): `State` object for the desired state.
         geometry (str, optional): Geometry level at which data is retrieved.
             Acceptable values are `&#34;tract&#34;` and `&#34;block group&#34;`. Defaults to
-            `&#34;tract&#34;`, so data is retrieved at the 2010 Census tract level.
-        year (int, optional): Year for which data is retrieved. Defaults to 2019.
+            `&#34;tract&#34;`, so data is retrieved at the 2020 Census tract level.
+        year (int, optional): Year for which data is retrieved. Defaults to 2020.
         columns (list, optional): Columns to retrieve. If `None`, a default set
             of columns including total populations by race and ethnicity and voting-age
             populations by race and ethnicity are returned, along with a GEOID
@@ -175,8 +176,8 @@ POC populations.</dd>
     # Get CVAP columns; the same goes for these columns as does the above, except
     # these columns are 18 years and older *and* citizens.
     cvapnames = [
-        &#34;WCVAP&#34;, &#34;BCVAP&#34;, &#34;AMINCVAP&#34;, &#34;ASIANCVAP&#34;, &#34;NHPICVAP&#34;, &#34;OTHCVAP&#34;,
-        &#34;2MORECVAP&#34;, &#34;NHWCVAP&#34;, &#34;HCVAP&#34;
+        &#34;WHITECVAP&#34;, &#34;BLACKCVAP&#34;, &#34;AMINCVAP&#34;, &#34;ASIANCVAP&#34;, &#34;NHPICVAP&#34;, &#34;OTHCVAP&#34;,
+        &#34;2MORECVAP&#34;, &#34;NHWHITECVAP&#34;, &#34;HCVAP&#34;
     ]
     cvaptables = list(zip(
         [name + yearsuffix for name in cvapnames],
@@ -216,7 +217,7 @@ POC populations.</dd>
     # Rework columns.
     data = data.reset_index(drop=True)
     data[&#34;GEO_ID&#34;] = data[&#34;GEO_ID&#34;].str.split(&#34;US&#34;).str[1]
-    data = data.rename({&#34;GEO_ID&#34;: geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;}, axis=1)
+    data = data.rename({&#34;GEO_ID&#34;: geometry.replace(&#34; &#34;, &#34;&#34;).upper() + (&#34;10&#34; if year &lt; 2020 else &#34;20&#34;)}, axis=1)
     data = data.rename(popcolumns, axis=1)
 
     # Collapse column groups.
@@ -400,7 +401,7 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
 </details>
 </dd>
 <dt id="evaltools.data.cvap"><code class="name flex">
-<span>def <span class="ident">cvap</span></span>(<span>state, geometry='tract', year=2019) ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">cvap</span></span>(<span>state, geometry='tract', year=2020) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Retrieves and CSV-formats 5-year CVAP data for the provided state at
@@ -425,7 +426,7 @@ the ACS CVAP Special Tab for the specified year.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def cvap(state, geometry=&#34;tract&#34;, year=2019) -&gt; pd.DataFrame:
+<pre><code class="python">def cvap(state, geometry=&#34;tract&#34;, year=2020) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves and CSV-formats 5-year CVAP data for the provided state at
     the specified geometry level. Geometries from the **2010 Census**. Variables
@@ -447,15 +448,15 @@ the ACS CVAP Special Tab for the specified year.</p></div>
     descriptions = {
         1: &#34;CVAP&#34;,
         2: &#34;NHCVAP&#34;,
-        3: &#34;NHAICVAP&#34;,
-        4: &#34;NHACVAP&#34;,
-        5: &#34;NHBCVAP&#34;,
+        3: &#34;NHAMINCVAP&#34;,
+        4: &#34;NHASIANCVAP&#34;,
+        5: &#34;NHBLACKCVAP&#34;,
         6: &#34;NHNHPICVAP&#34;,
-        7: &#34;NHWCVAP&#34;,
-        8: &#34;NHAIWCVAP&#34;,
-        9: &#34;NHAWCVAP&#34;,
-        10: &#34;NHBWCVAP&#34;,
-        11: &#34;NHAIBCVAP&#34;,
+        7: &#34;NHWHITECVAP&#34;,
+        8: &#34;NHWHITEAMINCVAP&#34;,
+        9: &#34;NHWHITEASIANCVAP&#34;,
+        10: &#34;NHWHITEBLACKCVAP&#34;,
+        11: &#34;NHBLACKAMINCVAP&#34;,
         12: &#34;NHOTHCVAP&#34;,
         13: &#34;HCVAP&#34; 
     }
@@ -466,9 +467,10 @@ the ACS CVAP Special Tab for the specified year.</p></div>
         print(f&#34;Requested geometry \&#34;{geometry}\&#34; is not allowed; loading tracts.&#34;)
         geometry = &#34;tract&#34;
 
-    yearsuffix = str(year)[-2:]
+    abbrv = geometry if geometry == &#34;tract&#34; else &#34;bg&#34;
+
     # Load the raw data.
-    raw = _raw(geometry, yearsuffix)
+    raw = _raw(abbrv, year)
 
     # Create a STATE column for filtering and remove all rows which don&#39;t match
     # the state FIPS code.
@@ -485,6 +487,10 @@ the ACS CVAP Special Tab for the specified year.</p></div>
     instate_records = instate.to_dict(orient=&#34;records&#34;)
     collapsed = []
 
+    # Get year stuff.
+    decade = &#34;10&#34; if year &lt; 2020 else &#34;20&#34;
+    yearsuffix = str(year)[:-2]
+
     # Next, we collapse these records to a single record.
     for i in range(0, len(instate_records), 13):
         # Create an empty records.
@@ -494,7 +500,7 @@ the ACS CVAP Special Tab for the specified year.</p></div>
         # record.
         block = instate_records[i:i+13]
         for line in block:
-            record[geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;] = line[&#34;GEOID&#34;]
+            record[geometry.replace(&#34; &#34;, &#34;&#34;).upper() + decade] = line[&#34;GEOID&#34;]
             record[descriptions[line[&#34;lnnumber&#34;]] + yearsuffix] = line[&#34;cvap_est&#34;]
             record[descriptions[line[&#34;lnnumber&#34;]] + f&#34;{yearsuffix}e&#34;] = line[&#34;cvap_moe&#34;]
 
@@ -503,13 +509,13 @@ the ACS CVAP Special Tab for the specified year.</p></div>
     # Create a dataframe and a POCCVAP column; all people minus non-Hispanic
     # White.
     data = pd.DataFrame().from_records(collapsed)
-    data[f&#34;POCCVAP{yearsuffix}&#34;] = data[f&#34;CVAP{yearsuffix}&#34;] - data[f&#34;NHWCVAP{yearsuffix}&#34;]
+    data[f&#34;POCCVAP{yearsuffix}&#34;] = data[f&#34;CVAP{yearsuffix}&#34;] - data[f&#34;NHWHITECVAP{yearsuffix}&#34;]
 
     return data</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.estimatecvap"><code class="name flex">
-<span>def <span class="ident">estimatecvap</span></span>(<span>base, state, groups, ceiling, zfill, geometry10='tract') ‑> pandas.core.frame.DataFrame</span>
+<dt id="evaltools.data.estimatecvap2010"><code class="name flex">
+<span>def <span class="ident">estimatecvap2010</span></span>(<span>base, state, groups, ceiling, zfill, geometry10='tract') ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Function for turning old (2019) CVAP data on 2010 geometries into estimates
@@ -564,7 +570,7 @@ blocks fit neatly into the 2010 Census tracts.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def estimatecvap(
+<pre><code class="python">def estimatecvap2010(
         base, state, groups, ceiling, zfill, geometry10=&#34;tract&#34;
     ) -&gt; DataFrame:
     r&#34;&#34;&#34;
@@ -775,6 +781,107 @@ blocks fit neatly into the 2010 Census tracts.</dd>
     weightedbase = pd.concat(frame for _, frame in groupedtogeometry)
     weightedbase = weightedbase.drop(columns=[p + &#34;%&#34; for (p, _, _) in groups])
     return weightedbase</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.estimatecvap2020"><code class="name flex">
+<span>def <span class="ident">estimatecvap2020</span></span>(<span>state) ‑> pandas.core.frame.DataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
+<dd>The <code>us.State</code> for which CVAP will be estimated.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A <code>DataFrame</code> of combined Census and ACS data at the Census block level.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def estimatecvap2020(state) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;
+    Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data.
+
+    Args:
+        state (State): The `us.State` for which CVAP will be estimated.
+
+    Returns:
+        A `DataFrame` of combined Census and ACS data at the Census block level.
+    &#34;&#34;&#34;
+
+    # First, get the Census data for blocks and block groups.
+    bg = census(state, table=&#34;P4&#34;, geometry=&#34;block group&#34;)
+    block = census(state, table=&#34;P4&#34;, geometry=&#34;block&#34;)
+
+    # Now, get 2020 Census data at the block group level and merging it with the
+    # block group-level Census data.
+    cvap20 = cvap(state, geometry=&#34;block group&#34;, year=2020)
+    bg = bg.merge(cvap20, left_on=&#34;GEOID20&#34;, right_on=&#34;BLOCKGROUP20&#34;)
+
+    # Name the VAP columns.
+    vapcolumns = [
+        &#34;NHWHITEVAP20&#34;, &#34;NHASIANVAP20&#34;, &#34;NHBLACKVAP20&#34;, &#34;NHNHPIVAP20&#34;, &#34;NHAMINVAP20&#34;,
+        &#34;NHWHITEASIANVAP20&#34;, &#34;NHWHITEAMINVAP20&#34;, &#34;NHWHITEBLACKVAP20&#34;, &#34;NHBLACKAMINVAP20&#34;
+    ]
+
+    # Create &#34;remainder&#34; column.
+    for universe in [block, bg]:
+        universe[&#34;NHVAP20&#34;] = universe[&#34;VAP20&#34;]-universe[&#34;HVAP20&#34;]
+        universe[&#34;OTHVAP20&#34;] = universe[&#34;NHVAP20&#34;]-universe[vapcolumns].sum(axis=1)
+    
+    # Get the block group ID for blocks.
+    block[&#34;BLOCKGROUP20&#34;] = block[&#34;GEOID20&#34;].astype(str).str[:-3]
+
+    # Mapping from block group IDs to block group total populations.
+    bgtotalvapmap = dict(zip(bg[&#34;BLOCKGROUP20&#34;].astype(str), bg[&#34;VAP20&#34;]))
+
+    # Add all columns.
+    allvapcols = vapcolumns + [&#34;VAP20&#34;, &#34;NHVAP20&#34;, &#34;HVAP20&#34;, &#34;NHOTHVAP20&#34;]
+
+    # Estimate CVAP data for all VAP columns.
+    for vapcolumn in allvapcols:
+        # Crete a mapping from block group names to totals for the VAP column.
+        popmap = dict(zip(bg[&#34;GEOID20&#34;].astype(str), bg[vapcolumn]))
+        
+        # Create column names.
+        colpct = vapcolumn+&#34;%&#34;
+        cvapcolumn = vapcolumn.replace(&#34;VAP&#34;, &#34;CVAP&#34;)
+
+        # Calculate ratios.
+        block[colpct] = block[&#34;BLOCKGROUP20&#34;].map(popmap)
+        block[colpct] = block[vapcolumn]/block[colpct]
+
+        # Create a mapping from block group IDs to CVAP groups.
+        cvapcolumn = vapcolumn.replace(&#34;VAP&#34;, &#34;CVAP&#34;)
+        cvapmap = dict(zip(bg[&#34;BLOCKGROUP20&#34;].astype(str), bg[cvapcolumn]))
+
+        # Create two temporary columns: the first sets the block&#39;s CVAP to the
+        # total CVAP for its block group; the second sets the block&#39;s VAP to the
+        # total VAP for its block group. (Note: each of these C/VAP columns are
+        # with respect to the current VAP column.)
+        block[&#34;tmp&#34;] = block[&#34;BLOCKGROUP20&#34;].map(cvapmap)
+        block[&#34;BGVAP20&#34;] = block[&#34;BLOCKGROUP20&#34;].map(bgtotalvapmap)
+
+        # Next, compute the estimated CVAP by multiplying the VAP column percent
+        # for the block group by the total CVAP population of the block group.
+        block[cvapcolumn] = block[colpct]*block[&#34;tmp&#34;]
+
+        # If the above doesn&#39;t work — which is the case if the VAP column percent
+        # is NaN (0/0) or inf (k/0), we estimate the CVAP of the block using the
+        # VAP ratio outright rather than the column-specific VAP ratio.
+        ni = block[block[colpct].isna()].index
+        block.loc[ni,cvapcolumn] = (block.loc[ni,&#34;VAP20&#34;]/block.loc[ni,&#34;BGVAP20&#34;])*block.loc[ni,&#34;tmp&#34;]
+
+        # Assert that our summed disaggregated numbers and totals are close!
+        assert np.isclose(bg[cvapcolumn].sum()-block[cvapcolumn].sum(), 0)
+
+    # Fill NaNs with 0 and drop unnecessary columns.
+    block = block.fillna(0)
+    block = block.drop([&#34;tmp&#34;, &#34;BGVAP20&#34;], axis=1)
+
+    # Return!
+    return block</code></pre>
 </details>
 </dd>
 <dt id="evaltools.data.fetchgeometries"><code class="name flex">
@@ -1915,6 +2022,7 @@ float: right;
 <ul>
 <li><code><a title="evaltools.data.URLs" href="URLs.html">evaltools.data.URLs</a></code></li>
 <li><code><a title="evaltools.data.acs" href="acs.html">evaltools.data.acs</a></code></li>
+<li><code><a title="evaltools.data.estimatecvap" href="estimatecvap.html">evaltools.data.estimatecvap</a></code></li>
 <li><code><a title="evaltools.data.fetch" href="fetch.html">evaltools.data.fetch</a></code></li>
 </ul>
 </li>
@@ -1924,7 +2032,8 @@ float: right;
 <li><code><a title="evaltools.data.census" href="#evaltools.data.census">census</a></code></li>
 <li><code><a title="evaltools.data.csvs" href="#evaltools.data.csvs">csvs</a></code></li>
 <li><code><a title="evaltools.data.cvap" href="#evaltools.data.cvap">cvap</a></code></li>
-<li><code><a title="evaltools.data.estimatecvap" href="#evaltools.data.estimatecvap">estimatecvap</a></code></li>
+<li><code><a title="evaltools.data.estimatecvap2010" href="#evaltools.data.estimatecvap2010">estimatecvap2010</a></code></li>
+<li><code><a title="evaltools.data.estimatecvap2020" href="#evaltools.data.estimatecvap2020">estimatecvap2020</a></code></li>
 <li><code><a title="evaltools.data.fetchgeometries" href="#evaltools.data.fetchgeometries">fetchgeometries</a></code></li>
 <li><code><a title="evaltools.data.ids" href="#evaltools.data.ids">ids</a></code></li>
 <li><code><a title="evaltools.data.one" href="#evaltools.data.one">one</a></code></li>

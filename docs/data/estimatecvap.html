@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>evaltools.data.estimatecvap API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS_CHTML" integrity="sha256-kZafAc6mZvK3W3v1pHOcUix30OHQN6pU/NO2oFkqZVw=" crossorigin></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>evaltools.data.estimatecvap</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import pandas as pd
+import geopandas as gpd
+import numpy as np
+from pandas import DataFrame
+from .acs import acs5, cvap
+from .census import census
+from ..geometry import unitmap
+
+
+def estimatecvap2020(state) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;
+    Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data.
+
+    Args:
+        state (State): The `us.State` for which CVAP will be estimated.
+
+    Returns:
+        A `DataFrame` of combined Census and ACS data at the Census block level.
+    &#34;&#34;&#34;
+
+    # First, get the Census data for blocks and block groups.
+    bg = census(state, table=&#34;P4&#34;, geometry=&#34;block group&#34;)
+    block = census(state, table=&#34;P4&#34;, geometry=&#34;block&#34;)
+
+    # Now, get 2020 Census data at the block group level and merging it with the
+    # block group-level Census data.
+    cvap20 = cvap(state, geometry=&#34;block group&#34;, year=2020)
+    bg = bg.merge(cvap20, left_on=&#34;GEOID20&#34;, right_on=&#34;BLOCKGROUP20&#34;)
+
+    # Name the VAP columns.
+    vapcolumns = [
+        &#34;NHWHITEVAP20&#34;, &#34;NHASIANVAP20&#34;, &#34;NHBLACKVAP20&#34;, &#34;NHNHPIVAP20&#34;, &#34;NHAMINVAP20&#34;,
+        &#34;NHWHITEASIANVAP20&#34;, &#34;NHWHITEAMINVAP20&#34;, &#34;NHWHITEBLACKVAP20&#34;, &#34;NHBLACKAMINVAP20&#34;
+    ]
+
+    # Create &#34;remainder&#34; column.
+    for universe in [block, bg]:
+        universe[&#34;NHVAP20&#34;] = universe[&#34;VAP20&#34;]-universe[&#34;HVAP20&#34;]
+        universe[&#34;OTHVAP20&#34;] = universe[&#34;NHVAP20&#34;]-universe[vapcolumns].sum(axis=1)
+    
+    # Get the block group ID for blocks.
+    block[&#34;BLOCKGROUP20&#34;] = block[&#34;GEOID20&#34;].astype(str).str[:-3]
+
+    # Mapping from block group IDs to block group total populations.
+    bgtotalvapmap = dict(zip(bg[&#34;BLOCKGROUP20&#34;].astype(str), bg[&#34;VAP20&#34;]))
+
+    # Add all columns.
+    allvapcols = vapcolumns + [&#34;VAP20&#34;, &#34;NHVAP20&#34;, &#34;HVAP20&#34;, &#34;NHOTHVAP20&#34;]
+
+    # Estimate CVAP data for all VAP columns.
+    for vapcolumn in allvapcols:
+        # Crete a mapping from block group names to totals for the VAP column.
+        popmap = dict(zip(bg[&#34;GEOID20&#34;].astype(str), bg[vapcolumn]))
+        
+        # Create column names.
+        colpct = vapcolumn+&#34;%&#34;
+        cvapcolumn = vapcolumn.replace(&#34;VAP&#34;, &#34;CVAP&#34;)
+
+        # Calculate ratios.
+        block[colpct] = block[&#34;BLOCKGROUP20&#34;].map(popmap)
+        block[colpct] = block[vapcolumn]/block[colpct]
+
+        # Create a mapping from block group IDs to CVAP groups.
+        cvapcolumn = vapcolumn.replace(&#34;VAP&#34;, &#34;CVAP&#34;)
+        cvapmap = dict(zip(bg[&#34;BLOCKGROUP20&#34;].astype(str), bg[cvapcolumn]))
+
+        # Create two temporary columns: the first sets the block&#39;s CVAP to the
+        # total CVAP for its block group; the second sets the block&#39;s VAP to the
+        # total VAP for its block group. (Note: each of these C/VAP columns are
+        # with respect to the current VAP column.)
+        block[&#34;tmp&#34;] = block[&#34;BLOCKGROUP20&#34;].map(cvapmap)
+        block[&#34;BGVAP20&#34;] = block[&#34;BLOCKGROUP20&#34;].map(bgtotalvapmap)
+
+        # Next, compute the estimated CVAP by multiplying the VAP column percent
+        # for the block group by the total CVAP population of the block group.
+        block[cvapcolumn] = block[colpct]*block[&#34;tmp&#34;]
+
+        # If the above doesn&#39;t work — which is the case if the VAP column percent
+        # is NaN (0/0) or inf (k/0), we estimate the CVAP of the block using the
+        # VAP ratio outright rather than the column-specific VAP ratio.
+        ni = block[block[colpct].isna()].index
+        block.loc[ni,cvapcolumn] = (block.loc[ni,&#34;VAP20&#34;]/block.loc[ni,&#34;BGVAP20&#34;])*block.loc[ni,&#34;tmp&#34;]
+
+        # Assert that our summed disaggregated numbers and totals are close!
+        assert np.isclose(bg[cvapcolumn].sum()-block[cvapcolumn].sum(), 0)
+
+    # Fill NaNs with 0 and drop unnecessary columns.
+    block = block.fillna(0)
+    block = block.drop([&#34;tmp&#34;, &#34;BGVAP20&#34;], axis=1)
+
+    # Return!
+    return block
+
+
+def fetchgeometries(state, geometry) -&gt; gpd.GeoDataFrame: 
+    &#34;&#34;&#34;
+    Fetches the 2010 Census geometries on which ACS data are reported.
+  
+    Args:
+        state (State): The `us.State` for which CVAP will be estimated. 
+        geometry10 (str): Level of geometry we&#39;re fetching. Accepted values are
+            `&#34;tract&#34;` and `&#34;block group&#34;`.
+
+    Returns: 
+        A `GeoDataFrame` of 2010 geometries.
+    &#34;&#34;&#34;
+    # Get a Census locator for the provided State by replacing spaces in its name
+    # with underscores (should they exist).
+    clocator = state.name.replace(&#34; &#34;, &#34;_&#34;)
+    
+    # Validate geometry level indicators.
+    if geometry not in {&#34;block group&#34;, &#34;tract&#34;}:
+        raise ValueError(f&#34;Geometry level {geometry} not supported; aborting.&#34;)
+    
+    if geometry == &#34;block group&#34;: geometry = &#34;bg&#34;
+
+    # Construct the Census URL.
+    fips = state.fips
+    head = &#34;https://www2.census.gov/geo/pvs/tiger2010st/&#34;
+    tail = f&#34;{fips}_{clocator}/{fips}/tl_2010_{fips}_{geometry}10.zip&#34;
+    url = head + tail
+
+    # Download, extract, and return the geometries from the URL.
+    return gpd.read_file(url)
+
+def mapbase(base, state, geometry, baseindex=&#34;GEOID20&#34;):
+    &#34;&#34;&#34;
+    Maps the provided geometries in `base` to the 2010 Census geometries specified
+    by `geometry`.
+    
+    Args:
+        base (GeoDataFrame): GeoDataFrame with the desired units for cvap to be
+            estimated on. 
+        state (State): The `us.State` for which CVAP will be estimated. 
+        geometry (str): Level of geometry we&#39;re fetching. Accepted values are
+            `&#34;tract&#34;` and `&#34;block group&#34;`.
+    
+    Returns: 
+       `base` with 2010 geometry assignments adjoined.
+    &#34;&#34;&#34;
+    # Get the 2010 geometries from the Census.
+    geometry10 = fetchgeometries(state, geometry)
+    
+    # Get the right name and rename the 2010 geometry index this way.
+    geometry10id = &#34;TRACT10&#34; if geometry == &#34;tract&#34; else &#34;BLOCKGROUP10&#34;
+    geometry10 = geometry10.rename({&#34;GEOID10&#34;: geometry10id}, axis=1)
+    
+    # Create a unit mapping from the provided base units to those retrieved from
+    # the Census. If the `base` passed has been sliced or could possibly be a
+    # copy, *this will throw a SettingWithCopy warning*.
+    mapping = unitmap((base, baseindex), (geometry10, geometry10id))
+    base[geometry10id] = base[baseindex].map(mapping)
+
+    return base
+
+def estimatecvap2010(
+        base, state, groups, ceiling, zfill, geometry10=&#34;tract&#34;
+    ) -&gt; DataFrame:
+    r&#34;&#34;&#34;
+    Function for turning old (2019) CVAP data on 2010 geometries into estimates
+    for current CVAP data on 2020 geometries. Users must supply a base `GeoDataFrame`
+    representing their chosen U.S. state. Additionally, users must specify the
+    demographic groups whose CVAP statistics are to be estimated. For each group,
+    users specify a triple \((X, Y, Z)\) where \(X\) is the old CVAP column for
+    that group, \(Y\) is the old VAP column for that group, and \(Z\) is the new VAP
+    column for that group, which must be an existing column on `base`.  Then,
+    the estimated new CVAP for that group will be constructed by multiplying
+    \((X / Y) \cdot Z\) for each new geometry.
+
+    &lt;div style=&#34;text-align: center;&#34;&gt;
+        &lt;/br&gt;
+        &lt;img width=&#34;75%&#34; src=&#34;../images/cvap-estimation.png&#34;/&gt;
+    &lt;/div&gt;
+
+    Args:
+        base (GeoDataFrame): A `GeoDataFrame` with the appropriate columns for
+            estimating CVAP.
+        state (State): The `us.State` object for which CVAP data is retrieved.
+        groups (list): `(X, Y, Z)` triples for each desired CVAP group to be
+            estimated, where each of the parameters are column names: `X` is
+            the column on the 2010 geometries which contains the relevant CVAP
+            data; `Y` is the column on the 2010 geometries which contains the
+            relevant VAP data; `Z` is the column on the 2020 geometries to be
+            weighted by the ratio of the per-unit ratios in `X` and `Y`. For
+            example, if we wish to estimate Black CVAP, this triple would be
+            `(NHBCVAP19, BVAP19, BVAP20)`, which takes the ratios of the `NHBCVAP19`
+            and `BVAP19` columns on the 2010 geometries, and multplies the 2020
+            geometries&#39; respective `BVAP20` values by these ratios.
+        ceiling (float): Number representing where to cap the weighting ratio of
+            CVAP to VAP20. After this percentage ceiling is passed, the percentage
+            will be set to 1. We recommend setting this to 1.
+        zfill (float): Fill in ratio for CVAP to VAP20 when there is 0 CVAP in the
+            area. We recommend setting this parameter to `0.1`.
+        geometry10 (str, optional): The 2010 geometry on which cvap will be pulled.
+            Acceptable values are `&#34;tract&#34;` or `&#34;block group&#34;`. As tracts are
+            less susceptible to change across Census vintages, setting this parameter
+            to `&#34;tract&#34;` is recommended, as it is more likely that the 2020 Census
+            blocks fit neatly into the 2010 Census tracts.
+
+    Returns: 
+       `base` geometries with 2019 CVAP-weighted 2020 CVAP estimates attached.
+    &#34;&#34;&#34;
+    if geometry10 not in {&#34;block group&#34;, &#34;tract&#34;}:
+        print(f&#34;Requested geometry \&#34;{geometry10}\&#34; is not allowed; loading tracts.&#34;)
+        geometry10 = &#34;tract&#34;
+
+    # Grab ACS and CVAP special-tab data, and make sure our triples are correct
+    cvap_geoid = &#34;TRACT10&#34; if geometry10 == &#34;tract&#34; else &#34;BLOCKGROUP10&#34;
+    acs_source = acs5(state, geometry10)
+    cvap_source = cvap(state, geometry10)
+
+    # Validate the columns passed, issuing user warnings when it&#39;s inadvisable
+    # to estimate CVAP given the passed columns.
+    for (cvap10, vap10, vap20) in groups:
+        # If any of the CVAP columns passed correspond to columns which tabulate
+        # people of multiple races, notify the user that there isn&#39;t an appropriate
+        # 2019 VAP column to match them against.
+        if any(substring in cvap10 for substring in {&#34;AIW&#34;, &#34;AW&#34;, &#34;BW&#34;, &#34;AIB&#34;}):
+            print(
+                f&#34;Warning: Estimating CVAP among {cvap10} is not advisable, since &#34;
+                &#34;there isn&#39;t a reasonable VAP column from which to construct _CVAP &#34;
+                &#34;/ _VAP rates (because you seem to be combining two racial groups).&#34;
+            )
+
+        # If the CVAP or ACS5 columns passed aren&#39;t present in the set of possible
+        # columns, raise an error.
+        if not (cvap10 in acs_source or cvap10 in cvap_source):
+            possible_columns = set(acs_source).union(set(cvap_source))
+            raise ValueError(
+                f&#34;Your CVAP column &#39;{cvap10}&#39; must be contained in either the ACS &#34;
+                f&#34;or Special Tab columns: {possible_columns}&#34;
+            )
+        
+        if not vap10 in acs_source:
+            raise ValueError(
+                f&#34;Your old VAP column &#39;{vap10}&#39; must be contained in the ACS &#34;
+                &#34;columns: {set(acs_source)}&#34;
+            )
+
+        # If the VAP20 column passed doesn&#39;t exist on the user-provided geometries,
+        # raise an error.
+        if not vap20 in base:
+            raise ValueError(
+                f&#34;Your new VAP column &#39;{vap20}&#39; must be contained in your base &#34; +
+                f&#34;dataframe: {set(base)}&#34;
+            )
+    
+    # Remove ACS 5 columns that overlap with special-tab ones.
+    non_overlaps = list(set(acs_source).difference(set(cvap_source)))
+    acs_source = acs_source[[cvap_geoid] + non_overlaps]
+    source = cvap_source.merge(acs_source, on=cvap_geoid)
+
+    # Get the right columns from the base geometry, and map the base geometries
+    # to the units with CVAP data. Apparently dropping bad columns by using slicing
+    # incudes a SettingWithCopy warning, so we&#39;re just dropping using .drop()
+    # instead.
+    correct = [&#34;geometry&#34;] + [col for col in list(base) if any(sub in col for sub in [&#34;POP&#34;, &#34;VAP&#34;, &#34;GEOID&#34;])]
+    bads = list(set(base) - set(correct))
+    pared = base.drop(bads, axis=1)
+    pared = mapbase(pared, state, geometry10)
+
+    # Compute weights.
+    for (cvap10, vap10, _) in groups: 
+       source[cvap10 + &#34;%&#34;] = source[cvap10]/source[vap10]
+
+    # Fill in values according to the following rules:
+    # 
+    #   1.  if there are 0 *CVAP reported and 0 *VAP reported, we set the weight to
+    #       the average *CVAP/*VAP ratio within the county;
+    #   2.  if there are 0 *CVAP reported and *VAP &gt; 0, we set the weight to zero_fill;
+    #   3.  if *CVAP &gt; 0 but *VAP = 0 or *CVAP/*VAP &gt; percentage_cap, we set the weight to 1.
+    statewide = {
+        cvap + &#34;%&#34;: source[cvap].sum()/source[vap].sum() if source[vap].sum() != 0 else 0
+        for (cvap, vap, _) in groups
+    }
+
+    # Rename colunms with percentages.
+    cvappcts = [cvap + &#34;%&#34; for (cvap, _, _) in groups]
+
+    # Get the county names and compute population-weighted CVAP averages. This
+    # serves as a replacement for the statewide average.
+    source[&#34;_county&#34;] = source[cvap_geoid].str[2:5]
+    counties = list(set(source[&#34;_county&#34;]))
+    countyaverages = { pct: {} for pct in cvappcts }
+
+    for county in counties:
+        chunk = source[source[&#34;_county&#34;] == county]
+        
+        for cvap19, vap19, _ in groups:
+            # Calculate the CVAP19-to-VAP19 ratio. Set numpy to ignore runtimewarnings,
+            # but warn the user if one is encountered. We do this so that the user
+            # doesn&#39;t get spooked by a numpy warning, but we&#39;re still noisy about
+            # the weird value encountered.
+            cvap19total = chunk[cvap19].sum()
+            vap19total = chunk[vap19].sum()
+
+            np.seterr(divide=&#34;ignore&#34;, invalid=&#34;ignore&#34;)
+            ratio = cvap19total/vap19total
+
+            # Check whether the ratio of the above is less than the ceiling.
+            if not np.isfinite(ratio):
+                print(
+                    f&#34;Encountered an invalid ratio: there are {cvap19total} {cvap19} &#34;
+                    f&#34;persons and {vap19total} {vap19} persons, for a ratio of &#34;
+                    f&#34;{cvap19total}/{vap19total}. &#34;
+                    f&#34;we have substituted it for the statewide {cvap19}-to-{vap19} &#34;
+                    f&#34;share of {statewide[cvap19 + &#39;%&#39;]}.&#34;
+                )
+                ratio = statewide[cvap19 + &#34;%&#34;]
+
+            # Set the county-average ratio.
+            countyaverages[cvap19 + &#34;%&#34;][county] = ratio
+    
+    # Reset the numpy error catching thing.
+    np.seterr(all=&#34;warn&#34;)
+    
+    # For each of the percentage columns, we want to apply the rules specified
+    # by the user.
+    for pct in cvappcts:
+        # Fill NaNs with the *county-wide* average.
+        countywidepcts = countyaverages[pct]
+
+        source[pct] = source[pct].replace(np.inf, np.nan)
+        nanindices = source[source[pct].isna()].index
+        source.loc[nanindices, pct] = source.loc[nanindices, &#34;_county&#34;].map(countywidepcts)
+        
+        # Fill zeroes with the `zfill` value, and cap all the percentages.
+        source[pct] = source[pct] \
+            .replace(0, zfill) \
+            .apply(lambda c: 1 if c &gt; ceiling else c)
+
+    # Assert we don&#39;t have any percentages over percentage_cap.
+    assert all(
+        np.all(source[p + &#34;%&#34;] &lt;= ceiling)
+        for (p, _, __) in groups
+    )
+    
+    # Assert we don&#39;t have any zeros. 
+    assert all(
+        np.all(source[p + &#34;%&#34;] &gt; 0)
+        for (p, _, __) in groups
+    )
+
+    # Set indices and create a mapping from IDs to weights.
+    source = source.set_index(cvap_geoid)    
+    source = source[cvappcts]
+    weights = source.to_dict(orient=&#34;index&#34;)
+
+    # Group by the CVAP GEOID.
+    groupedtogeometry = list(pared.groupby(cvap_geoid))
+
+    # For each of the geometry groups (e.g. a set of rows of blocks corresponding
+    # to a single tract), and for each of the CVAP groups, apply the appropriate
+    # weight to the blocks&#39; 2020 VAP populations.
+    for ix, group in groupedtogeometry:
+        for (cvap10, vap10, vap20) in groups:
+            weight = cvap10 + &#34;%&#34;
+            cvap20 = cvap10.replace(&#34;19&#34;, &#34;20_EST&#34;)
+            group[weight] = weights[ix][weight]
+            group[cvap20] = group[weight]*group[vap20]
+
+    # Re-create a dataframe and strip out % columns, leaving only the estimate
+    # columns.
+    weightedbase = pd.concat(frame for _, frame in groupedtogeometry)
+    weightedbase = weightedbase.drop(columns=[p + &#34;%&#34; for (p, _, _) in groups])
+    return weightedbase</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="evaltools.data.estimatecvap.estimatecvap2010"><code class="name flex">
+<span>def <span class="ident">estimatecvap2010</span></span>(<span>base, state, groups, ceiling, zfill, geometry10='tract') ‑> pandas.core.frame.DataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Function for turning old (2019) CVAP data on 2010 geometries into estimates
+for current CVAP data on 2020 geometries. Users must supply a base <code>GeoDataFrame</code>
+representing their chosen U.S. state. Additionally, users must specify the
+demographic groups whose CVAP statistics are to be estimated. For each group,
+users specify a triple <span><span class="MathJax_Preview">(X, Y, Z)</span><script type="math/tex">(X, Y, Z)</script></span> where <span><span class="MathJax_Preview">X</span><script type="math/tex">X</script></span> is the old CVAP column for
+that group, <span><span class="MathJax_Preview">Y</span><script type="math/tex">Y</script></span> is the old VAP column for that group, and <span><span class="MathJax_Preview">Z</span><script type="math/tex">Z</script></span> is the new VAP
+column for that group, which must be an existing column on <code>base</code>.
+Then,
+the estimated new CVAP for that group will be constructed by multiplying
+<span><span class="MathJax_Preview">(X / Y) \cdot Z</span><script type="math/tex">(X / Y) \cdot Z</script></span> for each new geometry.</p>
+<div style="text-align: center;">
+</br>
+<img width="75%" src="../images/cvap-estimation.png"/>
+</div>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>base</code></strong> :&ensp;<code>GeoDataFrame</code></dt>
+<dd>A <code>GeoDataFrame</code> with the appropriate columns for
+estimating CVAP.</dd>
+<dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
+<dd>The <code>us.State</code> object for which CVAP data is retrieved.</dd>
+<dt><strong><code>groups</code></strong> :&ensp;<code>list</code></dt>
+<dd><code>(X, Y, Z)</code> triples for each desired CVAP group to be
+estimated, where each of the parameters are column names: <code>X</code> is
+the column on the 2010 geometries which contains the relevant CVAP
+data; <code>Y</code> is the column on the 2010 geometries which contains the
+relevant VAP data; <code>Z</code> is the column on the 2020 geometries to be
+weighted by the ratio of the per-unit ratios in <code>X</code> and <code>Y</code>. For
+example, if we wish to estimate Black CVAP, this triple would be
+<code>(NHBCVAP19, BVAP19, BVAP20)</code>, which takes the ratios of the <code>NHBCVAP19</code>
+and <code>BVAP19</code> columns on the 2010 geometries, and multplies the 2020
+geometries' respective <code>BVAP20</code> values by these ratios.</dd>
+<dt><strong><code>ceiling</code></strong> :&ensp;<code>float</code></dt>
+<dd>Number representing where to cap the weighting ratio of
+CVAP to VAP20. After this percentage ceiling is passed, the percentage
+will be set to 1. We recommend setting this to 1.</dd>
+<dt><strong><code>zfill</code></strong> :&ensp;<code>float</code></dt>
+<dd>Fill in ratio for CVAP to VAP20 when there is 0 CVAP in the
+area. We recommend setting this parameter to <code>0.1</code>.</dd>
+<dt><strong><code>geometry10</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The 2010 geometry on which cvap will be pulled.
+Acceptable values are <code>"tract"</code> or <code>"block group"</code>. As tracts are
+less susceptible to change across Census vintages, setting this parameter
+to <code>"tract"</code> is recommended, as it is more likely that the 2020 Census
+blocks fit neatly into the 2010 Census tracts.</dd>
+</dl>
+<p>Returns:
+<code>base</code> geometries with 2019 CVAP-weighted 2020 CVAP estimates attached.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def estimatecvap2010(
+        base, state, groups, ceiling, zfill, geometry10=&#34;tract&#34;
+    ) -&gt; DataFrame:
+    r&#34;&#34;&#34;
+    Function for turning old (2019) CVAP data on 2010 geometries into estimates
+    for current CVAP data on 2020 geometries. Users must supply a base `GeoDataFrame`
+    representing their chosen U.S. state. Additionally, users must specify the
+    demographic groups whose CVAP statistics are to be estimated. For each group,
+    users specify a triple \((X, Y, Z)\) where \(X\) is the old CVAP column for
+    that group, \(Y\) is the old VAP column for that group, and \(Z\) is the new VAP
+    column for that group, which must be an existing column on `base`.  Then,
+    the estimated new CVAP for that group will be constructed by multiplying
+    \((X / Y) \cdot Z\) for each new geometry.
+
+    &lt;div style=&#34;text-align: center;&#34;&gt;
+        &lt;/br&gt;
+        &lt;img width=&#34;75%&#34; src=&#34;../images/cvap-estimation.png&#34;/&gt;
+    &lt;/div&gt;
+
+    Args:
+        base (GeoDataFrame): A `GeoDataFrame` with the appropriate columns for
+            estimating CVAP.
+        state (State): The `us.State` object for which CVAP data is retrieved.
+        groups (list): `(X, Y, Z)` triples for each desired CVAP group to be
+            estimated, where each of the parameters are column names: `X` is
+            the column on the 2010 geometries which contains the relevant CVAP
+            data; `Y` is the column on the 2010 geometries which contains the
+            relevant VAP data; `Z` is the column on the 2020 geometries to be
+            weighted by the ratio of the per-unit ratios in `X` and `Y`. For
+            example, if we wish to estimate Black CVAP, this triple would be
+            `(NHBCVAP19, BVAP19, BVAP20)`, which takes the ratios of the `NHBCVAP19`
+            and `BVAP19` columns on the 2010 geometries, and multplies the 2020
+            geometries&#39; respective `BVAP20` values by these ratios.
+        ceiling (float): Number representing where to cap the weighting ratio of
+            CVAP to VAP20. After this percentage ceiling is passed, the percentage
+            will be set to 1. We recommend setting this to 1.
+        zfill (float): Fill in ratio for CVAP to VAP20 when there is 0 CVAP in the
+            area. We recommend setting this parameter to `0.1`.
+        geometry10 (str, optional): The 2010 geometry on which cvap will be pulled.
+            Acceptable values are `&#34;tract&#34;` or `&#34;block group&#34;`. As tracts are
+            less susceptible to change across Census vintages, setting this parameter
+            to `&#34;tract&#34;` is recommended, as it is more likely that the 2020 Census
+            blocks fit neatly into the 2010 Census tracts.
+
+    Returns: 
+       `base` geometries with 2019 CVAP-weighted 2020 CVAP estimates attached.
+    &#34;&#34;&#34;
+    if geometry10 not in {&#34;block group&#34;, &#34;tract&#34;}:
+        print(f&#34;Requested geometry \&#34;{geometry10}\&#34; is not allowed; loading tracts.&#34;)
+        geometry10 = &#34;tract&#34;
+
+    # Grab ACS and CVAP special-tab data, and make sure our triples are correct
+    cvap_geoid = &#34;TRACT10&#34; if geometry10 == &#34;tract&#34; else &#34;BLOCKGROUP10&#34;
+    acs_source = acs5(state, geometry10)
+    cvap_source = cvap(state, geometry10)
+
+    # Validate the columns passed, issuing user warnings when it&#39;s inadvisable
+    # to estimate CVAP given the passed columns.
+    for (cvap10, vap10, vap20) in groups:
+        # If any of the CVAP columns passed correspond to columns which tabulate
+        # people of multiple races, notify the user that there isn&#39;t an appropriate
+        # 2019 VAP column to match them against.
+        if any(substring in cvap10 for substring in {&#34;AIW&#34;, &#34;AW&#34;, &#34;BW&#34;, &#34;AIB&#34;}):
+            print(
+                f&#34;Warning: Estimating CVAP among {cvap10} is not advisable, since &#34;
+                &#34;there isn&#39;t a reasonable VAP column from which to construct _CVAP &#34;
+                &#34;/ _VAP rates (because you seem to be combining two racial groups).&#34;
+            )
+
+        # If the CVAP or ACS5 columns passed aren&#39;t present in the set of possible
+        # columns, raise an error.
+        if not (cvap10 in acs_source or cvap10 in cvap_source):
+            possible_columns = set(acs_source).union(set(cvap_source))
+            raise ValueError(
+                f&#34;Your CVAP column &#39;{cvap10}&#39; must be contained in either the ACS &#34;
+                f&#34;or Special Tab columns: {possible_columns}&#34;
+            )
+        
+        if not vap10 in acs_source:
+            raise ValueError(
+                f&#34;Your old VAP column &#39;{vap10}&#39; must be contained in the ACS &#34;
+                &#34;columns: {set(acs_source)}&#34;
+            )
+
+        # If the VAP20 column passed doesn&#39;t exist on the user-provided geometries,
+        # raise an error.
+        if not vap20 in base:
+            raise ValueError(
+                f&#34;Your new VAP column &#39;{vap20}&#39; must be contained in your base &#34; +
+                f&#34;dataframe: {set(base)}&#34;
+            )
+    
+    # Remove ACS 5 columns that overlap with special-tab ones.
+    non_overlaps = list(set(acs_source).difference(set(cvap_source)))
+    acs_source = acs_source[[cvap_geoid] + non_overlaps]
+    source = cvap_source.merge(acs_source, on=cvap_geoid)
+
+    # Get the right columns from the base geometry, and map the base geometries
+    # to the units with CVAP data. Apparently dropping bad columns by using slicing
+    # incudes a SettingWithCopy warning, so we&#39;re just dropping using .drop()
+    # instead.
+    correct = [&#34;geometry&#34;] + [col for col in list(base) if any(sub in col for sub in [&#34;POP&#34;, &#34;VAP&#34;, &#34;GEOID&#34;])]
+    bads = list(set(base) - set(correct))
+    pared = base.drop(bads, axis=1)
+    pared = mapbase(pared, state, geometry10)
+
+    # Compute weights.
+    for (cvap10, vap10, _) in groups: 
+       source[cvap10 + &#34;%&#34;] = source[cvap10]/source[vap10]
+
+    # Fill in values according to the following rules:
+    # 
+    #   1.  if there are 0 *CVAP reported and 0 *VAP reported, we set the weight to
+    #       the average *CVAP/*VAP ratio within the county;
+    #   2.  if there are 0 *CVAP reported and *VAP &gt; 0, we set the weight to zero_fill;
+    #   3.  if *CVAP &gt; 0 but *VAP = 0 or *CVAP/*VAP &gt; percentage_cap, we set the weight to 1.
+    statewide = {
+        cvap + &#34;%&#34;: source[cvap].sum()/source[vap].sum() if source[vap].sum() != 0 else 0
+        for (cvap, vap, _) in groups
+    }
+
+    # Rename colunms with percentages.
+    cvappcts = [cvap + &#34;%&#34; for (cvap, _, _) in groups]
+
+    # Get the county names and compute population-weighted CVAP averages. This
+    # serves as a replacement for the statewide average.
+    source[&#34;_county&#34;] = source[cvap_geoid].str[2:5]
+    counties = list(set(source[&#34;_county&#34;]))
+    countyaverages = { pct: {} for pct in cvappcts }
+
+    for county in counties:
+        chunk = source[source[&#34;_county&#34;] == county]
+        
+        for cvap19, vap19, _ in groups:
+            # Calculate the CVAP19-to-VAP19 ratio. Set numpy to ignore runtimewarnings,
+            # but warn the user if one is encountered. We do this so that the user
+            # doesn&#39;t get spooked by a numpy warning, but we&#39;re still noisy about
+            # the weird value encountered.
+            cvap19total = chunk[cvap19].sum()
+            vap19total = chunk[vap19].sum()
+
+            np.seterr(divide=&#34;ignore&#34;, invalid=&#34;ignore&#34;)
+            ratio = cvap19total/vap19total
+
+            # Check whether the ratio of the above is less than the ceiling.
+            if not np.isfinite(ratio):
+                print(
+                    f&#34;Encountered an invalid ratio: there are {cvap19total} {cvap19} &#34;
+                    f&#34;persons and {vap19total} {vap19} persons, for a ratio of &#34;
+                    f&#34;{cvap19total}/{vap19total}. &#34;
+                    f&#34;we have substituted it for the statewide {cvap19}-to-{vap19} &#34;
+                    f&#34;share of {statewide[cvap19 + &#39;%&#39;]}.&#34;
+                )
+                ratio = statewide[cvap19 + &#34;%&#34;]
+
+            # Set the county-average ratio.
+            countyaverages[cvap19 + &#34;%&#34;][county] = ratio
+    
+    # Reset the numpy error catching thing.
+    np.seterr(all=&#34;warn&#34;)
+    
+    # For each of the percentage columns, we want to apply the rules specified
+    # by the user.
+    for pct in cvappcts:
+        # Fill NaNs with the *county-wide* average.
+        countywidepcts = countyaverages[pct]
+
+        source[pct] = source[pct].replace(np.inf, np.nan)
+        nanindices = source[source[pct].isna()].index
+        source.loc[nanindices, pct] = source.loc[nanindices, &#34;_county&#34;].map(countywidepcts)
+        
+        # Fill zeroes with the `zfill` value, and cap all the percentages.
+        source[pct] = source[pct] \
+            .replace(0, zfill) \
+            .apply(lambda c: 1 if c &gt; ceiling else c)
+
+    # Assert we don&#39;t have any percentages over percentage_cap.
+    assert all(
+        np.all(source[p + &#34;%&#34;] &lt;= ceiling)
+        for (p, _, __) in groups
+    )
+    
+    # Assert we don&#39;t have any zeros. 
+    assert all(
+        np.all(source[p + &#34;%&#34;] &gt; 0)
+        for (p, _, __) in groups
+    )
+
+    # Set indices and create a mapping from IDs to weights.
+    source = source.set_index(cvap_geoid)    
+    source = source[cvappcts]
+    weights = source.to_dict(orient=&#34;index&#34;)
+
+    # Group by the CVAP GEOID.
+    groupedtogeometry = list(pared.groupby(cvap_geoid))
+
+    # For each of the geometry groups (e.g. a set of rows of blocks corresponding
+    # to a single tract), and for each of the CVAP groups, apply the appropriate
+    # weight to the blocks&#39; 2020 VAP populations.
+    for ix, group in groupedtogeometry:
+        for (cvap10, vap10, vap20) in groups:
+            weight = cvap10 + &#34;%&#34;
+            cvap20 = cvap10.replace(&#34;19&#34;, &#34;20_EST&#34;)
+            group[weight] = weights[ix][weight]
+            group[cvap20] = group[weight]*group[vap20]
+
+    # Re-create a dataframe and strip out % columns, leaving only the estimate
+    # columns.
+    weightedbase = pd.concat(frame for _, frame in groupedtogeometry)
+    weightedbase = weightedbase.drop(columns=[p + &#34;%&#34; for (p, _, _) in groups])
+    return weightedbase</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.estimatecvap.estimatecvap2020"><code class="name flex">
+<span>def <span class="ident">estimatecvap2020</span></span>(<span>state) ‑> pandas.core.frame.DataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
+<dd>The <code>us.State</code> for which CVAP will be estimated.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A <code>DataFrame</code> of combined Census and ACS data at the Census block level.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def estimatecvap2020(state) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;
+    Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data.
+
+    Args:
+        state (State): The `us.State` for which CVAP will be estimated.
+
+    Returns:
+        A `DataFrame` of combined Census and ACS data at the Census block level.
+    &#34;&#34;&#34;
+
+    # First, get the Census data for blocks and block groups.
+    bg = census(state, table=&#34;P4&#34;, geometry=&#34;block group&#34;)
+    block = census(state, table=&#34;P4&#34;, geometry=&#34;block&#34;)
+
+    # Now, get 2020 Census data at the block group level and merging it with the
+    # block group-level Census data.
+    cvap20 = cvap(state, geometry=&#34;block group&#34;, year=2020)
+    bg = bg.merge(cvap20, left_on=&#34;GEOID20&#34;, right_on=&#34;BLOCKGROUP20&#34;)
+
+    # Name the VAP columns.
+    vapcolumns = [
+        &#34;NHWHITEVAP20&#34;, &#34;NHASIANVAP20&#34;, &#34;NHBLACKVAP20&#34;, &#34;NHNHPIVAP20&#34;, &#34;NHAMINVAP20&#34;,
+        &#34;NHWHITEASIANVAP20&#34;, &#34;NHWHITEAMINVAP20&#34;, &#34;NHWHITEBLACKVAP20&#34;, &#34;NHBLACKAMINVAP20&#34;
+    ]
+
+    # Create &#34;remainder&#34; column.
+    for universe in [block, bg]:
+        universe[&#34;NHVAP20&#34;] = universe[&#34;VAP20&#34;]-universe[&#34;HVAP20&#34;]
+        universe[&#34;OTHVAP20&#34;] = universe[&#34;NHVAP20&#34;]-universe[vapcolumns].sum(axis=1)
+    
+    # Get the block group ID for blocks.
+    block[&#34;BLOCKGROUP20&#34;] = block[&#34;GEOID20&#34;].astype(str).str[:-3]
+
+    # Mapping from block group IDs to block group total populations.
+    bgtotalvapmap = dict(zip(bg[&#34;BLOCKGROUP20&#34;].astype(str), bg[&#34;VAP20&#34;]))
+
+    # Add all columns.
+    allvapcols = vapcolumns + [&#34;VAP20&#34;, &#34;NHVAP20&#34;, &#34;HVAP20&#34;, &#34;NHOTHVAP20&#34;]
+
+    # Estimate CVAP data for all VAP columns.
+    for vapcolumn in allvapcols:
+        # Crete a mapping from block group names to totals for the VAP column.
+        popmap = dict(zip(bg[&#34;GEOID20&#34;].astype(str), bg[vapcolumn]))
+        
+        # Create column names.
+        colpct = vapcolumn+&#34;%&#34;
+        cvapcolumn = vapcolumn.replace(&#34;VAP&#34;, &#34;CVAP&#34;)
+
+        # Calculate ratios.
+        block[colpct] = block[&#34;BLOCKGROUP20&#34;].map(popmap)
+        block[colpct] = block[vapcolumn]/block[colpct]
+
+        # Create a mapping from block group IDs to CVAP groups.
+        cvapcolumn = vapcolumn.replace(&#34;VAP&#34;, &#34;CVAP&#34;)
+        cvapmap = dict(zip(bg[&#34;BLOCKGROUP20&#34;].astype(str), bg[cvapcolumn]))
+
+        # Create two temporary columns: the first sets the block&#39;s CVAP to the
+        # total CVAP for its block group; the second sets the block&#39;s VAP to the
+        # total VAP for its block group. (Note: each of these C/VAP columns are
+        # with respect to the current VAP column.)
+        block[&#34;tmp&#34;] = block[&#34;BLOCKGROUP20&#34;].map(cvapmap)
+        block[&#34;BGVAP20&#34;] = block[&#34;BLOCKGROUP20&#34;].map(bgtotalvapmap)
+
+        # Next, compute the estimated CVAP by multiplying the VAP column percent
+        # for the block group by the total CVAP population of the block group.
+        block[cvapcolumn] = block[colpct]*block[&#34;tmp&#34;]
+
+        # If the above doesn&#39;t work — which is the case if the VAP column percent
+        # is NaN (0/0) or inf (k/0), we estimate the CVAP of the block using the
+        # VAP ratio outright rather than the column-specific VAP ratio.
+        ni = block[block[colpct].isna()].index
+        block.loc[ni,cvapcolumn] = (block.loc[ni,&#34;VAP20&#34;]/block.loc[ni,&#34;BGVAP20&#34;])*block.loc[ni,&#34;tmp&#34;]
+
+        # Assert that our summed disaggregated numbers and totals are close!
+        assert np.isclose(bg[cvapcolumn].sum()-block[cvapcolumn].sum(), 0)
+
+    # Fill NaNs with 0 and drop unnecessary columns.
+    block = block.fillna(0)
+    block = block.drop([&#34;tmp&#34;, &#34;BGVAP20&#34;], axis=1)
+
+    # Return!
+    return block</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.estimatecvap.fetchgeometries"><code class="name flex">
+<span>def <span class="ident">fetchgeometries</span></span>(<span>state, geometry) ‑> geopandas.geodataframe.GeoDataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Fetches the 2010 Census geometries on which ACS data are reported.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
+<dd>The <code>us.State</code> for which CVAP will be estimated. </dd>
+<dt><strong><code>geometry10</code></strong> :&ensp;<code>str</code></dt>
+<dd>Level of geometry we're fetching. Accepted values are
+<code>"tract"</code> and <code>"block group"</code>.</dd>
+</dl>
+<p>Returns:
+A <code>GeoDataFrame</code> of 2010 geometries.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def fetchgeometries(state, geometry) -&gt; gpd.GeoDataFrame: 
+    &#34;&#34;&#34;
+    Fetches the 2010 Census geometries on which ACS data are reported.
+  
+    Args:
+        state (State): The `us.State` for which CVAP will be estimated. 
+        geometry10 (str): Level of geometry we&#39;re fetching. Accepted values are
+            `&#34;tract&#34;` and `&#34;block group&#34;`.
+
+    Returns: 
+        A `GeoDataFrame` of 2010 geometries.
+    &#34;&#34;&#34;
+    # Get a Census locator for the provided State by replacing spaces in its name
+    # with underscores (should they exist).
+    clocator = state.name.replace(&#34; &#34;, &#34;_&#34;)
+    
+    # Validate geometry level indicators.
+    if geometry not in {&#34;block group&#34;, &#34;tract&#34;}:
+        raise ValueError(f&#34;Geometry level {geometry} not supported; aborting.&#34;)
+    
+    if geometry == &#34;block group&#34;: geometry = &#34;bg&#34;
+
+    # Construct the Census URL.
+    fips = state.fips
+    head = &#34;https://www2.census.gov/geo/pvs/tiger2010st/&#34;
+    tail = f&#34;{fips}_{clocator}/{fips}/tl_2010_{fips}_{geometry}10.zip&#34;
+    url = head + tail
+
+    # Download, extract, and return the geometries from the URL.
+    return gpd.read_file(url)</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.estimatecvap.mapbase"><code class="name flex">
+<span>def <span class="ident">mapbase</span></span>(<span>base, state, geometry, baseindex='GEOID20')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Maps the provided geometries in <code>base</code> to the 2010 Census geometries specified
+by <code>geometry</code>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>base</code></strong> :&ensp;<code>GeoDataFrame</code></dt>
+<dd>GeoDataFrame with the desired units for cvap to be
+estimated on. </dd>
+<dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
+<dd>The <code>us.State</code> for which CVAP will be estimated. </dd>
+<dt><strong><code>geometry</code></strong> :&ensp;<code>str</code></dt>
+<dd>Level of geometry we're fetching. Accepted values are
+<code>"tract"</code> and <code>"block group"</code>.</dd>
+</dl>
+<p>Returns:
+<code>base</code> with 2010 geometry assignments adjoined.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def mapbase(base, state, geometry, baseindex=&#34;GEOID20&#34;):
+    &#34;&#34;&#34;
+    Maps the provided geometries in `base` to the 2010 Census geometries specified
+    by `geometry`.
+    
+    Args:
+        base (GeoDataFrame): GeoDataFrame with the desired units for cvap to be
+            estimated on. 
+        state (State): The `us.State` for which CVAP will be estimated. 
+        geometry (str): Level of geometry we&#39;re fetching. Accepted values are
+            `&#34;tract&#34;` and `&#34;block group&#34;`.
+    
+    Returns: 
+       `base` with 2010 geometry assignments adjoined.
+    &#34;&#34;&#34;
+    # Get the 2010 geometries from the Census.
+    geometry10 = fetchgeometries(state, geometry)
+    
+    # Get the right name and rename the 2010 geometry index this way.
+    geometry10id = &#34;TRACT10&#34; if geometry == &#34;tract&#34; else &#34;BLOCKGROUP10&#34;
+    geometry10 = geometry10.rename({&#34;GEOID10&#34;: geometry10id}, axis=1)
+    
+    # Create a unit mapping from the provided base units to those retrieved from
+    # the Census. If the `base` passed has been sliced or could possibly be a
+    # copy, *this will throw a SettingWithCopy warning*.
+    mapping = unitmap((base, baseindex), (geometry10, geometry10id))
+    base[geometry10id] = base[baseindex].map(mapping)
+
+    return base</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<!-- include a script for adding stuff to the end of proofs. -->
+<script>
+// Get all the proofs in the document.
+proofs = document.getElementsByClassName("proof");
+// For each of the proofs, attach a floating child element in the bottom-right
+// corner.
+for (var proof of proofs) {
+// Create a proof-ending tombstone.
+square = document.createElement("div");
+square.className = "tombstone";
+square.innerHTML = "◼️";
+// Attach the tombstone to the proof.
+proof.appendChild(square);
+}
+</script>
+<header>
+<a class="homelink" rel="home" title="evaltools" href="https://github.com/mggg/plan-evaluation-processing">
+<style>
+header > h1 { display: none; }
+img.resize {
+max-width: 80%;
+max-height: 80%;
+display: block;
+margin: 0 auto;
+}
+div.proof {
+border: 1px solid black;
+padding: 0em 1em;
+width: 90%;
+margin: 1em auto;
+}
+.tombstone {
+margin-top: -2em;
+float: right;
+}
+</style>
+<img class="resize" src="https://mggg.org/assets/logo.svg" alt="MGGG Logo">
+</a>
+</header>
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="evaltools.data" href="index.html">evaltools.data</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="evaltools.data.estimatecvap.estimatecvap2010" href="#evaltools.data.estimatecvap.estimatecvap2010">estimatecvap2010</a></code></li>
+<li><code><a title="evaltools.data.estimatecvap.estimatecvap2020" href="#evaltools.data.estimatecvap.estimatecvap2020">estimatecvap2020</a></code></li>
+<li><code><a title="evaltools.data.estimatecvap.fetchgeometries" href="#evaltools.data.estimatecvap.fetchgeometries">fetchgeometries</a></code></li>
+<li><code><a title="evaltools.data.estimatecvap.mapbase" href="#evaltools.data.estimatecvap.mapbase">mapbase</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>
