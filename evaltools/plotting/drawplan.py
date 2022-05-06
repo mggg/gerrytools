@@ -40,7 +40,7 @@ def drawplan(
     base = districts.plot(
         color=districts[colors if colors else "color"],
         edgecolor="black",
-        linewidth=1 if N<=20 else lw
+        linewidth=lw if lw is not None else 1
     )
 
     # If we have overlaid geometries, plot those too.
