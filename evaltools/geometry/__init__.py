@@ -11,7 +11,7 @@ from gerrychain import Graph, Partition
 
 from .optimize import (
     minimize_dispersion, minimize_dispersion_with_parity, minimize_parity,
-    calculate_dispersion, populationoverlap, optimalrelabeling
+    calculate_dispersion, populationoverlap, arealoverlap, optimalrelabeling
 )
 
 from .updater import dispersion_updater_closure
@@ -28,5 +28,6 @@ __all__ = [
     "invert",
     "dataframe",
     "populationoverlap",
-    "optimalrelabeling"
+    "optimalrelabeling",
+    "arealoverlap"
 ]
