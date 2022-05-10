@@ -17,6 +17,7 @@ from .multidimensional import multidimensional
 from .gifs import gif_multidimensional
 from .bins import bins
 from .annotation import arrow, ideal
+from .districtnumbers import districtnumbers
 
 __all__ = [
     "drawplan",
@@ -35,5 +36,6 @@ __all__ = [
     "gif_multidimensional",
     "arrow",
     "ideal",
-    "bins"
+    "bins",
+    "districtnumbers"
 ]
