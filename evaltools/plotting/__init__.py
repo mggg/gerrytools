@@ -6,7 +6,7 @@ and violin plots 🎻.
 
 from .drawplan import drawplan
 from .drawgraph import drawgraph
-from .colors import redbluecmap, flare, purples, districtr
+from .colors import redbluecmap, flare, purples, districtr, latex
 from .specification import PlotSpecification
 from .histogram import histogram
 from .violin import violin
@@ -18,6 +18,7 @@ from .gifs import gif_multidimensional
 from .bins import bins
 from .annotation import arrow, ideal
 from .districtnumbers import districtnumbers
+from .choropleth import choropleth
 
 __all__ = [
     "drawplan",
@@ -37,5 +38,7 @@ __all__ = [
     "arrow",
     "ideal",
     "bins",
-    "districtnumbers"
+    "districtnumbers",
+    "latex",
+    "choropleth"
 ]
