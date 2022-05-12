@@ -7,7 +7,7 @@ def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
     """
     Retrieves and CSV-formats 5-year CVAP data for the provided state at
     the specified geometry level. Geometries from the **2010 Census**. Variables
-    and descriptions are [listed here](https://tinyurl.com/3mnrm56s>).
+    and descriptions are [listed here](https://tinyurl.com/3mnrm56s).
 
     Args:
         state (us.State): The `State` object for which we're retrieving 2019 ACS
