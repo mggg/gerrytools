@@ -239,12 +239,48 @@ POC populations.</dd>
 <span>def <span class="ident">census10</span></span>(<span>state, columns={}, geometry='block')</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Retrieves <code>geometry</code>-level 2010 Summary File 1 data via the Census API.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
+<dd><code>us.State</code> object (e.g. <code>us.states.WI</code>).</dd>
+<dt><strong><code>columns</code></strong> :&ensp;<code>dict</code>, optional</dt>
+<dd>Dictionary which maps Census column names (from
+the correct table) to human-readable names. We require this to be a
+dictionary, <em>not</em> a list, as specifying human-readable names will
+implicitly protect against incorrect column names and excessive API
+calls.</dd>
+<dt><strong><code>geometry</code></strong> :&ensp;<code>string</code>, optional</dt>
+<dd>Geometry level at which we retrieve data.
+Defaults to <code>"block"</code> to retrieve block-level data for the state
+provided. Accepted values are <code>"block"</code>, <code>"block group</code>", and <code>"tract"</code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A DataFrame with columns renamed according to their Census description
+designation and a unique identifier column for joining to geometries.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def census10(state, columns={}, geometry=&#34;block&#34;):
+    &#34;&#34;&#34;
+    Retrieves `geometry`-level 2010 Summary File 1 data via the Census API.
+
+    Args:
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        columns (dict, optional): Dictionary which maps Census column names (from
+            the correct table) to human-readable names. We require this to be a
+            dictionary, _not_ a list, as specifying human-readable names will
+            implicitly protect against incorrect column names and excessive API
+            calls.
+        geometry (string, optional): Geometry level at which we retrieve data.
+            Defaults to `&#34;block&#34;` to retrieve block-level data for the state
+            provided. Accepted values are `&#34;block&#34;`, `&#34;block group`&#34;, and `&#34;tract&#34;`.
+    
+    Returns:
+        A DataFrame with columns renamed according to their Census description
+        designation and a unique identifier column for joining to geometries.
+    &#34;&#34;&#34;
     # Create the right geometry identifiers.
     geometries = [(&#34;state&#34;, str(state.fips)), (&#34;county&#34;, &#34;*&#34;), (&#34;tract&#34;, &#34;*&#34;)]
     if geometry in {&#34;block group&#34;, &#34;block&#34;}: geometries += [(geometry, &#34;*&#34;)]
@@ -270,7 +306,7 @@ POC populations.</dd>
 <span>def <span class="ident">census20</span></span>(<span>state, table='P1', columns={}, geometry='block', key='75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65') ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Retrieves geometry-level 2020 Decennial Census PL94-171 data via the Census
+<div class="desc"><p>Retrieves <code>geometry</code>-level 2020 Decennial Census PL94-171 data via the Census
 API.</p>
 <h2 id="args">Args</h2>
 <dl>
@@ -304,7 +340,7 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
         key=&#34;75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65&#34;
     ) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
-    Retrieves geometry-level 2020 Decennial Census PL94-171 data via the Census
+    Retrieves `geometry`-level 2020 Decennial Census PL94-171 data via the Census
     API.
 
     Args:
@@ -555,7 +591,11 @@ the ACS CVAP Special Tab for the specified year.</p></div>
 </code></dt>
 <dd>
 <div class="desc"><p>Function for turning old (2019) CVAP data on 2010 geometries into estimates
-for current CVAP data on 2020 geometries. Users must supply a base <code>GeoDataFrame</code>
+for current CVAP data on 2020 geometries. <strong>This method serves a different
+purpose than <code><a title="evaltools.data.estimatecvap.estimatecvap2020" href="estimatecvap.html#evaltools.data.estimatecvap.estimatecvap2020">estimatecvap2020()</a></code>:</strong> this method
+is intended to put 2010-era CVAP data on 2020-era geometries, and uses
+geometric properties to do so.</p>
+<p>Users must supply a base <code>GeoDataFrame</code>
 representing their chosen U.S. state. Additionally, users must specify the
 demographic groups whose CVAP statistics are to be estimated. For each group,
 users specify a triple <span><span class="MathJax_Preview">(X, Y, Z)</span><script type="math/tex">(X, Y, Z)</script></span> where <span><span class="MathJax_Preview">X</span><script type="math/tex">X</script></span> is the old CVAP column for
@@ -611,7 +651,12 @@ blocks fit neatly into the 2010 Census tracts.</dd>
     ) -&gt; DataFrame:
     r&#34;&#34;&#34;
     Function for turning old (2019) CVAP data on 2010 geometries into estimates
-    for current CVAP data on 2020 geometries. Users must supply a base `GeoDataFrame`
+    for current CVAP data on 2020 geometries. **This method serves a different
+    purpose than `evaltools.data.estimatecvap.estimatecvap2020()`:** this method
+    is intended to put 2010-era CVAP data on 2020-era geometries, and uses
+    geometric properties to do so.
+    
+    Users must supply a base `GeoDataFrame`
     representing their chosen U.S. state. Additionally, users must specify the
     demographic groups whose CVAP statistics are to be estimated. For each group,
     users specify a triple \((X, Y, Z)\) where \(X\) is the old CVAP column for
@@ -830,7 +875,14 @@ blocks fit neatly into the 2010 Census tracts.</dd>
 <span>def <span class="ident">estimatecvap2020</span></span>(<span>state) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data.</p>
+<div class="desc"><p>Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data. <strong>This method serves
+a different purpose than <code><a title="evaltools.data.estimatecvap.estimatecvap2010" href="estimatecvap.html#evaltools.data.estimatecvap.estimatecvap2010">estimatecvap2010()</a></code>:</strong>
+rather than using geometric procedures to put CVAP data on old geometries,
+this method takes advantage of the Census's geographic hierarchy, and
+associates finer-grained 2020 CVAP data with 2020 blocks. <em>No geometric
+data or procedures are used here</em>. The resulting data can then be adjoined
+to 2020 block geometries (or assigned to VTDs, assigned to districts, etc.)
+and be used to build other units of varying size.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
@@ -844,7 +896,14 @@ blocks fit neatly into the 2010 Census tracts.</dd>
 </summary>
 <pre><code class="python">def estimatecvap2020(state) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
-    Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data.
+    Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data. **This method serves
+    a different purpose than `evaltools.data.estimatecvap.estimatecvap2010()`:**
+    rather than using geometric procedures to put CVAP data on old geometries,
+    this method takes advantage of the Census&#39;s geographic hierarchy, and
+    associates finer-grained 2020 CVAP data with 2020 blocks. _No geometric
+    data or procedures are used here_. The resulting data can then be adjoined
+    to 2020 block geometries (or assigned to VTDs, assigned to districts, etc.)
+    and be used to build other units of varying size.
 
     Args:
         state (State): The `us.State` for which CVAP will be estimated.
@@ -1024,7 +1083,7 @@ districtr identifiers.</dd>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>identifier</code></strong></dt>
-<dd>distrivtr identifier.</dd>
+<dd>districtr identifier.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>String with the appropriate URL.</p></div>
@@ -1037,7 +1096,7 @@ districtr identifiers.</dd>
     URL for accessing an individual districtr plan.
 
     Args:
-        identifier: distrivtr identifier.
+        identifier: districtr identifier.
 
     Returns:
         String with the appropriate URL.
@@ -2047,9 +2106,6 @@ margin: 1em auto;
 .tombstone {
 margin-top: -2em;
 float: right;
-}
-p {
-text-align: justify;
 }
 </style>
 <img class="resize" src="https://mggg.org/assets/logo.svg" alt="MGGG Logo">

@@ -10,7 +10,14 @@ from ..geometry import unitmap
 
 def estimatecvap2020(state) -> pd.DataFrame:
     """
-    Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data.
+    Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data. **This method serves
+    a different purpose than `evaltools.data.estimatecvap.estimatecvap2010()`:**
+    rather than using geometric procedures to put CVAP data on old geometries,
+    this method takes advantage of the Census's geographic hierarchy, and
+    associates finer-grained 2020 CVAP data with 2020 blocks. _No geometric
+    data or procedures are used here_. The resulting data can then be adjoined
+    to 2020 block geometries (or assigned to VTDs, assigned to districts, etc.)
+    and be used to build other units of varying size.
 
     Args:
         state (State): The `us.State` for which CVAP will be estimated.
@@ -160,7 +167,12 @@ def estimatecvap2010(
     ) -> DataFrame:
     r"""
     Function for turning old (2019) CVAP data on 2010 geometries into estimates
-    for current CVAP data on 2020 geometries. Users must supply a base `GeoDataFrame`
+    for current CVAP data on 2020 geometries. **This method serves a different
+    purpose than `evaltools.data.estimatecvap.estimatecvap2020()`:** this method
+    is intended to put 2010-era CVAP data on 2020-era geometries, and uses
+    geometric properties to do so.
+    
+    Users must supply a base `GeoDataFrame`
     representing their chosen U.S. state. Additionally, users must specify the
     demographic groups whose CVAP statistics are to be estimated. For each group,
     users specify a triple \((X, Y, Z)\) where \(X\) is the old CVAP column for

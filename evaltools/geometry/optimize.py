@@ -130,18 +130,25 @@ def populationoverlap(
 
 
 def optimalrelabeling(
-        left: pd.DataFrame, right: pd.DataFrame, maximize: bool=True,
+        left: Any, right: Any, maximize: bool=True,
         costmatrix: Callable=populationoverlap
     ) -> dict:
     r"""
-    Given two dataframes, each with at least three columns --- one for unique geometric
-    identifiers, one for districts, and one for some score (e.g. total population)
-    --- we compute an optimal relabeling.
+    Finds the optimal relabeling for two districting plans.
 
     Args:
-        left (pd.DataFrame): DataFrame with columns handleable by `costmatrix`;
-            the district labels in `left` will be the preimage of the relabeling.
-        right (pd.DataFrame): DataFrame with columns handleable by `costmatrix`.
+        left (Any): Data structure which can be passed to `costmatrix` to construct
+            a cost matrix. District labels will be the preimage of the relabeling.
+            If the default `costmatrix` function is used, these must be pandas
+            DataFrames, with at least three columns: one denoting a unique geometric
+            identifier (e.g. `GEOID20`), one denoting the districting assignment,
+            and another denoting the population of choice.
+        right (Any): Data structure which can be passed to `costmatrix` to construct
+            a cost matrix. District labels will be the image of the relabeling.
+            If the default `costmatrix` function is used, these must be pandas
+            DataFrames, with at least three columns: one denoting a unique geometric
+            identifier (e.g. `GEOID20`), one denoting the districting assignment,
+            and another denoting the population of choice.
         maximize (bool): Are we finding the largest or smallest linear sum over
             the cost matrix? Defaults to `maximize=True`.
         costmatrix (Callable): The function (or partial function) which consumes
@@ -154,6 +161,8 @@ def optimalrelabeling(
     Returns:
         A dictionary which maps district labels in `left` to district labels in
         `right`, according to the weighting scheme applied in `costmatrix`.
+
+    </br>
 
     This is an [assignment problem](https://bit.ly/3wnyS4F)
     and is equivalently a [(min/max)imal bipartite matching problem](http://bit.ly/2OfwUeh).
@@ -178,13 +187,14 @@ def optimalrelabeling(
     
     We then seek to find the set of weighted edges \(M\) such that all vertices
     \(l_i\) and \(r_j\) appear at most once in \(M\), and that the sum of \(M\)'s
-    weights is as large (or as small) as possible. To do so, we take the adjacency
+    weights is as small (or as large) as possible. To do so, we take the adjacency
     matrix \(A\) of our graph \(K_{n,m}\), where the \(i, j\)th entry records
     the weight of the edge \(l_i, r_j\). Then, we want to select at most one entry
-    in each row and column, and ensure those entries have the greatest possible
-    sum. Using the [Jonker-Volgenant algorithm](DOI:10.1109/TAES.2016.140952) (as
-    implemented by scipy), we can find these entries. The algorithm achieves
-    \(\textbf{O}(N^3)\) worst-case running time, where \(N = \max(n, m)\).
+    in each row and column, and ensure those entries have the smallest (or greatest)
+    possible sum. Using the [Jonker-Volgenant algorithm](DOI:10.1109/TAES.2016.140952) (as
+    implemented by scipy), we can find the row and column indices of these entries,
+    and retrieve the district label pairs corresponding to each.The algorithm
+    achieves \(\textbf{O}(N^3)\) worst-case running time, where \(N = \max(n, m)\).
 
     """
     # Our cost function should compute the weights between left and right. First,

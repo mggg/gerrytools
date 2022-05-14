@@ -51,6 +51,24 @@ def _rjoin(df, columns) -&gt; Iterable:
 
 
 def census10(state, columns={}, geometry=&#34;block&#34;):
+    &#34;&#34;&#34;
+    Retrieves `geometry`-level 2010 Summary File 1 data via the Census API.
+
+    Args:
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        columns (dict, optional): Dictionary which maps Census column names (from
+            the correct table) to human-readable names. We require this to be a
+            dictionary, _not_ a list, as specifying human-readable names will
+            implicitly protect against incorrect column names and excessive API
+            calls.
+        geometry (string, optional): Geometry level at which we retrieve data.
+            Defaults to `&#34;block&#34;` to retrieve block-level data for the state
+            provided. Accepted values are `&#34;block&#34;`, `&#34;block group`&#34;, and `&#34;tract&#34;`.
+    
+    Returns:
+        A DataFrame with columns renamed according to their Census description
+        designation and a unique identifier column for joining to geometries.
+    &#34;&#34;&#34;
     # Create the right geometry identifiers.
     geometries = [(&#34;state&#34;, str(state.fips)), (&#34;county&#34;, &#34;*&#34;), (&#34;tract&#34;, &#34;*&#34;)]
     if geometry in {&#34;block group&#34;, &#34;block&#34;}: geometries += [(geometry, &#34;*&#34;)]
@@ -76,7 +94,7 @@ def census20(
         key=&#34;75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65&#34;
     ) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
-    Retrieves geometry-level 2020 Decennial Census PL94-171 data via the Census
+    Retrieves `geometry`-level 2020 Decennial Census PL94-171 data via the Census
     API.
 
     Args:
@@ -239,12 +257,48 @@ def variables(table) -&gt; dict:
 <span>def <span class="ident">census10</span></span>(<span>state, columns={}, geometry='block')</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Retrieves <code>geometry</code>-level 2010 Summary File 1 data via the Census API.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
+<dd><code>us.State</code> object (e.g. <code>us.states.WI</code>).</dd>
+<dt><strong><code>columns</code></strong> :&ensp;<code>dict</code>, optional</dt>
+<dd>Dictionary which maps Census column names (from
+the correct table) to human-readable names. We require this to be a
+dictionary, <em>not</em> a list, as specifying human-readable names will
+implicitly protect against incorrect column names and excessive API
+calls.</dd>
+<dt><strong><code>geometry</code></strong> :&ensp;<code>string</code>, optional</dt>
+<dd>Geometry level at which we retrieve data.
+Defaults to <code>"block"</code> to retrieve block-level data for the state
+provided. Accepted values are <code>"block"</code>, <code>"block group</code>", and <code>"tract"</code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A DataFrame with columns renamed according to their Census description
+designation and a unique identifier column for joining to geometries.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def census10(state, columns={}, geometry=&#34;block&#34;):
+    &#34;&#34;&#34;
+    Retrieves `geometry`-level 2010 Summary File 1 data via the Census API.
+
+    Args:
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        columns (dict, optional): Dictionary which maps Census column names (from
+            the correct table) to human-readable names. We require this to be a
+            dictionary, _not_ a list, as specifying human-readable names will
+            implicitly protect against incorrect column names and excessive API
+            calls.
+        geometry (string, optional): Geometry level at which we retrieve data.
+            Defaults to `&#34;block&#34;` to retrieve block-level data for the state
+            provided. Accepted values are `&#34;block&#34;`, `&#34;block group`&#34;, and `&#34;tract&#34;`.
+    
+    Returns:
+        A DataFrame with columns renamed according to their Census description
+        designation and a unique identifier column for joining to geometries.
+    &#34;&#34;&#34;
     # Create the right geometry identifiers.
     geometries = [(&#34;state&#34;, str(state.fips)), (&#34;county&#34;, &#34;*&#34;), (&#34;tract&#34;, &#34;*&#34;)]
     if geometry in {&#34;block group&#34;, &#34;block&#34;}: geometries += [(geometry, &#34;*&#34;)]
@@ -270,7 +324,7 @@ def variables(table) -&gt; dict:
 <span>def <span class="ident">census20</span></span>(<span>state, table='P1', columns={}, geometry='block', key='75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65') ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Retrieves geometry-level 2020 Decennial Census PL94-171 data via the Census
+<div class="desc"><p>Retrieves <code>geometry</code>-level 2020 Decennial Census PL94-171 data via the Census
 API.</p>
 <h2 id="args">Args</h2>
 <dl>
@@ -304,7 +358,7 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
         key=&#34;75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65&#34;
     ) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
-    Retrieves geometry-level 2020 Decennial Census PL94-171 data via the Census
+    Retrieves `geometry`-level 2020 Decennial Census PL94-171 data via the Census
     API.
 
     Args:
@@ -514,9 +568,6 @@ margin: 1em auto;
 .tombstone {
 margin-top: -2em;
 float: right;
-}
-p {
-text-align: justify;
 }
 </style>
 <img class="resize" src="https://mggg.org/assets/logo.svg" alt="MGGG Logo">
