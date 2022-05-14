@@ -140,15 +140,23 @@ def optimalrelabeling(
         left (Any): Data structure which can be passed to `costmatrix` to construct
             a cost matrix. District labels will be the preimage of the relabeling.
             If the default `costmatrix` function is used, these must be pandas
-            DataFrames, with at least three columns: one denoting a unique geometric
+            DataFrames where one row corresponds to one atomic unit (e.g. Census
+            blocks), with at least three columns: one denoting a unique geometric
             identifier (e.g. `GEOID20`), one denoting the districting assignment,
-            and another denoting the population of choice.
+            and another denoting the population of choice. If
+            `evaltools.geometry.optimize.arealoverlap()` is used, these must be
+            GeoDataFrames where one row corresponds to one district, and one
+            column denotes the districts' unique identifiers.
         right (Any): Data structure which can be passed to `costmatrix` to construct
             a cost matrix. District labels will be the image of the relabeling.
             If the default `costmatrix` function is used, these must be pandas
-            DataFrames, with at least three columns: one denoting a unique geometric
+            DataFrames where one row corresponds to one atomic unit (e.g. Census
+            blocks), with at least three columns: one denoting a unique geometric
             identifier (e.g. `GEOID20`), one denoting the districting assignment,
-            and another denoting the population of choice.
+            and another denoting the population of choice. If
+            `evaltools.geometry.optimize.arealoverlap()` is used, these must be
+            GeoDataFrames where one row corresponds to one district, and one
+            column denotes the districts' unique identifiers.
         maximize (bool): Are we finding the largest or smallest linear sum over
             the cost matrix? Defaults to `maximize=True`.
         costmatrix (Callable): The function (or partial function) which consumes
