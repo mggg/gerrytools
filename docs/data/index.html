@@ -32,7 +32,7 @@
 Facilities for processing data and districting plans in a standardized fashion.
 &#34;&#34;&#34;
 from .acs import cvap, acs5
-from .census import census, variables
+from .census import census20, census10, variables
 from .estimatecvap import estimatecvap2010, estimatecvap2020, fetchgeometries
 from .fetch import submissions, tabularized, Submission
 from .remap import remap
@@ -50,11 +50,12 @@ __all__ = [
     &#34;Submission&#34;,
     &#34;cvap&#34;,
     &#34;acs5&#34;,
-    &#34;census&#34;,
+    &#34;census20&#34;,
     &#34;variables&#34;,
     &#34;estimatecvap2010&#34;,
     &#34;estimatecvap2020&#34;,
-    &#34;fetchgeometries&#34;
+    &#34;fetchgeometries&#34;,
+    &#34;census10&#34;
 ]</code></pre>
 </details>
 </section>
@@ -66,6 +67,10 @@ __all__ = [
 <div class="desc"></div>
 </dd>
 <dt><code class="name"><a title="evaltools.data.acs" href="acs.html">evaltools.data.acs</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt><code class="name"><a title="evaltools.data.census" href="census.html">evaltools.data.census</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -85,7 +90,7 @@ __all__ = [
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.data.acs5"><code class="name flex">
-<span>def <span class="ident">acs5</span></span>(<span>state, geometry='tract', year=2020, columns=[], white='NHWVAP') ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">acs5</span></span>(<span>state, geometry='tract', year=2020, columns=[], white='NHWHITEVAP') ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Retrieves ACS 5-year population estimates for the provided state, geometry
@@ -117,7 +122,7 @@ POC populations.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def acs5(state, geometry=&#34;tract&#34;, year=2020, columns=[], white=&#34;NHWVAP&#34;) -&gt; pd.DataFrame:
+<pre><code class="python">def acs5(state, geometry=&#34;tract&#34;, year=2020, columns=[], white=&#34;NHWHITEVAP&#34;) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves ACS 5-year population estimates for the provided state, geometry
     level, and year. Also retrieves ACS-reported CVAP data, which closely matches
@@ -161,8 +166,8 @@ POC populations.</dd>
     # for example, WVAP19 is the group of people who identified White as their *only*
     # race, including people who identified as Hispanic and White.
     vapnames = [
-        &#34;WVAP&#34;, &#34;BVAP&#34;, &#34;AMINVAP&#34;, &#34;ASIANVAP&#34;, &#34;NHPIVAP&#34;, &#34;OTHVAP&#34;, &#34;2MOREVAP&#34;,
-        &#34;NHWVAP&#34;, &#34;HVAP&#34;
+        &#34;WHITEVAP&#34;, &#34;BLACKVAP&#34;, &#34;AMINVAP&#34;, &#34;ASIANVAP&#34;, &#34;NHPIVAP&#34;, &#34;OTHVAP&#34;, &#34;2MOREVAP&#34;,
+        &#34;NHWHITEVAP&#34;, &#34;HVAP&#34;
     ]
     vaptables = list(zip(
         [column + yearsuffix for column in vapnames],
@@ -230,8 +235,39 @@ POC populations.</dd>
     return data</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.census"><code class="name flex">
-<span>def <span class="ident">census</span></span>(<span>state, table='P1', columns={}, geometry='block', key='75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65') ‑> pandas.core.frame.DataFrame</span>
+<dt id="evaltools.data.census10"><code class="name flex">
+<span>def <span class="ident">census10</span></span>(<span>state, columns={}, geometry='block')</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def census10(state, columns={}, geometry=&#34;block&#34;):
+    # Create the right geometry identifiers.
+    geometries = [(&#34;state&#34;, str(state.fips)), (&#34;county&#34;, &#34;*&#34;), (&#34;tract&#34;, &#34;*&#34;)]
+    if geometry in {&#34;block group&#34;, &#34;block&#34;}: geometries += [(geometry, &#34;*&#34;)]
+
+    # Create an identifier column.
+    identifier = geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;
+
+    # Download data.
+    raw = censusdata.download(
+        &#34;sf1&#34;, 2010, censusdata.censusgeo(geometries),
+        [&#34;GEO_ID&#34;] + list(columns.keys()),
+    )
+
+    # Rename columns and send back to the caller!
+    raw = raw.rename({&#34;GEO_ID&#34;: identifier, **columns}, axis=1)
+    raw[identifier] = raw[identifier].str[9:]
+    clean = raw.reset_index(drop=True)
+
+    return clean</code></pre>
+</details>
+</dd>
+<dt id="evaltools.data.census20"><code class="name flex">
+<span>def <span class="ident">census20</span></span>(<span>state, table='P1', columns={}, geometry='block', key='75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65') ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Retrieves geometry-level 2020 Decennial Census PL94-171 data via the Census
@@ -263,7 +299,7 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def census(
+<pre><code class="python">def census20(
         state, table=&#34;P1&#34;, columns={}, geometry=&#34;block&#34;,
         key=&#34;75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65&#34;
     ) -&gt; pd.DataFrame:
@@ -406,7 +442,7 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
 <dd>
 <div class="desc"><p>Retrieves and CSV-formats 5-year CVAP data for the provided state at
 the specified geometry level. Geometries from the <strong>2010 Census</strong>. Variables
-and descriptions are <a href="https://tinyurl.com/3mnrm56s&gt;">listed here</a>.</p>
+and descriptions are <a href="https://tinyurl.com/3mnrm56s">listed here</a>.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>state</code></strong> :&ensp;<code>us.State</code></dt>
@@ -430,7 +466,7 @@ the ACS CVAP Special Tab for the specified year.</p></div>
     &#34;&#34;&#34;
     Retrieves and CSV-formats 5-year CVAP data for the provided state at
     the specified geometry level. Geometries from the **2010 Census**. Variables
-    and descriptions are [listed here](https://tinyurl.com/3mnrm56s&gt;).
+    and descriptions are [listed here](https://tinyurl.com/3mnrm56s).
 
     Args:
         state (us.State): The `State` object for which we&#39;re retrieving 2019 ACS
@@ -489,7 +525,7 @@ the ACS CVAP Special Tab for the specified year.</p></div>
 
     # Get year stuff.
     decade = &#34;10&#34; if year &lt; 2020 else &#34;20&#34;
-    yearsuffix = str(year)[:-2]
+    yearsuffix = str(year)[2:]
 
     # Next, we collapse these records to a single record.
     for i in range(0, len(instate_records), 13):
@@ -515,7 +551,7 @@ the ACS CVAP Special Tab for the specified year.</p></div>
 </details>
 </dd>
 <dt id="evaltools.data.estimatecvap2010"><code class="name flex">
-<span>def <span class="ident">estimatecvap2010</span></span>(<span>base, state, groups, ceiling, zfill, geometry10='tract') ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">estimatecvap2010</span></span>(<span>base, state, groups, ceiling, zfill, geometry10='tract', year=2019) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Function for turning old (2019) CVAP data on 2010 geometries into estimates
@@ -571,7 +607,7 @@ blocks fit neatly into the 2010 Census tracts.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def estimatecvap2010(
-        base, state, groups, ceiling, zfill, geometry10=&#34;tract&#34;
+        base, state, groups, ceiling, zfill, geometry10=&#34;tract&#34;, year=2019
     ) -&gt; DataFrame:
     r&#34;&#34;&#34;
     Function for turning old (2019) CVAP data on 2010 geometries into estimates
@@ -623,8 +659,8 @@ blocks fit neatly into the 2010 Census tracts.</dd>
 
     # Grab ACS and CVAP special-tab data, and make sure our triples are correct
     cvap_geoid = &#34;TRACT10&#34; if geometry10 == &#34;tract&#34; else &#34;BLOCKGROUP10&#34;
-    acs_source = acs5(state, geometry10)
-    cvap_source = cvap(state, geometry10)
+    acs_source = acs5(state, geometry10, year=year)
+    cvap_source = cvap(state, geometry10, year=year)
 
     # Validate the columns passed, issuing user warnings when it&#39;s inadvisable
     # to estimate CVAP given the passed columns.
@@ -673,6 +709,10 @@ blocks fit neatly into the 2010 Census tracts.</dd>
     # instead.
     correct = [&#34;geometry&#34;] + [col for col in list(base) if any(sub in col for sub in [&#34;POP&#34;, &#34;VAP&#34;, &#34;GEOID&#34;])]
     bads = list(set(base) - set(correct))
+
+    # Warn the user of column removal:
+    print(f&#34;Removing the following columns: &#34; + &#34;, &#34;.join(bads))
+
     pared = base.drop(bads, axis=1)
     pared = mapbase(pared, state, geometry10)
 
@@ -716,7 +756,7 @@ blocks fit neatly into the 2010 Census tracts.</dd>
 
             # Check whether the ratio of the above is less than the ceiling.
             if not np.isfinite(ratio):
-                print(
+                print(county, 
                     f&#34;Encountered an invalid ratio: there are {cvap19total} {cvap19} &#34;
                     f&#34;persons and {vap19total} {vap19} persons, for a ratio of &#34;
                     f&#34;{cvap19total}/{vap19total}. &#34;
@@ -766,13 +806,16 @@ blocks fit neatly into the 2010 Census tracts.</dd>
     # Group by the CVAP GEOID.
     groupedtogeometry = list(pared.groupby(cvap_geoid))
 
+    # Get the year suffix so we can replace columns.
+    yearsuffix = str(year)[2:]
+
     # For each of the geometry groups (e.g. a set of rows of blocks corresponding
     # to a single tract), and for each of the CVAP groups, apply the appropriate
     # weight to the blocks&#39; 2020 VAP populations.
     for ix, group in groupedtogeometry:
         for (cvap10, vap10, vap20) in groups:
             weight = cvap10 + &#34;%&#34;
-            cvap20 = cvap10.replace(&#34;19&#34;, &#34;20_EST&#34;)
+            cvap20 = cvap10.replace(yearsuffix, &#34;20_EST&#34;)
             group[weight] = weights[ix][weight]
             group[cvap20] = group[weight]*group[vap20]
 
@@ -811,8 +854,8 @@ blocks fit neatly into the 2010 Census tracts.</dd>
     &#34;&#34;&#34;
 
     # First, get the Census data for blocks and block groups.
-    bg = census(state, table=&#34;P4&#34;, geometry=&#34;block group&#34;)
-    block = census(state, table=&#34;P4&#34;, geometry=&#34;block&#34;)
+    bg = census20(state, table=&#34;P4&#34;, geometry=&#34;block group&#34;)
+    block = census20(state, table=&#34;P4&#34;, geometry=&#34;block&#34;)
 
     # Now, get 2020 Census data at the block group level and merging it with the
     # block group-level Census data.
@@ -920,10 +963,11 @@ A <code>GeoDataFrame</code> of 2010 geometries.</p></div>
     clocator = state.name.replace(&#34; &#34;, &#34;_&#34;)
     
     # Validate geometry level indicators.
-    if geometry not in {&#34;block group&#34;, &#34;tract&#34;}:
+    if geometry not in {&#34;block group&#34;, &#34;tract&#34;, &#34;block&#34;}:
         raise ValueError(f&#34;Geometry level {geometry} not supported; aborting.&#34;)
     
     if geometry == &#34;block group&#34;: geometry = &#34;bg&#34;
+    if geometry == &#34;block&#34;: geometry = &#34;tabblock&#34;
 
     # Construct the Census URL.
     fips = state.fips
@@ -2004,6 +2048,9 @@ margin: 1em auto;
 margin-top: -2em;
 float: right;
 }
+p {
+text-align: justify;
+}
 </style>
 <img class="resize" src="https://mggg.org/assets/logo.svg" alt="MGGG Logo">
 </a>
@@ -2022,6 +2069,7 @@ float: right;
 <ul>
 <li><code><a title="evaltools.data.URLs" href="URLs.html">evaltools.data.URLs</a></code></li>
 <li><code><a title="evaltools.data.acs" href="acs.html">evaltools.data.acs</a></code></li>
+<li><code><a title="evaltools.data.census" href="census.html">evaltools.data.census</a></code></li>
 <li><code><a title="evaltools.data.estimatecvap" href="estimatecvap.html">evaltools.data.estimatecvap</a></code></li>
 <li><code><a title="evaltools.data.fetch" href="fetch.html">evaltools.data.fetch</a></code></li>
 </ul>
@@ -2029,7 +2077,8 @@ float: right;
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="two-column">
 <li><code><a title="evaltools.data.acs5" href="#evaltools.data.acs5">acs5</a></code></li>
-<li><code><a title="evaltools.data.census" href="#evaltools.data.census">census</a></code></li>
+<li><code><a title="evaltools.data.census10" href="#evaltools.data.census10">census10</a></code></li>
+<li><code><a title="evaltools.data.census20" href="#evaltools.data.census20">census20</a></code></li>
 <li><code><a title="evaltools.data.csvs" href="#evaltools.data.csvs">csvs</a></code></li>
 <li><code><a title="evaltools.data.cvap" href="#evaltools.data.cvap">cvap</a></code></li>
 <li><code><a title="evaltools.data.estimatecvap2010" href="#evaltools.data.estimatecvap2010">estimatecvap2010</a></code></li>

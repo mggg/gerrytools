@@ -10,26 +10,36 @@ import pandas as pd
 
 
 def arealoverlap(
-        left: gpd.GeoDataFrame, right: gpd.GeoDataFrame, assignment: str="DISTRICT"
+        left: gpd.GeoDataFrame, right: gpd.GeoDataFrame, assignment: str="DISTRICT",
+        crs=None
     ) -> pd.DataFrame:
     r"""
-    Given two unit-level districting assignments with some population attached,
-    report the amount of population shared by district \(k\) in `left` and district
-    \(k\) in `right`.
+    Given two GeoDataFrames, each encoding districting plans, computes the areal
+    overlap between each pair of districts. `left` is the districting plan to be
+    relabeled (e.g. a proposed districting plan) and `right` is the districting
+    plan with district labels we're trying to match (e.g. an enacted districting
+    plan). If `left` (denoted \(L\)) has \(n\) districts and `right` (denoted \(R\)) has
+    \(m\) districts, an \(n \times m\) matrix \(C\) is computed, where the entry
+    \(M_{ij}\) represents the area of the intersection of the districts \(L_i\) and
+    \(R_j\). \(C\) is represented as a pandas DataFrame, where the row indices are
+    the labels in `left`, and are the preimage of the label mapping; column indices
+    are the labels in `right`, and are the image of the label mapping.
 
     Args:
-        left (pd.DataFrame): DataFrame whose labels are the domain of the relabeling.
-        right (pd.DataFrame): DataFrame whose labels are the image of the relabeling.
-        identifier (str): Column on `left` and `right` which contains the unique
-            identifier for each unit.
-        population (str): Column on `left` and `right` which contains the population
-            total for each unit. This can be modified to be `any` population.
-        assignment (str): Column on `left` and `right` that denotes district membership.
+        left (pd.DataFrame): GeoDataFrame whose labels are the preimage of the
+            relabeling.
+        right (pd.DataFrame): GeoDataFrame whose labels are the image of the
+            relabeling.
+        assignment (str): Column on `left` and `right` which contains the district
+            identifier.
 
     Returns:
-        A DataFrame whose row names are the domain of the relabeling, column names
-        are the image of the relabeling, and values edge weights; a cost matrix.
+        Cost matrix \(C\), represented as a DataFrame.
     """
+    # Force the two things to be the same CRS (or the provided CRS)
+    if crs: left = left.to_crs(crs); right = right.to_crs(crs)
+    else: right = right.to_crs(left.crs)
+
     # An empty list of records for everything.
     records = []
 
@@ -57,12 +67,21 @@ def populationoverlap(
         population: str="TOTPOP20", assignment: str="DISTRICT"
     ) -> pd.DataFrame:
     r"""
-    Given two unit-level districting assignments with some population attached,
-    report the amount of population shared by district \(k\) in `left` and district
-    \(k\) in `right`.
+    Given two unit-level DataFrames — i.e. two dataframes where each row represents
+    an atomic unit like Census blocks or VTDs, and each row contains a district
+    assignment — computes the amount of population shared by each pair of districts.
+    `left` is the districting plan to be relabeled (e.g. a proposed districting
+    plan) and `right` is the districting plan with district labels we're trying
+    to match (e.g. an enacted districting plan). If `left` (denoted \(L\)) has
+    \(n\) districts and `right` (denoted \(R\)) has \(m\) districts, an
+    \(n \times m\) matrix \(C\) is computed, where the entry \(M_{ij}\) represents
+    the population shared by the districts \(L_i\) and \(R_j\). \(C\) is
+    represented as a pandas DataFrame, where the row indices are the labels in
+    `left`, and are the preimage of the label mapping; column indices are the labels
+    in `right`, and are the image of the label mapping.
 
     Args:
-        left (pd.DataFrame): DataFrame whose labels are the domain of the relabeling.
+        left (pd.DataFrame): DataFrame whose labels are the preimage of the relabeling.
         right (pd.DataFrame): DataFrame whose labels are the image of the relabeling.
         identifier (str): Column on `left` and `right` which contains the unique
             identifier for each unit.
@@ -71,7 +90,7 @@ def populationoverlap(
         assignment (str): Column on `left` and `right` that denotes district membership.
 
     Returns:
-        A DataFrame whose row names are the domain of the relabeling, column names
+        A DataFrame whose row names are the preimage of the relabeling, column names
         are the image of the relabeling, and values edge weights; a cost matrix.
     """
     # Make sure types are appropriate.
@@ -81,15 +100,15 @@ def populationoverlap(
     left[assignment] = left[assignment].astype(str)
     left[identifier] = left[identifier].astype(str)
 
-    # The domain is the set of proposed-plan labels.
-    domain = list(left[assignment].unique())
+    # The preimage is the set of proposed-plan labels.
+    preimage = list(left[assignment].unique())
 
     # Create a list of records from which we'll make a dataframe!
     records = []
 
-    # For each label in the domain, find the district which shares the most
+    # For each label in the preimage, find the district which shares the most
     # population; this is the cost matrix.
-    for fromlabel in domain:
+    for fromlabel in preimage:
         # Find the blocks in the "from" district and see how much population each
         # district shares with each enacted district.
         subleft = left[left[assignment] == fromlabel]
@@ -105,7 +124,7 @@ def populationoverlap(
 
     # Create the cost matrix!
     C = pd.DataFrame.from_records(records).fillna(0)
-    C.index = domain
+    C.index = preimage
 
     return C
 
@@ -115,26 +134,61 @@ def optimalrelabeling(
         costmatrix: Callable=populationoverlap
     ) -> dict:
     r"""
-    Given two dataframes, each with three columns --- one for unique geometric
+    Given two dataframes, each with at least three columns --- one for unique geometric
     identifiers, one for districts, and one for some score (e.g. total population)
     --- we compute an optimal relabeling.
 
     Args:
-        left (pd.DataFrame): DataFrame with columns handleable by `costmatrix`.
+        left (pd.DataFrame): DataFrame with columns handleable by `costmatrix`;
+            the district labels in `left` will be the preimage of the relabeling.
         right (pd.DataFrame): DataFrame with columns handleable by `costmatrix`.
         maximize (bool): Are we finding the largest or smallest linear sum over
             the cost matrix? Defaults to `maximize=True`.
         costmatrix (Callable): The function (or partial function) which consumes
             `left` and `right` and spits out a cost matrix. This cost matrix is
-            assumed to be a Dataframe, with row indices old district labels and
-            column names new district labels.
+            assumed to be a pandas DataFrame, with row indices old district labels
+            and column names new district labels. Examples of these are
+            `evaltools.geometry.optimize.populationoverlap()` and
+            `evaltools.geometry.optimize.arealoverlap()`.
     
     Returns:
-        A dictionary which maps proposed district labels to the labels which mimic
-        the enacted plan based on the weights in `costmatrix`.
+        A dictionary which maps district labels in `left` to district labels in
+        `right`, according to the weighting scheme applied in `costmatrix`.
+
+    This is an [assignment problem](https://bit.ly/3wnyS4F)
+    and is equivalently a [(min/max)imal bipartite matching problem](http://bit.ly/2OfwUeh).
+    Consider two districting plans \(L\) and \(R\), with \(n\) and \(m\) districts
+    respectively. Set \(V_L\) and \(V_R\) to be sets of vertices such that
+    a vertex \(l_i\) in \(V_L\) corresponds to the district \(L_i\) in \(L\), and
+    similarly for vertices \(r_j\) in \(V_R\); draw edges \((l_i, r_j)\) for each
+    \(i\) from \(1\) to \(n,\) and each \(j\) from \(1\) to \(m.\) In doing so,
+    we construct the [bipartite graph](https://bit.ly/39rDldy) \(K_{n,m}\):
+
+    <div style="text-align: center;">
+        </br>
+        <img width="40%" src="../images/bipartite-matching.png"/>
+    </div>
+
+    We then assign each edge a weight according to some function
+    \(f: L\times R\ \to \mathbb{R}\), which consumes a pair of districts and returns
+    a number. For example, this function could be the amount of area shared by
+    the districts \(L_i\) and \(R_j\), like in `evaltools.geometry.optimize.arealoverlap()`,
+    or the amount of population the districts share, like in
+    `evaltools.geometry.optimize.populationoverlap()`.
+    
+    We then seek to find the set of weighted edges \(M\) such that all vertices
+    \(l_i\) and \(r_j\) appear at most once in \(M\), and that the sum of \(M\)'s
+    weights is as large (or as small) as possible. To do so, we take the adjacency
+    matrix \(A\) of our graph \(K_{n,m}\), where the \(i, j\)th entry records
+    the weight of the edge \(l_i, r_j\). Then, we want to select at most one entry
+    in each row and column, and ensure those entries have the greatest possible
+    sum. Using the [Jonker-Volgenant algorithm](DOI:10.1109/TAES.2016.140952) (as
+    implemented by scipy), we can find these entries. The algorithm achieves
+    \(\textbf{O}(N^3)\) worst-case running time, where \(N = \max(n, m)\).
+
     """
     # Our cost function should compute the weights between left and right. First,
-    # we want to identify the indices of the domain (row index) and column
+    # we want to identify the indices of the preimage (row index) and column
     C = costmatrix(left, right)
     preimage, image = list(C.index), list(C)
     
@@ -144,7 +198,7 @@ def optimalrelabeling(
     preimage = [preimage[i] for i in preimageindices]
     image = [image[i] for i in imageindices]
 
-    # Zip the domain and image into a dict, and we're done!
+    # Zip the preimage and image into a dict, and we're done!
     return dict(zip(preimage, image))
 
 

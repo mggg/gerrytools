@@ -40,6 +40,10 @@
                 margin-top: -2em;
                 float: right;
             }
+
+            p {
+                text-align: justify;
+            }
         </style>
         <img class="resize" src="https://mggg.org/assets/logo.svg" alt="MGGG Logo">
     </a>
