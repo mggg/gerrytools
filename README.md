@@ -222,7 +222,7 @@ chunks = {
 indicates that the districting plan creates 16 pieces of county.
 
 ## Documentation
-Read the documentation [here](https://mggg.github.io/plan-evaluation-tools/). To
+Read the documentation [here](https://mggg.github.io/evaltools/). To
 create documentation after adding features, please ensure you're following the
 [Google Python style guide](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings), then run `sh docs.sh`. Pushing to the repository
 will modify the documentation automatically.
