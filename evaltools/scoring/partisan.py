@@ -1,16 +1,16 @@
-from functools import cache
+from functools import lru_cache
 from gerrychain import Partition
 import numpy as np
 from typing import Iterable, Tuple
 from .score_types import *
 
-@cache
+@lru_cache(maxsize=None)
 def _election_results(part: Partition, election_cols: Tuple[str], party: str):
     return np.array([
                         np.array([part[e].percent(party, d) for d in sorted(part.parts.keys()) if d != -1])
                         for e in election_cols
                     ])
-@cache
+@lru_cache(maxsize=None)
 def _election_stability(part: Partition, election_cols: Tuple[str], party: str):
     return (_election_results(part, election_cols, party) > 0.5).sum(axis=0)
 
