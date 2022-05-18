@@ -16,7 +16,7 @@ root = Path(os.getcwd()) / Path("tests/test-resources/")
 
 def test_splits():
     # Read in an existing dual graph.
-    dg = Graph.from_json(root / "IN-vtds.json")
+    dg = Graph.from_json(root / "test-graph.json")
     P = Partition(dg, "CONGRESS")
 
     geometricsplits = splits("COUNTYFP20", popcol="TOTPOP").apply(P)

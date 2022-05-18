@@ -225,11 +225,11 @@ def optimalrelabeling(
     \(l_i\) and \(r_j\) appear at most once in \(M\), and that the sum of \(M\)&#39;s
     weights is as small (or as large) as possible. To do so, we take the adjacency
     matrix \(A\) of our graph \(K_{n,m}\), where the \(i, j\)th entry records
-    the weight of the edge \(l_i, r_j\). Then, we want to select at most one entry
+    the weight of the edge \((l_i, r_j\)). Then, we want to select at most one entry
     in each row and column, and ensure those entries have the smallest (or greatest)
     possible sum. Using the [Jonker-Volgenant algorithm](DOI:10.1109/TAES.2016.140952) (as
     implemented by scipy), we can find the row and column indices of these entries,
-    and retrieve the district label pairs corresponding to each.The algorithm
+    and retrieve the district label pairs corresponding to each. The algorithm
     achieves \(\textbf{O}(N^3)\) worst-case running time, where \(N = \max(n, m)\).
 
     &#34;&#34;&#34;
@@ -883,11 +883,11 @@ or the amount of population the districts share, like in
 <span><span class="MathJax_Preview">l_i</span><script type="math/tex">l_i</script></span> and <span><span class="MathJax_Preview">r_j</span><script type="math/tex">r_j</script></span> appear at most once in <span><span class="MathJax_Preview">M</span><script type="math/tex">M</script></span>, and that the sum of <span><span class="MathJax_Preview">M</span><script type="math/tex">M</script></span>'s
 weights is as small (or as large) as possible. To do so, we take the adjacency
 matrix <span><span class="MathJax_Preview">A</span><script type="math/tex">A</script></span> of our graph <span><span class="MathJax_Preview">K_{n,m}</span><script type="math/tex">K_{n,m}</script></span>, where the <span><span class="MathJax_Preview">i, j</span><script type="math/tex">i, j</script></span>th entry records
-the weight of the edge <span><span class="MathJax_Preview">l_i, r_j</span><script type="math/tex">l_i, r_j</script></span>. Then, we want to select at most one entry
+the weight of the edge <span><span class="MathJax_Preview">(l_i, r_j</span><script type="math/tex">(l_i, r_j</script></span>). Then, we want to select at most one entry
 in each row and column, and ensure those entries have the smallest (or greatest)
 possible sum. Using the <a href="DOI:10.1109/TAES.2016.140952">Jonker-Volgenant algorithm</a> (as
 implemented by scipy), we can find the row and column indices of these entries,
-and retrieve the district label pairs corresponding to each.The algorithm
+and retrieve the district label pairs corresponding to each. The algorithm
 achieves <span><span class="MathJax_Preview">\textbf{O}(N^3)</span><script type="math/tex">\textbf{O}(N^3)</script></span> worst-case running time, where <span><span class="MathJax_Preview">N = \max(n, m)</span><script type="math/tex">N = \max(n, m)</script></span>.</p></div>
 <details class="source">
 <summary>
@@ -961,11 +961,11 @@ achieves <span><span class="MathJax_Preview">\textbf{O}(N^3)</span><script type=
     \(l_i\) and \(r_j\) appear at most once in \(M\), and that the sum of \(M\)&#39;s
     weights is as small (or as large) as possible. To do so, we take the adjacency
     matrix \(A\) of our graph \(K_{n,m}\), where the \(i, j\)th entry records
-    the weight of the edge \(l_i, r_j\). Then, we want to select at most one entry
+    the weight of the edge \((l_i, r_j\)). Then, we want to select at most one entry
     in each row and column, and ensure those entries have the smallest (or greatest)
     possible sum. Using the [Jonker-Volgenant algorithm](DOI:10.1109/TAES.2016.140952) (as
     implemented by scipy), we can find the row and column indices of these entries,
-    and retrieve the district label pairs corresponding to each.The algorithm
+    and retrieve the district label pairs corresponding to each. The algorithm
     achieves \(\textbf{O}(N^3)\) worst-case running time, where \(N = \max(n, m)\).
 
     &#34;&#34;&#34;
