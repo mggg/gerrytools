@@ -7,7 +7,6 @@ and violin plots 🎻.
 from .drawplan import drawplan
 from .drawgraph import drawgraph
 from .colors import redbluecmap, flare, purples, districtr, latex
-from .specification import PlotSpecification
 from .histogram import histogram
 from .violin import violin
 from .boxplot import boxplot
@@ -24,7 +23,6 @@ __all__ = [
     "drawplan",
     "drawgraph",
     "redbluecmap",
-    "PlotSpecification",
     "flare",
     "purples",
     "districtr",

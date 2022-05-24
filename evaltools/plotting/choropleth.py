@@ -3,7 +3,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import numpy as np
-from math import ceil
 
 from .colors import overlays as overlaycolors
 from .districtnumbers import districtnumbers
@@ -12,7 +11,7 @@ from .districtnumbers import districtnumbers
 def choropleth(
         geometries, districts=None, assignment=None, demographic="BVAP",
         overlays=[], cmap="Purples", cbartitle=None, numbers=True, lw=1/8,
-        fontsize=15, min=0, max=1, interval=1/10
+        fontsize=15, min=0, max=1, interval=1/10, colorbar=True
     ) -> Axes:
     """
     Visualization of population shares or totals in a state's map.
@@ -33,8 +32,10 @@ def choropleth(
             blocks, VTDs, or counties. The first set of geometries in the list
             will be overlaid in the lightest color, and last will be overlaid in
             the darkest color.
-	    cmap (string, optional): Defines which colormap to use. Defaults to
-            matplotlib's `Purples` colormap.
+	    cmap (string/ListedColorMap, optional): Defines which colormap to use.
+            Defaults to matplotlib's `Purples` colormap. Can be a string which
+            specifies a named matplotlib colormap or a `ListedColormap` with the
+            appropriate number of bins; by default, this is 10.
         cbartitle (string, optional): Title for the colorbar. Defaults to
             `demographic`.
         numbers (bool, optional): If `True`, plot district names (as defined by
@@ -43,7 +44,8 @@ def choropleth(
         lw (float, optional): The base geometries' line widths.
         min (float, optional): The lower limit of the data points; defaults to 0.
         max (float, optional): The upper limit of the data points; defaults to 1.
-        interfal (float, optional): The width of the interval; a bin.
+        interval (float, optional): The width of the interval; a bin.
+        colorbar (bool, optional): Do we include the color bar?
 
     Returns:
         A matplotlib `Axes` object visualizing a choropleth map with the provided
@@ -63,8 +65,11 @@ def choropleth(
         for i in range(len(ticks))
     ]
     
-    # Set the color map, based on user preference or default (purples).
-    colorbarmap = plt.cm.get_cmap(cmap, len(boundaries))
+    # Set the color map, based on user preference or default (purples). If we
+    # can't find the correct colormap, then create our own.
+    if type(cmap) == str: colorbarmap = plt.cm.get_cmap(cmap, len(boundaries))
+    else: colorbarmap = cmap
+
     norm = mpl.colors.BoundaryNorm(boundaries, colorbarmap.N)
         
     # Plot geometries!
@@ -79,14 +84,15 @@ def choropleth(
     )
 
     # Create and plot the colorbar on the right side of the figure.
-    cbar = fig.colorbar(
-        plt.cm.ScalarMappable(cmap=colorbarmap, norm=norm), shrink=0.5,
-        location="right", ax=base, ticks=ticks
-    )
-    cbar.ax.set_yticklabels(labels)
-    cbar.ax.set_ylabel(cbartitle)
-    cbar.ax.yaxis.set_label_position("left")
-    cbar.ax.tick_params(size=0)
+    if colorbar:
+        cbar = fig.colorbar(
+            plt.cm.ScalarMappable(cmap=colorbarmap, norm=norm), shrink=0.5,
+            location="right", ax=base, ticks=ticks
+        )
+        cbar.ax.set_yticklabels(labels)
+        cbar.ax.set_ylabel(cbartitle)
+        cbar.ax.yaxis.set_label_position("left")
+        cbar.ax.tick_params(size=0)
     
     # Plot each of the overlays, adjusting CRSes and applying colors as we go.
     for idx, geom in enumerate(overlays):
@@ -107,4 +113,5 @@ def choropleth(
 
     # Turn plot vertical/horizontal axes off and return base Axes.
     base.set_axis_off()
-    return base, cbar
+
+    return base, None if not colorbar else cbar
