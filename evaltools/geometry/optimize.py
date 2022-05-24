@@ -197,11 +197,11 @@ def optimalrelabeling(
     \(l_i\) and \(r_j\) appear at most once in \(M\), and that the sum of \(M\)'s
     weights is as small (or as large) as possible. To do so, we take the adjacency
     matrix \(A\) of our graph \(K_{n,m}\), where the \(i, j\)th entry records
-    the weight of the edge \(l_i, r_j\). Then, we want to select at most one entry
+    the weight of the edge \((l_i, r_j\)). Then, we want to select at most one entry
     in each row and column, and ensure those entries have the smallest (or greatest)
     possible sum. Using the [Jonker-Volgenant algorithm](DOI:10.1109/TAES.2016.140952) (as
     implemented by scipy), we can find the row and column indices of these entries,
-    and retrieve the district label pairs corresponding to each.The algorithm
+    and retrieve the district label pairs corresponding to each. The algorithm
     achieves \(\textbf{O}(N^3)\) worst-case running time, where \(N = \max(n, m)\).
 
     """
