@@ -1,3 +1,10 @@
+from evaltools.geometry.compactness import (
+    _reock,
+    _convex_hull,
+    _polsby_popper,
+    _schwartzberg,
+    _cut_edges,
+)
 from .splits import _splits, _pieces
 from .demographics import (
     _pop_shares,
@@ -24,6 +31,7 @@ from .partisan import (
 )
 from functools import partial
 from gerrychain import Partition, Graph
+from geopandas import GeoDataFrame
 from typing import Iterable, List, Mapping, Dict, Union, Any
 from tqdm import tqdm
 import gzip
@@ -104,11 +112,11 @@ def splits(
     ) -> Score:
     """
     Score representing the number of units split by the districting plan.
-    
+
     Bear in mind that this calculates the number of *unit splits*, not the number
     of *units split*: for example, if a district divides a county into three
     pieces, the former reports two splits (as a unit divided into three pieces is
-    cut twice), while the latter would report one split (as there is one county 
+    cut twice), while the latter would report one split (as there is one county
     being split).
 
     Args:
@@ -122,13 +130,13 @@ def splits(
             `"pandas"`.
         names (bool, optional): Whether we return the identifiers of the things
             being split.
-    
+
     Returns:
         A score object with the name `"{alias}_splits"` and associated function that takes a
         partition and returns a PlanWideScoreValue for the number of splits.
     """
     if alias is None: alias = unit
-    
+
     return Score(
         f"{alias}_splits",
         partial(_splits, unit=unit, how=how, popcol=popcol, names=names)
@@ -143,11 +151,11 @@ def pieces(
     consider a state with 100 counties. Suppose that one county is split twice,
     and another once. Then, there are 3 + 2 = 5 "pieces," disregarding the
     counties kept whole.
-    
+
     Bear in mind that this calculates the number of _unit splits_, not the number
     of _units split_: for example, if a district divides a county into three
     pieces, the former reports two splits (as a unit divided into three pieces is
-    cut twice), while the latter would report one split (as there is one county 
+    cut twice), while the latter would report one split (as there is one county
     being split).
 
     Args:
@@ -161,13 +169,13 @@ def pieces(
             `"pandas"`.
         names (bool, optional): Whether we return the identifiers of the things
             being split.
-    
+
     Returns:
         A score object with the name `"{alias}_pieces"` and associated function that takes a
         partition and returns a PlanWideScoreValue for the number of pieces.
     """
     if alias is None: alias = unit
-    
+
     return Score(
         f"{alias}_pieces",
         partial(_pieces, unit=unit, how=how, popcol=popcol, names=names)
@@ -183,7 +191,7 @@ def competitive_contests(election_cols: Iterable[str], party: str, points_within
         party (str): The "point of view" political party.
         points_within (float, optional): The margin from 0.5 that is considered competitive.
             Default is 0.03, corresponding to a competitive range of 47%-53%.
-    
+
     Returns:
         A score object with name `"competitive_contests_0.03"` and associated function that takes a
         partition and returns a PlanWideScoreValue for the number of competitive districts.
@@ -263,7 +271,7 @@ def party_wins_by_district(election_cols: Iterable[str], party: str) -> Score:
 def seats(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
     """
     Score representing how many seats (districts) within a given plan the POV party won in each
-    election 
+    election
 
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
@@ -351,7 +359,7 @@ def simplified_efficiency_gap(election_cols: Iterable[str], party: str, mean: bo
     """
     Score representing the simplified efficiency gap metric of a plan with respect to a set of elections.
     The original formulation of efficiency gap quantifies the difference in "wasted" votes for the two
-    parties across the state, as a share of votes cast. This is sensitive to turnout effects. The 
+    parties across the state, as a share of votes cast. This is sensitive to turnout effects. The
     simplified score is equal to standard efficiency gap when the districts have equal turnout.
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
@@ -440,12 +448,14 @@ def eguia(election_cols: Iterable[str], party: str, graph: Graph, updaters: Mapp
 
     Returns:
         A score object with name `"eguia"` and associated function that takes a partition and returns
-        a PlanWideScoreValue for the eguia metric. 
+        a PlanWideScoreValue for the eguia metric.
     """
     county_part = Partition(graph, county_col, updaters=updaters)
+
     prefix = "mean_" if mean else ""
-    return Score(f"{prefix}eguia", partial(_eguia, election_cols=election_cols, party=party, 
+    return Score(f"{prefix}eguia", partial(_eguia, election_cols=election_cols, party=party,
                                   county_part=county_part, totpop_col=totpop_col, mean=mean))
+
 
 
 def demographic_tallies(population_cols: Iterable[str]) -> List[Score]:
@@ -471,12 +481,12 @@ def demographic_shares(population_cols: Mapping[str, Iterable[str]]) -> List[Sco
     Args:
         population_cols (Mapping[str, Iterable[str]]): A mapping encoding the total population group
             divisor as well as the subgroups to create shares for.  The mapping has the format:
-            { \(P\) : [ \(P_1\), \(P_2\), ..., \(P_k\)], ...} where \(P\) is the population and 
+            { \(P\) : [ \(P_1\), \(P_2\), ..., \(P_k\)], ...} where \(P\) is the population and
             \( P_i \subseteq P \) forall subgroups \(P_i\).
 
     Returns:
         A list of score objects named with the pattern `"{column}_share"` and with associated
-        functions that take a partition and return a DistrictWideScoreValue for the demographic 
+        functions that take a partition and return a DistrictWideScoreValue for the demographic
         share of each district.
     """
     scores = []
@@ -508,11 +518,63 @@ def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: f
 
     for totalpop_col, subpop_cols in population_cols.items():
         scores.extend([
-            Score(f"{col}_gingles_districts", partial(_gingles_districts, subpop_col=col, 
+            Score(f"{col}_gingles_districts", partial(_gingles_districts, subpop_col=col,
                                                       totpop_col=totalpop_col, threshold=threshold))
             for col in subpop_cols
         ])
     return scores
+
+
+def reock(gdf: GeoDataFrame, crs: str) -> Score:
+    """
+    Returns the reock score for each district in a plan.
+    Args:
+        gdf (GeoDataFrame): Geodataframe for the plan.
+        crs (str): Desired projection for the geodataframe.
+    Returns:
+        A dictionary with districts as keys and reock scores as values.
+    """
+    return Score("reock", partial(_reock, gdf=gdf, crs=crs))
+
+def polsby_popper(dissolved_gdf: GeoDataFrame, crs: str) -> Score:
+    """
+    Returns the polsby-popper score for each district in a plan.
+    Args:
+        dissolved_gdf (GeoDataFrame): Dissolved geodataframe for the plan.
+        crs (str): Desired projection for the geodataframe.
+    Returns:
+        A dictionary with districts as keys and polsby-popper scores as values.
+    """
+
+    return Score("polsby_popper", partial(_polsby_popper, dissolved_gdf=dissolved_gdf, crs=crs))
+
+def schwartzberg(dissolved_gdf: GeoDataFrame, crs:str) -> Score:
+    """
+    Returns the schwartzberg score for each district in a plan.
+    Args:
+        dissolved_gdf (GeoDataFrame): Dissolved geodataframe for the plan.
+        crs (str): Desired projection for the geodataframe.
+    Returns:
+        A dictionary with districts as keys and schwartzberg scores as values.
+    """
+    return Score("schwartzberg", partial(_schwartzberg, dissolved_gdf=dissolved_gdf, crs=crs))
+
+def convex_hull(dissolved_gdf: GeoDataFrame, crs: str, index: str = "GEOID20") -> Score:
+    """
+    Returns the convex-hull score for each district in a plan.
+    Args:
+        disolved_gdf (GeoDataFrame): Dissolved geodataframe for the plan.
+        crs (str): Desired projection for the geodataframe.
+    Returns:
+        A dictionary with districts as keys and convex-hull scores as values.
+    """
+    return Score("convex_hull", partial(_convex_hull, dissolved_gdf=dissolved_gdf, crs=crs, index=index))
+
+def cut_edges() -> Score:
+    """
+    Returns the number of cut edges in a plan.
+    """
+    return Score("cut_edges", partial(_cut_edges))
 
 def max_deviation(totpop_col: str, pct: bool = False) -> Score:
     """
@@ -522,7 +584,7 @@ def max_deviation(totpop_col: str, pct: bool = False) -> Score:
     Args:
         totpop_col (str, optional): The name of the updater that computes total population by
             district.
-        pct (bool): Whether to return the maximum deviation as a count or as a percentage of 
+        pct (bool): Whether to return the maximum deviation as a count or as a percentage of
                     ideal district size.
     """
     return Score(f"{totpop_col}_max_deviation", partial(_max_deviation, totpop_col=totpop_col, pct=pct))
