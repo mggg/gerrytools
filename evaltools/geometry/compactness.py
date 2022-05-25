@@ -4,9 +4,11 @@ from gerrychain import (
     GeographicPartition
 )
 from gerrychain.updaters import (
-    boundary_nodes,
     perimeter,
     exterior_boundaries,
+    interior_boundaries,
+    boundary_nodes,
+    cut_edges_by_part,
     Tally, # TODO: ask why this isn't already in GeographicPartition
     perimeter, 
     exterior_boundaries, 
@@ -17,7 +19,7 @@ from geopandas import GeoDataFrame
 from cv2 import minEnclosingCircle
 from shapely.ops import unary_union
 from .dissolve import dissolve
-from math import pi
+from math import pi, sqrt
 import numpy as np
 
 def _reock(partition: Partition, gdf: GeoDataFrame, crs: str):
@@ -50,52 +52,41 @@ def _reock(partition: Partition, gdf: GeoDataFrame, crs: str):
         part_scores[part] = score
     return part_scores
 
-def _polsby_popper(partition: Partition, gdf: GeoDataFrame, crs: str, assignment_col: str):
+def _polsby_popper(partition: Partition, dissolved_gdf: GeoDataFrame, crs: str):
     """
     TODO : Add documentation
     """
-    gdf = gdf.to_crs(crs)
-<<<<<<< Updated upstream
-    gdf_graph = Graph.from_geodataframe(gdf, ignore_errors=True)
+    dissolved_gdf = dissolved_gdf.to_crs(crs)
+    gdf_graph = Graph.from_geodataframe(dissolved_gdf, ignore_errors=True)
     geo_partition = Partition(graph=gdf_graph,
-                              assignment=partition.assignment,
+                              assignment={n:n for n in gdf_graph.nodes},
                               updaters={
                                 "area": Tally("area", alias="area"),
                                 "perimeter": perimeter,
                                 "exterior_boundaries": exterior_boundaries,
+                                "interior_boundaries": interior_boundaries,
+                                "boundary_nodes": boundary_nodes,
+                                "cut_edges_by_part": cut_edges_by_part,
                               })
-=======
-    
-    assignment = gdf.to_dict()[assignment_col]
-    
-    gdf_graph = Graph.from_geodataframe(gdf)
-    geo_partition = GeographicPartition(graph=gdf_graph,
-                              assignment=assignment,
-                              updaters={})
-    
->>>>>>> Stashed changes
     part_scores = {}
-    for part, nodes in geo_partition.parts.items():
-        part_scores[part] = (4*pi*geo_partition['area'][part])/(geo_partition['perimeter'][part] ** 2)
+    for part, _ in geo_partition.parts.items():
+        part_scores[part] = (4*pi*geo_partition['area'][part])/(
+        geo_partition['perimeter'][part] ** 2)
     return part_scores
 
-def _schwartzberg(partition: Partition, gdf: GeoDataFrame, crs: str):
+def _schwartzberg(partition: Partition, dissolved_gdf: GeoDataFrame, crs: str):
     """
     TODO: Add documentation
     """
-    polsby_scores = _polsby_popper(partition, gdf, crs)
+    polsby_scores = _polsby_popper(partition, dissolved_gdf, crs)
     part_scores = {k : 1/sqrt(polsby_scores[k]) for k in polsby_scores.keys()}
     return part_scores
 
-def _convex_hull(partition: Partition, gdf: GeoDataFrame, crs: str, index: str = "GEOID20"):
+def _convex_hull(partition: Partition, dissolved_gdf: GeoDataFrame, crs: str, index: str = "GEOID20"):
     """
     TODO: Add documentation.
     """
-    gdf = gdf.to_crs(crs)
-    gdf = gdf.set_index(index)
-    assignment = {partition.graph.nodes[n][index]:partition.assignment[n] for n in partition.graph.nodes}
-    gdf["assignment"] = gdf.index.map(assignment)
-    dissolved_gdf = dissolve(gdf, by="assignment")
+    dissolved_gdf = dissolved_gdf.to_crs(crs)
     state_geom = dissolved_gdf.dissolve().iloc[0].geometry
 
     # Boundary-clipped convex hulls
@@ -106,10 +97,10 @@ def _convex_hull(partition: Partition, gdf: GeoDataFrame, crs: str, index: str =
     convex_hull_scores = dissolved_areas / dissolved_convex_hull_areas
     return convex_hull_scores
 
-<<<<<<< Updated upstream
+
 def _cut_edges(partition: Partition):
     return len(partition["cut_edges"])
-=======
+
 def _pop_polygon(partition: Partition, block_gdf: GeoDataFrame, gdf: GeoDataFrame, pop_col: str, crs: str):
     block_gdf = block_gdf.to_crs(crs)  
 
@@ -127,4 +118,3 @@ def _pop_polygon(partition: Partition, block_gdf: GeoDataFrame, gdf: GeoDataFram
         pop_polygon_scores[part] = geo_partition["population"][part]/sum(hull_gdf[pop_col])
 
     return pop_polygon_scores
->>>>>>> Stashed changes
