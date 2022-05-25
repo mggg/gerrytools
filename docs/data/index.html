@@ -390,16 +390,20 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
     Returns:
         String with the appropriate URL.
     &#34;&#34;&#34;
-    prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/csv/&#34;
+    pipeline = &#34;beta&#34; if state == us.states.MI else &#34;prod&#34;
+    if state == us.states.MI: prefix = &#34;https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com&#34;
+    else: prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com&#34;
+
     suffix = f&#34;?type={ptype}&amp;length=10000&#34;
-    return f&#34;{prefix}{state.name.lower()}{suffix}&#34;</code></pre>
+    
+    return f&#34;{prefix}/{pipeline}/submissions/csv/{state.name.lower()}{suffix}&#34;</code></pre>
 </details>
 </dd>
 <dt id="evaltools.data.cvap"><code class="name flex">
-<span>def <span class="ident">cvap</span></span>(<span>state, geometry='tract') ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">cvap</span></span>(<span>state, geometry='tract', year=2019) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
+<div class="desc"><p>Retrieves and CSV-formats 5-year CVAP data for the provided state at
 the specified geometry level. Geometries from the <strong>2010 Census</strong>. Variables
 and descriptions are <a href="https://tinyurl.com/3mnrm56s&gt;">listed here</a>.</p>
 <h2 id="args">Args</h2>
@@ -411,17 +415,19 @@ CVAP Special Tab.</dd>
 <dd>Level of geometry for which we're getting data.
 Accepted values are <code>"block group"</code> for 2010 Census Block Groups, and
 <code>"tract"</code> for 2010 Census Tracts. Defaults to <code>"tract"</code>.</dd>
+<dt><strong><code>year</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Year for which data is retrieved. Defaults to 2019.</dd>
 </dl>
 <p>Returns
 A <code>DataFrame</code> with a <code>GEOID</code> column and corresponding CVAP columns from
-the 2019 ACS CVAP Special Tab.</p></div>
+the ACS CVAP Special Tab for the specified year.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def cvap(state, geometry=&#34;tract&#34;) -&gt; pd.DataFrame:
+<pre><code class="python">def cvap(state, geometry=&#34;tract&#34;, year=2019) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
-    Retrieves and CSV-formats 2019 5-year CVAP data for the provided state at
+    Retrieves and CSV-formats 5-year CVAP data for the provided state at
     the specified geometry level. Geometries from the **2010 Census**. Variables
     and descriptions are [listed here](https://tinyurl.com/3mnrm56s&gt;).
 
@@ -431,10 +437,11 @@ the 2019 ACS CVAP Special Tab.</p></div>
         geometry (str, optional): Level of geometry for which we&#39;re getting data.
             Accepted values are `&#34;block group&#34;` for 2010 Census Block Groups, and
             `&#34;tract&#34;` for 2010 Census Tracts. Defaults to `&#34;tract&#34;`.
+        year (int, optional): Year for which data is retrieved. Defaults to 2019.
 
     Returns
         A `DataFrame` with a `GEOID` column and corresponding CVAP columns from
-        the 2019 ACS CVAP Special Tab.
+        the ACS CVAP Special Tab for the specified year.
     &#34;&#34;&#34;
     # Maps line numbers to descriptors.
     descriptions = {
@@ -459,8 +466,9 @@ the 2019 ACS CVAP Special Tab.</p></div>
         print(f&#34;Requested geometry \&#34;{geometry}\&#34; is not allowed; loading tracts.&#34;)
         geometry = &#34;tract&#34;
 
+    yearsuffix = str(year)[-2:]
     # Load the raw data.
-    raw = _raw(geometry)
+    raw = _raw(geometry, yearsuffix)
 
     # Create a STATE column for filtering and remove all rows which don&#39;t match
     # the state FIPS code.
@@ -487,15 +495,15 @@ the 2019 ACS CVAP Special Tab.</p></div>
         block = instate_records[i:i+13]
         for line in block:
             record[geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;] = line[&#34;GEOID&#34;]
-            record[descriptions[line[&#34;lnnumber&#34;]] + &#34;19&#34;] = line[&#34;cvap_est&#34;]
-            record[descriptions[line[&#34;lnnumber&#34;]] + &#34;19e&#34;] = line[&#34;cvap_moe&#34;]
+            record[descriptions[line[&#34;lnnumber&#34;]] + yearsuffix] = line[&#34;cvap_est&#34;]
+            record[descriptions[line[&#34;lnnumber&#34;]] + f&#34;{yearsuffix}e&#34;] = line[&#34;cvap_moe&#34;]
 
         collapsed.append(record)
 
     # Create a dataframe and a POCCVAP column; all people minus non-Hispanic
     # White.
     data = pd.DataFrame().from_records(collapsed)
-    data[&#34;POCCVAP19&#34;] = data[&#34;CVAP19&#34;] - data[&#34;NHWCVAP19&#34;]
+    data[f&#34;POCCVAP{yearsuffix}&#34;] = data[f&#34;CVAP{yearsuffix}&#34;] - data[f&#34;NHWCVAP{yearsuffix}&#34;]
 
     return data</code></pre>
 </details>
@@ -848,7 +856,13 @@ districtr identifiers.</dd>
     Returns:
         String with the appropriate URL.
     &#34;&#34;&#34;
-    return f&#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/districtr-ids/{state.name.lower()}&#34;</code></pre>
+    # If we&#39;re in michigan, then we use the &#39;beta&#39; pipeline instead of the &#39;prod&#39;
+    # one.
+    pipeline = &#34;beta&#34; if state == us.states.MI else &#34;prod&#34;
+    if state == us.states.MI: prefix = &#34;https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com&#34;
+    else: prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com&#34;
+
+    return f&#34;{prefix}/{pipeline}/submissions/districtr-ids/{state.name.lower()}&#34;</code></pre>
 </details>
 </dd>
 <dt id="evaltools.data.one"><code class="name flex">
@@ -1012,25 +1026,27 @@ submissions.</p>
         districtr = individual(identifier)
         
         # Force all plan keys and values to strings.
-        plan = {
-            str(k): str(v) if type(v) is not list else str(v[0])
-            for k, v in districtr[&#34;plan&#34;][&#34;assignment&#34;].items()
-        }
-        units = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;name&#34;]
-        unitsType = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;unitType&#34;]
-        tileset = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;tilesets&#34;][0][&#34;sourceLayer&#34;]
+        try:
+            plan = {
+                str(k): str(v) if type(v) is not list else str(v[0])
+                for k, v in districtr[&#34;plan&#34;][&#34;assignment&#34;].items()
+            }
+            units = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;name&#34;]
+            unitsType = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;unitType&#34;]
+            tileset = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;tilesets&#34;][0][&#34;sourceLayer&#34;]
 
-        # Create a new Submission.
-        submissions.append(Submission(
-            link=entity[&#34;link&#34;],
-            id=identifier,
-            plan=plan,
-            units=units,
-            unitsType=unitsType,
-            tileset=tileset,
-            type=entity[&#34;type&#34;]
-        ))
-
+            # Create a new Submission.
+            submissions.append(Submission(
+                link=entity[&#34;link&#34;],
+                id=identifier,
+                plan=plan,
+                units=units,
+                unitsType=unitsType,
+                tileset=tileset,
+                type=entity[&#34;type&#34;]
+            ))
+        except: pass
+    
     return submissions</code></pre>
 </details>
 </dd>
@@ -1129,7 +1145,6 @@ plans, cois, written = tabularized(state, subs)
 
     # Add the retrieved plan data to the dataframes *if the subset dataframes
     # contain items*.
-
     if not subset_plans.empty: plans = plans.merge(subset_plans, on=&#34;id&#34;)
     else: plans = pd.DataFrame()
     if not subset_cois.empty: cois = cois.merge(subset_cois, on=&#34;id&#34;)
@@ -1139,7 +1154,11 @@ plans, cois, written = tabularized(state, subs)
     # but... fine.
     for df in [plans, cois]:
         if not df.empty:
-            df.drop([&#34;type_x&#34;, &#34;link_x&#34;, &#34;coalition&#34;], axis=1, inplace=True)
+            # Remove columns we don&#39;t necessarily care about.
+            for col in [&#34;type_x&#34;, &#34;link_x&#34;, &#34;coalition&#34;]:
+                if col in list(df): df.drop(col, axis=1, inplace=True)
+
+            # Rename the columns we do care about.
             df.rename({&#34;type_y&#34;: &#34;type&#34;, &#34;link_y&#34;: &#34;link&#34;}, axis=1, inplace=True)
 
     return plans, cois, writtens</code></pre>

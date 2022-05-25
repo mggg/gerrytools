@@ -43,7 +43,8 @@ def _grouper(P:Partition, unit:str, popcol:str=None) -> list:
     return groups
 
 def _splits(
-        P:Partition, unit:str, names:bool=False, popcol:str=None, how:str="pandas"
+        P:Partition, unit:str, names:bool=False, popcol:str=None, how:str="pandas", 
+        unit_info_updater_col:str=None
     ) -> Union[int, List[str]]:
     """
     Determines the number of units split by the districting plan.
@@ -66,6 +67,9 @@ def _splits(
             `"pandas"`.
         names (bool, optional): Whether we return the identifiers of the things
             being split.
+        unit_info_updater_col (str, optional): The name of the corresponsind county_splits updater
+            in the partition.  If using "gerrychain" version and not specified defaults to the name
+            of unit.
     
     Returns:
         The number of splits or the list of things split.
@@ -87,9 +91,11 @@ def _splits(
 
     # Otherwise, do things the normal way!
     if how == "gerrychain":
+        if unit_info_updater_col is None:
+            unit_info_updater_col = unit
         geometrysplits = [
             identifier 
-            for identifier, split in county_splits("", unit)(P).items()
+            for identifier, split in P[unit_info_updater_col].items()
             if split.split != CountySplit.NOT_SPLIT
         ]
 
@@ -98,7 +104,8 @@ def _splits(
 
 
 def _pieces(
-        P:Partition, unit:str, names:bool=False, popcol:str=None, how:str="pandas"
+        P:Partition, unit:str, names:bool=False, popcol:str=None, how:str="pandas",
+        unit_info_updater_col:str=None
     ) -> Union[int, List[str]]:
     """
     Determines the number of "unit pieces" produced by the plan. For example,
@@ -124,6 +131,9 @@ def _pieces(
             `"pandas"`.
         names (bool, optional): Whether we return the identifiers of the things
             being split.
+        unit_info_updater_col (str, optional): The name of the corresponsind county_splits updater
+            in the partition.  If using "gerrychain" version and not specified defaults to the name
+            of unit.
 
     Returns:
         The number of pieces or the list of things split.
@@ -147,9 +157,11 @@ def _pieces(
         ])
 
     if how == "gerrychain":
+        if unit_info_updater_col is None:
+            unit_info_updater_col = unit
         geometrypieces = sum(
             len(split.contains)
-            for split in county_splits("", unit)(P).values()
+            for split in P[unit_info_updater_col].values()
             if split.split != CountySplit.NOT_SPLIT
         )
     

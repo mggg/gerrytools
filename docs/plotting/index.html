@@ -827,7 +827,7 @@ same value</dd>
             # Plot vertical line.
             ax.axvline(
                 s + bin_width / 2 + jitter_val,
-                color=proposed_info[&#39;colors&#39;][i],
+                color=districtr(i+1).pop(),
                 lw=2,
                 label=f&#34;{proposed_info[&#39;names&#39;][i]}: {round(s,2)}&#34;,
             )

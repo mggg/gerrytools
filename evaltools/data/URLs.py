@@ -1,4 +1,6 @@
 
+import us
+
 def ids(state):
     """
     URL for accessing districtr identifiers.
@@ -10,7 +12,13 @@ def ids(state):
     Returns:
         String with the appropriate URL.
     """
-    return f"https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/districtr-ids/{state.name.lower()}"
+    # If we're in michigan, then we use the 'beta' pipeline instead of the 'prod'
+    # one.
+    pipeline = "beta" if state == us.states.MI else "prod"
+    if state == us.states.MI: prefix = "https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com"
+    else: prefix = "https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com"
+
+    return f"{prefix}/{pipeline}/submissions/districtr-ids/{state.name.lower()}"
 
 
 def csvs(state, ptype="plan"):
@@ -24,9 +32,13 @@ def csvs(state, ptype="plan"):
     Returns:
         String with the appropriate URL.
     """
-    prefix = "https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com/prod/submissions/csv/"
+    pipeline = "beta" if state == us.states.MI else "prod"
+    if state == us.states.MI: prefix = "https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com"
+    else: prefix = "https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com"
+
     suffix = f"?type={ptype}&length=10000"
-    return f"{prefix}{state.name.lower()}{suffix}"
+    
+    return f"{prefix}/{pipeline}/submissions/csv/{state.name.lower()}{suffix}"
 
 
 def one(identifier):
