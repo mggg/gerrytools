@@ -404,8 +404,10 @@ the map. Some options would include overlaying district assignments,
 blocks, VTDs, or counties. The first set of geometries in the list
 will be overlaid in the lightest color, and last will be overlaid in
 the darkest color.
-cmap (string, optional): Defines which colormap to use. Defaults to
-matplotlib's <code>Purples</code> colormap.</dd>
+cmap (string/ListedColorMap, optional): Defines which colormap to use.
+Defaults to matplotlib's <code>Purples</code> colormap. Can be a string which
+specifies a named matplotlib colormap or a <code>ListedColormap</code> with the
+appropriate number of bins; by default, this is 10.</dd>
 <dt><strong><code>cbartitle</code></strong> :&ensp;<code>string</code>, optional</dt>
 <dd>Title for the colorbar. Defaults to
 <code>demographic</code>.</dd>
@@ -455,8 +457,10 @@ overlays.</p></div>
             blocks, VTDs, or counties. The first set of geometries in the list
             will be overlaid in the lightest color, and last will be overlaid in
             the darkest color.
-            cmap (string, optional): Defines which colormap to use. Defaults to
-            matplotlib&#39;s `Purples` colormap.
+            cmap (string/ListedColorMap, optional): Defines which colormap to use.
+            Defaults to matplotlib&#39;s `Purples` colormap. Can be a string which
+            specifies a named matplotlib colormap or a `ListedColormap` with the
+            appropriate number of bins; by default, this is 10.
         cbartitle (string, optional): Title for the colorbar. Defaults to
             `demographic`.
         numbers (bool, optional): If `True`, plot district names (as defined by
@@ -488,7 +492,9 @@ overlays.</p></div>
     
     # Set the color map, based on user preference or default (purples). If we
     # can&#39;t find the correct colormap, then create our own.
-    colorbarmap = plt.cm.get_cmap(cmap, len(boundaries))
+    if type(cmap) == str: colorbarmap = plt.cm.get_cmap(cmap, len(boundaries))
+    else: colorbarmap = cmap
+
     norm = mpl.colors.BoundaryNorm(boundaries, colorbarmap.N)
         
     # Plot geometries!
@@ -737,7 +743,7 @@ component.</p></div>
 </details>
 </dd>
 <dt id="evaltools.plotting.drawplan"><code class="name flex">
-<span>def <span class="ident">drawplan</span></span>(<span>districts, assignment, overlays=[], colors=None, numbers=False, lw=0.5, fontsize=15) ‑> matplotlib.axes._axes.Axes</span>
+<span>def <span class="ident">drawplan</span></span>(<span>districts, assignment, overlays=[], colors=None, numbers=False, lw=0.5, fontsize=15, edgecolor='black') ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Visualizes the districting plan defined by <code>assignment</code>.</p>
@@ -770,7 +776,7 @@ districts.</dd>
 </summary>
 <pre><code class="python">def drawplan(
         districts, assignment, overlays=[], colors=None, numbers=False, lw=1/2,
-        fontsize=15
+        fontsize=15, edgecolor=&#34;black&#34;
     ) -&gt; Axes:
     &#34;&#34;&#34;
     Visualizes the districting plan defined by `assignment`.
@@ -813,7 +819,7 @@ districts.</dd>
     if overlays:
         for overlay in overlays:
             overlay = overlay.to_crs(districts.crs)
-            overlay.plot(color=&#34;None&#34;, edgecolor=&#34;black&#34;, linewidth=1/8, ax=base)
+            overlay.plot(color=&#34;None&#34;, edgecolor=edgecolor, linewidth=1/8, ax=base)
     
     # If the `numbers` flag is passed, plot the numbers for each district.
     if numbers: base = districtnumbers(base, districts, assignment=assignment, fontsize=fontsize)
