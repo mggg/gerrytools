@@ -236,6 +236,7 @@ def ensure_column_types(units: gpd.GeoDataFrame, columns: List[str], expression:
     """
     return all([expression(x.name) for x in units[columns].dtypes])
 
+
 def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None, verbose: bool = False) -> Dict[str, str]:
     """
     Minimize core dispersion in a state given an column with enacted districts
@@ -298,6 +299,7 @@ def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col:
 
     return numbering_mapping
 
+
 def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, verbose: bool = False) -> Dict[str, bool]:
     """
     Minimize odd->even parity shift in a state given an column with enacted districts
@@ -347,6 +349,7 @@ def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str
         mapping[districts[i]] = bool(v.x)
 
     return mapping
+
 
 def minimize_dispersion_with_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None) -> Dict[str, str]:
     """

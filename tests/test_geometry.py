@@ -19,9 +19,12 @@ from pathlib import Path
 import os
 import pytest
 
+def zipped(suffix):
+    return "zip://" + str(Path(root / suffix))
+
 root = Path(os.getcwd()) / Path("tests/test-resources/")
 
-@pytest.mark.xfail(reason="Documentation and call signature do not match; clarification required.")
+@pytest.mark.xfail(reason="Documentation and call signature do not match; clarification needed.")
 def test_dispersion_calc():
     gdf = gpd.read_file("./test-resources/test-vtds/")
     gdf["CONGRESS"] = gdf["CONGRESS"].astype(int)
@@ -132,6 +135,7 @@ def test_unitmap():
     assert type(inverse) is dict
     assert len(inverse) == len(counties)
 
+
 def test_dataframe():
     G = Graph.from_json(root/"test-graph.json")
     P = Partition(graph=G, assignment={v:d["COUNTYFP20"] for v, d in G.nodes(data=True)})
@@ -140,6 +144,7 @@ def test_dataframe():
 
     # Assert the right number of "districts."
     len(P.parts) == 92
+
 
 if __name__ == "__main__":
     root = Path(os.getcwd()) / Path("test-resources/")
