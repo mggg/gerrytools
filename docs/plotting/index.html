@@ -37,8 +37,7 @@ and violin plots 🎻.
 
 from .drawplan import drawplan
 from .drawgraph import drawgraph
-from .colors import redbluecmap, flare, purples, districtr
-from .specification import PlotSpecification
+from .colors import redbluecmap, flare, purples, districtr, latex
 from .histogram import histogram
 from .violin import violin
 from .boxplot import boxplot
@@ -48,12 +47,13 @@ from .multidimensional import multidimensional
 from .gifs import gif_multidimensional
 from .bins import bins
 from .annotation import arrow, ideal
+from .districtnumbers import districtnumbers
+from .choropleth import choropleth
 
 __all__ = [
     &#34;drawplan&#34;,
     &#34;drawgraph&#34;,
     &#34;redbluecmap&#34;,
-    &#34;PlotSpecification&#34;,
     &#34;flare&#34;,
     &#34;purples&#34;,
     &#34;districtr&#34;,
@@ -66,7 +66,10 @@ __all__ = [
     &#34;gif_multidimensional&#34;,
     &#34;arrow&#34;,
     &#34;ideal&#34;,
-    &#34;bins&#34;
+    &#34;bins&#34;,
+    &#34;districtnumbers&#34;,
+    &#34;latex&#34;,
+    &#34;choropleth&#34;
 ]</code></pre>
 </details>
 </section>
@@ -77,23 +80,11 @@ __all__ = [
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.plotting.choropleth" href="choropleth.html">evaltools.plotting.choropleth</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
 <dt><code class="name"><a title="evaltools.plotting.colors" href="colors.html">evaltools.plotting.colors</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.plotting.districtnumbers" href="districtnumbers.html">evaltools.plotting.districtnumbers</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
 <dt><code class="name"><a title="evaltools.plotting.gifs" href="gifs.html">evaltools.plotting.gifs</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="evaltools.plotting.specification" href="specification.html">evaltools.plotting.specification</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -254,10 +245,12 @@ labels for the bins that are ticked, and the bin width.</p></div>
 <span>def <span class="ident">boxplot</span></span>(<span>ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1, 99), rotation=0, ticksize=12, jitter=0.3333333333333333) ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Plot boxplots, which takes <code>scores</code> — a dictionary where each value (corresponding to an ensemble, citizens' ensemble, or proposed plans), will be a list of lists, where each sublist
-will be its own box. Proposed scores will be plotted as colored circles on
-their respective box. Color the boxplots conditioned on the kind of the scores
-(ensemble or citizen), and trim each sublist to only the values between the specified percentiles.</p>
+<div class="desc"><p>Plot boxplots, which takes <code>scores</code> — a dictionary where each value
+(corresponding to an ensemble, citizens' ensemble, or proposed plans),
+will be a list of lists, where each sublist will be its own box. Proposed
+scores will be plotted as colored circles on their respective box. Color the
+boxplots conditioned on the kind of the scores (ensemble or citizen), and
+trim each sublist to only the values between the specified percentiles.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>ax</code></strong> :&ensp;<code>Axes</code></dt>
@@ -267,7 +260,7 @@ their respective box. Color the boxplots conditioned on the kind of the scores
 which map to lists of numerical scores.</dd>
 <dt><strong><code>proposed_info</code></strong> :&ensp;<code>dict</code>, optional</dt>
 <dd>Dictionary with keys of <code><a title="evaltools.plotting.colors" href="colors.html">evaltools.plotting.colors</a></code>, <code>names</code>;
-the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th color in <code>color</code> corresponds to the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th name in `names.</dd>
+the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th color in <code>color</code> corresponds to the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th name in <code>names</code>.</dd>
 <dt><strong><code>percentiles</code></strong> :&ensp;<code>tuple</code>, optional</dt>
 <dd>Observations outside this range of
 percentiles are ignored. Defaults to <code>(1, 99)</code>, such that observations
@@ -299,17 +292,19 @@ adjust its detail points by a value drawn from <span><span class="MathJax_Previe
         ticksize=12, jitter=1/3
     ) -&gt; Axes:
     r&#34;&#34;&#34;
-    Plot boxplots, which takes `scores` — a dictionary where each value (corresponding to an ensemble, citizens&#39; ensemble, or proposed plans), will be a list of lists, where each sublist
-    will be its own box. Proposed scores will be plotted as colored circles on
-    their respective box. Color the boxplots conditioned on the kind of the scores
-    (ensemble or citizen), and trim each sublist to only the values between the specified percentiles.
+    Plot boxplots, which takes `scores` — a dictionary where each value
+    (corresponding to an ensemble, citizens&#39; ensemble, or proposed plans),
+    will be a list of lists, where each sublist will be its own box. Proposed
+    scores will be plotted as colored circles on their respective box. Color the
+    boxplots conditioned on the kind of the scores (ensemble or citizen), and
+    trim each sublist to only the values between the specified percentiles.
 
     Args:
         ax (Axes): `Axes` object on which the boxplots are plotted.
         scores (dict): Dictionary with keys of `ensemble`, `citizen`, `proposed`
             which map to lists of numerical scores.
         proposed_info (dict, optional): Dictionary with keys of `colors`, `names`;
-            the \(i\)th color in `color` corresponds to the \(i\)th name in `names.
+            the \(i\)th color in `color` corresponds to the \(i\)th name in `names`.
         percentiles (tuple, optional): Observations outside this range of
             percentiles are ignored. Defaults to `(1, 99)`, such that observations
             between the 1st and 99th percentiles (inclusive) are included, and
@@ -380,6 +375,245 @@ adjust its detail points by a value drawn from <span><span class="MathJax_Previe
         ax.set_ylabel(labels[1], fontsize=24)
     
     return ax</code></pre>
+</details>
+</dd>
+<dt id="evaltools.plotting.choropleth"><code class="name flex">
+<span>def <span class="ident">choropleth</span></span>(<span>geometries, districts=None, assignment=None, demographic='BVAP', overlays=[], cmap='Purples', cbartitle=None, numbers=True, lw=0.125, fontsize=15, min=0, max=1, interval=0.1, colorbar=True) ‑> matplotlib.axes._axes.Axes</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Visualization of population shares or totals in a state's map.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>geometries</code></strong> :&ensp;<code>GeoDataFrame</code></dt>
+<dd>Base geometries for the state. Population
+shares or totals will be drawn at this level (i.e. statistics are
+reported at this base geometric level).</dd>
+<dt><strong><code>districts</code></strong> :&ensp;<code>GeoDataFrame</code>, optional</dt>
+<dd>Geometries for the districting plan.
+Assumes one geometry per district. </dd>
+<dt><strong><code>assignment</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Required argument when <code>districts</code> are
+provided. Column of <code>districts</code> which defines the districing plan. </dd>
+<dt><strong><code>demographic</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The string representing the demographic to
+be shown on the map. The string should specify a column in <code>geometries</code>.
+<em>This column must contain values in <span><span class="MathJax_Preview">[0,1]</span><script type="math/tex">[0,1]</script></span>.</em></dd>
+<dt><strong><code>overlays</code></strong> :&ensp;<code>list</code>, optional</dt>
+<dd>A list of GeoDataFrames desired to be overlaid on
+the map. Some options would include overlaying district assignments,
+blocks, VTDs, or counties. The first set of geometries in the list
+will be overlaid in the lightest color, and last will be overlaid in
+the darkest color.
+cmap (string/ListedColorMap, optional): Defines which colormap to use.
+Defaults to matplotlib's <code>Purples</code> colormap. Can be a string which
+specifies a named matplotlib colormap or a <code>ListedColormap</code> with the
+appropriate number of bins; by default, this is 10.</dd>
+<dt><strong><code>cbartitle</code></strong> :&ensp;<code>string</code>, optional</dt>
+<dd>Title for the colorbar. Defaults to
+<code>demographic</code>.</dd>
+<dt><strong><code>numbers</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>If <code>True</code>, plot district names (as defined by
+<code>assignment</code>) at districts' centroids. May only be <code>True</code> when
+<code>districts</code> is not <code>None</code>.</dd>
+<dt><strong><code>lw</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>The base geometries' line widths.</dd>
+<dt><strong><code>min</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>The lower limit of the data points; defaults to 0.</dd>
+<dt><strong><code>max</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>The upper limit of the data points; defaults to 1.</dd>
+<dt><strong><code>interval</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>The width of the interval; a bin.</dd>
+<dt><strong><code>colorbar</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Do we include the color bar?</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A matplotlib <code>Axes</code> object visualizing a choropleth map with the provided
+overlays.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def choropleth(
+        geometries, districts=None, assignment=None, demographic=&#34;BVAP&#34;,
+        overlays=[], cmap=&#34;Purples&#34;, cbartitle=None, numbers=True, lw=1/8,
+        fontsize=15, min=0, max=1, interval=1/10, colorbar=True
+    ) -&gt; Axes:
+    &#34;&#34;&#34;
+    Visualization of population shares or totals in a state&#39;s map.
+    
+    Args:
+        geometries (GeoDataFrame): Base geometries for the state. Population
+            shares or totals will be drawn at this level (i.e. statistics are
+            reported at this base geometric level).
+        districts (GeoDataFrame, optional): Geometries for the districting plan.
+            Assumes one geometry per district. 
+        assignment (str, optional): Required argument when `districts` are
+            provided. Column of `districts` which defines the districing plan. 
+        demographic (str, optional): The string representing the demographic to
+            be shown on the map. The string should specify a column in `geometries`.
+            *This column must contain values in \([0,1]\).*
+        overlays (list, optional): A list of GeoDataFrames desired to be overlaid on
+            the map. Some options would include overlaying district assignments,
+            blocks, VTDs, or counties. The first set of geometries in the list
+            will be overlaid in the lightest color, and last will be overlaid in
+            the darkest color.
+            cmap (string/ListedColorMap, optional): Defines which colormap to use.
+            Defaults to matplotlib&#39;s `Purples` colormap. Can be a string which
+            specifies a named matplotlib colormap or a `ListedColormap` with the
+            appropriate number of bins; by default, this is 10.
+        cbartitle (string, optional): Title for the colorbar. Defaults to
+            `demographic`.
+        numbers (bool, optional): If `True`, plot district names (as defined by
+            `assignment`) at districts&#39; centroids. May only be `True` when
+            `districts` is not `None`.
+        lw (float, optional): The base geometries&#39; line widths.
+        min (float, optional): The lower limit of the data points; defaults to 0.
+        max (float, optional): The upper limit of the data points; defaults to 1.
+        interval (float, optional): The width of the interval; a bin.
+        colorbar (bool, optional): Do we include the color bar?
+
+    Returns:
+        A matplotlib `Axes` object visualizing a choropleth map with the provided
+        overlays.
+    &#34;&#34;&#34;
+    # Get the figure and base axis sizes.
+    fig, base = plt.subplots(1, 1, figsize=(10,10))
+    
+    # Get the title for the colorbar.
+    if cbartitle is None: cbartitle = demographic
+    
+    # Set minimum and maximum values.
+    boundaries = np.arange(min, max+interval, interval)
+    ticks = np.arange(min, max+interval, interval/2)[:-1]
+    labels = [
+        f&#34;{int(ticks[i-1]*100)} — {int(ticks[i+1]*100)}%&#34; if i%2 else &#34;&#34;
+        for i in range(len(ticks))
+    ]
+    
+    # Set the color map, based on user preference or default (purples). If we
+    # can&#39;t find the correct colormap, then create our own.
+    if type(cmap) == str: colorbarmap = plt.cm.get_cmap(cmap, len(boundaries))
+    else: colorbarmap = cmap
+
+    norm = mpl.colors.BoundaryNorm(boundaries, colorbarmap.N)
+        
+    # Plot geometries!
+    geometries.plot(
+        column=demographic, 
+        cmap=cmap,
+        edgecolor=&#34;lightgray&#34;, 
+        linewidth=lw,
+        vmin=min, 
+        vmax=max,
+        ax=base
+    )
+
+    # Create and plot the colorbar on the right side of the figure.
+    if colorbar:
+        cbar = fig.colorbar(
+            plt.cm.ScalarMappable(cmap=colorbarmap, norm=norm), shrink=0.5,
+            location=&#34;right&#34;, ax=base, ticks=ticks
+        )
+        cbar.ax.set_yticklabels(labels)
+        cbar.ax.set_ylabel(cbartitle)
+        cbar.ax.yaxis.set_label_position(&#34;left&#34;)
+        cbar.ax.tick_params(size=0)
+    
+    # Plot each of the overlays, adjusting CRSes and applying colors as we go.
+    for idx, geom in enumerate(overlays):
+        geom = geom.to_crs(geometries.crs)
+        geom.boundary.plot(edgecolor=overlaycolors[-(idx+1)], linewidth = 1/4, ax =base)
+    
+    # If district geometries are provided, plot them as well.
+    if districts is not None:
+        districts.plot( 
+            edgecolor=&#34;black&#34;,
+            linewidth=3/2, 
+            ax=base,
+            color=&#34;None&#34;
+        )
+
+    # If district numbers are to be plotted, plot those too!
+    if numbers: base = districtnumbers(base, districts, assignment=assignment, fontsize=fontsize)
+
+    # Turn plot vertical/horizontal axes off and return base Axes.
+    base.set_axis_off()
+
+    return base, None if not colorbar else cbar</code></pre>
+</details>
+</dd>
+<dt id="evaltools.plotting.districtnumbers"><code class="name flex">
+<span>def <span class="ident">districtnumbers</span></span>(<span>base, districts, assignment='DISTRICTN', boxstyle='circle,pad=0.2', fc='wheat', ec='black', lw=0.16666666666666666, fontsize=15) ‑> matplotlib.axes._axes.Axes</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Plots district numbers on top of overlaid district geometries.</p>
+<p>TODO: change (x,y) coordinate pairs to representative points rather than
+centroids.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>base</code></strong> :&ensp;<code>Axes</code></dt>
+<dd>Base <code>Axes</code> object for the plot.</dd>
+<dt><strong><code>districts</code></strong> :&ensp;<code>GeoDataFrame</code></dt>
+<dd>Geometries for the districting plan. Assumes
+there is one geometry for each district.</dd>
+<dt><strong><code>assignment</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Column of <code>districts</code> which defines the
+districting plan.</dd>
+<dt><strong><code>boxstyle</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Sets the box style for the district number
+markers. Defaults to circles with 0.2pt padding.</dd>
+<dt><strong><code>fc</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>District marker face color. Defaults to <code>"wheat"</code>.</dd>
+<dt><strong><code>ec</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>District marker edge color. Defaults to <code>"black"</code>.</dd>
+<dt><strong><code>lw</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>District marker edge width. Defaults to 1/6pt.</dd>
+<dt><strong><code>fontsize</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>District marker font size. Defaults to 15pt.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>Base axes object.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def districtnumbers(
+        base, districts, assignment=&#34;DISTRICTN&#34;, boxstyle=&#34;circle,pad=0.2&#34;,
+        fc=&#34;wheat&#34;, ec=&#34;black&#34;, lw=1/6, fontsize=15
+    ) -&gt; Axes:
+    &#34;&#34;&#34;
+    Plots district numbers on top of overlaid district geometries.
+
+    TODO: change (x,y) coordinate pairs to representative points rather than
+    centroids.
+
+    Args:
+        base (Axes): Base `Axes` object for the plot.
+        districts (GeoDataFrame): Geometries for the districting plan. Assumes
+            there is one geometry for each district.
+        assignment (str, optional): Column of `districts` which defines the
+            districting plan.
+        boxstyle (str, optional): Sets the box style for the district number
+            markers. Defaults to circles with 0.2pt padding.
+        fc (str, optional): District marker face color. Defaults to `&#34;wheat&#34;`.
+        ec (str, optional): District marker edge color. Defaults to `&#34;black&#34;`.
+        lw (float, optional): District marker edge width. Defaults to 1/6pt.
+        fontsize (float, optional): District marker font size. Defaults to 15pt.
+
+    Returns:
+        Base axes object.
+    &#34;&#34;&#34;
+    for district, identifier in zip(districts[&#34;geometry&#34;], districts[assignment]):
+        x, y = list(district.representative_point().coords)[0]
+        base.annotate(
+            identifier, (x,y), xytext=(x,y), xycoords=&#34;data&#34;, fontsize=fontsize, 
+            ha=&#34;center&#34;, va=&#34;center&#34;,
+            bbox=dict(
+                boxstyle=boxstyle, fc=fc, ec=ec, alpha=1, linewidth=lw
+            )
+        )
+
+    return base</code></pre>
 </details>
 </dd>
 <dt id="evaltools.plotting.districtr"><code class="name flex">
@@ -509,7 +743,7 @@ component.</p></div>
 </details>
 </dd>
 <dt id="evaltools.plotting.drawplan"><code class="name flex">
-<span>def <span class="ident">drawplan</span></span>(<span>districts, assignment, overlays=[], colors=None, numbers=False, lw=0.5) ‑> matplotlib.axes._axes.Axes</span>
+<span>def <span class="ident">drawplan</span></span>(<span>districts, assignment, overlays=[], colors=None, numbers=False, lw=0.5, fontsize=15, edgecolor='black') ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Visualizes the districting plan defined by <code>assignment</code>.</p>
@@ -530,6 +764,9 @@ districts.</dd>
 <code>assignment</code>) at districts' centroids. Defaults to <code>False</code>.</dd>
 <dt><strong><code>lw</code></strong> :&ensp;<code>float</code>, optional</dt>
 <dd>Line thickness if there are more than 20 districts.</dd>
+<dt><strong><code>fontsize</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>District-number font size; passed to
+<code><a title="evaltools.plotting.districtnumbers" href="#evaltools.plotting.districtnumbers">districtnumbers()</a></code>.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A <code>matplotlib</code> <code>Axes</code> object for the geometries attached to <code>districts</code>.</p></div>
@@ -538,7 +775,8 @@ districts.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def drawplan(
-        districts, assignment, overlays=[], colors=None, numbers=False, lw=1/2
+        districts, assignment, overlays=[], colors=None, numbers=False, lw=1/2,
+        fontsize=15, edgecolor=&#34;black&#34;
     ) -&gt; Axes:
     &#34;&#34;&#34;
     Visualizes the districting plan defined by `assignment`.
@@ -553,6 +791,8 @@ districts.</dd>
         numbers (bool, optional): If `True`, plots district names (as defined by
             `assignment`) at districts&#39; centroids. Defaults to `False`.
         lw (float, optional): Line thickness if there are more than 20 districts.
+        fontsize (float, optional): District-number font size; passed to
+            `districtnumbers`.
     
     Returns:
         A `matplotlib` `Axes` object for the geometries attached to `districts`.
@@ -572,17 +812,17 @@ districts.</dd>
     base = districts.plot(
         color=districts[colors if colors else &#34;color&#34;],
         edgecolor=&#34;black&#34;,
-        linewidth=1 if N&lt;=20 else lw
+        linewidth=lw if lw is not None else 1
     )
 
     # If we have overlaid geometries, plot those too.
     if overlays:
         for overlay in overlays:
             overlay = overlay.to_crs(districts.crs)
-            overlay.plot(color=&#34;None&#34;, edgecolor=&#34;black&#34;, linewidth=1/8, ax=base)
+            overlay.plot(color=&#34;None&#34;, edgecolor=edgecolor, linewidth=1/8, ax=base)
     
     # If the `numbers` flag is passed, plot the numbers for each district.
-    if numbers: base = districtnumbers(base, districts, assignment=assignment)
+    if numbers: base = districtnumbers(base, districts, assignment=assignment, fontsize=fontsize)
 
     # Turn plot axes off.
     plt.axis(&#34;off&#34;)
@@ -1409,366 +1649,6 @@ adjust its detail points by a value drawn from <span><span class="MathJax_Previe
 </dl>
 </section>
 <section>
-<h2 class="section-title" id="header-classes">Classes</h2>
-<dl>
-<dt id="evaltools.plotting.PlotSpecification"><code class="flex name class">
-<span>class <span class="ident">PlotSpecification</span></span>
-</code></dt>
-<dd>
-<div class="desc"><p>Specification for redblue plots. Rather than spending extra time re-computing
-bounding boxes, label locations, and manually editing titles, plot specifications
-store those data so plots can be re-created with speed.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class PlotSpecification:
-    &#34;&#34;&#34;
-    Specification for redblue plots. Rather than spending extra time re-computing
-    bounding boxes, label locations, and manually editing titles, plot specifications
-    store those data so plots can be re-created with speed.
-    &#34;&#34;&#34;
-
-    webmercator: str = &#34;epsg:3857&#34;
-    &#34;&#34;&#34;
-    WebMercator CRS, with coordinates in feet.
-    &#34;&#34;&#34;
-
-    def __init__(self):
-        self.bbox: dict = None
-        &#34;&#34;&#34;
-        Plot bounding box; equivalent to matplotlib axis limits. Reported as a
-        dictionary. If `None`, the plot&#39;s axis limits aren&#39;t modified.
-        &#34;&#34;&#34;
-
-        self.context: bool = True
-        &#34;&#34;&#34;
-        Asks whether &#34;context&#34; – the units surrounding the desired area to plot –
-        should be included. If `True`, the axis limits are modified according to
-        the calculated bounding box; if `False`, all other units are dropped and
-        only designated units are included.
-        &#34;&#34;&#34;
-
-        self.labels: dict = {}
-        &#34;&#34;&#34;
-        Labels and their locations. If this is empty, no labels are plotted.
-        &#34;&#34;&#34;
-        
-    def computebbox(self, geometries, identifiers, idcolumn=&#34;COUNTYFP20&#34;, margin=1) -&gt; Tuple:
-        r&#34;&#34;&#34;
-        Finds the minimal rectangle containing the geometries matching the provided
-        identifier codes. Typically, the `geometries` are counties and `identifiers`
-        are county FIPS codes.
-
-        Args:
-            geometries (gpd.GeoDataFrame): Set of geometries.
-            identifiers (list): List of identifiers to whose boundaries we
-                restrict the viewport.
-            idcolumn (str, optional): Column on `geometries` where `identifiers`
-                are stored.
-            margin (float, optional): Bounding box margin measured in **miles**.
-                For example, if the base width of the bounding box is \(w\), then
-                the width of the margin-adjusted bounding box is \(w+2m\), where
-                \(m\) is the margin; the height of the bounding box is adjusted
-                similarly.
-
-        Returns:
-            A four-tuple of values: the first pair represents the bottom-left corner
-            of the bounding box, the second pair the top-right corner.
-        &#34;&#34;&#34;
-        # Set the geometries to the specified CRS, filter the geometries, and
-        # dissolve them.
-        geometries = geometries.to_crs(self.webmercator)
-        geometries[&#34;dissolve&#34;] = 1
-
-        subgeometries = geometries[geometries[idcolumn].astype(str).isin(identifiers)]
-        dissolved = dissolve(subgeometries, by=&#34;dissolve&#34;)
-
-        # Find the bounding box and adjust.
-        offset = margin*5280
-        bounds = dissolved.bounds
-        minx, maxx = bounds.minx.values[0], bounds.maxx.values[0]
-        miny, maxy = bounds.miny.values[0], bounds.maxy.values[0]
-
-        self.bbox = {
-            &#34;x&#34;: (minx-offset, maxx+offset),
-            &#34;y&#34;: (miny-offset, maxy+offset)
-        }
-
-        return minx-offset, miny-offset, maxx+offset, maxy+offset
-
-    def computelabels(self, districts, assignment, geometrycolumn=&#34;geometry&#34;) -&gt; dict:
-        &#34;&#34;&#34;
-        Computes label locations for the provided district geometries.
-
-        Args:
-            districts (gpd.GeoDataFrame): Districting plan; assumes there is one
-                geometry per district.
-            assignment (str): Column of `districts` which defines the
-                districting plan.
-            geometrycolumn (str, optional): Column of `districts` which defines
-                the geometry for each district.
-
-        Returns:
-            A dictionary mapping district labels to locations.
-        &#34;&#34;&#34;
-        # Make sure we&#39;re in the same CRS.
-        districts = districts.to_crs(self.webmercator)
-
-        # Get the bounding box; if there is no bounding box, we don&#39;t need to
-        # compute anything, and we simply assign labels to representative points.
-        if self.bbox:
-            minx, maxx = self.bbox[&#34;x&#34;]
-            miny, maxy = self.bbox[&#34;y&#34;]
-            bbox = box(minx, miny, maxx, maxy)
-
-        locations = {}
-        
-        for geometry, district in zip(districts[geometrycolumn], districts[assignment]):
-            # In the first condition, there *is* no bounding box for the plot;
-            # set the location of the district&#39;s label to be a representative
-            # point for the entire geometry.
-            if not self.bbox:
-                point = geometry.representative_point()
-                locations[district] = point.coords[0]
-            else:
-                # If there *is* a bounding box, we encounter three conditions:
-                # either the bounding box entirely contains the district, the
-                # bounding box contains a part of the district, or the intersection
-                # of the district and the bounding box is empty.
-
-                # If the district is entirely contained, return a representative
-                # point.
-                if bbox.contains(geometry):
-                    point = geometry.representative_point()
-                    locations[district] = point.coords[0]
-
-                # If the intersection is nonempty (and is greater than two square
-                # miles), return a representative point of the *intersection*.
-                elif bbox.intersection(geometry).area &gt; 2*(5280**2):
-                    # Find the intersection.
-                    intersection = bbox.intersection(geometry)
-
-                    # Check if the intersection is a MultiPolygon (i.e. there are
-                    # multiple pieces of the same district), and label the largest
-                    # one.
-                    if isinstance(intersection, MultiPolygon):
-                        largest = max(intersection, key=lambda p: p.area)
-                    else:
-                        largest = intersection
-
-                    # Compute the representative point.
-                    point = largest.representative_point()
-                    locations[district] = point.coords[0]
-
-                # Otherwise, continue.
-                else: continue
-
-        # Set labels to the `labels` property.
-        self.labels = locations
-        return locations</code></pre>
-</details>
-<h3>Class variables</h3>
-<dl>
-<dt id="evaltools.plotting.PlotSpecification.webmercator"><code class="name">var <span class="ident">webmercator</span> : str</code></dt>
-<dd>
-<div class="desc"><p>WebMercator CRS, with coordinates in feet.</p></div>
-</dd>
-</dl>
-<h3>Instance variables</h3>
-<dl>
-<dt id="evaltools.plotting.PlotSpecification.bbox"><code class="name">var <span class="ident">bbox</span></code></dt>
-<dd>
-<div class="desc"><p>Plot bounding box; equivalent to matplotlib axis limits. Reported as a
-dictionary. If <code>None</code>, the plot's axis limits aren't modified.</p></div>
-</dd>
-<dt id="evaltools.plotting.PlotSpecification.context"><code class="name">var <span class="ident">context</span></code></dt>
-<dd>
-<div class="desc"><p>Asks whether "context" – the units surrounding the desired area to plot –
-should be included. If <code>True</code>, the axis limits are modified according to
-the calculated bounding box; if <code>False</code>, all other units are dropped and
-only designated units are included.</p></div>
-</dd>
-<dt id="evaltools.plotting.PlotSpecification.labels"><code class="name">var <span class="ident">labels</span></code></dt>
-<dd>
-<div class="desc"><p>Labels and their locations. If this is empty, no labels are plotted.</p></div>
-</dd>
-</dl>
-<h3>Methods</h3>
-<dl>
-<dt id="evaltools.plotting.PlotSpecification.computebbox"><code class="name flex">
-<span>def <span class="ident">computebbox</span></span>(<span>self, geometries, identifiers, idcolumn='COUNTYFP20', margin=1) ‑> Tuple</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Finds the minimal rectangle containing the geometries matching the provided
-identifier codes. Typically, the <code>geometries</code> are counties and <code>identifiers</code>
-are county FIPS codes.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>geometries</code></strong> :&ensp;<code>gpd.GeoDataFrame</code></dt>
-<dd>Set of geometries.</dd>
-<dt><strong><code>identifiers</code></strong> :&ensp;<code>list</code></dt>
-<dd>List of identifiers to whose boundaries we
-restrict the viewport.</dd>
-<dt><strong><code>idcolumn</code></strong> :&ensp;<code>str</code>, optional</dt>
-<dd>Column on <code>geometries</code> where <code>identifiers</code>
-are stored.</dd>
-<dt><strong><code>margin</code></strong> :&ensp;<code>float</code>, optional</dt>
-<dd>Bounding box margin measured in <strong>miles</strong>.
-For example, if the base width of the bounding box is <span><span class="MathJax_Preview">w</span><script type="math/tex">w</script></span>, then
-the width of the margin-adjusted bounding box is <span><span class="MathJax_Preview">w+2m</span><script type="math/tex">w+2m</script></span>, where
-<span><span class="MathJax_Preview">m</span><script type="math/tex">m</script></span> is the margin; the height of the bounding box is adjusted
-similarly.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<p>A four-tuple of values: the first pair represents the bottom-left corner
-of the bounding box, the second pair the top-right corner.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def computebbox(self, geometries, identifiers, idcolumn=&#34;COUNTYFP20&#34;, margin=1) -&gt; Tuple:
-    r&#34;&#34;&#34;
-    Finds the minimal rectangle containing the geometries matching the provided
-    identifier codes. Typically, the `geometries` are counties and `identifiers`
-    are county FIPS codes.
-
-    Args:
-        geometries (gpd.GeoDataFrame): Set of geometries.
-        identifiers (list): List of identifiers to whose boundaries we
-            restrict the viewport.
-        idcolumn (str, optional): Column on `geometries` where `identifiers`
-            are stored.
-        margin (float, optional): Bounding box margin measured in **miles**.
-            For example, if the base width of the bounding box is \(w\), then
-            the width of the margin-adjusted bounding box is \(w+2m\), where
-            \(m\) is the margin; the height of the bounding box is adjusted
-            similarly.
-
-    Returns:
-        A four-tuple of values: the first pair represents the bottom-left corner
-        of the bounding box, the second pair the top-right corner.
-    &#34;&#34;&#34;
-    # Set the geometries to the specified CRS, filter the geometries, and
-    # dissolve them.
-    geometries = geometries.to_crs(self.webmercator)
-    geometries[&#34;dissolve&#34;] = 1
-
-    subgeometries = geometries[geometries[idcolumn].astype(str).isin(identifiers)]
-    dissolved = dissolve(subgeometries, by=&#34;dissolve&#34;)
-
-    # Find the bounding box and adjust.
-    offset = margin*5280
-    bounds = dissolved.bounds
-    minx, maxx = bounds.minx.values[0], bounds.maxx.values[0]
-    miny, maxy = bounds.miny.values[0], bounds.maxy.values[0]
-
-    self.bbox = {
-        &#34;x&#34;: (minx-offset, maxx+offset),
-        &#34;y&#34;: (miny-offset, maxy+offset)
-    }
-
-    return minx-offset, miny-offset, maxx+offset, maxy+offset</code></pre>
-</details>
-</dd>
-<dt id="evaltools.plotting.PlotSpecification.computelabels"><code class="name flex">
-<span>def <span class="ident">computelabels</span></span>(<span>self, districts, assignment, geometrycolumn='geometry') ‑> dict</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Computes label locations for the provided district geometries.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>districts</code></strong> :&ensp;<code>gpd.GeoDataFrame</code></dt>
-<dd>Districting plan; assumes there is one
-geometry per district.</dd>
-<dt><strong><code>assignment</code></strong> :&ensp;<code>str</code></dt>
-<dd>Column of <code>districts</code> which defines the
-districting plan.</dd>
-<dt><strong><code>geometrycolumn</code></strong> :&ensp;<code>str</code>, optional</dt>
-<dd>Column of <code>districts</code> which defines
-the geometry for each district.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<p>A dictionary mapping district labels to locations.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def computelabels(self, districts, assignment, geometrycolumn=&#34;geometry&#34;) -&gt; dict:
-    &#34;&#34;&#34;
-    Computes label locations for the provided district geometries.
-
-    Args:
-        districts (gpd.GeoDataFrame): Districting plan; assumes there is one
-            geometry per district.
-        assignment (str): Column of `districts` which defines the
-            districting plan.
-        geometrycolumn (str, optional): Column of `districts` which defines
-            the geometry for each district.
-
-    Returns:
-        A dictionary mapping district labels to locations.
-    &#34;&#34;&#34;
-    # Make sure we&#39;re in the same CRS.
-    districts = districts.to_crs(self.webmercator)
-
-    # Get the bounding box; if there is no bounding box, we don&#39;t need to
-    # compute anything, and we simply assign labels to representative points.
-    if self.bbox:
-        minx, maxx = self.bbox[&#34;x&#34;]
-        miny, maxy = self.bbox[&#34;y&#34;]
-        bbox = box(minx, miny, maxx, maxy)
-
-    locations = {}
-    
-    for geometry, district in zip(districts[geometrycolumn], districts[assignment]):
-        # In the first condition, there *is* no bounding box for the plot;
-        # set the location of the district&#39;s label to be a representative
-        # point for the entire geometry.
-        if not self.bbox:
-            point = geometry.representative_point()
-            locations[district] = point.coords[0]
-        else:
-            # If there *is* a bounding box, we encounter three conditions:
-            # either the bounding box entirely contains the district, the
-            # bounding box contains a part of the district, or the intersection
-            # of the district and the bounding box is empty.
-
-            # If the district is entirely contained, return a representative
-            # point.
-            if bbox.contains(geometry):
-                point = geometry.representative_point()
-                locations[district] = point.coords[0]
-
-            # If the intersection is nonempty (and is greater than two square
-            # miles), return a representative point of the *intersection*.
-            elif bbox.intersection(geometry).area &gt; 2*(5280**2):
-                # Find the intersection.
-                intersection = bbox.intersection(geometry)
-
-                # Check if the intersection is a MultiPolygon (i.e. there are
-                # multiple pieces of the same district), and label the largest
-                # one.
-                if isinstance(intersection, MultiPolygon):
-                    largest = max(intersection, key=lambda p: p.area)
-                else:
-                    largest = intersection
-
-                # Compute the representative point.
-                point = largest.representative_point()
-                locations[district] = point.coords[0]
-
-            # Otherwise, continue.
-            else: continue
-
-    # Set labels to the `labels` property.
-    self.labels = locations
-    return locations</code></pre>
-</details>
-</dd>
-</dl>
-</dd>
-</dl>
 </section>
 </article>
 <nav id="sidebar">
@@ -1824,11 +1704,8 @@ float: right;
 <li><h3><a href="#header-submodules">Sub-modules</a></h3>
 <ul>
 <li><code><a title="evaltools.plotting.annotation" href="annotation.html">evaltools.plotting.annotation</a></code></li>
-<li><code><a title="evaltools.plotting.choropleth" href="choropleth.html">evaltools.plotting.choropleth</a></code></li>
 <li><code><a title="evaltools.plotting.colors" href="colors.html">evaltools.plotting.colors</a></code></li>
-<li><code><a title="evaltools.plotting.districtnumbers" href="districtnumbers.html">evaltools.plotting.districtnumbers</a></code></li>
 <li><code><a title="evaltools.plotting.gifs" href="gifs.html">evaltools.plotting.gifs</a></code></li>
-<li><code><a title="evaltools.plotting.specification" href="specification.html">evaltools.plotting.specification</a></code></li>
 <li><code><a title="evaltools.plotting.utils" href="utils.html">evaltools.plotting.utils</a></code></li>
 </ul>
 </li>
@@ -1837,6 +1714,8 @@ float: right;
 <li><code><a title="evaltools.plotting.arrow" href="#evaltools.plotting.arrow">arrow</a></code></li>
 <li><code><a title="evaltools.plotting.bins" href="#evaltools.plotting.bins">bins</a></code></li>
 <li><code><a title="evaltools.plotting.boxplot" href="#evaltools.plotting.boxplot">boxplot</a></code></li>
+<li><code><a title="evaltools.plotting.choropleth" href="#evaltools.plotting.choropleth">choropleth</a></code></li>
+<li><code><a title="evaltools.plotting.districtnumbers" href="#evaltools.plotting.districtnumbers">districtnumbers</a></code></li>
 <li><code><a title="evaltools.plotting.districtr" href="#evaltools.plotting.districtr">districtr</a></code></li>
 <li><code><a title="evaltools.plotting.drawgraph" href="#evaltools.plotting.drawgraph">drawgraph</a></code></li>
 <li><code><a title="evaltools.plotting.drawplan" href="#evaltools.plotting.drawplan">drawplan</a></code></li>
@@ -1850,21 +1729,6 @@ float: right;
 <li><code><a title="evaltools.plotting.scatterplot" href="#evaltools.plotting.scatterplot">scatterplot</a></code></li>
 <li><code><a title="evaltools.plotting.sealevel" href="#evaltools.plotting.sealevel">sealevel</a></code></li>
 <li><code><a title="evaltools.plotting.violin" href="#evaltools.plotting.violin">violin</a></code></li>
-</ul>
-</li>
-<li><h3><a href="#header-classes">Classes</a></h3>
-<ul>
-<li>
-<h4><code><a title="evaltools.plotting.PlotSpecification" href="#evaltools.plotting.PlotSpecification">PlotSpecification</a></code></h4>
-<ul class="two-column">
-<li><code><a title="evaltools.plotting.PlotSpecification.bbox" href="#evaltools.plotting.PlotSpecification.bbox">bbox</a></code></li>
-<li><code><a title="evaltools.plotting.PlotSpecification.computebbox" href="#evaltools.plotting.PlotSpecification.computebbox">computebbox</a></code></li>
-<li><code><a title="evaltools.plotting.PlotSpecification.computelabels" href="#evaltools.plotting.PlotSpecification.computelabels">computelabels</a></code></li>
-<li><code><a title="evaltools.plotting.PlotSpecification.context" href="#evaltools.plotting.PlotSpecification.context">context</a></code></li>
-<li><code><a title="evaltools.plotting.PlotSpecification.labels" href="#evaltools.plotting.PlotSpecification.labels">labels</a></code></li>
-<li><code><a title="evaltools.plotting.PlotSpecification.webmercator" href="#evaltools.plotting.PlotSpecification.webmercator">webmercator</a></code></li>
-</ul>
-</li>
 </ul>
 </li>
 </ul>

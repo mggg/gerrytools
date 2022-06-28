@@ -54,6 +54,7 @@ from .partisan import (
 from functools import partial
 from gerrychain import Partition, Graph
 from typing import Iterable, List, Mapping, Dict, Union, Any
+from tqdm import tqdm
 import gzip
 import json
 from .score_types import *
@@ -83,7 +84,7 @@ def summarize(part: Partition, scores: Iterable[Score]) -&gt; Dict[str, ScoreVal
     return summary
 
 def summarize_many(parts: Iterable[Partition], scores: Iterable[Score], plan_names: List[str] = [],
-                   output_file: str = None, compress: bool = False) -&gt; Union[List[Dict[str, ScoreValue]], None]:
+                   output_file: str = None, compress: bool = False, verbose : bool = False) -&gt; Union[List[Dict[str, ScoreValue]], None]:
     &#34;&#34;&#34;
     Summarize the given partitions by the passed scores.
 
@@ -105,10 +106,16 @@ def summarize_many(parts: Iterable[Partition], scores: Iterable[Score], plan_nam
         is void.
     &#34;&#34;&#34;
     if output_file is None:
+        if verbose:
+            result = []
+            for part in tqdm(parts):
+                result.append(summarize(part, scores=scores))
+            return result
         return [summarize(part, scores=scores) for part in parts]
     else:
         with gzip.open(f&#34;{output_file}.gz&#34;, &#34;wt&#34;) if compress else open(output_file, &#34;w&#34;) as fout:
-            for i, part in enumerate(parts):
+            iterator = tqdm(enumerate(parts)) if verbose else enumerate(parts)
+            for i, part in iterator:
                 plan_details = summarize(part, scores=scores)
                 try:
                     plan_details[&#34;id&#34;] = plan_names[i]
@@ -156,6 +163,7 @@ def splits(
         partial(_splits, unit=unit, how=how, popcol=popcol, names=names)
     )
 
+
 def pieces(
         unit:str, names:bool=False, popcol:str=None, how:str=&#34;pandas&#34;,
         alias:str=None
@@ -195,7 +203,7 @@ def pieces(
         partial(_pieces, unit=unit, how=how, popcol=popcol, names=names)
     )
 
-def competitive_contests(election_cols: Iterable[str], party: str, points_within: float = 0.03) -&gt; Score:
+def competitive_contests(election_cols: Iterable[str], party: str, points_within: float = 0.03, alias: str = None) -&gt; Score:
     &#34;&#34;&#34;
     Score representing the number of competitive contests in a plan.
 
@@ -598,7 +606,7 @@ party across elections.</p></div>
 </details>
 </dd>
 <dt id="evaltools.scoring.scores.competitive_contests"><code class="name flex">
-<span>def <span class="ident">competitive_contests</span></span>(<span>election_cols: Iterable[str], party: str, points_within: float = 0.03) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
+<span>def <span class="ident">competitive_contests</span></span>(<span>election_cols: Iterable[str], party: str, points_within: float = 0.03, alias: str = None) ‑> <a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the number of competitive contests in a plan.</p>
@@ -620,7 +628,7 @@ partition and returns a PlanWideScoreValue for the number of competitive distric
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def competitive_contests(election_cols: Iterable[str], party: str, points_within: float = 0.03) -&gt; Score:
+<pre><code class="python">def competitive_contests(election_cols: Iterable[str], party: str, points_within: float = 0.03, alias: str = None) -&gt; Score:
     &#34;&#34;&#34;
     Score representing the number of competitive contests in a plan.
 
@@ -1514,7 +1522,7 @@ applied to the plan.</p>
 </details>
 </dd>
 <dt id="evaltools.scoring.scores.summarize_many"><code class="name flex">
-<span>def <span class="ident">summarize_many</span></span>(<span>parts: Iterable[gerrychain.partition.partition.Partition], scores: Iterable[<a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a>], plan_names: List[str] = [], output_file: str = None, compress: bool = False) ‑> Optional[List[Dict[str, Union[float, int, Mapping[Union[int, str], Union[float, int]], Mapping[str, Union[float, int]]]]]]</span>
+<span>def <span class="ident">summarize_many</span></span>(<span>parts: Iterable[gerrychain.partition.partition.Partition], scores: Iterable[<a title="evaltools.scoring.score_types.Score" href="score_types.html#evaltools.scoring.score_types.Score">Score</a>], plan_names: List[str] = [], output_file: str = None, compress: bool = False, verbose: bool = False) ‑> Optional[List[Dict[str, Union[float, int, Mapping[Union[int, str], Union[float, int]], Mapping[str, Union[float, int]]]]]]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Summarize the given partitions by the passed scores.</p>
@@ -1547,7 +1555,7 @@ is void.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def summarize_many(parts: Iterable[Partition], scores: Iterable[Score], plan_names: List[str] = [],
-                   output_file: str = None, compress: bool = False) -&gt; Union[List[Dict[str, ScoreValue]], None]:
+                   output_file: str = None, compress: bool = False, verbose : bool = False) -&gt; Union[List[Dict[str, ScoreValue]], None]:
     &#34;&#34;&#34;
     Summarize the given partitions by the passed scores.
 
@@ -1569,10 +1577,16 @@ is void.</p></div>
         is void.
     &#34;&#34;&#34;
     if output_file is None:
+        if verbose:
+            result = []
+            for part in tqdm(parts):
+                result.append(summarize(part, scores=scores))
+            return result
         return [summarize(part, scores=scores) for part in parts]
     else:
         with gzip.open(f&#34;{output_file}.gz&#34;, &#34;wt&#34;) if compress else open(output_file, &#34;w&#34;) as fout:
-            for i, part in enumerate(parts):
+            iterator = tqdm(enumerate(parts)) if verbose else enumerate(parts)
+            for i, part in iterator:
                 plan_details = summarize(part, scores=scores)
                 try:
                     plan_details[&#34;id&#34;] = plan_names[i]

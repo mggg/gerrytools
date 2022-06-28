@@ -67,9 +67,9 @@ def _splits(
             `"pandas"`.
         names (bool, optional): Whether we return the identifiers of the things
             being split.
-        unit_info_updater_col (str, optional): The name of the corresponsind county_splits updater
-            in the partition.  If using "gerrychain" version and not specified defaults to the name
-            of unit.
+        unit_info_updater_col (str, optional): The name of the corresponsing
+            county_splits updater in the partition.  If using "gerrychain" version
+            and not specified defaults to the name of unit.
     
     Returns:
         The number of splits or the list of things split.

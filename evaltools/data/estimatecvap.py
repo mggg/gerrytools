@@ -4,7 +4,100 @@ import geopandas as gpd
 import numpy as np
 from pandas import DataFrame
 from .acs import acs5, cvap
+from .census import census20
 from ..geometry import unitmap
+
+
+def estimatecvap2020(state) -> pd.DataFrame:
+    """
+    Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data. **This method serves
+    a different purpose than `evaltools.data.estimatecvap.estimatecvap2010()`:**
+    rather than using geometric procedures to put CVAP data on old geometries,
+    this method takes advantage of the Census's geographic hierarchy, and
+    associates finer-grained 2020 CVAP data with 2020 blocks. _No geometric
+    data or procedures are used here_. The resulting data can then be adjoined
+    to 2020 block geometries (or assigned to VTDs, assigned to districts, etc.)
+    and be used to build other units of varying size.
+
+    Args:
+        state (State): The `us.State` for which CVAP will be estimated.
+
+    Returns:
+        A `DataFrame` of combined Census and ACS data at the Census block level.
+    """
+
+    # First, get the Census data for blocks and block groups.
+    bg = census20(state, table="P4", geometry="block group")
+    block = census20(state, table="P4", geometry="block")
+
+    # Now, get 2020 Census data at the block group level and merging it with the
+    # block group-level Census data.
+    cvap20 = cvap(state, geometry="block group", year=2020)
+    bg = bg.merge(cvap20, left_on="GEOID20", right_on="BLOCKGROUP20")
+
+    # Name the VAP columns.
+    vapcolumns = [
+        "NHWHITEVAP20", "NHASIANVAP20", "NHBLACKVAP20", "NHNHPIVAP20", "NHAMINVAP20",
+        "NHWHITEASIANVAP20", "NHWHITEAMINVAP20", "NHWHITEBLACKVAP20", "NHBLACKAMINVAP20"
+    ]
+
+    # Create "remainder" column.
+    for universe in [block, bg]:
+        universe["NHVAP20"] = universe["VAP20"]-universe["HVAP20"]
+        universe["OTHVAP20"] = universe["NHVAP20"]-universe[vapcolumns].sum(axis=1)
+    
+    # Get the block group ID for blocks.
+    block["BLOCKGROUP20"] = block["GEOID20"].astype(str).str[:-3]
+
+    # Mapping from block group IDs to block group total populations.
+    bgtotalvapmap = dict(zip(bg["BLOCKGROUP20"].astype(str), bg["VAP20"]))
+
+    # Add all columns.
+    allvapcols = vapcolumns + ["VAP20", "NHVAP20", "HVAP20", "NHOTHVAP20"]
+
+    # Estimate CVAP data for all VAP columns.
+    for vapcolumn in allvapcols:
+        # Crete a mapping from block group names to totals for the VAP column.
+        popmap = dict(zip(bg["GEOID20"].astype(str), bg[vapcolumn]))
+        
+        # Create column names.
+        colpct = vapcolumn+"%"
+        cvapcolumn = vapcolumn.replace("VAP", "CVAP")
+
+        # Calculate ratios.
+        block[colpct] = block["BLOCKGROUP20"].map(popmap)
+        block[colpct] = block[vapcolumn]/block[colpct]
+
+        # Create a mapping from block group IDs to CVAP groups.
+        cvapcolumn = vapcolumn.replace("VAP", "CVAP")
+        cvapmap = dict(zip(bg["BLOCKGROUP20"].astype(str), bg[cvapcolumn]))
+
+        # Create two temporary columns: the first sets the block's CVAP to the
+        # total CVAP for its block group; the second sets the block's VAP to the
+        # total VAP for its block group. (Note: each of these C/VAP columns are
+        # with respect to the current VAP column.)
+        block["tmp"] = block["BLOCKGROUP20"].map(cvapmap)
+        block["BGVAP20"] = block["BLOCKGROUP20"].map(bgtotalvapmap)
+
+        # Next, compute the estimated CVAP by multiplying the VAP column percent
+        # for the block group by the total CVAP population of the block group.
+        block[cvapcolumn] = block[colpct]*block["tmp"]
+
+        # If the above doesn't work — which is the case if the VAP column percent
+        # is NaN (0/0) or inf (k/0), we estimate the CVAP of the block using the
+        # VAP ratio outright rather than the column-specific VAP ratio.
+        ni = block[block[colpct].isna()].index
+        block.loc[ni,cvapcolumn] = (block.loc[ni,"VAP20"]/block.loc[ni,"BGVAP20"])*block.loc[ni,"tmp"]
+
+        # Assert that our summed disaggregated numbers and totals are close!
+        assert np.isclose(bg[cvapcolumn].sum()-block[cvapcolumn].sum(), 0)
+
+    # Fill NaNs with 0 and drop unnecessary columns.
+    block = block.fillna(0)
+    block = block.drop(["tmp", "BGVAP20"], axis=1)
+
+    # Return!
+    return block
 
 
 def fetchgeometries(state, geometry) -> gpd.GeoDataFrame: 
@@ -24,10 +117,11 @@ def fetchgeometries(state, geometry) -> gpd.GeoDataFrame:
     clocator = state.name.replace(" ", "_")
     
     # Validate geometry level indicators.
-    if geometry not in {"block group", "tract"}:
+    if geometry not in {"block group", "tract", "block"}:
         raise ValueError(f"Geometry level {geometry} not supported; aborting.")
     
     if geometry == "block group": geometry = "bg"
+    if geometry == "block": geometry = "tabblock"
 
     # Construct the Census URL.
     fips = state.fips
@@ -68,12 +162,17 @@ def mapbase(base, state, geometry, baseindex="GEOID20"):
 
     return base
 
-def estimatecvap(
-        base, state, groups, ceiling, zfill, geometry10="tract"
+def estimatecvap2010(
+        base, state, groups, ceiling, zfill, geometry10="tract", year=2019
     ) -> DataFrame:
     r"""
     Function for turning old (2019) CVAP data on 2010 geometries into estimates
-    for current CVAP data on 2020 geometries. Users must supply a base `GeoDataFrame`
+    for current CVAP data on 2020 geometries. **This method serves a different
+    purpose than `evaltools.data.estimatecvap.estimatecvap2020()`:** this method
+    is intended to put 2010-era CVAP data on 2020-era geometries, and uses
+    geometric properties to do so.
+    
+    Users must supply a base `GeoDataFrame`
     representing their chosen U.S. state. Additionally, users must specify the
     demographic groups whose CVAP statistics are to be estimated. For each group,
     users specify a triple \((X, Y, Z)\) where \(X\) is the old CVAP column for
@@ -121,8 +220,8 @@ def estimatecvap(
 
     # Grab ACS and CVAP special-tab data, and make sure our triples are correct
     cvap_geoid = "TRACT10" if geometry10 == "tract" else "BLOCKGROUP10"
-    acs_source = acs5(state, geometry10)
-    cvap_source = cvap(state, geometry10)
+    acs_source = acs5(state, geometry10, year=year)
+    cvap_source = cvap(state, geometry10, year=year)
 
     # Validate the columns passed, issuing user warnings when it's inadvisable
     # to estimate CVAP given the passed columns.
@@ -171,6 +270,10 @@ def estimatecvap(
     # instead.
     correct = ["geometry"] + [col for col in list(base) if any(sub in col for sub in ["POP", "VAP", "GEOID"])]
     bads = list(set(base) - set(correct))
+
+    # Warn the user of column removal:
+    print(f"Removing the following columns: " + ", ".join(bads))
+
     pared = base.drop(bads, axis=1)
     pared = mapbase(pared, state, geometry10)
 
@@ -214,7 +317,7 @@ def estimatecvap(
 
             # Check whether the ratio of the above is less than the ceiling.
             if not np.isfinite(ratio):
-                print(
+                print(county, 
                     f"Encountered an invalid ratio: there are {cvap19total} {cvap19} "
                     f"persons and {vap19total} {vap19} persons, for a ratio of "
                     f"{cvap19total}/{vap19total}. "
@@ -264,13 +367,16 @@ def estimatecvap(
     # Group by the CVAP GEOID.
     groupedtogeometry = list(pared.groupby(cvap_geoid))
 
+    # Get the year suffix so we can replace columns.
+    yearsuffix = str(year)[2:]
+
     # For each of the geometry groups (e.g. a set of rows of blocks corresponding
     # to a single tract), and for each of the CVAP groups, apply the appropriate
     # weight to the blocks' 2020 VAP populations.
     for ix, group in groupedtogeometry:
         for (cvap10, vap10, vap20) in groups:
             weight = cvap10 + "%"
-            cvap20 = cvap10.replace("19", "20_EST")
+            cvap20 = cvap10.replace(yearsuffix, "20_EST")
             group[weight] = weights[ix][weight]
             group[cvap20] = group[weight]*group[vap20]
 

@@ -1,6 +1,7 @@
 
 import pandas as pd
 import requests
+import censusdata
 from itertools import combinations
 from functools import reduce
 from typing import Iterable
@@ -20,12 +21,52 @@ def _rjoin(df, columns) -> Iterable:
     stringified = [df[c].astype(str) for c in columns]
     return reduce(lambda l, r: l + r, stringified[1:], stringified[0])
 
-def census(
+
+def census10(state, columns={}, geometry="block"):
+    """
+    Retrieves `geometry`-level 2010 Summary File 1 data via the Census API.
+
+    Args:
+        state (State): `us.State` object (e.g. `us.states.WI`).
+        columns (dict, optional): Dictionary which maps Census column names (from
+            the correct table) to human-readable names. We require this to be a
+            dictionary, _not_ a list, as specifying human-readable names will
+            implicitly protect against incorrect column names and excessive API
+            calls.
+        geometry (string, optional): Geometry level at which we retrieve data.
+            Defaults to `"block"` to retrieve block-level data for the state
+            provided. Accepted values are `"block"`, `"block group`", and `"tract"`.
+    
+    Returns:
+        A DataFrame with columns renamed according to their Census description
+        designation and a unique identifier column for joining to geometries.
+    """
+    # Create the right geometry identifiers.
+    geometries = [("state", str(state.fips)), ("county", "*"), ("tract", "*")]
+    if geometry in {"block group", "block"}: geometries += [(geometry, "*")]
+
+    # Create an identifier column.
+    identifier = geometry.replace(" ", "").upper() + "10"
+
+    # Download data.
+    raw = censusdata.download(
+        "sf1", 2010, censusdata.censusgeo(geometries),
+        ["GEO_ID"] + list(columns.keys()),
+    )
+
+    # Rename columns and send back to the caller!
+    raw = raw.rename({"GEO_ID": identifier, **columns}, axis=1)
+    raw[identifier] = raw[identifier].str[9:]
+    clean = raw.reset_index(drop=True)
+
+    return clean
+
+def census20(
         state, table="P1", columns={}, geometry="block",
         key="75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65"
     ) -> pd.DataFrame:
     """
-    Retrieves geometry-level 2020 Decennial Census PL94-171 data via the Census
+    Retrieves `geometry`-level 2020 Decennial Census PL94-171 data via the Census
     API.
 
     Args:

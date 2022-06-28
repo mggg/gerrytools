@@ -1,6 +1,5 @@
 
 from matplotlib.axes import Axes
-import numpy as np
 import random
 from .colors import defaultGray, citizenBlue, districtr
 
@@ -9,17 +8,19 @@ def boxplot(
         ticksize=12, jitter=1/3
     ) -> Axes:
     r"""
-    Plot boxplots, which takes `scores` — a dictionary where each value (corresponding to an ensemble, citizens' ensemble, or proposed plans), will be a list of lists, where each sublist
-    will be its own box. Proposed scores will be plotted as colored circles on
-    their respective box. Color the boxplots conditioned on the kind of the scores
-    (ensemble or citizen), and trim each sublist to only the values between the specified percentiles.
+    Plot boxplots, which takes `scores` — a dictionary where each value
+    (corresponding to an ensemble, citizens' ensemble, or proposed plans),
+    will be a list of lists, where each sublist will be its own box. Proposed
+    scores will be plotted as colored circles on their respective box. Color the
+    boxplots conditioned on the kind of the scores (ensemble or citizen), and
+    trim each sublist to only the values between the specified percentiles.
 
     Args:
         ax (Axes): `Axes` object on which the boxplots are plotted.
         scores (dict): Dictionary with keys of `ensemble`, `citizen`, `proposed`
             which map to lists of numerical scores.
         proposed_info (dict, optional): Dictionary with keys of `colors`, `names`;
-            the \(i\)th color in `color` corresponds to the \(i\)th name in `names.
+            the \(i\)th color in `color` corresponds to the \(i\)th name in `names`.
         percentiles (tuple, optional): Observations outside this range of
             percentiles are ignored. Defaults to `(1, 99)`, such that observations
             between the 1st and 99th percentiles (inclusive) are included, and

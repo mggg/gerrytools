@@ -11,23 +11,47 @@ from gerrychain.grid import Grid
 from shapely.geometry import box
 import math
 import os
+import pytest
 
 root = Path(os.getcwd()) / Path("tests/test-resources/")
 
-def test_splits():
+def test_splits_pandas():
     # Read in an existing dual graph.
-    dg = Graph.from_json(root / "IN-vtds.json")
+    dg = Graph.from_json(root / "test-graph.json")
     P = Partition(dg, "CONGRESS")
 
     geometricsplits = splits("COUNTYFP20", popcol="TOTPOP").apply(P)
     geometricsplitsnames = splits("COUNTYFP20", popcol="TOTPOP", names=True).apply(P)
+
+    split = {'005', '135', '085', '067', '091', '045', '097', '017'}
+
+    pairs = [
+        (geometricsplits, geometricsplitsnames),
+    ]
+
+    for unnamed, named in pairs:
+        # Assert that we have a dictionary and that we have the right keys in it.
+        assert type(unnamed) is int
+        assert unnamed == 8
+
+        # Make sure that we're counting the number of splits correctly – Indiana's
+        # enacted Congressional plan should split counties 8 times.
+        assert len(named) == 8
+        assert set(split) == set(named)
+
+
+@pytest.mark.xfail(reason="The provided Partitions are not GeometricPartitions, and should fail.")
+def test_splits_gerrychain():
+    # Read in an existing dual graph.
+    dg = Graph.from_json(root / "test-graph.json")
+    P = Partition(dg, "CONGRESS")
+
     geometricsplitsgc = splits("COUNTYFP20", popcol="TOTPOP", how="gerrychain").apply(P)
     geometricsplitsnamesgc = splits("COUNTYFP20", popcol="TOTPOP", how="gerrychain", names=True).apply(P)
 
     split = {'005', '135', '085', '067', '091', '045', '097', '017'}
 
     pairs = [
-        (geometricsplits, geometricsplitsnames),
         (geometricsplitsgc, geometricsplitsnamesgc)
     ]
 
@@ -42,21 +66,43 @@ def test_splits():
         assert set(split) == set(named)
 
 
-
-def test_pieces():
+def test_pieces_pandas():
     # Read in an existing dual graph.
     dg = Graph.from_json(root / "IN-vtds.json")
     P = Partition(dg, "CONGRESS")
 
     geometricpieces = pieces("COUNTYFP20", popcol="TOTPOP").apply(P)
     geometricpiecesnames = pieces("COUNTYFP20", popcol="TOTPOP", names=True).apply(P)
+
+    split = {'005', '135', '085', '067', '091', '045', '097', '017'}
+
+    pairs = [
+        (geometricpieces, geometricpiecesnames),
+    ]
+
+    for unnamed, named in pairs:
+        # Assert that we have a dictionary and that we have the right keys in it.
+        assert type(unnamed) is int
+        assert unnamed == 16
+
+        # Make sure that we're counting the number of splits correctly – Indiana's
+        # enacted Congressional plan should split counties 8 times.
+        assert len(named) == 8
+        assert set(split) == set(named)
+
+
+@pytest.mark.xfail(reason="The provided Partitions are not GeometricPartitions, and should fail.")
+def test_pieces_gerrychain():
+    # Read in an existing dual graph.
+    dg = Graph.from_json(root / "IN-vtds.json")
+    P = Partition(dg, "CONGRESS")
+
     geometricpiecesgc = pieces("COUNTYFP20", popcol="TOTPOP", how="gerrychain").apply(P)
     geometricpiecesnamesgc = pieces("COUNTYFP20", popcol="TOTPOP", how="gerrychain", names=True).apply(P)
 
     split = {'005', '135', '085', '067', '091', '045', '097', '017'}
 
     pairs = [
-        (geometricpieces, geometricpiecesnames),
         (geometricpiecesgc, geometricpiecesnamesgc)
     ]
 
@@ -103,6 +149,7 @@ def test_unassigned_units():
     assert bads == wholebads
 
 
+@pytest.mark.skip(reason="Tests should use real-world data.")
 def test_reock_score_squares_geodataframe():
     grid = Grid((10, 10))
     gdf = gpd.GeoDataFrame([
@@ -120,6 +167,8 @@ def test_reock_score_squares_geodataframe():
     for dist_score in scored.values():
         assert abs(dist_score - expected_dist_score) < 1e-4
 
+
+@pytest.mark.skip(reason="Tests should use real-world data.")
 def test_reock_score_squares_graph():
     grid = Grid((10, 10))
     for (x, y), data in grid.graph.nodes(data=True):
@@ -135,7 +184,7 @@ def test_reock_score_squares_graph():
     for dist_score in scored.values():
         assert abs(dist_score - expected_dist_score) < 1e-4
 
-
+@pytest.mark.skip(reason="Tests should use real-world data.")
 def test_reock_score_disconnected():
     grid = Grid((10, 10))
     for (x, y), data in grid.graph.nodes(data=True):
@@ -157,4 +206,3 @@ def test_reock_score_disconnected():
 
 if __name__ == "__main__":
     root = Path(os.getcwd()) / Path("test-resources/")
-    test_splits()

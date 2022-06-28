@@ -1,4 +1,4 @@
-"""Auxiliary and specialized geographical scores for plan evaluation."""
+
 import numpy as np
 import geopandas as gpd
 from typing import Dict, Callable, Union, Any
@@ -10,8 +10,8 @@ from math import pi
 
 
 def reock(
-    geodata: Union[gpd.GeoDataFrame, Graph]
-) -> Callable[[GeographicPartition], Dict[Any, float]]:
+        geodata: Union[gpd.GeoDataFrame, Graph]
+    ) -> Callable[[GeographicPartition], Dict[Any, float]]:
     r"""
     Makes a Reock score function specialized to `geodata`.
 

@@ -29,7 +29,7 @@ def districtnumbers(
         Base axes object.
     """
     for district, identifier in zip(districts["geometry"], districts[assignment]):
-        x, y = list(district.centroid.coords)[0]
+        x, y = list(district.representative_point().coords)[0]
         base.annotate(
             identifier, (x,y), xytext=(x,y), xycoords="data", fontsize=fontsize, 
             ha="center", va="center",

@@ -1,9 +1,224 @@
+
 from typing import Dict, List, Any, Callable
 import geopandas as gpd
 import tqdm
 import gurobipy as gp
 from gurobipy import GRB
+from scipy.optimize import linear_sum_assignment as lsa
 import math
+import pandas as pd
+
+
+def arealoverlap(
+        left: gpd.GeoDataFrame, right: gpd.GeoDataFrame, assignment: str="DISTRICT",
+        crs=None
+    ) -> pd.DataFrame:
+    r"""
+    Given two GeoDataFrames, each encoding districting plans, computes the areal
+    overlap between each pair of districts. `left` is the districting plan to be
+    relabeled (e.g. a proposed districting plan) and `right` is the districting
+    plan with district labels we're trying to match (e.g. an enacted districting
+    plan). If `left` (denoted \(L\)) has \(n\) districts and `right` (denoted \(R\)) has
+    \(m\) districts, an \(n \times m\) matrix \(C\) is computed, where the entry
+    \(M_{ij}\) represents the area of the intersection of the districts \(L_i\) and
+    \(R_j\). \(C\) is represented as a pandas DataFrame, where the row indices are
+    the labels in `left`, and are the preimage of the label mapping; column indices
+    are the labels in `right`, and are the image of the label mapping.
+
+    Args:
+        left (pd.DataFrame): GeoDataFrame whose labels are the preimage of the
+            relabeling.
+        right (pd.DataFrame): GeoDataFrame whose labels are the image of the
+            relabeling.
+        assignment (str): Column on `left` and `right` which contains the district
+            identifier.
+
+    Returns:
+        Cost matrix \(C\), represented as a DataFrame.
+    """
+    # Force the two things to be the same CRS (or the provided CRS)
+    if crs: left = left.to_crs(crs); right = right.to_crs(crs)
+    else: right = right.to_crs(left.crs)
+
+    # An empty list of records for everything.
+    records = []
+
+    # Figure out the image as we go along.
+    image = []
+
+    # Now, iterate over each dissolved district, finding the areal overlap with
+    # enacted districts.
+    for pid, pdistrict in zip(left[assignment], left["geometry"]):
+        image.append(pid)
+        records.append({
+            eid: pdistrict.intersection(edistrict).area
+            for eid, edistrict in zip(right[assignment], right["geometry"])
+        })
+
+    # Create a dataframe from that!
+    weighted = pd.DataFrame.from_records(records)
+    weighted.index = image
+
+    return weighted
+
+
+def populationoverlap(
+        left: pd.DataFrame, right: pd.DataFrame, identifier: str="GEOID20",
+        population: str="TOTPOP20", assignment: str="DISTRICT"
+    ) -> pd.DataFrame:
+    r"""
+    Given two unit-level DataFrames — i.e. two dataframes where each row represents
+    an atomic unit like Census blocks or VTDs, and each row contains a district
+    assignment — computes the amount of population shared by each pair of districts.
+    `left` is the districting plan to be relabeled (e.g. a proposed districting
+    plan) and `right` is the districting plan with district labels we're trying
+    to match (e.g. an enacted districting plan). If `left` (denoted \(L\)) has
+    \(n\) districts and `right` (denoted \(R\)) has \(m\) districts, an
+    \(n \times m\) matrix \(C\) is computed, where the entry \(M_{ij}\) represents
+    the population shared by the districts \(L_i\) and \(R_j\). \(C\) is
+    represented as a pandas DataFrame, where the row indices are the labels in
+    `left`, and are the preimage of the label mapping; column indices are the labels
+    in `right`, and are the image of the label mapping.
+
+    Args:
+        left (pd.DataFrame): DataFrame whose labels are the preimage of the relabeling.
+        right (pd.DataFrame): DataFrame whose labels are the image of the relabeling.
+        identifier (str): Column on `left` and `right` which contains the unique
+            identifier for each unit.
+        population (str): Column on `left` and `right` which contains the population
+            total for each unit. This can be modified to be `any` population.
+        assignment (str): Column on `left` and `right` that denotes district membership.
+
+    Returns:
+        A DataFrame whose row names are the preimage of the relabeling, column names
+        are the image of the relabeling, and values edge weights; a cost matrix.
+    """
+    # Make sure types are appropriate.
+    right[assignment] = right[assignment].astype(str)
+    right[identifier] = right[identifier].astype(str)
+
+    left[assignment] = left[assignment].astype(str)
+    left[identifier] = left[identifier].astype(str)
+
+    # The preimage is the set of proposed-plan labels.
+    preimage = list(left[assignment].unique())
+
+    # Create a list of records from which we'll make a dataframe!
+    records = []
+
+    # For each label in the preimage, find the district which shares the most
+    # population; this is the cost matrix.
+    for fromlabel in preimage:
+        # Find the blocks in the "from" district and see how much population each
+        # district shares with each enacted district.
+        subleft = left[left[assignment] == fromlabel]
+        subright = right[right[identifier].isin(subleft[identifier])]
+
+        # Aggregate shared blocks based on district label.
+        agg = subright.groupby(assignment, as_index=False).sum()
+
+        # Now figure out the shared populations.
+        records.append({
+            i: shared for i, shared in zip(agg[assignment], agg[population])
+        })
+
+    # Create the cost matrix!
+    C = pd.DataFrame.from_records(records).fillna(0)
+    C.index = preimage
+
+    return C
+
+
+def optimalrelabeling(
+        left: Any, right: Any, maximize: bool=True,
+        costmatrix: Callable=populationoverlap
+    ) -> dict:
+    r"""
+    Finds the optimal relabeling for two districting plans.
+
+    Args:
+        left (Any): Data structure which can be passed to `costmatrix` to construct
+            a cost matrix. District labels will be the preimage of the relabeling.
+            If the default `costmatrix` function is used, these must be pandas
+            DataFrames where one row corresponds to one atomic unit (e.g. Census
+            blocks), with at least three columns: one denoting a unique geometric
+            identifier (e.g. `GEOID20`), one denoting the districting assignment,
+            and another denoting the population of choice. If
+            `evaltools.geometry.optimize.arealoverlap()` is used, these must be
+            GeoDataFrames where one row corresponds to one district, and one
+            column denotes the districts' unique identifiers.
+        right (Any): Data structure which can be passed to `costmatrix` to construct
+            a cost matrix. District labels will be the image of the relabeling.
+            If the default `costmatrix` function is used, these must be pandas
+            DataFrames where one row corresponds to one atomic unit (e.g. Census
+            blocks), with at least three columns: one denoting a unique geometric
+            identifier (e.g. `GEOID20`), one denoting the districting assignment,
+            and another denoting the population of choice. If
+            `evaltools.geometry.optimize.arealoverlap()` is used, these must be
+            GeoDataFrames where one row corresponds to one district, and one
+            column denotes the districts' unique identifiers.
+        maximize (bool): Are we finding the largest or smallest linear sum over
+            the cost matrix? Defaults to `maximize=True`.
+        costmatrix (Callable): The function (or partial function) which consumes
+            `left` and `right` and spits out a cost matrix. This cost matrix is
+            assumed to be a pandas DataFrame, with row indices old district labels
+            and column names new district labels. Examples of these are
+            `evaltools.geometry.optimize.populationoverlap()` and
+            `evaltools.geometry.optimize.arealoverlap()`.
+    
+    Returns:
+        A dictionary which maps district labels in `left` to district labels in
+        `right`, according to the weighting scheme applied in `costmatrix`.
+
+    </br>
+
+    This is an [assignment problem](https://bit.ly/3wnyS4F)
+    and is equivalently a [(min/max)imal bipartite matching problem](http://bit.ly/2OfwUeh).
+    Consider two districting plans \(L\) and \(R\), with \(n\) and \(m\) districts
+    respectively. Set \(V_L\) and \(V_R\) to be sets of vertices such that
+    a vertex \(l_i\) in \(V_L\) corresponds to the district \(L_i\) in \(L\), and
+    similarly for vertices \(r_j\) in \(V_R\); draw edges \((l_i, r_j)\) for each
+    \(i\) from \(1\) to \(n,\) and each \(j\) from \(1\) to \(m.\) In doing so,
+    we construct the [bipartite graph](https://bit.ly/39rDldy) \(K_{n,m}\):
+
+    <div style="text-align: center;">
+        </br>
+        <img width="40%" src="../images/bipartite-matching.png"/>
+    </div>
+
+    We then assign each edge a weight according to some function
+    \(f: L\times R\ \to \mathbb{R}\), which consumes a pair of districts and returns
+    a number. For example, this function could be the amount of area shared by
+    the districts \(L_i\) and \(R_j\), like in `evaltools.geometry.optimize.arealoverlap()`,
+    or the amount of population the districts share, like in
+    `evaltools.geometry.optimize.populationoverlap()`.
+    
+    We then seek to find the set of weighted edges \(M\) such that all vertices
+    \(l_i\) and \(r_j\) appear at most once in \(M\), and that the sum of \(M\)'s
+    weights is as small (or as large) as possible. To do so, we take the adjacency
+    matrix \(A\) of our graph \(K_{n,m}\), where the \(i, j\)th entry records
+    the weight of the edge \((l_i, r_j\)). Then, we want to select at most one entry
+    in each row and column, and ensure those entries have the smallest (or greatest)
+    possible sum. Using the [Jonker-Volgenant algorithm](DOI:10.1109/TAES.2016.140952) (as
+    implemented by scipy), we can find the row and column indices of these entries,
+    and retrieve the district label pairs corresponding to each. The algorithm
+    achieves \(\textbf{O}(N^3)\) worst-case running time, where \(N = \max(n, m)\).
+
+    """
+    # Our cost function should compute the weights between left and right. First,
+    # we want to identify the indices of the preimage (row index) and column
+    C = costmatrix(left, right)
+    preimage, image = list(C.index), list(C)
+    
+    # Now we do our linear sum assignment, getting back the indices which maximize
+    # the total weight on the edges!
+    preimageindices, imageindices = lsa(C, maximize=maximize)
+    preimage = [preimage[i] for i in preimageindices]
+    image = [image[i] for i in imageindices]
+
+    # Zip the preimage and image into a dict, and we're done!
+    return dict(zip(preimage, image))
+
 
 def ensure_column_types(units: gpd.GeoDataFrame, columns: List[str], expression: Callable[[Any], bool] = lambda x: x.startswith("int")) -> bool:
     """
@@ -20,6 +235,7 @@ def ensure_column_types(units: gpd.GeoDataFrame, columns: List[str], expression:
         A boolean indicating if all the columns checked match the expression.
     """
     return all([expression(x.name) for x in units[columns].dtypes])
+
 
 def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None, verbose: bool = False) -> Dict[str, str]:
     """
@@ -83,6 +299,7 @@ def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col:
 
     return numbering_mapping
 
+
 def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, verbose: bool = False) -> Dict[str, bool]:
     """
     Minimize odd->even parity shift in a state given an column with enacted districts
@@ -132,6 +349,7 @@ def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str
         mapping[districts[i]] = bool(v.x)
 
     return mapping
+
 
 def minimize_dispersion_with_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None) -> Dict[str, str]:
     """

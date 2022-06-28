@@ -1,9 +1,11 @@
 
 import seaborn as sns
 import math
+import json
 from typing import List, Tuple
 from random import choice
 from string import hexdigits as hex
+from pathlib import Path
 
 """
 Default gray plotting color; used in histograms, violin plots, and arrows.
@@ -20,6 +22,13 @@ citizenBlue = "#4693b3"
 Overlay colors for choropleth maps.
 """
 overlays = ["gainsboro", "silver", "darkgray", "gray", "dimgrey"]
+
+"""
+LaTeX colors, [borrowed from here.](http://latexcolor.com/)
+"""
+local = Path(__file__).parent.absolute()
+with open(local/"latexcolors.json") as r: latex = json.load(r)
+
 
 def hexshift(color) -> str:
     """
@@ -119,3 +128,4 @@ def greens(n) -> list:
         List of RGB triples.
     """
     return list(sns.color_palette("Greens", as_cmap=False, n_colors=n))
+

@@ -46,7 +46,7 @@ def one(identifier):
     URL for accessing an individual districtr plan.
 
     Args:
-        identifier: distrivtr identifier.
+        identifier: districtr identifier.
 
     Returns:
         String with the appropriate URL.

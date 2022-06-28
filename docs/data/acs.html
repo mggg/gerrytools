@@ -31,11 +31,11 @@
 import censusdata
 from pathlib import Path
 
-def cvap(state, geometry=&#34;tract&#34;, year=2019) -&gt; pd.DataFrame:
+def cvap(state, geometry=&#34;tract&#34;, year=2020) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves and CSV-formats 5-year CVAP data for the provided state at
     the specified geometry level. Geometries from the **2010 Census**. Variables
-    and descriptions are [listed here](https://tinyurl.com/3mnrm56s&gt;).
+    and descriptions are [listed here](https://tinyurl.com/3mnrm56s).
 
     Args:
         state (us.State): The `State` object for which we&#39;re retrieving 2019 ACS
@@ -53,15 +53,15 @@ def cvap(state, geometry=&#34;tract&#34;, year=2019) -&gt; pd.DataFrame:
     descriptions = {
         1: &#34;CVAP&#34;,
         2: &#34;NHCVAP&#34;,
-        3: &#34;NHAICVAP&#34;,
-        4: &#34;NHACVAP&#34;,
-        5: &#34;NHBCVAP&#34;,
+        3: &#34;NHAMINCVAP&#34;,
+        4: &#34;NHASIANCVAP&#34;,
+        5: &#34;NHBLACKCVAP&#34;,
         6: &#34;NHNHPICVAP&#34;,
-        7: &#34;NHWCVAP&#34;,
-        8: &#34;NHAIWCVAP&#34;,
-        9: &#34;NHAWCVAP&#34;,
-        10: &#34;NHBWCVAP&#34;,
-        11: &#34;NHAIBCVAP&#34;,
+        7: &#34;NHWHITECVAP&#34;,
+        8: &#34;NHWHITEAMINCVAP&#34;,
+        9: &#34;NHWHITEASIANCVAP&#34;,
+        10: &#34;NHWHITEBLACKCVAP&#34;,
+        11: &#34;NHBLACKAMINCVAP&#34;,
         12: &#34;NHOTHCVAP&#34;,
         13: &#34;HCVAP&#34; 
     }
@@ -72,9 +72,10 @@ def cvap(state, geometry=&#34;tract&#34;, year=2019) -&gt; pd.DataFrame:
         print(f&#34;Requested geometry \&#34;{geometry}\&#34; is not allowed; loading tracts.&#34;)
         geometry = &#34;tract&#34;
 
-    yearsuffix = str(year)[-2:]
+    abbrv = geometry if geometry == &#34;tract&#34; else &#34;bg&#34;
+
     # Load the raw data.
-    raw = _raw(geometry, yearsuffix)
+    raw = _raw(abbrv, year)
 
     # Create a STATE column for filtering and remove all rows which don&#39;t match
     # the state FIPS code.
@@ -91,6 +92,10 @@ def cvap(state, geometry=&#34;tract&#34;, year=2019) -&gt; pd.DataFrame:
     instate_records = instate.to_dict(orient=&#34;records&#34;)
     collapsed = []
 
+    # Get year stuff.
+    decade = &#34;10&#34; if year &lt; 2020 else &#34;20&#34;
+    yearsuffix = str(year)[2:]
+
     # Next, we collapse these records to a single record.
     for i in range(0, len(instate_records), 13):
         # Create an empty records.
@@ -100,7 +105,7 @@ def cvap(state, geometry=&#34;tract&#34;, year=2019) -&gt; pd.DataFrame:
         # record.
         block = instate_records[i:i+13]
         for line in block:
-            record[geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;] = line[&#34;GEOID&#34;]
+            record[geometry.replace(&#34; &#34;, &#34;&#34;).upper() + decade] = line[&#34;GEOID&#34;]
             record[descriptions[line[&#34;lnnumber&#34;]] + yearsuffix] = line[&#34;cvap_est&#34;]
             record[descriptions[line[&#34;lnnumber&#34;]] + f&#34;{yearsuffix}e&#34;] = line[&#34;cvap_moe&#34;]
 
@@ -109,24 +114,23 @@ def cvap(state, geometry=&#34;tract&#34;, year=2019) -&gt; pd.DataFrame:
     # Create a dataframe and a POCCVAP column; all people minus non-Hispanic
     # White.
     data = pd.DataFrame().from_records(collapsed)
-    data[f&#34;POCCVAP{yearsuffix}&#34;] = data[f&#34;CVAP{yearsuffix}&#34;] - data[f&#34;NHWCVAP{yearsuffix}&#34;]
+    data[f&#34;POCCVAP{yearsuffix}&#34;] = data[f&#34;CVAP{yearsuffix}&#34;] - data[f&#34;NHWHITECVAP{yearsuffix}&#34;]
 
     return data
 
-def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWVAP&#34;) -&gt; pd.DataFrame:
+def acs5(state, geometry=&#34;tract&#34;, year=2020, columns=[], white=&#34;NHWHITEVAP&#34;) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves ACS 5-year population estimates for the provided state, geometry
-    level, and year. Geometries are from the **2010 Census**. Also retrieves
-    ACS-reported CVAP data, which closely matches that reported by the CVAP
-    special tabulation; CVAP data are only returned at the tract level, and are
-    otherwise reported as 0.
+    level, and year. Also retrieves ACS-reported CVAP data, which closely matches
+    that reported by the CVAP special tabulation; CVAP data are only returned at
+    the tract level, and are otherwise reported as 0.
     
     Args:
         state (us.State): `State` object for the desired state.
         geometry (str, optional): Geometry level at which data is retrieved.
             Acceptable values are `&#34;tract&#34;` and `&#34;block group&#34;`. Defaults to
-            `&#34;tract&#34;`, so data is retrieved at the 2010 Census tract level.
-        year (int, optional): Year for which data is retrieved. Defaults to 2019.
+            `&#34;tract&#34;`, so data is retrieved at the 2020 Census tract level.
+        year (int, optional): Year for which data is retrieved. Defaults to 2020.
         columns (list, optional): Columns to retrieve. If `None`, a default set
             of columns including total populations by race and ethnicity and voting-age
             populations by race and ethnicity are returned, along with a GEOID
@@ -158,8 +162,8 @@ def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWV
     # for example, WVAP19 is the group of people who identified White as their *only*
     # race, including people who identified as Hispanic and White.
     vapnames = [
-        &#34;WVAP&#34;, &#34;BVAP&#34;, &#34;AMINVAP&#34;, &#34;ASIANVAP&#34;, &#34;NHPIVAP&#34;, &#34;OTHVAP&#34;, &#34;2MOREVAP&#34;,
-        &#34;NHWVAP&#34;, &#34;HVAP&#34;
+        &#34;WHITEVAP&#34;, &#34;BLACKVAP&#34;, &#34;AMINVAP&#34;, &#34;ASIANVAP&#34;, &#34;NHPIVAP&#34;, &#34;OTHVAP&#34;, &#34;2MOREVAP&#34;,
+        &#34;NHWHITEVAP&#34;, &#34;HVAP&#34;
     ]
     vaptables = list(zip(
         [column + yearsuffix for column in vapnames],
@@ -173,8 +177,8 @@ def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWV
     # Get CVAP columns; the same goes for these columns as does the above, except
     # these columns are 18 years and older *and* citizens.
     cvapnames = [
-        &#34;WCVAP&#34;, &#34;BCVAP&#34;, &#34;AMINCVAP&#34;, &#34;ASIANCVAP&#34;, &#34;NHPICVAP&#34;, &#34;OTHCVAP&#34;,
-        &#34;2MORECVAP&#34;, &#34;NHWCVAP&#34;, &#34;HCVAP&#34;
+        &#34;WHITECVAP&#34;, &#34;BLACKCVAP&#34;, &#34;AMINCVAP&#34;, &#34;ASIANCVAP&#34;, &#34;NHPICVAP&#34;, &#34;OTHCVAP&#34;,
+        &#34;2MORECVAP&#34;, &#34;NHWHITECVAP&#34;, &#34;HCVAP&#34;
     ]
     cvaptables = list(zip(
         [name + yearsuffix for name in cvapnames],
@@ -214,7 +218,7 @@ def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWV
     # Rework columns.
     data = data.reset_index(drop=True)
     data[&#34;GEO_ID&#34;] = data[&#34;GEO_ID&#34;].str.split(&#34;US&#34;).str[1]
-    data = data.rename({&#34;GEO_ID&#34;: geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;}, axis=1)
+    data = data.rename({&#34;GEO_ID&#34;: geometry.replace(&#34; &#34;, &#34;&#34;).upper() + (&#34;10&#34; if year &lt; 2020 else &#34;20&#34;)}, axis=1)
     data = data.rename(popcolumns, axis=1)
 
     # Collapse column groups.
@@ -253,13 +257,13 @@ def _variables(prefix, start, stop, suffix=&#34;E&#34;) -&gt; list:
         for t in range(start, stop+1)
     ]
 
-def _raw(geometry, yearsuffix) -&gt; pd.DataFrame:
+def _raw(geometry, year) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Reads raw CVAP data from the local repository.
 
     Args:
         geometry (str): Level of geometry for which we&#39;re getting 2019 CVAP data.
-        yearsuffix(str): Last 2 digits of year for which data is retrieved.
+        year (int): Year for which data is retrieved.
     Returns:
         A DataFrame, where each block of 13 rows corresponds to an individual
         geometric unit (2010 Census Block Group, 2010 Census Tract) and each row
@@ -269,7 +273,11 @@ def _raw(geometry, yearsuffix) -&gt; pd.DataFrame:
     # Get the filepath local to the repository, load in the raw data, and return
     # it to the caller.
     local = Path(__file__).parent.absolute()
-    return pd.read_csv(local/f&#34;local/{geometry}10-{yearsuffix}.zip&#34;, encoding=&#34;ISO-8859-1&#34;)</code></pre>
+
+    decade = &#34;10&#34; if year &lt; 2020 else &#34;20&#34;
+    yearsuffix = str(year)[2:]
+
+    return pd.read_csv(local/f&#34;local/{geometry}{decade}-{yearsuffix}.zip&#34;, encoding=&#34;ISO-8859-1&#34;)</code></pre>
 </details>
 </section>
 <section>
@@ -280,14 +288,13 @@ def _raw(geometry, yearsuffix) -&gt; pd.DataFrame:
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="evaltools.data.acs.acs5"><code class="name flex">
-<span>def <span class="ident">acs5</span></span>(<span>state, geometry='tract', year=2019, columns=[], white='NHWVAP') ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">acs5</span></span>(<span>state, geometry='tract', year=2020, columns=[], white='NHWHITEVAP') ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Retrieves ACS 5-year population estimates for the provided state, geometry
-level, and year. Geometries are from the <strong>2010 Census</strong>. Also retrieves
-ACS-reported CVAP data, which closely matches that reported by the CVAP
-special tabulation; CVAP data are only returned at the tract level, and are
-otherwise reported as 0.</p>
+level, and year. Also retrieves ACS-reported CVAP data, which closely matches
+that reported by the CVAP special tabulation; CVAP data are only returned at
+the tract level, and are otherwise reported as 0.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>state</code></strong> :&ensp;<code>us.State</code></dt>
@@ -295,9 +302,9 @@ otherwise reported as 0.</p>
 <dt><strong><code>geometry</code></strong> :&ensp;<code>str</code>, optional</dt>
 <dd>Geometry level at which data is retrieved.
 Acceptable values are <code>"tract"</code> and <code>"block group"</code>. Defaults to
-<code>"tract"</code>, so data is retrieved at the 2010 Census tract level.</dd>
+<code>"tract"</code>, so data is retrieved at the 2020 Census tract level.</dd>
 <dt><strong><code>year</code></strong> :&ensp;<code>int</code>, optional</dt>
-<dd>Year for which data is retrieved. Defaults to 2019.</dd>
+<dd>Year for which data is retrieved. Defaults to 2020.</dd>
 <dt><strong><code>columns</code></strong> :&ensp;<code>list</code>, optional</dt>
 <dd>Columns to retrieve. If <code>None</code>, a default set
 of columns including total populations by race and ethnicity and voting-age
@@ -313,20 +320,19 @@ POC populations.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def acs5(state, geometry=&#34;tract&#34;, year=2019, columns=[], white=&#34;NHWVAP&#34;) -&gt; pd.DataFrame:
+<pre><code class="python">def acs5(state, geometry=&#34;tract&#34;, year=2020, columns=[], white=&#34;NHWHITEVAP&#34;) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves ACS 5-year population estimates for the provided state, geometry
-    level, and year. Geometries are from the **2010 Census**. Also retrieves
-    ACS-reported CVAP data, which closely matches that reported by the CVAP
-    special tabulation; CVAP data are only returned at the tract level, and are
-    otherwise reported as 0.
+    level, and year. Also retrieves ACS-reported CVAP data, which closely matches
+    that reported by the CVAP special tabulation; CVAP data are only returned at
+    the tract level, and are otherwise reported as 0.
     
     Args:
         state (us.State): `State` object for the desired state.
         geometry (str, optional): Geometry level at which data is retrieved.
             Acceptable values are `&#34;tract&#34;` and `&#34;block group&#34;`. Defaults to
-            `&#34;tract&#34;`, so data is retrieved at the 2010 Census tract level.
-        year (int, optional): Year for which data is retrieved. Defaults to 2019.
+            `&#34;tract&#34;`, so data is retrieved at the 2020 Census tract level.
+        year (int, optional): Year for which data is retrieved. Defaults to 2020.
         columns (list, optional): Columns to retrieve. If `None`, a default set
             of columns including total populations by race and ethnicity and voting-age
             populations by race and ethnicity are returned, along with a GEOID
@@ -358,8 +364,8 @@ POC populations.</dd>
     # for example, WVAP19 is the group of people who identified White as their *only*
     # race, including people who identified as Hispanic and White.
     vapnames = [
-        &#34;WVAP&#34;, &#34;BVAP&#34;, &#34;AMINVAP&#34;, &#34;ASIANVAP&#34;, &#34;NHPIVAP&#34;, &#34;OTHVAP&#34;, &#34;2MOREVAP&#34;,
-        &#34;NHWVAP&#34;, &#34;HVAP&#34;
+        &#34;WHITEVAP&#34;, &#34;BLACKVAP&#34;, &#34;AMINVAP&#34;, &#34;ASIANVAP&#34;, &#34;NHPIVAP&#34;, &#34;OTHVAP&#34;, &#34;2MOREVAP&#34;,
+        &#34;NHWHITEVAP&#34;, &#34;HVAP&#34;
     ]
     vaptables = list(zip(
         [column + yearsuffix for column in vapnames],
@@ -373,8 +379,8 @@ POC populations.</dd>
     # Get CVAP columns; the same goes for these columns as does the above, except
     # these columns are 18 years and older *and* citizens.
     cvapnames = [
-        &#34;WCVAP&#34;, &#34;BCVAP&#34;, &#34;AMINCVAP&#34;, &#34;ASIANCVAP&#34;, &#34;NHPICVAP&#34;, &#34;OTHCVAP&#34;,
-        &#34;2MORECVAP&#34;, &#34;NHWCVAP&#34;, &#34;HCVAP&#34;
+        &#34;WHITECVAP&#34;, &#34;BLACKCVAP&#34;, &#34;AMINCVAP&#34;, &#34;ASIANCVAP&#34;, &#34;NHPICVAP&#34;, &#34;OTHCVAP&#34;,
+        &#34;2MORECVAP&#34;, &#34;NHWHITECVAP&#34;, &#34;HCVAP&#34;
     ]
     cvaptables = list(zip(
         [name + yearsuffix for name in cvapnames],
@@ -414,7 +420,7 @@ POC populations.</dd>
     # Rework columns.
     data = data.reset_index(drop=True)
     data[&#34;GEO_ID&#34;] = data[&#34;GEO_ID&#34;].str.split(&#34;US&#34;).str[1]
-    data = data.rename({&#34;GEO_ID&#34;: geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;}, axis=1)
+    data = data.rename({&#34;GEO_ID&#34;: geometry.replace(&#34; &#34;, &#34;&#34;).upper() + (&#34;10&#34; if year &lt; 2020 else &#34;20&#34;)}, axis=1)
     data = data.rename(popcolumns, axis=1)
 
     # Collapse column groups.
@@ -428,12 +434,12 @@ POC populations.</dd>
 </details>
 </dd>
 <dt id="evaltools.data.acs.cvap"><code class="name flex">
-<span>def <span class="ident">cvap</span></span>(<span>state, geometry='tract', year=2019) ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">cvap</span></span>(<span>state, geometry='tract', year=2020) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Retrieves and CSV-formats 5-year CVAP data for the provided state at
 the specified geometry level. Geometries from the <strong>2010 Census</strong>. Variables
-and descriptions are <a href="https://tinyurl.com/3mnrm56s&gt;">listed here</a>.</p>
+and descriptions are <a href="https://tinyurl.com/3mnrm56s">listed here</a>.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>state</code></strong> :&ensp;<code>us.State</code></dt>
@@ -453,11 +459,11 @@ the ACS CVAP Special Tab for the specified year.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def cvap(state, geometry=&#34;tract&#34;, year=2019) -&gt; pd.DataFrame:
+<pre><code class="python">def cvap(state, geometry=&#34;tract&#34;, year=2020) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves and CSV-formats 5-year CVAP data for the provided state at
     the specified geometry level. Geometries from the **2010 Census**. Variables
-    and descriptions are [listed here](https://tinyurl.com/3mnrm56s&gt;).
+    and descriptions are [listed here](https://tinyurl.com/3mnrm56s).
 
     Args:
         state (us.State): The `State` object for which we&#39;re retrieving 2019 ACS
@@ -475,15 +481,15 @@ the ACS CVAP Special Tab for the specified year.</p></div>
     descriptions = {
         1: &#34;CVAP&#34;,
         2: &#34;NHCVAP&#34;,
-        3: &#34;NHAICVAP&#34;,
-        4: &#34;NHACVAP&#34;,
-        5: &#34;NHBCVAP&#34;,
+        3: &#34;NHAMINCVAP&#34;,
+        4: &#34;NHASIANCVAP&#34;,
+        5: &#34;NHBLACKCVAP&#34;,
         6: &#34;NHNHPICVAP&#34;,
-        7: &#34;NHWCVAP&#34;,
-        8: &#34;NHAIWCVAP&#34;,
-        9: &#34;NHAWCVAP&#34;,
-        10: &#34;NHBWCVAP&#34;,
-        11: &#34;NHAIBCVAP&#34;,
+        7: &#34;NHWHITECVAP&#34;,
+        8: &#34;NHWHITEAMINCVAP&#34;,
+        9: &#34;NHWHITEASIANCVAP&#34;,
+        10: &#34;NHWHITEBLACKCVAP&#34;,
+        11: &#34;NHBLACKAMINCVAP&#34;,
         12: &#34;NHOTHCVAP&#34;,
         13: &#34;HCVAP&#34; 
     }
@@ -494,9 +500,10 @@ the ACS CVAP Special Tab for the specified year.</p></div>
         print(f&#34;Requested geometry \&#34;{geometry}\&#34; is not allowed; loading tracts.&#34;)
         geometry = &#34;tract&#34;
 
-    yearsuffix = str(year)[-2:]
+    abbrv = geometry if geometry == &#34;tract&#34; else &#34;bg&#34;
+
     # Load the raw data.
-    raw = _raw(geometry, yearsuffix)
+    raw = _raw(abbrv, year)
 
     # Create a STATE column for filtering and remove all rows which don&#39;t match
     # the state FIPS code.
@@ -513,6 +520,10 @@ the ACS CVAP Special Tab for the specified year.</p></div>
     instate_records = instate.to_dict(orient=&#34;records&#34;)
     collapsed = []
 
+    # Get year stuff.
+    decade = &#34;10&#34; if year &lt; 2020 else &#34;20&#34;
+    yearsuffix = str(year)[2:]
+
     # Next, we collapse these records to a single record.
     for i in range(0, len(instate_records), 13):
         # Create an empty records.
@@ -522,7 +533,7 @@ the ACS CVAP Special Tab for the specified year.</p></div>
         # record.
         block = instate_records[i:i+13]
         for line in block:
-            record[geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;] = line[&#34;GEOID&#34;]
+            record[geometry.replace(&#34; &#34;, &#34;&#34;).upper() + decade] = line[&#34;GEOID&#34;]
             record[descriptions[line[&#34;lnnumber&#34;]] + yearsuffix] = line[&#34;cvap_est&#34;]
             record[descriptions[line[&#34;lnnumber&#34;]] + f&#34;{yearsuffix}e&#34;] = line[&#34;cvap_moe&#34;]
 
@@ -531,7 +542,7 @@ the ACS CVAP Special Tab for the specified year.</p></div>
     # Create a dataframe and a POCCVAP column; all people minus non-Hispanic
     # White.
     data = pd.DataFrame().from_records(collapsed)
-    data[f&#34;POCCVAP{yearsuffix}&#34;] = data[f&#34;CVAP{yearsuffix}&#34;] - data[f&#34;NHWCVAP{yearsuffix}&#34;]
+    data[f&#34;POCCVAP{yearsuffix}&#34;] = data[f&#34;CVAP{yearsuffix}&#34;] - data[f&#34;NHWHITECVAP{yearsuffix}&#34;]
 
     return data</code></pre>
 </details>
