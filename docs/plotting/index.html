@@ -122,14 +122,16 @@ values are <code>"horizontal"</code> and <code>"vertical"</code>. Defaults to <c
 <dt><strong><code>padding</code></strong> :&ensp;<code>float</code>, optional</dt>
 <dd>Spacing between the arrow and its axis. Defaults
 to <code>0.1</code>.</dd>
-</dl></div>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>matplotlib <code>Axes</code>.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def arrow(
     ax, text, orientation=&#34;horizontal&#34;, color=defaultGray, padding=0.1
-    ) -&gt; Axes:
+) -&gt; Axes:
     &#34;&#34;&#34;
     For some partisan metrics, we want to draw an arrow showing where the POV-party&#39;s
     advantage is. Depending on the orientation of the scores (histograms have
@@ -145,33 +147,31 @@ to <code>0.1</code>.</dd>
         color (str, optional): Color of the arrow.
         padding (float, optional): Spacing between the arrow and its axis. Defaults
             to `0.1`.
+
+    Returns:
+        matplotlib `Axes`.
     &#34;&#34;&#34;
 
     if orientation == &#34;horizontal&#34;:
         x = ax.get_xlim()[0]
-        y = ax.get_ylim()[0] - padding*ax.get_ylim()[1]
+        y = ax.get_ylim()[0] - padding * ax.get_ylim()[1]
         horizontal_align = &#34;left&#34;
         rotation = 0
     elif orientation == &#34;vertical&#34;:
-        x = ax.get_xlim()[0] -  padding*(sum(map(lambda x: abs(x), ax.get_xlim())))
-        y = sum(ax.get_ylim())/2
+        x = ax.get_xlim()[0] - padding * (sum(map(lambda x: abs(x), ax.get_xlim())))
+        y = sum(ax.get_ylim()) / 2
         horizontal_align = &#34;center&#34;
         rotation = 90
-    
-    ax.text(x, y,
-            text,
-            ha=horizontal_align,
-            va=&#34;center&#34;,
-            color=&#34;white&#34;,
-            rotation=rotation,
-            size=10,
-            bbox=dict(
-                boxstyle=&#34;rarrow,pad=0.3&#34;,
-                fc=color,
-                alpha=1,
-                ec=&#34;black&#34;,
-                )
-            )
+
+    ax.text(
+        x, y, text, ha=horizontal_align, va=&#34;center&#34;, color=&#34;white&#34;, rotation=rotation,
+        size=10, bbox=dict(
+            boxstyle=&#34;rarrow,pad=0.3&#34;, fc=color,
+            alpha=1,
+            ec=&#34;black&#34;,
+        )
+    )
+
     return ax</code></pre>
 </details>
 </dd>
@@ -203,7 +203,7 @@ labels for the bins that are ticked, and the bin width.</p></div>
     Get necessary information for histograms. If we&#39;re working with only a few
     discrete, floating point values, then set the bin width to be relatively thin.
     Otherwise, adaptively set the bin width to the scale of our data.
-    
+
     Args:
         scores (list): The collection of all observations.
         width (int, optional): The width of the bins.
@@ -235,9 +235,9 @@ labels for the bins that are ticked, and the bin width.</p></div>
             tick_labels.append(x)
             tick_bins.append(x + width / 2)
     for i, label in enumerate(tick_labels):
-        if type(label) == np.float64:
+        if isinstance(label, np.float64):
             tick_labels[i] = round(label, 2)
-    
+
     return hist_bins, tick_bins, tick_labels, width</code></pre>
 </details>
 </dd>
@@ -288,9 +288,9 @@ adjust its detail points by a value drawn from <span><span class="MathJax_Previe
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def boxplot(
-        ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1,99), rotation=0,
-        ticksize=12, jitter=1/3
-    ) -&gt; Axes:
+    ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1, 99),
+    rotation=0, ticksize=12, jitter=1 / 3
+) -&gt; Axes:
     r&#34;&#34;&#34;
     Plot boxplots, which takes `scores` — a dictionary where each value
     (corresponding to an ensemble, citizens&#39; ensemble, or proposed plans),
@@ -361,7 +361,7 @@ adjust its detail points by a value drawn from <span><span class="MathJax_Previe
                 ax.scatter(
                     boxplot + 1 + jitter_val,
                     score,
-                    color=districtr(plan+1).pop(),
+                    color=districtr(plan + 1).pop(),
                     edgecolor=&#39;black&#39;,
                     s=100,
                     alpha=0.9,
@@ -373,7 +373,7 @@ adjust its detail points by a value drawn from <span><span class="MathJax_Previe
     if labels:
         ax.set_xlabel(labels[0], fontsize=24)
         ax.set_ylabel(labels[1], fontsize=24)
-    
+
     return ax</code></pre>
 </details>
 </dd>
@@ -390,14 +390,14 @@ shares or totals will be drawn at this level (i.e. statistics are
 reported at this base geometric level).</dd>
 <dt><strong><code>districts</code></strong> :&ensp;<code>GeoDataFrame</code>, optional</dt>
 <dd>Geometries for the districting plan.
-Assumes one geometry per district. </dd>
+Assumes one geometry per district.</dd>
 <dt><strong><code>assignment</code></strong> :&ensp;<code>str</code>, optional</dt>
 <dd>Required argument when <code>districts</code> are
-provided. Column of <code>districts</code> which defines the districing plan. </dd>
+provided. Column of <code>districts</code> which defines the districing plan.</dd>
 <dt><strong><code>demographic</code></strong> :&ensp;<code>str</code>, optional</dt>
 <dd>The string representing the demographic to
 be shown on the map. The string should specify a column in <code>geometries</code>.
-<em>This column must contain values in <span><span class="MathJax_Preview">[0,1]</span><script type="math/tex">[0,1]</script></span>.</em></dd>
+<em>This column must contain values in \([0,1]\).</em></dd>
 <dt><strong><code>overlays</code></strong> :&ensp;<code>list</code>, optional</dt>
 <dd>A list of GeoDataFrames desired to be overlaid on
 the map. Some options would include overlaying district assignments,
@@ -434,24 +434,24 @@ overlays.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def choropleth(
-        geometries, districts=None, assignment=None, demographic=&#34;BVAP&#34;,
-        overlays=[], cmap=&#34;Purples&#34;, cbartitle=None, numbers=True, lw=1/8,
-        fontsize=15, min=0, max=1, interval=1/10, colorbar=True
-    ) -&gt; Axes:
-    &#34;&#34;&#34;
+    geometries, districts=None, assignment=None, demographic=&#34;BVAP&#34;,
+    overlays=[], cmap=&#34;Purples&#34;, cbartitle=None, numbers=True, lw=1 / 8,
+    fontsize=15, min=0, max=1, interval=1 / 10, colorbar=True
+) -&gt; Axes:
+    r&#34;&#34;&#34;
     Visualization of population shares or totals in a state&#39;s map.
-    
+
     Args:
         geometries (GeoDataFrame): Base geometries for the state. Population
             shares or totals will be drawn at this level (i.e. statistics are
             reported at this base geometric level).
         districts (GeoDataFrame, optional): Geometries for the districting plan.
-            Assumes one geometry per district. 
+            Assumes one geometry per district.
         assignment (str, optional): Required argument when `districts` are
-            provided. Column of `districts` which defines the districing plan. 
+            provided. Column of `districts` which defines the districing plan.
         demographic (str, optional): The string representing the demographic to
             be shown on the map. The string should specify a column in `geometries`.
-            *This column must contain values in \([0,1]\).*
+            *This column must contain values in \\([0,1]\\).*
         overlays (list, optional): A list of GeoDataFrames desired to be overlaid on
             the map. Some options would include overlaying district assignments,
             blocks, VTDs, or counties. The first set of geometries in the list
@@ -477,33 +477,36 @@ overlays.</p></div>
         overlays.
     &#34;&#34;&#34;
     # Get the figure and base axis sizes.
-    fig, base = plt.subplots(1, 1, figsize=(10,10))
-    
+    fig, base = plt.subplots(1, 1, figsize=(10, 10))
+
     # Get the title for the colorbar.
-    if cbartitle is None: cbartitle = demographic
-    
+    if cbartitle is None:
+        cbartitle = demographic
+
     # Set minimum and maximum values.
-    boundaries = np.arange(min, max+interval, interval)
-    ticks = np.arange(min, max+interval, interval/2)[:-1]
+    boundaries = np.arange(min, max + interval, interval)
+    ticks = np.arange(min, max + interval, interval / 2)[:-1]
     labels = [
-        f&#34;{int(ticks[i-1]*100)} — {int(ticks[i+1]*100)}%&#34; if i%2 else &#34;&#34;
+        f&#34;{int(ticks[i-1]*100)} — {int(ticks[i+1]*100)}%&#34; if i % 2 else &#34;&#34;
         for i in range(len(ticks))
     ]
-    
+
     # Set the color map, based on user preference or default (purples). If we
     # can&#39;t find the correct colormap, then create our own.
-    if type(cmap) == str: colorbarmap = plt.cm.get_cmap(cmap, len(boundaries))
-    else: colorbarmap = cmap
+    if isinstance(cmap, str):
+        colorbarmap = plt.cm.get_cmap(cmap, len(boundaries))
+    else:
+        colorbarmap = cmap
 
     norm = mpl.colors.BoundaryNorm(boundaries, colorbarmap.N)
-        
+
     # Plot geometries!
     geometries.plot(
-        column=demographic, 
+        column=demographic,
         cmap=cmap,
-        edgecolor=&#34;lightgray&#34;, 
+        edgecolor=&#34;lightgray&#34;,
         linewidth=lw,
-        vmin=min, 
+        vmin=min,
         vmax=max,
         ax=base
     )
@@ -518,23 +521,24 @@ overlays.</p></div>
         cbar.ax.set_ylabel(cbartitle)
         cbar.ax.yaxis.set_label_position(&#34;left&#34;)
         cbar.ax.tick_params(size=0)
-    
+
     # Plot each of the overlays, adjusting CRSes and applying colors as we go.
     for idx, geom in enumerate(overlays):
         geom = geom.to_crs(geometries.crs)
-        geom.boundary.plot(edgecolor=overlaycolors[-(idx+1)], linewidth = 1/4, ax =base)
-    
+        geom.boundary.plot(edgecolor=overlaycolors[-(idx + 1)], linewidth=1 / 4, ax=base)
+
     # If district geometries are provided, plot them as well.
     if districts is not None:
-        districts.plot( 
+        districts.plot(
             edgecolor=&#34;black&#34;,
-            linewidth=3/2, 
+            linewidth=3 / 2,
             ax=base,
             color=&#34;None&#34;
         )
 
     # If district numbers are to be plotted, plot those too!
-    if numbers: base = districtnumbers(base, districts, assignment=assignment, fontsize=fontsize)
+    if numbers:
+        base = districtnumbers(base, districts, assignment=assignment, fontsize=fontsize)
 
     # Turn plot vertical/horizontal axes off and return base Axes.
     base.set_axis_off()
@@ -578,9 +582,9 @@ markers. Defaults to circles with 0.2pt padding.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def districtnumbers(
-        base, districts, assignment=&#34;DISTRICTN&#34;, boxstyle=&#34;circle,pad=0.2&#34;,
-        fc=&#34;wheat&#34;, ec=&#34;black&#34;, lw=1/6, fontsize=15
-    ) -&gt; Axes:
+    base, districts, assignment=&#34;DISTRICTN&#34;, boxstyle=&#34;circle,pad=0.2&#34;,
+    fc=&#34;wheat&#34;, ec=&#34;black&#34;, lw=1 / 6, fontsize=15
+) -&gt; Axes:
     &#34;&#34;&#34;
     Plots district numbers on top of overlaid district geometries.
 
@@ -606,7 +610,7 @@ markers. Defaults to circles with 0.2pt padding.</dd>
     for district, identifier in zip(districts[&#34;geometry&#34;], districts[assignment]):
         x, y = list(district.representative_point().coords)[0]
         base.annotate(
-            identifier, (x,y), xytext=(x,y), xycoords=&#34;data&#34;, fontsize=fontsize, 
+            identifier, (x, y), xytext=(x, y), xycoords=&#34;data&#34;, fontsize=fontsize,
             ha=&#34;center&#34;, va=&#34;center&#34;,
             bbox=dict(
                 boxstyle=boxstyle, fc=fc, ec=ec, alpha=1, linewidth=lw
@@ -635,8 +639,8 @@ markers. Defaults to circles with 0.2pt padding.</dd>
         &#34;#D81B60&#34;, &#34;#26A69A&#34;, &#34;#FFEA00&#34;, &#34;#6200EA&#34;
     ]
 
-    repeats = math.ceil(N/len(colors))
-    tail = [hexshift(c) for c in colors*(repeats-1)]
+    repeats = math.ceil(N / len(colors))
+    tail = [hexshift(c) for c in colors * (repeats - 1)]
     return (colors + (tail if tail else []))[:N]</code></pre>
 </details>
 </dd>
@@ -678,9 +682,9 @@ component.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def drawgraph(
-        G, ax=None, x=&#34;INTPTLON20&#34;, y=&#34;INTPTLAT20&#34;, components=False, node_size=1,
-        **kwargs
-    ) -&gt; Union[Axes, List[Tuple[Figure,Axes]]]:
+    G, ax=None, x=&#34;INTPTLON20&#34;, y=&#34;INTPTLAT20&#34;, components=False, node_size=1,
+    **kwargs
+) -&gt; Union[Axes, List[Tuple[Figure, Axes]]]:
     &#34;&#34;&#34;
     Draws a gerrychain Graph object. Returns a single Axes object (for dual
     graphs drawn whole) and lists of `(Figure, Axes)` pairs for graphs drawn
@@ -713,14 +717,16 @@ component.</p></div>
 
     # If `components` is true, plot the graph component-wise. Otherwise plot
     # normally. First, set some properties common to both graphs.
-    properties = {&#34;pos&#34;: positions, &#34;node_size&#34;: node_size }
+    properties = {&#34;pos&#34;: positions, &#34;node_size&#34;: node_size}
 
     # Initialize `pairs` to None.
     pairs = None
 
     if not components:
-        if not ax: axes = plt.axes()
-        else: axes = ax
+        if not ax:
+            axes = plt.axes()
+        else:
+            axes = ax
         nx.draw(G, ax=axes, **properties, **kwargs)
     else:
         # Create lists for figures and axes.
@@ -730,7 +736,8 @@ component.</p></div>
         for component in connected_components:
             # Create a new Figure object for each component.
             fig = plt.figure()
-            if not ax: ax = plt.axes()
+            if not ax:
+                ax = plt.axes()
 
             # Plot the graph.
             subgraph = G.subgraph(component)
@@ -775,9 +782,9 @@ districts.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def drawplan(
-        districts, assignment, overlays=[], colors=None, numbers=False, lw=1/2,
-        fontsize=15, edgecolor=&#34;black&#34;
-    ) -&gt; Axes:
+    districts, assignment, overlays=[], colors=None, numbers=False, lw=1 / 2,
+    fontsize=15, edgecolor=&#34;black&#34;
+) -&gt; Axes:
     &#34;&#34;&#34;
     Visualizes the districting plan defined by `assignment`.
 
@@ -793,7 +800,7 @@ districts.</dd>
         lw (float, optional): Line thickness if there are more than 20 districts.
         fontsize (float, optional): District-number font size; passed to
             `districtnumbers`.
-    
+
     Returns:
         A `matplotlib` `Axes` object for the geometries attached to `districts`.
     &#34;&#34;&#34;
@@ -819,10 +826,11 @@ districts.</dd>
     if overlays:
         for overlay in overlays:
             overlay = overlay.to_crs(districts.crs)
-            overlay.plot(color=&#34;None&#34;, edgecolor=edgecolor, linewidth=1/8, ax=base)
-    
+            overlay.plot(color=&#34;None&#34;, edgecolor=edgecolor, linewidth=1 / 8, ax=base)
+
     # If the `numbers` flag is passed, plot the numbers for each district.
-    if numbers: base = districtnumbers(base, districts, assignment=assignment, fontsize=fontsize)
+    if numbers:
+        base = districtnumbers(base, districts, assignment=assignment, fontsize=fontsize)
 
     # Turn plot axes off.
     plt.axis(&#34;off&#34;)
@@ -881,22 +889,17 @@ number of frames/ensembles, where each element is a list of all values in the en
 <dt><strong><code>folder</code></strong> :&ensp;<code>str</code></dt>
 <dd>Folder containing all the frames/gifs.</dd>
 <dt><strong><code>figsize</code></strong> :&ensp;<code>tuple</code>, optional</dt>
-<dd>Figure size</dd>
+<dd>Figure size.</dd>
 </dl>
 <p>Returns: None.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def gif_multidimensional(data, 
-                         proposed_info={}, 
-                         labels=[&#34;X values&#34;, &#34;Y values&#34;, &#34;Histogram values&#34;],
-                         filename=&#34;testfile&#34;, 
-                         folder=&#34;test&#34;, 
-                         limits=None,
-                         DPI=150,
-                         figsize=(12,8),
-                         ):
+<pre><code class="python">def gif_multidimensional(
+    data, proposed_info={}, labels=[&#34;X values&#34;, &#34;Y values&#34;, &#34;Histogram values&#34;],
+    filename=&#34;testfile&#34;, folder=&#34;test&#34;, limits=None, DPI=150, figsize=(12, 8),
+):
     r&#34;&#34;&#34;
     Plot many multidimensional figures in their own `{folder}/{filename}/` directory. Each
     file will represent one ensemble of plans, and this will be stitched together to create
@@ -905,52 +908,53 @@ number of frames/ensembles, where each element is a list of all values in the en
     Args:
         data (dict): Dictionary with keys of `xs`, `ys`, `hists`, each one a list of length
             number of frames/ensembles, where each element is a list of all values in the ensemble.
-        proposed_info (dict, optional): Dictionary with keys of `colors`, `names`, 
-            `x`, `y`, `hist`; the \(i\)th color in `color` corresponds to the 
-            \(i\)th name in `names`, which corresponds to the \(i\)th value in 
+        proposed_info (dict, optional): Dictionary with keys of `colors`, `names`,
+            `x`, `y`, `hist`; the \(i\)th color in `color` corresponds to the
+            \(i\)th name in `names`, which corresponds to the \(i\)th value in
             `x`, `y`, and `hist`.
         filename (str): Name for the final gif, and for the folder the gif&#39;s frames are stored in
         folder (str): Folder containing all the frames/gifs.
-        figsize (tuple, optional): Figure size
+        figsize (tuple, optional): Figure size.
 
     Returns: None.
     &#34;&#34;&#34;
+    # Get the x- and y-values.
     xs = data[&#39;xs&#39;]
     ys = data[&#39;ys&#39;]
+
+    # TODO: Check what&#39;s actually happening here.
     hists = data[&#39;hists&#39;]
     assert len(xs) == len(ys) == len(hists)
+
     lower_bound = 1
     upper_bound = 1
     x_limits = (lower_bound * min_of_min(xs), upper_bound * max_of_max(xs))
     y_limits = (lower_bound * min_of_min(ys), upper_bound * max_of_max(ys))
     hist_limits = (int(lower_bound * min_of_min(hists)), int(upper_bound * max_of_max(hists)))
     limits = [x_limits, y_limits, hist_limits] if not limits else limits
-    
+
     save = {
-        &#34;folder&#34;:folder,
-        &#34;filename&#34;:filename,
-        &#34;DPI&#34;:DPI,
+        &#34;folder&#34;: folder,
+        &#34;filename&#34;: filename,
+        &#34;DPI&#34;: DPI,
     }
+
     print(&#34;Generating PNGs...&#34;)
+
     for i in tqdm(range(len(xs))):
         save[&#34;frame&#34;] = i
-        multidimensional(xs[i],
-                         ys[i],
-                         hists[i],
-                         labels=labels,
-                         limits=limits,
-                         proposed_info=proposed_info,
-                         figsize=figsize,
-                         save=save,
-                        )
+        multidimensional(
+            xs[i], ys[i], hists[i], labels=labels, limits=limits,
+            proposed_info=proposed_info, figsize=figsize, save=save,
+        )
+
     print(&#34;Generating gif...&#34;)
     images = []
     path = f&#34;{save[&#39;folder&#39;]}/{save[&#39;filename&#39;]}/{save[&#39;filename&#39;]}_&#34;
     output = f&#34;{save[&#39;folder&#39;]}/{save[&#39;filename&#39;]}.gif&#34;
     for i in tqdm(range(len(xs))):
         images.append(imageio.imread(f&#34;{path}{i}.png&#34;))
-    imageio.mimsave(output, images)
-    return</code></pre>
+    imageio.mimsave(output, images)</code></pre>
 </details>
 </dd>
 <dt id="evaltools.plotting.histogram"><code class="name flex">
@@ -992,15 +996,10 @@ same value</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def histogram(ax, 
-              scores, 
-              label=None, 
-              limits=tuple(), 
-              proposed_info={}, 
-              ticksize=12, 
-              fontsize=24,
-              jitter=False,
-              bin_width=None) -&gt; Axes:
+<pre><code class="python">def histogram(
+    ax, scores, label=None, limits=tuple(), proposed_info={}, ticksize=12,
+    fontsize=24, jitter=False, bin_width=None
+) -&gt; Axes:
     r&#34;&#34;&#34;
     Plot a histogram with the ensemble scores in bins and the proposed plans&#39;
     scores as vertical lines. If there are many unique values, use a white border
@@ -1013,7 +1012,7 @@ same value</dd>
         scores (dict): Dictionary with keys of `ensemble`, `citizen`, `proposed`
             which map to lists of numerical scores.
         label (str, optional): String for x-axis label.
-        limits (tuple, optional): X-axis limits (specify to force histogram to extend to 
+        limits (tuple, optional): X-axis limits (specify to force histogram to extend to
             these limits).
         proposed_info (dict, optional): Dictionary with keys of `colors`, `names`;
             the \(i\)th color in `color` corresponds to the \(i\)th name in `names`.
@@ -1022,7 +1021,7 @@ same value</dd>
         jitter: (Boolean, optional): If True, horizontally jitter proposed plans if they share the
             same value
         bin_width: (float, optional): Manually set histogram bin width, if preferred.
-        
+
     Returns:
         Axes object on which the histogram is plotted.
     &#34;&#34;&#34;
@@ -1042,7 +1041,7 @@ same value</dd>
     # if we have few scores, we want to adjust the look of the bins to make the
     # plots more readable. Also adjust the opacity of the ensembles if we include
     # a citizen ensemble.
-    rwidth    = 0.8     if len(set(scores)) &lt; 20 else 1
+    rwidth = 0.8 if len(set(scores)) &lt; 20 else 1
     edgecolor = &#34;black&#34; if len(set(scores)) &lt; 20 else &#34;white&#34;
     alpha = 0.7 if scores[&#34;ensemble&#34;] and scores[&#34;citizen&#34;] else 1
 
@@ -1057,21 +1056,22 @@ same value</dd>
                 alpha=alpha,
                 density=True,
             )
+
     if scores[&#34;proposed&#34;]:
         for i, s in enumerate(scores[&#34;proposed&#34;]):
             if jitter and scores[&#34;proposed&#34;].count(s) &gt; 1:
-                jitter_val = random.uniform(-bin_width/4, bin_width/4)
+                jitter_val = random.uniform(-bin_width / 4, bin_width / 4)
             else:
                 jitter_val = 0
 
             # Plot vertical line.
             ax.axvline(
                 s + bin_width / 2 + jitter_val,
-                color=districtr(i+1).pop(),
+                color=districtr(i + 1).pop(),
                 lw=2,
                 label=f&#34;{proposed_info[&#39;names&#39;][i]}: {round(s,2)}&#34;,
             )
-        
+
         ax.legend()
     if label:
         ax.set_xlabel(label, fontsize=fontsize)
@@ -1132,7 +1132,7 @@ values are <code>"horizontal"</code> or <code>"vertical"</code>.</dd>
         raise TypeError(&#34;`placement` is not of correct type.&#34;)
 
     # If `placement` is a tuple, we draw a band.
-    if type(placement) is tuple:
+    if isinstance(placement, tuple):
         if orientation == &#34;horizontal&#34;:
             xlims = orig_xlims
             ylims1 = [placement[0], placement[0]]
@@ -1141,15 +1141,17 @@ values are <code>"horizontal"</code> or <code>"vertical"</code>.</dd>
             xlims = placement
             ylims1 = [orig_ylims[0], orig_ylims[0]]
             ylims2 = [orig_ylims[1], orig_ylims[1]]
-        
+
         ax.fill_between(xlims, ylims1, ylims2, color=color, alpha=alpha, label=label)
     # Otherwise, draw a line.
     else:
         alpha = alpha if alpha else 0.5
         idealprops = dict(color=color, alpha=alpha, label=label)
 
-        if orientation == &#34;horizontal&#34;: ax.axhline(placement+0.5, **idealprops)
-        else: ax.axvline(placement+0.5, **idealprops)
+        if orientation == &#34;horizontal&#34;:
+            ax.axhline(placement + 0.5, **idealprops)
+        else:
+            ax.axvline(placement + 0.5, **idealprops)
 
     # Set the original x- and y-axis limits, and plot a legend.
     ax.set_xlim(orig_xlims)
@@ -1160,11 +1162,11 @@ values are <code>"horizontal"</code> or <code>"vertical"</code>.</dd>
 </details>
 </dd>
 <dt id="evaltools.plotting.multidimensional"><code class="name flex">
-<span>def <span class="ident">multidimensional</span></span>(<span>x, y, hist, labels=['X values', 'Y values', 'Histogram values'], bin_width=1, limits=None, proposed_info={}, figsize=(12, 8), save={})</span>
+<span>def <span class="ident">multidimensional</span></span>(<span>x, y, hist, labels=['X values', 'Y values', 'Histogram values'], bin_width=1, limits=None, proposed_info={}, figsize=(12, 8)) ‑> Tuple[matplotlib.axes._axes.Axes, matplotlib.axes._axes.Axes]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Plot a multidimensional figure, comparing two metrics as a scatterplot above
-and one metric as a histogram, below. </p>
+and one metric as a histogram, below.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>ax</code></strong> :&ensp;<code>Axes</code></dt>
@@ -1183,7 +1185,7 @@ and one metric as a histogram, below. </p>
 <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th name in <code>names</code>, which corresponds to the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th value in
 <code>x</code>, <code>y</code>, and <code>hist</code>.</dd>
 <dt><strong><code>figsize</code></strong> :&ensp;<code>tuple</code>, optional</dt>
-<dd>Figure size</dd>
+<dd>Figure size.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>The scatterplot and histogram axes.</p></div>
@@ -1191,19 +1193,13 @@ and one metric as a histogram, below. </p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def multidimensional(x, 
-                     y, 
-                     hist, 
-                     labels=[&#34;X values&#34;, &#34;Y values&#34;, &#34;Histogram values&#34;],
-                     bin_width=1,
-                     limits=None, 
-                     proposed_info={},
-                     figsize=(12,8),
-                     save={},
-                     ):
-    &#34;&#34;&#34;
+<pre><code class="python">def multidimensional(
+    x, y, hist, labels=[&#34;X values&#34;, &#34;Y values&#34;, &#34;Histogram values&#34;], bin_width=1,
+    limits=None, proposed_info={}, figsize=(12, 8)
+) -&gt; Tuple[Axes, Axes]:
+    r&#34;&#34;&#34;
     Plot a multidimensional figure, comparing two metrics as a scatterplot above
-    and one metric as a histogram, below. 
+    and one metric as a histogram, below.
 
     Args:
         ax (Axes): `Axes` object on which the histogram is plotted.
@@ -1211,11 +1207,11 @@ and one metric as a histogram, below. </p>
         y (list): Score on the y-axis of the scatterplot.
         hist (list): Score to be plotted as a histogram below.
         limits (list, optional): x, y, and histogram limits, if wanted.
-        proposed_info (dict, optional): Dictionary with keys of `colors`, `names`, 
-            `x`, `y`, `hist`; the \(i\)th color in `color` corresponds to the 
-            \(i\)th name in `names`, which corresponds to the \(i\)th value in 
+        proposed_info (dict, optional): Dictionary with keys of `colors`, `names`,
+            `x`, `y`, `hist`; the \(i\)th color in `color` corresponds to the
+            \(i\)th name in `names`, which corresponds to the \(i\)th value in
             `x`, `y`, and `hist`.
-        figsize (tuple, optional): Figure size
+        figsize (tuple, optional): Figure size.
 
     Returns:
         The scatterplot and histogram axes.
@@ -1226,42 +1222,30 @@ and one metric as a histogram, below. </p>
     scatter_limits = limits[:2] if limits else set()
     scatter_labels = labels[:2]
     scatter_ax = plt.subplot(gs[0])
-    scatter_ax = scatterplot(scatter_ax, 
-                             x, 
-                             y, 
-                             labels=scatter_labels,
-                             limits=scatter_limits, 
-                             proposed_info=proposed_info,
-                             )
-    
+    scatter_ax = scatterplot(
+        scatter_ax, x, y, labels=scatter_labels, limits=scatter_limits,
+        proposed_info=proposed_info,
+    )
+
     scores = {
         &#34;ensemble&#34;: hist,
         &#34;citizen&#34;: [],
         &#34;proposed&#34;: proposed_info[&#34;hist&#34;] if proposed_info else [],
     }
+
     hist_limits = limits[-1] if limits else set()
-    # print(f&#34;limits is: {limits}, {hist_limits}&#34;)
     hist_label = labels[-1]
     hist_ax = plt.subplot(gs[1])
-    hist_ax = histogram(hist_ax, 
-                        scores, 
-                        label=hist_label,
-                        limits=hist_limits, 
-                        proposed_info=proposed_info, 
-                        bin_width=bin_width,
-                       )
+    hist_ax = histogram(
+        hist_ax, scores, label=hist_label, limits=hist_limits, proposed_info=proposed_info,
+        bin_width=bin_width,
+    )
+
     hist_ax.get_yaxis().set_visible(False)
     hist_ax.spines[&#39;top&#39;].set_visible(False)
     hist_ax.spines[&#39;right&#39;].set_visible(False)
     hist_ax.spines[&#39;left&#39;].set_visible(False)
 
-    if save:
-        folder = save[&#39;folder&#39;]
-        filename = save[&#39;filename&#39;]
-        frame = save[&#39;frame&#39;]
-        os.makedirs(f&#39;{folder}/{filename}&#39;, exist_ok=True)
-        plt.savefig(f&#39;{folder}/{filename}/{filename}_{frame}.png&#39;, dpi=save[&#39;DPI&#39;], bbox_inches=&#39;tight&#39;)
-        plt.close()
     return scatter_ax, hist_ax</code></pre>
 </details>
 </dd>
@@ -1322,17 +1306,17 @@ and one metric as a histogram, below. </p>
     Returns:
         List of RGB tuples.
     &#34;&#34;&#34;
-    midpoint = math.ceil(n/2)
-    
+    midpoint = math.ceil(n / 2)
+
     # To get the appropriately-toned blues and reds, we create a list of colors,
     # then select the first section of each color.
     blues = list(
-        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
+        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n + 2)
     )[:midpoint]
     reds = list(
-        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
+        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n + 2)
     )[-midpoint:]
-    
+
     return list(reversed(reds)) + list(reversed(blues))</code></pre>
 </details>
 </dd>
@@ -1366,14 +1350,7 @@ in <code>names</code>, which corresponds to the <span><span class="MathJax_Previ
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def scatterplot(ax, 
-                x, 
-                y, 
-                labels=None, 
-                limits=set(), 
-                proposed_info={}, 
-                bins=None, 
-                axis_range=None) -&gt; Axes:
+<pre><code class="python">def scatterplot(ax, x, y, labels=None, limits=set(), proposed_info={}, bins=None, axis_range=None) -&gt; Axes:
     r&#34;&#34;&#34;
     Plot a scatterplot comparing two scores, with the proposed plans&#39;
     scores as points.
@@ -1383,26 +1360,27 @@ in <code>names</code>, which corresponds to the <span><span class="MathJax_Previ
         x (list): Score on the x-axis.
         y (list): score on the y-axis.
         labels (list, optional): Strings for x- and y-axis labels.
-        limits (tuple, optional): Axis limits (specify to force plot to extend to 
+        limits (tuple, optional): Axis limits (specify to force plot to extend to
             these limits).
-        proposed_info (dict, optional): Dictionary with keys of `colors`, `names`, 
-            `x`, `y`; the \(i\)th color in `color` corresponds to the \(i\)th name 
+        proposed_info (dict, optional): Dictionary with keys of `colors`, `names`,
+            `x`, `y`; the \(i\)th color in `color` corresponds to the \(i\)th name
             in `names`, which corresponds to the \(i\)th value in `x` and `y`.
 
     Returns:
         Axes object on which the scatterplot is plotted.
     &#34;&#34;&#34;
     if not bins:
-        bins = [np.arange(int(min(x)), int(max(x)) + 1), np.arange(int(min(y)), int(max(y)) + 1)]
-    h, xedges, yedges, image = ax.hist2d(x,
-                                         y,
-                                         bins=bins,
-                                         cmap=&#39;Greys&#39;,
-                                         range=axis_range,
-                                         )
+        bins = [
+            np.arange(int(min(x)), int(max(x)) + 1),
+            np.arange(int(min(y)), int(max(y)) + 1)
+        ]
 
-    ### Shift bins over by 0.5 to center labels in the middle of the bin.
-    ### TODO: This only works for bins of width 1 — need to fix for general bid width.
+    h, xedges, yedges, image = ax.hist2d(
+        x, y, bins=bins, cmap=&#39;Greys&#39;, range=axis_range,
+    )
+
+    # Shift bins over by 0.5 to center labels in the middle of the bin.
+    # TODO: This only works for bins of width 1 — need to fix for general bid width.
     ax.set_xticks([x + 0.5 for x in xedges])
     ax.set_xticklabels(xedges)
     ax.set_yticks([y + 0.5 for y in yedges])
@@ -1413,13 +1391,13 @@ in <code>names</code>, which corresponds to the <span><span class="MathJax_Previ
             x = proposed_info[&#39;x&#39;][i]
             y = proposed_info[&#39;y&#39;][i]
             ax.scatter(
-                    x + 0.5,
-                    y + 0.5,
-                    label=f&#34;{proposed_info[&#39;names&#39;][i]} ({x}, {y})&#34;,
-                    color=proposed_info[&#39;colors&#39;][i],
-                    s=150,
-                    edgecolor=&#39;black&#39;,
-                   )
+                x + 0.5,
+                y + 0.5,
+                label=f&#34;{proposed_info[&#39;names&#39;][i]} ({x}, {y})&#34;,
+                color=proposed_info[&#39;colors&#39;][i],
+                s=150,
+                edgecolor=&#39;black&#39;,
+            )
         ax.legend()
 
     if labels:
@@ -1432,7 +1410,7 @@ in <code>names</code>, which corresponds to the <span><span class="MathJax_Previ
 </details>
 </dd>
 <dt id="evaltools.plotting.sealevel"><code class="name flex">
-<span>def <span class="ident">sealevel</span></span>(<span>ax, scores, num_districts, proposed_info, ticksize=12)</span>
+<span>def <span class="ident">sealevel</span></span>(<span>ax, scores, num_districts, proposed_info, ticksize=12) ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Plot a sea level plot: Each plan is a line across our elections on the
@@ -1443,8 +1421,9 @@ share (proportionality) is plotted as a thick blue line.</p>
 <dt><strong><code>ax</code></strong> :&ensp;<code>Axes</code></dt>
 <dd><code>Axes</code> object on which the sea level plot is plotted.</dd>
 <dt><strong><code>scores</code></strong> :&ensp;<code>dict</code></dt>
-<dd>Dictionary with keys of each plan plus a <code>statewide</code> key for proportionality.
-Each value is another dictionary, with keys for each election, values are the # seats.</dd>
+<dd>Dictionary with keys of each plan plus a <code>statewide</code> key
+for proportionality. Each value is another dictionary, with keys for
+each election, values are the # seats.</dd>
 <dt><strong><code>proposed_info</code></strong> :&ensp;<code>dict</code>, optional</dt>
 <dd>Dictionary with keys of <code><a title="evaltools.plotting.colors" href="colors.html">evaltools.plotting.colors</a></code>, <code>names</code>;
 the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th color in <code>color</code> corresponds to the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th name in <code>names</code>.</dd>
@@ -1455,54 +1434,59 @@ the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</scrip
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def sealevel(ax, scores, num_districts, proposed_info, ticksize=12):
-    &#34;&#34;&#34;
-    Plot a sea level plot: Each plan is a line across our elections on the 
+<pre><code class="python">def sealevel(ax, scores, num_districts, proposed_info, ticksize=12) -&gt; Axes:
+    r&#34;&#34;&#34;
+    Plot a sea level plot: Each plan is a line across our elections on the
     x-axis, with Democratic vote share on the y-axis. The statewide Dem. vote
     share (proportionality) is plotted as a thick blue line.
 
     Args:
         ax (Axes): `Axes` object on which the sea level plot is plotted.
-        scores (dict): Dictionary with keys of each plan plus a `statewide` key for proportionality.
-            Each value is another dictionary, with keys for each election, values are the # seats.
+        scores (dict): Dictionary with keys of each plan plus a `statewide` key
+            for proportionality. Each value is another dictionary, with keys for
+            each election, values are the # seats.
         proposed_info (dict, optional): Dictionary with keys of `colors`, `names`;
             the \(i\)th color in `color` corresponds to the \(i\)th name in `names`.
         ticksize (float, optional): Font size for tick labels.
     &#34;&#34;&#34;
     assert &#34;statewide&#34; in scores
     elections = sort_elections(scores[&#34;statewide&#34;].keys())
-    shares_by_plan = {plan:[] for plan in scores}
+    shares_by_plan = {plan: [] for plan in scores}
     for plan in scores:
         for election in elections:
             shares_by_plan[plan].append(scores[plan][election])
 
-    ax.plot(shares_by_plan[&#39;statewide&#39;],
-            marker=&#39;o&#39;,
-            markersize=10,
-            lw=5,
-            label=&#34;Proportionality&#34;,
-           )
+    ax.plot(
+        shares_by_plan[&#39;statewide&#39;], marker=&#39;o&#39;, markersize=10, lw=5,
+        label=&#34;Proportionality&#34;,
+    )
+
     for i, plan in enumerate(proposed_info[&#39;names&#39;]):
         for j in range(len(shares_by_plan[plan])):
-            jitter = random.uniform(-0.02, 0.02) if len(set([shares_by_plan[plan][j] for plan in shares_by_plan.keys()])) &gt; 1 else 0
+            if len(set([shares_by_plan[plan][j] for plan in shares_by_plan.keys()])) &gt; 1:
+                jitter = random.uniform(-0.02, 0.02)
+            else:
+                0
+
             shares_by_plan[plan][j] = shares_by_plan[plan][j] + jitter
-        ax.plot(shares_by_plan[plan],
-                marker=&#39;o&#39;,
-                linestyle=&#39;--&#39;,
-                color=proposed_info[&#39;colors&#39;][i],
-                label=plan,
-               )
+
+        ax.plot(
+            shares_by_plan[plan], marker=&#39;o&#39;, linestyle=&#39;--&#39;, color=proposed_info[&#39;colors&#39;][i],
+            label=plan,
+        )
+
     ax.legend()
+
     if num_districts &lt;= 20:
-        yticks = np.arange(0, 1 + 1/num_districts, 1/num_districts)
+        yticks = np.arange(0, 1 + 1 / num_districts, 1 / num_districts)
         yticklabels = [f&#34;{i}/{num_districts}&#34; for i in range(num_districts + 1)]
         ax.set_yticks(yticks)
         ax.set_yticklabels(yticklabels)
+
     ax.axhline(0.5, color=defaultGray, label=&#34;50%&#34;)
     ax.set_xticks(range(len(elections)))
     ax.set_xticklabels(elections, fontsize=ticksize)
     ax.set_ylim(-0.02, 1)
-
 
     return ax</code></pre>
 </details>
@@ -1553,12 +1537,12 @@ adjust its detail points by a value drawn from <span><span class="MathJax_Previe
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def violin(
-        ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1,99), rotation=0,
-        ticksize=12, jitter=1/3
-    ) -&gt; Axes:
+    ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1, 99), rotation=0,
+    ticksize=12, jitter=1 / 3
+) -&gt; Axes:
     r&#34;&#34;&#34;
-    Plot a violin plot, which takes `scores` — a dictionary where each value (corresponding to 
-    an ensemble, citizens&#39; ensemble, or proposed plans), will be a list of lists, where each 
+    Plot a violin plot, which takes `scores` — a dictionary where each value (corresponding to
+    an ensemble, citizens&#39; ensemble, or proposed plans), will be a list of lists, where each
     sublist will be its own violin. Proposed scores will be plotted as colored circles on
     their respective violin. Color the violins conditioned on the kind of the scores
     (ensemble or citizen), and trim each sublist to only the values between the percentiles.
@@ -1630,7 +1614,7 @@ adjust its detail points by a value drawn from <span><span class="MathJax_Previe
                 ax.scatter(
                     violin + 1 + jitter_val,
                     score,
-                    color=districtr(plan+1).pop(),
+                    color=districtr(plan + 1).pop(),
                     edgecolor=&#39;black&#39;,
                     s=100,
                     alpha=0.9,
@@ -1642,7 +1626,7 @@ adjust its detail points by a value drawn from <span><span class="MathJax_Previe
     if labels:
         ax.set_xlabel(labels[0], fontsize=24)
         ax.set_ylabel(labels[1], fontsize=24)
-    
+
     return ax</code></pre>
 </details>
 </dd>

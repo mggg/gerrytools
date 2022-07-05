@@ -12,11 +12,12 @@ import math
 import os
 import pytest
 
-root = Path(os.getcwd()) / Path("tests/test-resources/")
+from utils import remoteresource, remotegraphresource
+
 
 def test_splits_pandas():
     # Read in an existing dual graph.
-    dg = Graph.from_json(root / "test-graph.json")
+    dg = remotegraphresource("test-graph.json")
     P = Partition(dg, "CONGRESS")
 
     geometricsplits = splits("COUNTYFP20", popcol="TOTPOP").apply(P)
@@ -42,7 +43,7 @@ def test_splits_pandas():
 @pytest.mark.xfail(reason="The provided Partitions are not GeometricPartitions, and should fail.")
 def test_splits_gerrychain():
     # Read in an existing dual graph.
-    dg = Graph.from_json(root / "test-graph.json")
+    dg = remotegraphresource("test-graph.json")
     P = Partition(dg, "CONGRESS")
 
     geometricsplitsgc = splits("COUNTYFP20", popcol="TOTPOP", how="gerrychain").apply(P)
@@ -67,7 +68,7 @@ def test_splits_gerrychain():
 
 def test_pieces_pandas():
     # Read in an existing dual graph.
-    dg = Graph.from_json(root / "IN-vtds.json")
+    dg = remotegraphresource("test-graph.json")
     P = Partition(dg, "CONGRESS")
 
     geometricpieces = pieces("COUNTYFP20", popcol="TOTPOP").apply(P)
@@ -93,7 +94,7 @@ def test_pieces_pandas():
 @pytest.mark.xfail(reason="The provided Partitions are not GeometricPartitions, and should fail.")
 def test_pieces_gerrychain():
     # Read in an existing dual graph.
-    dg = Graph.from_json(root / "IN-vtds.json")
+    dg = remotegraphresource("test-graph.json")
     P = Partition(dg, "CONGRESS")
 
     geometricpiecesgc = pieces("COUNTYFP20", popcol="TOTPOP", how="gerrychain").apply(P)
@@ -117,7 +118,7 @@ def test_pieces_gerrychain():
 
 
 def test_deviations():
-    dg = Graph.from_json(root / "test-graph.json")
+    dg = remotegraphresource("test-graph.json")
     P = Partition(dg, "CONGRESS")
     devs = deviations(P, "TOTPOP")
 
@@ -126,7 +127,7 @@ def test_deviations():
 
 
 def test_contiguity():
-    dg = Graph.from_json(root / "test-graph.json")
+    dg = remotegraphresource("test-graph.json")
     P = Partition(dg, "CONGRESS")
     contiguity = contiguous(P)
 
@@ -136,7 +137,7 @@ def test_contiguity():
 
 
 def test_unassigned_units():
-    dg = Graph.from_json(root / "test-graph.json")
+    dg = remotegraphresource("test-graph.json")
     P = Partition(dg, "CONGRESS")
     bads = unassigned_units(P)
     wholebads = unassigned_units(P, raw=True)
@@ -204,4 +205,4 @@ def test_reock_score_disconnected():
     assert abs(scored[3] == (27 / 25) * (math.pi / 2)) < 1e-4
 
 if __name__ == "__main__":
-    root = Path(os.getcwd()) / Path("test-resources/")
+    pass

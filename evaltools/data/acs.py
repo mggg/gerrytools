@@ -1,7 +1,9 @@
 
 import pandas as pd
 import censusdata
-from pathlib import Path
+import io
+from urllib.request import urlopen
+from zipfile import ZipFile
 
 
 def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
@@ -16,7 +18,7 @@ def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
         geometry (str, optional): Level of geometry for which we're getting data.
             Accepted values are `"block group"` for 2010 Census Block Groups, and
             `"tract"` for 2010 Census Tracts. Defaults to `"tract"`.
-        year (int, optional): Year for which data is retrieved. Defaults to 2019.
+        year (int, optional): Year for which data is retrieved. Defaults to 2020.
 
     Returns
         A `DataFrame` with a `GEOID` column and corresponding CVAP columns from
@@ -45,7 +47,7 @@ def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
         print(f"Requested geometry \"{geometry}\" is not allowed; loading tracts.")
         geometry = "tract"
 
-    abbrv = geometry if geometry == "tract" else "bg"
+    abbrv = geometry if geometry == "tract" else "block group"
 
     # Load the raw data.
     raw = _raw(abbrv, year)
@@ -233,6 +235,29 @@ def _variables(prefix, start, stop, suffix="E") -> list:
     ]
 
 
+def _retrieve(year, geometry="block group"):
+    # Create a mapping from geometry names to filenames.
+    levels = {"block group": "BlockGr.csv", "tract": "Tract.csv"}
+    inverted = {v: k for k, v in levels.items()}
+
+    # Construct the URL.
+    start, stop = year - 4, year
+    root = "https://www2.census.gov/programs-surveys/decennial/rdo/datasets/"
+    suffix = f"{stop}/{stop}-cvap/CVAP_{start}-{stop}_ACS_csv_files.zip"
+
+    # Make the request and extract only the required files.
+    with urlopen(root + suffix) as resource:
+        with ZipFile(io.BytesIO(resource.read())) as archive:
+            files = {
+                inverted[file]: archive.read(file).decode(encoding="ISO-8859-1")
+                for file in archive.namelist()
+                if file == levels[geometry]
+            }
+
+    # Return the raw extracted file.
+    return files[geometry]
+
+
 def _raw(geometry, year) -> pd.DataFrame:
     """
     Reads raw CVAP data from the local repository.
@@ -240,17 +265,13 @@ def _raw(geometry, year) -> pd.DataFrame:
     Args:
         geometry (str): Level of geometry for which we're getting 2019 CVAP data.
         year (int): Year for which data is retrieved.
+
     Returns:
         A DataFrame, where each block of 13 rows corresponds to an individual
         geometric unit (2010 Census Block Group, 2010 Census Tract) and each row
         in a given block corresponds to a CVAP statistic for that block's
         geometric unit.
     """
-    # Get the filepath local to the repository, load in the raw data, and return
-    # it to the caller.
-    local = Path(__file__).parent.absolute()
-
-    decade = "10" if year < 2020 else "20"
-    yearsuffix = str(year)[2:]
-
-    return pd.read_csv(local / f"local/{geometry}{decade}-{yearsuffix}.zip", encoding="ISO-8859-1")
+    # Retrieve the data at the specified geometry level and return
+    # it as a dataframe.
+    return pd.read_csv(io.StringIO(_retrieve(year, geometry)), encoding="ISO-8859-1")

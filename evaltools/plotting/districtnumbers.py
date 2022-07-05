@@ -6,7 +6,7 @@ from matplotlib.axes import Axes
 
 def districtnumbers(
     base, districts, assignment="DISTRICTN", boxstyle="circle,pad=0.2",
-    fc="wheat", ec="black", lw=1/6, fontsize=15
+    fc="wheat", ec="black", lw=1 / 6, fontsize=15
 ) -> Axes:
     """
     Plots district numbers on top of overlaid district geometries.

@@ -128,7 +128,7 @@ POC populations.</dd>
     level, and year. Also retrieves ACS-reported CVAP data, which closely matches
     that reported by the CVAP special tabulation; CVAP data are only returned at
     the tract level, and are otherwise reported as 0.
-    
+
     Args:
         state (us.State): `State` object for the desired state.
         geometry (str, optional): Geometry level at which data is retrieved.
@@ -189,18 +189,18 @@ POC populations.</dd>
         [&#34;A&#34;, &#34;B&#34;, &#34;C&#34;, &#34;D&#34;, &#34;E&#34;, &#34;F&#34;, &#34;G&#34;, &#34;H&#34;, &#34;I&#34;]
     ))
     groups.update({
-        column: 
-            _variables(f&#34;B05003{table}&#34;, 9, 9) + _variables(f&#34;B05003{table}&#34;, 11, 11) + # men
-            _variables(f&#34;B05003{table}&#34;, 20, 20) + _variables(f&#34;B05003{table}&#34;, 22, 22) # women
+        column:
+            _variables(f&#34;B05003{table}&#34;, 9, 9) + _variables(f&#34;B05003{table}&#34;, 11, 11) +  # men
+            _variables(f&#34;B05003{table}&#34;, 20, 20) + _variables(f&#34;B05003{table}&#34;, 22, 22)  # women
         for column, table in cvaptables
     })
-    
+
     # Get all voting-age people and citizen voting-age people.
     groups[&#34;VAP&#34; + yearsuffix] = _variables(&#34;B01001&#34;, 7, 25) + _variables(&#34;B01001&#34;, 31, 49)
-    groups[&#34;CVAP&#34; + yearsuffix] = _variables(f&#34;B05003&#34;, 9, 9) + \
-        _variables(f&#34;B05003&#34;, 11, 11) + \
-        _variables(f&#34;B05003&#34;, 20, 20) + \
-        _variables(f&#34;B05003&#34;, 22, 22)
+    groups[&#34;CVAP&#34; + yearsuffix] = _variables(&#34;B05003&#34;, 9, 9) + \
+        _variables(&#34;B05003&#34;, 11, 11) + \
+        _variables(&#34;B05003&#34;, 20, 20) + \
+        _variables(&#34;B05003&#34;, 22, 22)
 
     # TODO: all variables used across the data submodule should be packaged up
     # as a class, so we can access individual dictionaries of variables to add.
@@ -276,14 +276,15 @@ designation and a unique identifier column for joining to geometries.</p></div>
         geometry (string, optional): Geometry level at which we retrieve data.
             Defaults to `&#34;block&#34;` to retrieve block-level data for the state
             provided. Accepted values are `&#34;block&#34;`, `&#34;block group`&#34;, and `&#34;tract&#34;`.
-    
+
     Returns:
         A DataFrame with columns renamed according to their Census description
         designation and a unique identifier column for joining to geometries.
     &#34;&#34;&#34;
     # Create the right geometry identifiers.
     geometries = [(&#34;state&#34;, str(state.fips)), (&#34;county&#34;, &#34;*&#34;), (&#34;tract&#34;, &#34;*&#34;)]
-    if geometry in {&#34;block group&#34;, &#34;block&#34;}: geometries += [(geometry, &#34;*&#34;)]
+    if geometry in {&#34;block group&#34;, &#34;block&#34;}:
+        geometries += [(geometry, &#34;*&#34;)]
 
     # Create an identifier column.
     identifier = geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;
@@ -336,9 +337,9 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def census20(
-        state, table=&#34;P1&#34;, columns={}, geometry=&#34;block&#34;,
-        key=&#34;75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65&#34;
-    ) -&gt; pd.DataFrame:
+    state, table=&#34;P1&#34;, columns={}, geometry=&#34;block&#34;,
+    key=&#34;75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65&#34;
+) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves `geometry`-level 2020 Decennial Census PL94-171 data via the Census
     API.
@@ -373,7 +374,7 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
         table = &#34;P1&#34;
 
     # Set the base Census API URL and get the keys for the provided table.
-    base = f&#34;https://api.census.gov/data/2020/dec/pl&#34;
+    base = &#34;https://api.census.gov/data/2020/dec/pl&#34;
     varmap = columns if columns else variables(table)
     vars = list(varmap.keys())
 
@@ -387,15 +388,18 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
 
     # Based on the geometry type, add an additional entry; this is required to
     # match the Census geographic hierarchy.
-    if geometry in {&#34;block&#34;, &#34;block group&#34;}: q.append((&#34;in&#34;, &#34;tract:*&#34;))
+    if geometry in {&#34;block&#34;, &#34;block group&#34;}:
+        q.append((&#34;in&#34;, &#34;tract:*&#34;))
 
     # Now, since the Census doesn&#39;t allow us to request more than 50 variables
     # at once, we request things in two parts and then merge them together.
     mergeable = []
 
     # Split up start and stop positions based on the number of variables.
-    if len(vars) &lt; 45: positions = [(0, len(vars))]
-    else: positions = [(0, 45), (45, len(vars))]
+    if len(vars) &lt; 45:
+        positions = [(0, len(vars))]
+    else:
+        positions = [(0, 45), (45, len(vars))]
 
     for start, stop in positions:
         # Get the chunk of variables and create a tail of columns (geographic
@@ -464,11 +468,13 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
         String with the appropriate URL.
     &#34;&#34;&#34;
     pipeline = &#34;beta&#34; if state == us.states.MI else &#34;prod&#34;
-    if state == us.states.MI: prefix = &#34;https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com&#34;
-    else: prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com&#34;
+    if state == us.states.MI:
+        prefix = &#34;https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com&#34;
+    else:
+        prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com&#34;
 
     suffix = f&#34;?type={ptype}&amp;length=10000&#34;
-    
+
     return f&#34;{prefix}/{pipeline}/submissions/csv/{state.name.lower()}{suffix}&#34;</code></pre>
 </details>
 </dd>
@@ -489,7 +495,7 @@ CVAP Special Tab.</dd>
 Accepted values are <code>"block group"</code> for 2010 Census Block Groups, and
 <code>"tract"</code> for 2010 Census Tracts. Defaults to <code>"tract"</code>.</dd>
 <dt><strong><code>year</code></strong> :&ensp;<code>int</code>, optional</dt>
-<dd>Year for which data is retrieved. Defaults to 2019.</dd>
+<dd>Year for which data is retrieved. Defaults to 2020.</dd>
 </dl>
 <p>Returns
 A <code>DataFrame</code> with a <code>GEOID</code> column and corresponding CVAP columns from
@@ -510,7 +516,7 @@ the ACS CVAP Special Tab for the specified year.</p></div>
         geometry (str, optional): Level of geometry for which we&#39;re getting data.
             Accepted values are `&#34;block group&#34;` for 2010 Census Block Groups, and
             `&#34;tract&#34;` for 2010 Census Tracts. Defaults to `&#34;tract&#34;`.
-        year (int, optional): Year for which data is retrieved. Defaults to 2019.
+        year (int, optional): Year for which data is retrieved. Defaults to 2020.
 
     Returns
         A `DataFrame` with a `GEOID` column and corresponding CVAP columns from
@@ -530,7 +536,7 @@ the ACS CVAP Special Tab for the specified year.</p></div>
         10: &#34;NHWHITEBLACKCVAP&#34;,
         11: &#34;NHBLACKAMINCVAP&#34;,
         12: &#34;NHOTHCVAP&#34;,
-        13: &#34;HCVAP&#34; 
+        13: &#34;HCVAP&#34;
     }
 
     # First, load the raw data requested; allowed geometry values are &#34;block group&#34;
@@ -539,7 +545,7 @@ the ACS CVAP Special Tab for the specified year.</p></div>
         print(f&#34;Requested geometry \&#34;{geometry}\&#34; is not allowed; loading tracts.&#34;)
         geometry = &#34;tract&#34;
 
-    abbrv = geometry if geometry == &#34;tract&#34; else &#34;bg&#34;
+    abbrv = geometry if geometry == &#34;tract&#34; else &#34;block group&#34;
 
     # Load the raw data.
     raw = _raw(abbrv, year)
@@ -570,7 +576,7 @@ the ACS CVAP Special Tab for the specified year.</p></div>
 
         # For each of the records in the block, &#34;collapse&#34; them into a single
         # record.
-        block = instate_records[i:i+13]
+        block = instate_records[i:i + 13]
         for line in block:
             record[geometry.replace(&#34; &#34;, &#34;&#34;).upper() + decade] = line[&#34;GEOID&#34;]
             record[descriptions[line[&#34;lnnumber&#34;]] + yearsuffix] = line[&#34;cvap_est&#34;]
@@ -640,22 +646,22 @@ less susceptible to change across Census vintages, setting this parameter
 to <code>"tract"</code> is recommended, as it is more likely that the 2020 Census
 blocks fit neatly into the 2010 Census tracts.</dd>
 </dl>
-<p>Returns:
-<code>base</code> geometries with 2019 CVAP-weighted 2020 CVAP estimates attached.</p></div>
+<h2 id="returns">Returns</h2>
+<p><code>base</code> geometries with 2019 CVAP-weighted 2020 CVAP estimates attached.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def estimatecvap2010(
-        base, state, groups, ceiling, zfill, geometry10=&#34;tract&#34;, year=2019
-    ) -&gt; DataFrame:
+    base, state, groups, ceiling, zfill, geometry10=&#34;tract&#34;, year=2019
+) -&gt; DataFrame:
     r&#34;&#34;&#34;
     Function for turning old (2019) CVAP data on 2010 geometries into estimates
     for current CVAP data on 2020 geometries. **This method serves a different
     purpose than `evaltools.data.estimatecvap.estimatecvap2020()`:** this method
     is intended to put 2010-era CVAP data on 2020-era geometries, and uses
     geometric properties to do so.
-    
+
     Users must supply a base `GeoDataFrame`
     representing their chosen U.S. state. Additionally, users must specify the
     demographic groups whose CVAP statistics are to be estimated. For each group,
@@ -695,7 +701,7 @@ blocks fit neatly into the 2010 Census tracts.</dd>
             to `&#34;tract&#34;` is recommended, as it is more likely that the 2020 Census
             blocks fit neatly into the 2010 Census tracts.
 
-    Returns: 
+    Returns:
        `base` geometries with 2019 CVAP-weighted 2020 CVAP estimates attached.
     &#34;&#34;&#34;
     if geometry10 not in {&#34;block group&#34;, &#34;tract&#34;}:
@@ -728,8 +734,8 @@ blocks fit neatly into the 2010 Census tracts.</dd>
                 f&#34;Your CVAP column &#39;{cvap10}&#39; must be contained in either the ACS &#34;
                 f&#34;or Special Tab columns: {possible_columns}&#34;
             )
-        
-        if not vap10 in acs_source:
+
+        if vap10 not in acs_source:
             raise ValueError(
                 f&#34;Your old VAP column &#39;{vap10}&#39; must be contained in the ACS &#34;
                 &#34;columns: {set(acs_source)}&#34;
@@ -737,12 +743,12 @@ blocks fit neatly into the 2010 Census tracts.</dd>
 
         # If the VAP20 column passed doesn&#39;t exist on the user-provided geometries,
         # raise an error.
-        if not vap20 in base:
+        if vap20 not in base:
             raise ValueError(
                 f&#34;Your new VAP column &#39;{vap20}&#39; must be contained in your base &#34; +
                 f&#34;dataframe: {set(base)}&#34;
             )
-    
+
     # Remove ACS 5 columns that overlap with special-tab ones.
     non_overlaps = list(set(acs_source).difference(set(cvap_source)))
     acs_source = acs_source[[cvap_geoid] + non_overlaps]
@@ -756,23 +762,23 @@ blocks fit neatly into the 2010 Census tracts.</dd>
     bads = list(set(base) - set(correct))
 
     # Warn the user of column removal:
-    print(f&#34;Removing the following columns: &#34; + &#34;, &#34;.join(bads))
+    print(&#34;Removing the following columns: &#34; + &#34;, &#34;.join(bads))
 
     pared = base.drop(bads, axis=1)
     pared = mapbase(pared, state, geometry10)
 
     # Compute weights.
-    for (cvap10, vap10, _) in groups: 
-       source[cvap10 + &#34;%&#34;] = source[cvap10]/source[vap10]
+    for (cvap10, vap10, _) in groups:
+        source[cvap10 + &#34;%&#34;] = source[cvap10] / source[vap10]
 
     # Fill in values according to the following rules:
-    # 
+    #
     #   1.  if there are 0 *CVAP reported and 0 *VAP reported, we set the weight to
     #       the average *CVAP/*VAP ratio within the county;
     #   2.  if there are 0 *CVAP reported and *VAP &gt; 0, we set the weight to zero_fill;
     #   3.  if *CVAP &gt; 0 but *VAP = 0 or *CVAP/*VAP &gt; percentage_cap, we set the weight to 1.
     statewide = {
-        cvap + &#34;%&#34;: source[cvap].sum()/source[vap].sum() if source[vap].sum() != 0 else 0
+        cvap + &#34;%&#34;: source[cvap].sum() / source[vap].sum() if source[vap].sum() != 0 else 0
         for (cvap, vap, _) in groups
     }
 
@@ -783,11 +789,11 @@ blocks fit neatly into the 2010 Census tracts.</dd>
     # serves as a replacement for the statewide average.
     source[&#34;_county&#34;] = source[cvap_geoid].str[2:5]
     counties = list(set(source[&#34;_county&#34;]))
-    countyaverages = { pct: {} for pct in cvappcts }
+    countyaverages = {pct: {} for pct in cvappcts}
 
     for county in counties:
         chunk = source[source[&#34;_county&#34;] == county]
-        
+
         for cvap19, vap19, _ in groups:
             # Calculate the CVAP19-to-VAP19 ratio. Set numpy to ignore runtimewarnings,
             # but warn the user if one is encountered. We do this so that the user
@@ -797,25 +803,25 @@ blocks fit neatly into the 2010 Census tracts.</dd>
             vap19total = chunk[vap19].sum()
 
             np.seterr(divide=&#34;ignore&#34;, invalid=&#34;ignore&#34;)
-            ratio = cvap19total/vap19total
+            ratio = cvap19total / vap19total
 
             # Check whether the ratio of the above is less than the ceiling.
             if not np.isfinite(ratio):
-                print(county, 
-                    f&#34;Encountered an invalid ratio: there are {cvap19total} {cvap19} &#34;
-                    f&#34;persons and {vap19total} {vap19} persons, for a ratio of &#34;
-                    f&#34;{cvap19total}/{vap19total}. &#34;
-                    f&#34;we have substituted it for the statewide {cvap19}-to-{vap19} &#34;
-                    f&#34;share of {statewide[cvap19 + &#39;%&#39;]}.&#34;
-                )
+                print(county,
+                      f&#34;Encountered an invalid ratio: there are {cvap19total} {cvap19} &#34;
+                      f&#34;persons and {vap19total} {vap19} persons, for a ratio of &#34;
+                      f&#34;{cvap19total}/{vap19total}. &#34;
+                      f&#34;we have substituted it for the statewide {cvap19}-to-{vap19} &#34;
+                      f&#34;share of {statewide[cvap19 + &#39;%&#39;]}.&#34;
+                      )
                 ratio = statewide[cvap19 + &#34;%&#34;]
 
             # Set the county-average ratio.
             countyaverages[cvap19 + &#34;%&#34;][county] = ratio
-    
+
     # Reset the numpy error catching thing.
     np.seterr(all=&#34;warn&#34;)
-    
+
     # For each of the percentage columns, we want to apply the rules specified
     # by the user.
     for pct in cvappcts:
@@ -825,7 +831,7 @@ blocks fit neatly into the 2010 Census tracts.</dd>
         source[pct] = source[pct].replace(np.inf, np.nan)
         nanindices = source[source[pct].isna()].index
         source.loc[nanindices, pct] = source.loc[nanindices, &#34;_county&#34;].map(countywidepcts)
-        
+
         # Fill zeroes with the `zfill` value, and cap all the percentages.
         source[pct] = source[pct] \
             .replace(0, zfill) \
@@ -836,15 +842,15 @@ blocks fit neatly into the 2010 Census tracts.</dd>
         np.all(source[p + &#34;%&#34;] &lt;= ceiling)
         for (p, _, __) in groups
     )
-    
-    # Assert we don&#39;t have any zeros. 
+
+    # Assert we don&#39;t have any zeros.
     assert all(
         np.all(source[p + &#34;%&#34;] &gt; 0)
         for (p, _, __) in groups
     )
 
     # Set indices and create a mapping from IDs to weights.
-    source = source.set_index(cvap_geoid)    
+    source = source.set_index(cvap_geoid)
     source = source[cvappcts]
     weights = source.to_dict(orient=&#34;index&#34;)
 
@@ -862,7 +868,7 @@ blocks fit neatly into the 2010 Census tracts.</dd>
             weight = cvap10 + &#34;%&#34;
             cvap20 = cvap10.replace(yearsuffix, &#34;20_EST&#34;)
             group[weight] = weights[ix][weight]
-            group[cvap20] = group[weight]*group[vap20]
+            group[cvap20] = group[weight] * group[vap20]
 
     # Re-create a dataframe and strip out % columns, leaving only the estimate
     # columns.
@@ -929,9 +935,9 @@ and be used to build other units of varying size.</p>
 
     # Create &#34;remainder&#34; column.
     for universe in [block, bg]:
-        universe[&#34;NHVAP20&#34;] = universe[&#34;VAP20&#34;]-universe[&#34;HVAP20&#34;]
-        universe[&#34;OTHVAP20&#34;] = universe[&#34;NHVAP20&#34;]-universe[vapcolumns].sum(axis=1)
-    
+        universe[&#34;NHVAP20&#34;] = universe[&#34;VAP20&#34;] - universe[&#34;HVAP20&#34;]
+        universe[&#34;OTHVAP20&#34;] = universe[&#34;NHVAP20&#34;] - universe[vapcolumns].sum(axis=1)
+
     # Get the block group ID for blocks.
     block[&#34;BLOCKGROUP20&#34;] = block[&#34;GEOID20&#34;].astype(str).str[:-3]
 
@@ -945,14 +951,14 @@ and be used to build other units of varying size.</p>
     for vapcolumn in allvapcols:
         # Crete a mapping from block group names to totals for the VAP column.
         popmap = dict(zip(bg[&#34;GEOID20&#34;].astype(str), bg[vapcolumn]))
-        
+
         # Create column names.
-        colpct = vapcolumn+&#34;%&#34;
+        colpct = vapcolumn + &#34;%&#34;
         cvapcolumn = vapcolumn.replace(&#34;VAP&#34;, &#34;CVAP&#34;)
 
         # Calculate ratios.
         block[colpct] = block[&#34;BLOCKGROUP20&#34;].map(popmap)
-        block[colpct] = block[vapcolumn]/block[colpct]
+        block[colpct] = block[vapcolumn] / block[colpct]
 
         # Create a mapping from block group IDs to CVAP groups.
         cvapcolumn = vapcolumn.replace(&#34;VAP&#34;, &#34;CVAP&#34;)
@@ -967,16 +973,16 @@ and be used to build other units of varying size.</p>
 
         # Next, compute the estimated CVAP by multiplying the VAP column percent
         # for the block group by the total CVAP population of the block group.
-        block[cvapcolumn] = block[colpct]*block[&#34;tmp&#34;]
+        block[cvapcolumn] = block[colpct] * block[&#34;tmp&#34;]
 
         # If the above doesn&#39;t work — which is the case if the VAP column percent
         # is NaN (0/0) or inf (k/0), we estimate the CVAP of the block using the
         # VAP ratio outright rather than the column-specific VAP ratio.
         ni = block[block[colpct].isna()].index
-        block.loc[ni,cvapcolumn] = (block.loc[ni,&#34;VAP20&#34;]/block.loc[ni,&#34;BGVAP20&#34;])*block.loc[ni,&#34;tmp&#34;]
+        block.loc[ni, cvapcolumn] = (block.loc[ni, &#34;VAP20&#34;] / block.loc[ni, &#34;BGVAP20&#34;]) * block.loc[ni, &#34;tmp&#34;]
 
         # Assert that our summed disaggregated numbers and totals are close!
-        assert np.isclose(bg[cvapcolumn].sum()-block[cvapcolumn].sum(), 0)
+        assert np.isclose(bg[cvapcolumn].sum() - block[cvapcolumn].sum(), 0)
 
     # Fill NaNs with 0 and drop unnecessary columns.
     block = block.fillna(0)
@@ -994,39 +1000,41 @@ and be used to build other units of varying size.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
-<dd>The <code>us.State</code> for which CVAP will be estimated. </dd>
+<dd>The <code>us.State</code> for which CVAP will be estimated.</dd>
 <dt><strong><code>geometry10</code></strong> :&ensp;<code>str</code></dt>
 <dd>Level of geometry we're fetching. Accepted values are
 <code>"tract"</code> and <code>"block group"</code>.</dd>
 </dl>
-<p>Returns:
-A <code>GeoDataFrame</code> of 2010 geometries.</p></div>
+<h2 id="returns">Returns</h2>
+<p>A <code>GeoDataFrame</code> of 2010 geometries.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def fetchgeometries(state, geometry) -&gt; gpd.GeoDataFrame: 
+<pre><code class="python">def fetchgeometries(state, geometry) -&gt; gpd.GeoDataFrame:
     &#34;&#34;&#34;
     Fetches the 2010 Census geometries on which ACS data are reported.
-  
+
     Args:
-        state (State): The `us.State` for which CVAP will be estimated. 
+        state (State): The `us.State` for which CVAP will be estimated.
         geometry10 (str): Level of geometry we&#39;re fetching. Accepted values are
             `&#34;tract&#34;` and `&#34;block group&#34;`.
 
-    Returns: 
+    Returns:
         A `GeoDataFrame` of 2010 geometries.
     &#34;&#34;&#34;
     # Get a Census locator for the provided State by replacing spaces in its name
     # with underscores (should they exist).
     clocator = state.name.replace(&#34; &#34;, &#34;_&#34;)
-    
+
     # Validate geometry level indicators.
     if geometry not in {&#34;block group&#34;, &#34;tract&#34;, &#34;block&#34;}:
         raise ValueError(f&#34;Geometry level {geometry} not supported; aborting.&#34;)
-    
-    if geometry == &#34;block group&#34;: geometry = &#34;bg&#34;
-    if geometry == &#34;block&#34;: geometry = &#34;tabblock&#34;
+
+    if geometry == &#34;block group&#34;:
+        geometry = &#34;bg&#34;
+    if geometry == &#34;block&#34;:
+        geometry = &#34;tabblock&#34;
 
     # Construct the Census URL.
     fips = state.fips
@@ -1069,8 +1077,10 @@ districtr identifiers.</dd>
     # If we&#39;re in michigan, then we use the &#39;beta&#39; pipeline instead of the &#39;prod&#39;
     # one.
     pipeline = &#34;beta&#34; if state == us.states.MI else &#34;prod&#34;
-    if state == us.states.MI: prefix = &#34;https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com&#34;
-    else: prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com&#34;
+    if state == us.states.MI:
+        prefix = &#34;https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com&#34;
+    else:
+        prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com&#34;
 
     return f&#34;{prefix}/{pipeline}/submissions/districtr-ids/{state.name.lower()}&#34;</code></pre>
 </details>
@@ -1148,7 +1158,7 @@ units to larger ones.</dd>
             units to larger ones.
 
     Returns:
-        A function 
+        A function
     &#34;&#34;&#34;
     def _(row):
         # Get the assignment for the row.
@@ -1160,7 +1170,7 @@ units to larger ones.</dd>
         try:
             unitsType = row[&#34;units&#34;]
             unitmap = unitmaps[unitsType]
-        except:
+        except BaseException:
             print(f&#34;No unit mapping provided for {row[&#39;units&#39;]}; skipping.&#34;)
             return assignment
 
@@ -1176,11 +1186,14 @@ units to larger ones.</dd>
         unitmapdirection = &#34;down&#34;
 
         # Mark which kind of mapping we have.
-        if type(firstvalue) is list: unitmapdirection = &#34;down&#34;
-        else: unitmapdirection = &#34;up&#34;
+        if isinstance(firstvalue, list):
+            unitmapdirection = &#34;down&#34;
+        else:
+            unitmapdirection = &#34;up&#34;
 
         # Now, based on the mapping type, return the appropriate mapping.
-        if unitmapdirection == &#34;down&#34;: return _down(unitmap, assignment)
+        if unitmapdirection == &#34;down&#34;:
+            return _down(unitmap, assignment)
         return _up(unitmap, popmap, assignment)
 
     plans[&#34;plan&#34;] = plans.apply(_, axis=1)
@@ -1234,11 +1247,11 @@ submissions.</p>
         # Retrieve the required data points.
         identifier = parse_id(entity[&#34;link&#34;], df=False)
         districtr = individual(identifier)
-        
+
         # Force all plan keys and values to strings.
         try:
             plan = {
-                str(k): str(v) if type(v) is not list else str(v[0])
+                str(k): str(v) if not isinstance(v, list) else str(v[0])
                 for k, v in districtr[&#34;plan&#34;][&#34;assignment&#34;].items()
             }
             units = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;name&#34;]
@@ -1255,8 +1268,9 @@ submissions.</p>
                 tileset=tileset,
                 type=entity[&#34;type&#34;]
             ))
-        except: pass
-    
+        except BaseException:
+            pass
+
     return submissions</code></pre>
 </details>
 </dd>
@@ -1307,7 +1321,7 @@ plans, cois, written = tabularized(state, subs)
 
     Example:
         Prototypical example usage.
-        
+
             import us
             from evaltools.retrieve import submissions, tabularized
 
@@ -1328,13 +1342,13 @@ plans, cois, written = tabularized(state, subs)
     # of submissions).
     _plans = [s.dict() for s in submissions if s.type == &#34;plan&#34;]
     _cois = [s.dict() for s in submissions if s.type == &#34;coi&#34;]
-    
+
     # Create preliminary dataframes so we can do safe `merge`s rather than rely
     # explicitly on sorting; this also allows us to specify a sample size if
     # we&#39;re only looking to sample a specific number of plans.
     subset_plans = pd.DataFrame.from_records(_plans)
     subset_cois = pd.DataFrame.from_records(_cois)
-    
+
     # Get appropriate URLs and create dataframes.
     plans_url = csvs(state)
     cois_url = csvs(state, ptype=&#34;coi&#34;)
@@ -1351,14 +1365,19 @@ plans, cois, written = tabularized(state, subs)
         universe[&#34;id&#34;] = parse_id(universe[&#34;link&#34;])
 
     # Adjust column contents for all dataframes.
-    for df in [plans, cois, writtens]: df[&#34;datetime&#34;] = parse_datetime(df[&#34;datetime&#34;])
+    for df in [plans, cois, writtens]:
+        df[&#34;datetime&#34;] = parse_datetime(df[&#34;datetime&#34;])
 
     # Add the retrieved plan data to the dataframes *if the subset dataframes
     # contain items*.
-    if not subset_plans.empty: plans = plans.merge(subset_plans, on=&#34;id&#34;)
-    else: plans = pd.DataFrame()
-    if not subset_cois.empty: cois = cois.merge(subset_cois, on=&#34;id&#34;)
-    else: cois = pd.DataFrame()
+    if not subset_plans.empty:
+        plans = plans.merge(subset_plans, on=&#34;id&#34;)
+    else:
+        plans = pd.DataFrame()
+    if not subset_cois.empty:
+        cois = cois.merge(subset_cois, on=&#34;id&#34;)
+    else:
+        cois = pd.DataFrame()
 
     # Drop bad columns and rename. Not sure why we have to `inplace` things here,
     # but... fine.
@@ -1366,7 +1385,8 @@ plans, cois, written = tabularized(state, subs)
         if not df.empty:
             # Remove columns we don&#39;t necessarily care about.
             for col in [&#34;type_x&#34;, &#34;link_x&#34;, &#34;coalition&#34;]:
-                if col in list(df): df.drop(col, axis=1, inplace=True)
+                if col in list(df):
+                    df.drop(col, axis=1, inplace=True)
 
             # Rename the columns we do care about.
             df.rename({&#34;type_y&#34;: &#34;type&#34;, &#34;link_y&#34;: &#34;link&#34;}, axis=1, inplace=True)
@@ -1400,7 +1420,7 @@ P4</a>.</p>
 
     Args:
         table (string): The table for which we&#39;re generating variables.
-    
+
     Returns:
         A dictionary mapping Census variable codes to human-readable ones.
     &#34;&#34;&#34;
@@ -1418,7 +1438,7 @@ P4</a>.</p>
     combos = list(pd.core.common.flatten(
         [
             prefix + &#34;&#34;.join(list(combo)) + suffix + &#34;20&#34;
-            for i in range(1, len(categories)+1)
+            for i in range(1, len(categories) + 1)
             for combo in list(combinations(categories, i))
         ]
     ))
@@ -1427,12 +1447,14 @@ P4</a>.</p>
     # the descriptor. Each of these tranches should have a width of 6 choose i,
     # where i is the number of categories in the combination. For example, the
     # second tranch (from 13 to 27) has width 15, as 6C2=15.
-    if table in {&#34;P1&#34;, &#34;P3&#34;}: tranches = [(3, 8), (11, 25), (27, 46), (48, 62), (64, 69), (71, 71)]
-    else: tranches = [(5, 10), (13, 27), (29, 48), (50, 64), (66, 71), (73, 73)]
+    if table in {&#34;P1&#34;, &#34;P3&#34;}:
+        tranches = [(3, 8), (11, 25), (27, 46), (48, 62), (64, 69), (71, 71)]
+    else:
+        tranches = [(5, 10), (13, 27), (29, 48), (50, 64), (66, 71), (73, 73)]
 
     # Create variable numbers.
-    numbers = list(pd.core.common.flatten([list(range(i, j+1)) for i, j in tranches]))
-    
+    numbers = list(pd.core.common.flatten([list(range(i, j + 1)) for i, j in tranches]))
+
     # Edit these for specific tables. For example, in tables P2 and P3, we want
     # to get the total Hispanic population and the total population.
     if table in {&#34;P2&#34;, &#34;P4&#34;}:
@@ -1444,7 +1466,7 @@ P4</a>.</p>
         numbers = [1] + numbers
         tcol = &#34;VAP20&#34; if table in {&#34;P3&#34;, &#34;P4&#34;} else &#34;TOTPOP20&#34;
         combos = [tcol] + combos
-    
+
     # Create the variable names and zip the names together with the combinations.
     names = [f&#34;{table}_{str(n).zfill(3)}N&#34; for n in numbers]
     return dict(zip(names, combos))</code></pre>
@@ -1558,7 +1580,7 @@ or write). Defaults to <code>compressed.ac</code>.</dd>
     &#34;&#34;&#34;
     A class for compressing and decompressing lots of assignments very, very
     quickly. Intended for use with ``jsonlines``-like libraries (where assignments
-    are read in line-by-line) or for network requests (where assignments are 
+    are read in line-by-line) or for network requests (where assignments are
     retrieved one-by-one). When decompressing, yields ``dict``s where keys are
     in sorted order.
 
@@ -1639,12 +1661,12 @@ or write). Defaults to <code>compressed.ac</code>.</dd>
                 or write). Defaults to `compressed.ac`.
         &#34;&#34;&#34;
         self.identifiers = SortedList(identifiers)
-        self.default = frozenset(zip(self.identifiers, [&#34;-1&#34;]*len(self.identifiers)))
+        self.default = frozenset(zip(self.identifiers, [&#34;-1&#34;] * len(self.identifiers)))
         self.cache = []
         self.location = location
 
         # Error to users if the window is nonexistent.
-        if type(window) != int or window &lt;= 0:
+        if not isinstance(window, int) or window &lt;= 0:
             raise ValueError(&#34;Cache window width must be a positive integer.&#34;)
 
         self.window = window
@@ -1672,7 +1694,7 @@ or write). Defaults to <code>compressed.ac</code>.</dd>
         # dictionary with assignment values.
         indexer = SortedDict(self.default)
         indexer.update(assignment)
-        
+
         return indexer
 
     def __enter__(self):
@@ -1689,7 +1711,8 @@ or write). Defaults to <code>compressed.ac</code>.</dd>
         feeding items to the compressor) we can force the remaining items to be
         compressed and written to file.
         &#34;&#34;&#34;
-        if self.cache: self._compress(force=True)
+        if self.cache:
+            self._compress(force=True)
 
     def compress_all(self, assignments):
         &#34;&#34;&#34;
@@ -1725,7 +1748,7 @@ or write). Defaults to <code>compressed.ac</code>.</dd>
         if not set(assignment.keys()).issubset(self.identifiers):
             skip = True
             print(
-                &#34;`assignment`&#39;s keys are not a subset of `identifiers`; skipping. &#34; + \
+                &#34;`assignment`&#39;s keys are not a subset of `identifiers`; skipping. &#34; +
                 &#34;Please ensure that all keys and values in `assignment` are strings.&#34;,
             )
 
@@ -1768,7 +1791,8 @@ or write). Defaults to <code>compressed.ac</code>.</dd>
                 # a separator; doing so will produce an empty bytestring (which,
                 # in turn, produces a dictionary with one key, corresponding to
                 # a null assignment).
-                if not force: writer.write(self.CHUNK_DELIMITER)
+                if not force:
+                    writer.write(self.CHUNK_DELIMITER)
 
             # Reset the cache.
             self.cache = []
@@ -1785,8 +1809,10 @@ or write). Defaults to <code>compressed.ac</code>.</dd>
         # we hit our separator or until the end of the file.
         with open(self.location, &#34;rb&#34;) as _compressed_fin:
             for chunk in self._chunk(_compressed_fin):
-                if not chunk: break
-                for assignment in self._decompress(chunk): yield assignment
+                if not chunk:
+                    break
+                for assignment in self._decompress(chunk):
+                    yield assignment
 
     def _chunk(self, stream):
         &#34;&#34;&#34;
@@ -1820,7 +1846,9 @@ or write). Defaults to <code>compressed.ac</code>.</dd>
                 yield part
 
             # If the chunk&#39;s empty, `yield` the remaining buffer and return.
-            if not chunk: yield b&#34;&#34;.join(_buffer); break
+            if not chunk:
+                yield b&#34;&#34;.join(_buffer)
+                break
 
     def _decompress(self, chunk) -&gt; List[dict]:
         &#34;&#34;&#34;
@@ -1836,7 +1864,7 @@ or write). Defaults to <code>compressed.ac</code>.</dd>
         # Decompress the chunk and split it on our delimiter.
         decompressed = zlib.decompress(chunk)
         decompressed_parts = decompressed.split(self.ASSIGNMENT_DELIMITER)
-        
+
         # For each of the parts, decode the bytes, make them into lists, and
         # match them to GEOIDs.
         decoded_parts = [part.decode() for part in decompressed_parts]
@@ -1881,7 +1909,7 @@ All keys and values in this dictionary must be strings.</dd>
     if not set(assignment.keys()).issubset(self.identifiers):
         skip = True
         print(
-            &#34;`assignment`&#39;s keys are not a subset of `identifiers`; skipping. &#34; + \
+            &#34;`assignment`&#39;s keys are not a subset of `identifiers`; skipping. &#34; +
             &#34;Please ensure that all keys and values in `assignment` are strings.&#34;,
         )
 
@@ -1953,8 +1981,10 @@ assignments.</p>
     # we hit our separator or until the end of the file.
     with open(self.location, &#34;rb&#34;) as _compressed_fin:
         for chunk in self._chunk(_compressed_fin):
-            if not chunk: break
-            for assignment in self._decompress(chunk): yield assignment</code></pre>
+            if not chunk:
+                break
+            for assignment in self._decompress(chunk):
+                yield assignment</code></pre>
 </details>
 </dd>
 <dt id="evaltools.data.AssignmentCompressor.match"><code class="name flex">
@@ -1992,7 +2022,7 @@ districts. All keys and values in this dictionary must be strings.</dd>
     # dictionary with assignment values.
     indexer = SortedDict(self.default)
     indexer.update(assignment)
-    
+
     return indexer</code></pre>
 </details>
 </dd>

@@ -11,6 +11,7 @@ from gerrychain import (
 from gerrychain.proposals import recom
 from functools import partial
 import geopandas as gpd
+import requests
 from evaltools.geometry import (
     dissolve, dualgraph, unitmap, invert, dispersion_updater_closure, dataframe
 )
@@ -19,10 +20,8 @@ from pathlib import Path
 import os
 import pytest
 
-def zipped(suffix):
-    return "zip://" + str(Path(root / suffix))
+from utils import remotegraphresource, remoteresource
 
-root = Path(os.getcwd()) / Path("tests/test-resources/")
 
 @pytest.mark.xfail(reason="Documentation and call signature do not match; clarification needed.")
 def test_dispersion_calc():
@@ -68,7 +67,7 @@ def test_dispersion_calc():
 
 def test_dissolve():
     # Read in geometric data.
-    districts = gpd.read_file(zipped("test-vtds.zip"))
+    districts = gpd.read_file(remoteresource("test-vtds.geojson"))
 
     # Assign half the units to district 0, the other half to district 1; create
     # a "name" column and do the same.
@@ -87,7 +86,7 @@ def test_dissolve():
 
 def test_dualgraph():
     # Read in geometric data and get centroids.
-    districts = gpd.read_file(zipped("test-districts.zip"))
+    districts = gpd.read_file(remoteresource("test-districts.geojson"))
     districts["x"] = districts["geometry"].apply(lambda c: c.centroid.coords[0][0])
     districts["y"] = districts["geometry"].apply(lambda c: c.centroid.coords[0][1])
     districts = districts[["DISTRICT", "geometry", "G20PREDBID", "x", "y", "NAME"]]
@@ -118,8 +117,8 @@ def test_dualgraph():
 
 def test_unitmap():
     # Read in some test dataframes.
-    vtds = gpd.read_file(zipped("test-vtds.zip"))
-    counties = gpd.read_file(zipped("test-counties.zip"))
+    vtds = gpd.read_file(remoteresource("test-vtds.geojson"))
+    counties = gpd.read_file(remoteresource("test-counties.geojson"))
 
     # Make an assignment!
     umap = unitmap((vtds, "GEOID20"), (counties, "COUNTYFP20"))
@@ -137,7 +136,8 @@ def test_unitmap():
 
 
 def test_dataframe():
-    G = Graph.from_json(root/"test-graph.json")
+    G = remotegraphresource("test-graph.json")
+    
     P = Partition(graph=G, assignment={v:d["COUNTYFP20"] for v, d in G.nodes(data=True)})
     df = dataframe(P, assignment="COUNTYFP20")
     df = df.rename({"id": "GEOID20"}, axis=1)
@@ -147,8 +147,7 @@ def test_dataframe():
 
 
 if __name__ == "__main__":
-    root = Path(os.getcwd()) / Path("test-resources/")
-    # test_dataframe()
+    test_dataframe()
     # test_dualgraph()
     # test_dissolve()
     # test_unitmap()

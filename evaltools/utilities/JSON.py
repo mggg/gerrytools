@@ -75,7 +75,7 @@ def jsonify(location) -> list:
 
         # First, check whether `data` is a list; if it is, deal with all the
         # plans individually and return the list.
-        if type(data) is list:
+        if isinstance(data, list):
             return [
                 JSONtoObject(
                     column=p["column"],

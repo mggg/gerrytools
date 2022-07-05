@@ -71,9 +71,9 @@ def estimatecvap2020(state) -&gt; pd.DataFrame:
 
     # Create &#34;remainder&#34; column.
     for universe in [block, bg]:
-        universe[&#34;NHVAP20&#34;] = universe[&#34;VAP20&#34;]-universe[&#34;HVAP20&#34;]
-        universe[&#34;OTHVAP20&#34;] = universe[&#34;NHVAP20&#34;]-universe[vapcolumns].sum(axis=1)
-    
+        universe[&#34;NHVAP20&#34;] = universe[&#34;VAP20&#34;] - universe[&#34;HVAP20&#34;]
+        universe[&#34;OTHVAP20&#34;] = universe[&#34;NHVAP20&#34;] - universe[vapcolumns].sum(axis=1)
+
     # Get the block group ID for blocks.
     block[&#34;BLOCKGROUP20&#34;] = block[&#34;GEOID20&#34;].astype(str).str[:-3]
 
@@ -87,14 +87,14 @@ def estimatecvap2020(state) -&gt; pd.DataFrame:
     for vapcolumn in allvapcols:
         # Crete a mapping from block group names to totals for the VAP column.
         popmap = dict(zip(bg[&#34;GEOID20&#34;].astype(str), bg[vapcolumn]))
-        
+
         # Create column names.
-        colpct = vapcolumn+&#34;%&#34;
+        colpct = vapcolumn + &#34;%&#34;
         cvapcolumn = vapcolumn.replace(&#34;VAP&#34;, &#34;CVAP&#34;)
 
         # Calculate ratios.
         block[colpct] = block[&#34;BLOCKGROUP20&#34;].map(popmap)
-        block[colpct] = block[vapcolumn]/block[colpct]
+        block[colpct] = block[vapcolumn] / block[colpct]
 
         # Create a mapping from block group IDs to CVAP groups.
         cvapcolumn = vapcolumn.replace(&#34;VAP&#34;, &#34;CVAP&#34;)
@@ -109,16 +109,16 @@ def estimatecvap2020(state) -&gt; pd.DataFrame:
 
         # Next, compute the estimated CVAP by multiplying the VAP column percent
         # for the block group by the total CVAP population of the block group.
-        block[cvapcolumn] = block[colpct]*block[&#34;tmp&#34;]
+        block[cvapcolumn] = block[colpct] * block[&#34;tmp&#34;]
 
         # If the above doesn&#39;t work — which is the case if the VAP column percent
         # is NaN (0/0) or inf (k/0), we estimate the CVAP of the block using the
         # VAP ratio outright rather than the column-specific VAP ratio.
         ni = block[block[colpct].isna()].index
-        block.loc[ni,cvapcolumn] = (block.loc[ni,&#34;VAP20&#34;]/block.loc[ni,&#34;BGVAP20&#34;])*block.loc[ni,&#34;tmp&#34;]
+        block.loc[ni, cvapcolumn] = (block.loc[ni, &#34;VAP20&#34;] / block.loc[ni, &#34;BGVAP20&#34;]) * block.loc[ni, &#34;tmp&#34;]
 
         # Assert that our summed disaggregated numbers and totals are close!
-        assert np.isclose(bg[cvapcolumn].sum()-block[cvapcolumn].sum(), 0)
+        assert np.isclose(bg[cvapcolumn].sum() - block[cvapcolumn].sum(), 0)
 
     # Fill NaNs with 0 and drop unnecessary columns.
     block = block.fillna(0)
@@ -128,28 +128,30 @@ def estimatecvap2020(state) -&gt; pd.DataFrame:
     return block
 
 
-def fetchgeometries(state, geometry) -&gt; gpd.GeoDataFrame: 
+def fetchgeometries(state, geometry) -&gt; gpd.GeoDataFrame:
     &#34;&#34;&#34;
     Fetches the 2010 Census geometries on which ACS data are reported.
-  
+
     Args:
-        state (State): The `us.State` for which CVAP will be estimated. 
+        state (State): The `us.State` for which CVAP will be estimated.
         geometry10 (str): Level of geometry we&#39;re fetching. Accepted values are
             `&#34;tract&#34;` and `&#34;block group&#34;`.
 
-    Returns: 
+    Returns:
         A `GeoDataFrame` of 2010 geometries.
     &#34;&#34;&#34;
     # Get a Census locator for the provided State by replacing spaces in its name
     # with underscores (should they exist).
     clocator = state.name.replace(&#34; &#34;, &#34;_&#34;)
-    
+
     # Validate geometry level indicators.
     if geometry not in {&#34;block group&#34;, &#34;tract&#34;, &#34;block&#34;}:
         raise ValueError(f&#34;Geometry level {geometry} not supported; aborting.&#34;)
-    
-    if geometry == &#34;block group&#34;: geometry = &#34;bg&#34;
-    if geometry == &#34;block&#34;: geometry = &#34;tabblock&#34;
+
+    if geometry == &#34;block group&#34;:
+        geometry = &#34;bg&#34;
+    if geometry == &#34;block&#34;:
+        geometry = &#34;tabblock&#34;
 
     # Construct the Census URL.
     fips = state.fips
@@ -160,28 +162,29 @@ def fetchgeometries(state, geometry) -&gt; gpd.GeoDataFrame:
     # Download, extract, and return the geometries from the URL.
     return gpd.read_file(url)
 
+
 def mapbase(base, state, geometry, baseindex=&#34;GEOID20&#34;):
     &#34;&#34;&#34;
     Maps the provided geometries in `base` to the 2010 Census geometries specified
     by `geometry`.
-    
+
     Args:
         base (GeoDataFrame): GeoDataFrame with the desired units for cvap to be
-            estimated on. 
-        state (State): The `us.State` for which CVAP will be estimated. 
+            estimated on.
+        state (State): The `us.State` for which CVAP will be estimated.
         geometry (str): Level of geometry we&#39;re fetching. Accepted values are
             `&#34;tract&#34;` and `&#34;block group&#34;`.
-    
-    Returns: 
+
+    Returns:
        `base` with 2010 geometry assignments adjoined.
     &#34;&#34;&#34;
     # Get the 2010 geometries from the Census.
     geometry10 = fetchgeometries(state, geometry)
-    
+
     # Get the right name and rename the 2010 geometry index this way.
     geometry10id = &#34;TRACT10&#34; if geometry == &#34;tract&#34; else &#34;BLOCKGROUP10&#34;
     geometry10 = geometry10.rename({&#34;GEOID10&#34;: geometry10id}, axis=1)
-    
+
     # Create a unit mapping from the provided base units to those retrieved from
     # the Census. If the `base` passed has been sliced or could possibly be a
     # copy, *this will throw a SettingWithCopy warning*.
@@ -190,16 +193,17 @@ def mapbase(base, state, geometry, baseindex=&#34;GEOID20&#34;):
 
     return base
 
+
 def estimatecvap2010(
-        base, state, groups, ceiling, zfill, geometry10=&#34;tract&#34;, year=2019
-    ) -&gt; DataFrame:
+    base, state, groups, ceiling, zfill, geometry10=&#34;tract&#34;, year=2019
+) -&gt; DataFrame:
     r&#34;&#34;&#34;
     Function for turning old (2019) CVAP data on 2010 geometries into estimates
     for current CVAP data on 2020 geometries. **This method serves a different
     purpose than `evaltools.data.estimatecvap.estimatecvap2020()`:** this method
     is intended to put 2010-era CVAP data on 2020-era geometries, and uses
     geometric properties to do so.
-    
+
     Users must supply a base `GeoDataFrame`
     representing their chosen U.S. state. Additionally, users must specify the
     demographic groups whose CVAP statistics are to be estimated. For each group,
@@ -239,7 +243,7 @@ def estimatecvap2010(
             to `&#34;tract&#34;` is recommended, as it is more likely that the 2020 Census
             blocks fit neatly into the 2010 Census tracts.
 
-    Returns: 
+    Returns:
        `base` geometries with 2019 CVAP-weighted 2020 CVAP estimates attached.
     &#34;&#34;&#34;
     if geometry10 not in {&#34;block group&#34;, &#34;tract&#34;}:
@@ -272,8 +276,8 @@ def estimatecvap2010(
                 f&#34;Your CVAP column &#39;{cvap10}&#39; must be contained in either the ACS &#34;
                 f&#34;or Special Tab columns: {possible_columns}&#34;
             )
-        
-        if not vap10 in acs_source:
+
+        if vap10 not in acs_source:
             raise ValueError(
                 f&#34;Your old VAP column &#39;{vap10}&#39; must be contained in the ACS &#34;
                 &#34;columns: {set(acs_source)}&#34;
@@ -281,12 +285,12 @@ def estimatecvap2010(
 
         # If the VAP20 column passed doesn&#39;t exist on the user-provided geometries,
         # raise an error.
-        if not vap20 in base:
+        if vap20 not in base:
             raise ValueError(
                 f&#34;Your new VAP column &#39;{vap20}&#39; must be contained in your base &#34; +
                 f&#34;dataframe: {set(base)}&#34;
             )
-    
+
     # Remove ACS 5 columns that overlap with special-tab ones.
     non_overlaps = list(set(acs_source).difference(set(cvap_source)))
     acs_source = acs_source[[cvap_geoid] + non_overlaps]
@@ -300,23 +304,23 @@ def estimatecvap2010(
     bads = list(set(base) - set(correct))
 
     # Warn the user of column removal:
-    print(f&#34;Removing the following columns: &#34; + &#34;, &#34;.join(bads))
+    print(&#34;Removing the following columns: &#34; + &#34;, &#34;.join(bads))
 
     pared = base.drop(bads, axis=1)
     pared = mapbase(pared, state, geometry10)
 
     # Compute weights.
-    for (cvap10, vap10, _) in groups: 
-       source[cvap10 + &#34;%&#34;] = source[cvap10]/source[vap10]
+    for (cvap10, vap10, _) in groups:
+        source[cvap10 + &#34;%&#34;] = source[cvap10] / source[vap10]
 
     # Fill in values according to the following rules:
-    # 
+    #
     #   1.  if there are 0 *CVAP reported and 0 *VAP reported, we set the weight to
     #       the average *CVAP/*VAP ratio within the county;
     #   2.  if there are 0 *CVAP reported and *VAP &gt; 0, we set the weight to zero_fill;
     #   3.  if *CVAP &gt; 0 but *VAP = 0 or *CVAP/*VAP &gt; percentage_cap, we set the weight to 1.
     statewide = {
-        cvap + &#34;%&#34;: source[cvap].sum()/source[vap].sum() if source[vap].sum() != 0 else 0
+        cvap + &#34;%&#34;: source[cvap].sum() / source[vap].sum() if source[vap].sum() != 0 else 0
         for (cvap, vap, _) in groups
     }
 
@@ -327,11 +331,11 @@ def estimatecvap2010(
     # serves as a replacement for the statewide average.
     source[&#34;_county&#34;] = source[cvap_geoid].str[2:5]
     counties = list(set(source[&#34;_county&#34;]))
-    countyaverages = { pct: {} for pct in cvappcts }
+    countyaverages = {pct: {} for pct in cvappcts}
 
     for county in counties:
         chunk = source[source[&#34;_county&#34;] == county]
-        
+
         for cvap19, vap19, _ in groups:
             # Calculate the CVAP19-to-VAP19 ratio. Set numpy to ignore runtimewarnings,
             # but warn the user if one is encountered. We do this so that the user
@@ -341,25 +345,25 @@ def estimatecvap2010(
             vap19total = chunk[vap19].sum()
 
             np.seterr(divide=&#34;ignore&#34;, invalid=&#34;ignore&#34;)
-            ratio = cvap19total/vap19total
+            ratio = cvap19total / vap19total
 
             # Check whether the ratio of the above is less than the ceiling.
             if not np.isfinite(ratio):
-                print(county, 
-                    f&#34;Encountered an invalid ratio: there are {cvap19total} {cvap19} &#34;
-                    f&#34;persons and {vap19total} {vap19} persons, for a ratio of &#34;
-                    f&#34;{cvap19total}/{vap19total}. &#34;
-                    f&#34;we have substituted it for the statewide {cvap19}-to-{vap19} &#34;
-                    f&#34;share of {statewide[cvap19 + &#39;%&#39;]}.&#34;
-                )
+                print(county,
+                      f&#34;Encountered an invalid ratio: there are {cvap19total} {cvap19} &#34;
+                      f&#34;persons and {vap19total} {vap19} persons, for a ratio of &#34;
+                      f&#34;{cvap19total}/{vap19total}. &#34;
+                      f&#34;we have substituted it for the statewide {cvap19}-to-{vap19} &#34;
+                      f&#34;share of {statewide[cvap19 + &#39;%&#39;]}.&#34;
+                      )
                 ratio = statewide[cvap19 + &#34;%&#34;]
 
             # Set the county-average ratio.
             countyaverages[cvap19 + &#34;%&#34;][county] = ratio
-    
+
     # Reset the numpy error catching thing.
     np.seterr(all=&#34;warn&#34;)
-    
+
     # For each of the percentage columns, we want to apply the rules specified
     # by the user.
     for pct in cvappcts:
@@ -369,7 +373,7 @@ def estimatecvap2010(
         source[pct] = source[pct].replace(np.inf, np.nan)
         nanindices = source[source[pct].isna()].index
         source.loc[nanindices, pct] = source.loc[nanindices, &#34;_county&#34;].map(countywidepcts)
-        
+
         # Fill zeroes with the `zfill` value, and cap all the percentages.
         source[pct] = source[pct] \
             .replace(0, zfill) \
@@ -380,15 +384,15 @@ def estimatecvap2010(
         np.all(source[p + &#34;%&#34;] &lt;= ceiling)
         for (p, _, __) in groups
     )
-    
-    # Assert we don&#39;t have any zeros. 
+
+    # Assert we don&#39;t have any zeros.
     assert all(
         np.all(source[p + &#34;%&#34;] &gt; 0)
         for (p, _, __) in groups
     )
 
     # Set indices and create a mapping from IDs to weights.
-    source = source.set_index(cvap_geoid)    
+    source = source.set_index(cvap_geoid)
     source = source[cvappcts]
     weights = source.to_dict(orient=&#34;index&#34;)
 
@@ -406,7 +410,7 @@ def estimatecvap2010(
             weight = cvap10 + &#34;%&#34;
             cvap20 = cvap10.replace(yearsuffix, &#34;20_EST&#34;)
             group[weight] = weights[ix][weight]
-            group[cvap20] = group[weight]*group[vap20]
+            group[cvap20] = group[weight] * group[vap20]
 
     # Re-create a dataframe and strip out % columns, leaving only the estimate
     # columns.
@@ -476,22 +480,22 @@ less susceptible to change across Census vintages, setting this parameter
 to <code>"tract"</code> is recommended, as it is more likely that the 2020 Census
 blocks fit neatly into the 2010 Census tracts.</dd>
 </dl>
-<p>Returns:
-<code>base</code> geometries with 2019 CVAP-weighted 2020 CVAP estimates attached.</p></div>
+<h2 id="returns">Returns</h2>
+<p><code>base</code> geometries with 2019 CVAP-weighted 2020 CVAP estimates attached.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def estimatecvap2010(
-        base, state, groups, ceiling, zfill, geometry10=&#34;tract&#34;, year=2019
-    ) -&gt; DataFrame:
+    base, state, groups, ceiling, zfill, geometry10=&#34;tract&#34;, year=2019
+) -&gt; DataFrame:
     r&#34;&#34;&#34;
     Function for turning old (2019) CVAP data on 2010 geometries into estimates
     for current CVAP data on 2020 geometries. **This method serves a different
     purpose than `evaltools.data.estimatecvap.estimatecvap2020()`:** this method
     is intended to put 2010-era CVAP data on 2020-era geometries, and uses
     geometric properties to do so.
-    
+
     Users must supply a base `GeoDataFrame`
     representing their chosen U.S. state. Additionally, users must specify the
     demographic groups whose CVAP statistics are to be estimated. For each group,
@@ -531,7 +535,7 @@ blocks fit neatly into the 2010 Census tracts.</dd>
             to `&#34;tract&#34;` is recommended, as it is more likely that the 2020 Census
             blocks fit neatly into the 2010 Census tracts.
 
-    Returns: 
+    Returns:
        `base` geometries with 2019 CVAP-weighted 2020 CVAP estimates attached.
     &#34;&#34;&#34;
     if geometry10 not in {&#34;block group&#34;, &#34;tract&#34;}:
@@ -564,8 +568,8 @@ blocks fit neatly into the 2010 Census tracts.</dd>
                 f&#34;Your CVAP column &#39;{cvap10}&#39; must be contained in either the ACS &#34;
                 f&#34;or Special Tab columns: {possible_columns}&#34;
             )
-        
-        if not vap10 in acs_source:
+
+        if vap10 not in acs_source:
             raise ValueError(
                 f&#34;Your old VAP column &#39;{vap10}&#39; must be contained in the ACS &#34;
                 &#34;columns: {set(acs_source)}&#34;
@@ -573,12 +577,12 @@ blocks fit neatly into the 2010 Census tracts.</dd>
 
         # If the VAP20 column passed doesn&#39;t exist on the user-provided geometries,
         # raise an error.
-        if not vap20 in base:
+        if vap20 not in base:
             raise ValueError(
                 f&#34;Your new VAP column &#39;{vap20}&#39; must be contained in your base &#34; +
                 f&#34;dataframe: {set(base)}&#34;
             )
-    
+
     # Remove ACS 5 columns that overlap with special-tab ones.
     non_overlaps = list(set(acs_source).difference(set(cvap_source)))
     acs_source = acs_source[[cvap_geoid] + non_overlaps]
@@ -592,23 +596,23 @@ blocks fit neatly into the 2010 Census tracts.</dd>
     bads = list(set(base) - set(correct))
 
     # Warn the user of column removal:
-    print(f&#34;Removing the following columns: &#34; + &#34;, &#34;.join(bads))
+    print(&#34;Removing the following columns: &#34; + &#34;, &#34;.join(bads))
 
     pared = base.drop(bads, axis=1)
     pared = mapbase(pared, state, geometry10)
 
     # Compute weights.
-    for (cvap10, vap10, _) in groups: 
-       source[cvap10 + &#34;%&#34;] = source[cvap10]/source[vap10]
+    for (cvap10, vap10, _) in groups:
+        source[cvap10 + &#34;%&#34;] = source[cvap10] / source[vap10]
 
     # Fill in values according to the following rules:
-    # 
+    #
     #   1.  if there are 0 *CVAP reported and 0 *VAP reported, we set the weight to
     #       the average *CVAP/*VAP ratio within the county;
     #   2.  if there are 0 *CVAP reported and *VAP &gt; 0, we set the weight to zero_fill;
     #   3.  if *CVAP &gt; 0 but *VAP = 0 or *CVAP/*VAP &gt; percentage_cap, we set the weight to 1.
     statewide = {
-        cvap + &#34;%&#34;: source[cvap].sum()/source[vap].sum() if source[vap].sum() != 0 else 0
+        cvap + &#34;%&#34;: source[cvap].sum() / source[vap].sum() if source[vap].sum() != 0 else 0
         for (cvap, vap, _) in groups
     }
 
@@ -619,11 +623,11 @@ blocks fit neatly into the 2010 Census tracts.</dd>
     # serves as a replacement for the statewide average.
     source[&#34;_county&#34;] = source[cvap_geoid].str[2:5]
     counties = list(set(source[&#34;_county&#34;]))
-    countyaverages = { pct: {} for pct in cvappcts }
+    countyaverages = {pct: {} for pct in cvappcts}
 
     for county in counties:
         chunk = source[source[&#34;_county&#34;] == county]
-        
+
         for cvap19, vap19, _ in groups:
             # Calculate the CVAP19-to-VAP19 ratio. Set numpy to ignore runtimewarnings,
             # but warn the user if one is encountered. We do this so that the user
@@ -633,25 +637,25 @@ blocks fit neatly into the 2010 Census tracts.</dd>
             vap19total = chunk[vap19].sum()
 
             np.seterr(divide=&#34;ignore&#34;, invalid=&#34;ignore&#34;)
-            ratio = cvap19total/vap19total
+            ratio = cvap19total / vap19total
 
             # Check whether the ratio of the above is less than the ceiling.
             if not np.isfinite(ratio):
-                print(county, 
-                    f&#34;Encountered an invalid ratio: there are {cvap19total} {cvap19} &#34;
-                    f&#34;persons and {vap19total} {vap19} persons, for a ratio of &#34;
-                    f&#34;{cvap19total}/{vap19total}. &#34;
-                    f&#34;we have substituted it for the statewide {cvap19}-to-{vap19} &#34;
-                    f&#34;share of {statewide[cvap19 + &#39;%&#39;]}.&#34;
-                )
+                print(county,
+                      f&#34;Encountered an invalid ratio: there are {cvap19total} {cvap19} &#34;
+                      f&#34;persons and {vap19total} {vap19} persons, for a ratio of &#34;
+                      f&#34;{cvap19total}/{vap19total}. &#34;
+                      f&#34;we have substituted it for the statewide {cvap19}-to-{vap19} &#34;
+                      f&#34;share of {statewide[cvap19 + &#39;%&#39;]}.&#34;
+                      )
                 ratio = statewide[cvap19 + &#34;%&#34;]
 
             # Set the county-average ratio.
             countyaverages[cvap19 + &#34;%&#34;][county] = ratio
-    
+
     # Reset the numpy error catching thing.
     np.seterr(all=&#34;warn&#34;)
-    
+
     # For each of the percentage columns, we want to apply the rules specified
     # by the user.
     for pct in cvappcts:
@@ -661,7 +665,7 @@ blocks fit neatly into the 2010 Census tracts.</dd>
         source[pct] = source[pct].replace(np.inf, np.nan)
         nanindices = source[source[pct].isna()].index
         source.loc[nanindices, pct] = source.loc[nanindices, &#34;_county&#34;].map(countywidepcts)
-        
+
         # Fill zeroes with the `zfill` value, and cap all the percentages.
         source[pct] = source[pct] \
             .replace(0, zfill) \
@@ -672,15 +676,15 @@ blocks fit neatly into the 2010 Census tracts.</dd>
         np.all(source[p + &#34;%&#34;] &lt;= ceiling)
         for (p, _, __) in groups
     )
-    
-    # Assert we don&#39;t have any zeros. 
+
+    # Assert we don&#39;t have any zeros.
     assert all(
         np.all(source[p + &#34;%&#34;] &gt; 0)
         for (p, _, __) in groups
     )
 
     # Set indices and create a mapping from IDs to weights.
-    source = source.set_index(cvap_geoid)    
+    source = source.set_index(cvap_geoid)
     source = source[cvappcts]
     weights = source.to_dict(orient=&#34;index&#34;)
 
@@ -698,7 +702,7 @@ blocks fit neatly into the 2010 Census tracts.</dd>
             weight = cvap10 + &#34;%&#34;
             cvap20 = cvap10.replace(yearsuffix, &#34;20_EST&#34;)
             group[weight] = weights[ix][weight]
-            group[cvap20] = group[weight]*group[vap20]
+            group[cvap20] = group[weight] * group[vap20]
 
     # Re-create a dataframe and strip out % columns, leaving only the estimate
     # columns.
@@ -765,9 +769,9 @@ and be used to build other units of varying size.</p>
 
     # Create &#34;remainder&#34; column.
     for universe in [block, bg]:
-        universe[&#34;NHVAP20&#34;] = universe[&#34;VAP20&#34;]-universe[&#34;HVAP20&#34;]
-        universe[&#34;OTHVAP20&#34;] = universe[&#34;NHVAP20&#34;]-universe[vapcolumns].sum(axis=1)
-    
+        universe[&#34;NHVAP20&#34;] = universe[&#34;VAP20&#34;] - universe[&#34;HVAP20&#34;]
+        universe[&#34;OTHVAP20&#34;] = universe[&#34;NHVAP20&#34;] - universe[vapcolumns].sum(axis=1)
+
     # Get the block group ID for blocks.
     block[&#34;BLOCKGROUP20&#34;] = block[&#34;GEOID20&#34;].astype(str).str[:-3]
 
@@ -781,14 +785,14 @@ and be used to build other units of varying size.</p>
     for vapcolumn in allvapcols:
         # Crete a mapping from block group names to totals for the VAP column.
         popmap = dict(zip(bg[&#34;GEOID20&#34;].astype(str), bg[vapcolumn]))
-        
+
         # Create column names.
-        colpct = vapcolumn+&#34;%&#34;
+        colpct = vapcolumn + &#34;%&#34;
         cvapcolumn = vapcolumn.replace(&#34;VAP&#34;, &#34;CVAP&#34;)
 
         # Calculate ratios.
         block[colpct] = block[&#34;BLOCKGROUP20&#34;].map(popmap)
-        block[colpct] = block[vapcolumn]/block[colpct]
+        block[colpct] = block[vapcolumn] / block[colpct]
 
         # Create a mapping from block group IDs to CVAP groups.
         cvapcolumn = vapcolumn.replace(&#34;VAP&#34;, &#34;CVAP&#34;)
@@ -803,16 +807,16 @@ and be used to build other units of varying size.</p>
 
         # Next, compute the estimated CVAP by multiplying the VAP column percent
         # for the block group by the total CVAP population of the block group.
-        block[cvapcolumn] = block[colpct]*block[&#34;tmp&#34;]
+        block[cvapcolumn] = block[colpct] * block[&#34;tmp&#34;]
 
         # If the above doesn&#39;t work — which is the case if the VAP column percent
         # is NaN (0/0) or inf (k/0), we estimate the CVAP of the block using the
         # VAP ratio outright rather than the column-specific VAP ratio.
         ni = block[block[colpct].isna()].index
-        block.loc[ni,cvapcolumn] = (block.loc[ni,&#34;VAP20&#34;]/block.loc[ni,&#34;BGVAP20&#34;])*block.loc[ni,&#34;tmp&#34;]
+        block.loc[ni, cvapcolumn] = (block.loc[ni, &#34;VAP20&#34;] / block.loc[ni, &#34;BGVAP20&#34;]) * block.loc[ni, &#34;tmp&#34;]
 
         # Assert that our summed disaggregated numbers and totals are close!
-        assert np.isclose(bg[cvapcolumn].sum()-block[cvapcolumn].sum(), 0)
+        assert np.isclose(bg[cvapcolumn].sum() - block[cvapcolumn].sum(), 0)
 
     # Fill NaNs with 0 and drop unnecessary columns.
     block = block.fillna(0)
@@ -830,39 +834,41 @@ and be used to build other units of varying size.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
-<dd>The <code>us.State</code> for which CVAP will be estimated. </dd>
+<dd>The <code>us.State</code> for which CVAP will be estimated.</dd>
 <dt><strong><code>geometry10</code></strong> :&ensp;<code>str</code></dt>
 <dd>Level of geometry we're fetching. Accepted values are
 <code>"tract"</code> and <code>"block group"</code>.</dd>
 </dl>
-<p>Returns:
-A <code>GeoDataFrame</code> of 2010 geometries.</p></div>
+<h2 id="returns">Returns</h2>
+<p>A <code>GeoDataFrame</code> of 2010 geometries.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def fetchgeometries(state, geometry) -&gt; gpd.GeoDataFrame: 
+<pre><code class="python">def fetchgeometries(state, geometry) -&gt; gpd.GeoDataFrame:
     &#34;&#34;&#34;
     Fetches the 2010 Census geometries on which ACS data are reported.
-  
+
     Args:
-        state (State): The `us.State` for which CVAP will be estimated. 
+        state (State): The `us.State` for which CVAP will be estimated.
         geometry10 (str): Level of geometry we&#39;re fetching. Accepted values are
             `&#34;tract&#34;` and `&#34;block group&#34;`.
 
-    Returns: 
+    Returns:
         A `GeoDataFrame` of 2010 geometries.
     &#34;&#34;&#34;
     # Get a Census locator for the provided State by replacing spaces in its name
     # with underscores (should they exist).
     clocator = state.name.replace(&#34; &#34;, &#34;_&#34;)
-    
+
     # Validate geometry level indicators.
     if geometry not in {&#34;block group&#34;, &#34;tract&#34;, &#34;block&#34;}:
         raise ValueError(f&#34;Geometry level {geometry} not supported; aborting.&#34;)
-    
-    if geometry == &#34;block group&#34;: geometry = &#34;bg&#34;
-    if geometry == &#34;block&#34;: geometry = &#34;tabblock&#34;
+
+    if geometry == &#34;block group&#34;:
+        geometry = &#34;bg&#34;
+    if geometry == &#34;block&#34;:
+        geometry = &#34;tabblock&#34;
 
     # Construct the Census URL.
     fips = state.fips
@@ -884,15 +890,15 @@ by <code>geometry</code>.</p>
 <dl>
 <dt><strong><code>base</code></strong> :&ensp;<code>GeoDataFrame</code></dt>
 <dd>GeoDataFrame with the desired units for cvap to be
-estimated on. </dd>
+estimated on.</dd>
 <dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
-<dd>The <code>us.State</code> for which CVAP will be estimated. </dd>
+<dd>The <code>us.State</code> for which CVAP will be estimated.</dd>
 <dt><strong><code>geometry</code></strong> :&ensp;<code>str</code></dt>
 <dd>Level of geometry we're fetching. Accepted values are
 <code>"tract"</code> and <code>"block group"</code>.</dd>
 </dl>
-<p>Returns:
-<code>base</code> with 2010 geometry assignments adjoined.</p></div>
+<h2 id="returns">Returns</h2>
+<p><code>base</code> with 2010 geometry assignments adjoined.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -901,24 +907,24 @@ estimated on. </dd>
     &#34;&#34;&#34;
     Maps the provided geometries in `base` to the 2010 Census geometries specified
     by `geometry`.
-    
+
     Args:
         base (GeoDataFrame): GeoDataFrame with the desired units for cvap to be
-            estimated on. 
-        state (State): The `us.State` for which CVAP will be estimated. 
+            estimated on.
+        state (State): The `us.State` for which CVAP will be estimated.
         geometry (str): Level of geometry we&#39;re fetching. Accepted values are
             `&#34;tract&#34;` and `&#34;block group&#34;`.
-    
-    Returns: 
+
+    Returns:
        `base` with 2010 geometry assignments adjoined.
     &#34;&#34;&#34;
     # Get the 2010 geometries from the Census.
     geometry10 = fetchgeometries(state, geometry)
-    
+
     # Get the right name and rename the 2010 geometry index this way.
     geometry10id = &#34;TRACT10&#34; if geometry == &#34;tract&#34; else &#34;BLOCKGROUP10&#34;
     geometry10 = geometry10.rename({&#34;GEOID10&#34;: geometry10id}, axis=1)
-    
+
     # Create a unit mapping from the provided base units to those retrieved from
     # the Census. If the `base` passed has been sliced or could possibly be a
     # copy, *this will throw a SettingWithCopy warning*.

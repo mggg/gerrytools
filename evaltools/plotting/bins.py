@@ -41,7 +41,7 @@ def bins(scores, width=None, labels=8) -> Tuple[array, List, List, Union[float, 
             tick_labels.append(x)
             tick_bins.append(x + width / 2)
     for i, label in enumerate(tick_labels):
-        if type(label) == np.float64:
+        if isinstance(label, np.float64):
             tick_labels[i] = round(label, 2)
 
     return hist_bins, tick_bins, tick_labels, width

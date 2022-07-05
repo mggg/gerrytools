@@ -34,6 +34,7 @@ from itertools import combinations
 from functools import reduce
 from typing import Iterable
 
+
 def _rjoin(df, columns) -&gt; Iterable:
     &#34;&#34;&#34;
     Private method for elementwise concatenating string dataframe columns.
@@ -42,7 +43,7 @@ def _rjoin(df, columns) -&gt; Iterable:
         df (pd.DataFrame): DataFrame to which the columns belong.
         columns (list): List of column names to be concatenated in left-to-right
             order.
-        
+
     Returns:
         An iterable representing the column of concatenated column entries.
     &#34;&#34;&#34;
@@ -64,14 +65,15 @@ def census10(state, columns={}, geometry=&#34;block&#34;):
         geometry (string, optional): Geometry level at which we retrieve data.
             Defaults to `&#34;block&#34;` to retrieve block-level data for the state
             provided. Accepted values are `&#34;block&#34;`, `&#34;block group`&#34;, and `&#34;tract&#34;`.
-    
+
     Returns:
         A DataFrame with columns renamed according to their Census description
         designation and a unique identifier column for joining to geometries.
     &#34;&#34;&#34;
     # Create the right geometry identifiers.
     geometries = [(&#34;state&#34;, str(state.fips)), (&#34;county&#34;, &#34;*&#34;), (&#34;tract&#34;, &#34;*&#34;)]
-    if geometry in {&#34;block group&#34;, &#34;block&#34;}: geometries += [(geometry, &#34;*&#34;)]
+    if geometry in {&#34;block group&#34;, &#34;block&#34;}:
+        geometries += [(geometry, &#34;*&#34;)]
 
     # Create an identifier column.
     identifier = geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;
@@ -89,10 +91,11 @@ def census10(state, columns={}, geometry=&#34;block&#34;):
 
     return clean
 
+
 def census20(
-        state, table=&#34;P1&#34;, columns={}, geometry=&#34;block&#34;,
-        key=&#34;75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65&#34;
-    ) -&gt; pd.DataFrame:
+    state, table=&#34;P1&#34;, columns={}, geometry=&#34;block&#34;,
+    key=&#34;75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65&#34;
+) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves `geometry`-level 2020 Decennial Census PL94-171 data via the Census
     API.
@@ -127,7 +130,7 @@ def census20(
         table = &#34;P1&#34;
 
     # Set the base Census API URL and get the keys for the provided table.
-    base = f&#34;https://api.census.gov/data/2020/dec/pl&#34;
+    base = &#34;https://api.census.gov/data/2020/dec/pl&#34;
     varmap = columns if columns else variables(table)
     vars = list(varmap.keys())
 
@@ -141,15 +144,18 @@ def census20(
 
     # Based on the geometry type, add an additional entry; this is required to
     # match the Census geographic hierarchy.
-    if geometry in {&#34;block&#34;, &#34;block group&#34;}: q.append((&#34;in&#34;, &#34;tract:*&#34;))
+    if geometry in {&#34;block&#34;, &#34;block group&#34;}:
+        q.append((&#34;in&#34;, &#34;tract:*&#34;))
 
     # Now, since the Census doesn&#39;t allow us to request more than 50 variables
     # at once, we request things in two parts and then merge them together.
     mergeable = []
 
     # Split up start and stop positions based on the number of variables.
-    if len(vars) &lt; 45: positions = [(0, len(vars))]
-    else: positions = [(0, 45), (45, len(vars))]
+    if len(vars) &lt; 45:
+        positions = [(0, len(vars))]
+    else:
+        positions = [(0, 45), (45, len(vars))]
 
     for start, stop in positions:
         # Get the chunk of variables and create a tail of columns (geographic
@@ -196,7 +202,7 @@ def variables(table) -&gt; dict:
 
     Args:
         table (string): The table for which we&#39;re generating variables.
-    
+
     Returns:
         A dictionary mapping Census variable codes to human-readable ones.
     &#34;&#34;&#34;
@@ -214,7 +220,7 @@ def variables(table) -&gt; dict:
     combos = list(pd.core.common.flatten(
         [
             prefix + &#34;&#34;.join(list(combo)) + suffix + &#34;20&#34;
-            for i in range(1, len(categories)+1)
+            for i in range(1, len(categories) + 1)
             for combo in list(combinations(categories, i))
         ]
     ))
@@ -223,12 +229,14 @@ def variables(table) -&gt; dict:
     # the descriptor. Each of these tranches should have a width of 6 choose i,
     # where i is the number of categories in the combination. For example, the
     # second tranch (from 13 to 27) has width 15, as 6C2=15.
-    if table in {&#34;P1&#34;, &#34;P3&#34;}: tranches = [(3, 8), (11, 25), (27, 46), (48, 62), (64, 69), (71, 71)]
-    else: tranches = [(5, 10), (13, 27), (29, 48), (50, 64), (66, 71), (73, 73)]
+    if table in {&#34;P1&#34;, &#34;P3&#34;}:
+        tranches = [(3, 8), (11, 25), (27, 46), (48, 62), (64, 69), (71, 71)]
+    else:
+        tranches = [(5, 10), (13, 27), (29, 48), (50, 64), (66, 71), (73, 73)]
 
     # Create variable numbers.
-    numbers = list(pd.core.common.flatten([list(range(i, j+1)) for i, j in tranches]))
-    
+    numbers = list(pd.core.common.flatten([list(range(i, j + 1)) for i, j in tranches]))
+
     # Edit these for specific tables. For example, in tables P2 and P3, we want
     # to get the total Hispanic population and the total population.
     if table in {&#34;P2&#34;, &#34;P4&#34;}:
@@ -240,7 +248,7 @@ def variables(table) -&gt; dict:
         numbers = [1] + numbers
         tcol = &#34;VAP20&#34; if table in {&#34;P3&#34;, &#34;P4&#34;} else &#34;TOTPOP20&#34;
         combos = [tcol] + combos
-    
+
     # Create the variable names and zip the names together with the combinations.
     names = [f&#34;{table}_{str(n).zfill(3)}N&#34; for n in numbers]
     return dict(zip(names, combos))</code></pre>
@@ -294,14 +302,15 @@ designation and a unique identifier column for joining to geometries.</p></div>
         geometry (string, optional): Geometry level at which we retrieve data.
             Defaults to `&#34;block&#34;` to retrieve block-level data for the state
             provided. Accepted values are `&#34;block&#34;`, `&#34;block group`&#34;, and `&#34;tract&#34;`.
-    
+
     Returns:
         A DataFrame with columns renamed according to their Census description
         designation and a unique identifier column for joining to geometries.
     &#34;&#34;&#34;
     # Create the right geometry identifiers.
     geometries = [(&#34;state&#34;, str(state.fips)), (&#34;county&#34;, &#34;*&#34;), (&#34;tract&#34;, &#34;*&#34;)]
-    if geometry in {&#34;block group&#34;, &#34;block&#34;}: geometries += [(geometry, &#34;*&#34;)]
+    if geometry in {&#34;block group&#34;, &#34;block&#34;}:
+        geometries += [(geometry, &#34;*&#34;)]
 
     # Create an identifier column.
     identifier = geometry.replace(&#34; &#34;, &#34;&#34;).upper() + &#34;10&#34;
@@ -354,9 +363,9 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def census20(
-        state, table=&#34;P1&#34;, columns={}, geometry=&#34;block&#34;,
-        key=&#34;75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65&#34;
-    ) -&gt; pd.DataFrame:
+    state, table=&#34;P1&#34;, columns={}, geometry=&#34;block&#34;,
+    key=&#34;75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65&#34;
+) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Retrieves `geometry`-level 2020 Decennial Census PL94-171 data via the Census
     API.
@@ -391,7 +400,7 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
         table = &#34;P1&#34;
 
     # Set the base Census API URL and get the keys for the provided table.
-    base = f&#34;https://api.census.gov/data/2020/dec/pl&#34;
+    base = &#34;https://api.census.gov/data/2020/dec/pl&#34;
     varmap = columns if columns else variables(table)
     vars = list(varmap.keys())
 
@@ -405,15 +414,18 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
 
     # Based on the geometry type, add an additional entry; this is required to
     # match the Census geographic hierarchy.
-    if geometry in {&#34;block&#34;, &#34;block group&#34;}: q.append((&#34;in&#34;, &#34;tract:*&#34;))
+    if geometry in {&#34;block&#34;, &#34;block group&#34;}:
+        q.append((&#34;in&#34;, &#34;tract:*&#34;))
 
     # Now, since the Census doesn&#39;t allow us to request more than 50 variables
     # at once, we request things in two parts and then merge them together.
     mergeable = []
 
     # Split up start and stop positions based on the number of variables.
-    if len(vars) &lt; 45: positions = [(0, len(vars))]
-    else: positions = [(0, 45), (45, len(vars))]
+    if len(vars) &lt; 45:
+        positions = [(0, len(vars))]
+    else:
+        positions = [(0, 45), (45, len(vars))]
 
     for start, stop in positions:
         # Get the chunk of variables and create a tail of columns (geographic
@@ -478,7 +490,7 @@ P4</a>.</p>
 
     Args:
         table (string): The table for which we&#39;re generating variables.
-    
+
     Returns:
         A dictionary mapping Census variable codes to human-readable ones.
     &#34;&#34;&#34;
@@ -496,7 +508,7 @@ P4</a>.</p>
     combos = list(pd.core.common.flatten(
         [
             prefix + &#34;&#34;.join(list(combo)) + suffix + &#34;20&#34;
-            for i in range(1, len(categories)+1)
+            for i in range(1, len(categories) + 1)
             for combo in list(combinations(categories, i))
         ]
     ))
@@ -505,12 +517,14 @@ P4</a>.</p>
     # the descriptor. Each of these tranches should have a width of 6 choose i,
     # where i is the number of categories in the combination. For example, the
     # second tranch (from 13 to 27) has width 15, as 6C2=15.
-    if table in {&#34;P1&#34;, &#34;P3&#34;}: tranches = [(3, 8), (11, 25), (27, 46), (48, 62), (64, 69), (71, 71)]
-    else: tranches = [(5, 10), (13, 27), (29, 48), (50, 64), (66, 71), (73, 73)]
+    if table in {&#34;P1&#34;, &#34;P3&#34;}:
+        tranches = [(3, 8), (11, 25), (27, 46), (48, 62), (64, 69), (71, 71)]
+    else:
+        tranches = [(5, 10), (13, 27), (29, 48), (50, 64), (66, 71), (73, 73)]
 
     # Create variable numbers.
-    numbers = list(pd.core.common.flatten([list(range(i, j+1)) for i, j in tranches]))
-    
+    numbers = list(pd.core.common.flatten([list(range(i, j + 1)) for i, j in tranches]))
+
     # Edit these for specific tables. For example, in tables P2 and P3, we want
     # to get the total Hispanic population and the total population.
     if table in {&#34;P2&#34;, &#34;P4&#34;}:
@@ -522,7 +536,7 @@ P4</a>.</p>
         numbers = [1] + numbers
         tcol = &#34;VAP20&#34; if table in {&#34;P3&#34;, &#34;P4&#34;} else &#34;TOTPOP20&#34;
         combos = [tcol] + combos
-    
+
     # Create the variable names and zip the names together with the combinations.
     names = [f&#34;{table}_{str(n).zfill(3)}N&#34; for n in numbers]
     return dict(zip(names, combos))</code></pre>

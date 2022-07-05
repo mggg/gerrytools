@@ -33,7 +33,7 @@ import json
 from typing import List, Tuple
 from random import choice
 from string import hexdigits as hex
-from pathlib import Path
+import pkgutil
 
 &#34;&#34;&#34;
 Default gray plotting color; used in histograms, violin plots, and arrows.
@@ -54,8 +54,7 @@ overlays = [&#34;gainsboro&#34;, &#34;silver&#34;, &#34;darkgray&#34;, &#34;gray
 &#34;&#34;&#34;
 LaTeX colors, [borrowed from here.](http://latexcolor.com/)
 &#34;&#34;&#34;
-local = Path(__file__).parent.absolute()
-with open(local/&#34;latexcolors.json&#34;) as r: latex = json.load(r)
+latex = json.loads(pkgutil.get_data(__name__, &#34;latexcolors.json&#34;))
 
 
 def hexshift(color) -&gt; str:
@@ -75,10 +74,12 @@ def hexshift(color) -&gt; str:
 
     # Find the character we&#39;re going to replace that&#39;s *not* the same character
     # as the one we got from the hexadecimal string.
-    while sub == char: sub = choice(h)
+    while sub == char:
+        sub = choice(h)
 
     # Return the subbed string.
     return color.replace(char, sub)
+
 
 def districtr(N):
     colors = [
@@ -90,9 +91,10 @@ def districtr(N):
         &#34;#D81B60&#34;, &#34;#26A69A&#34;, &#34;#FFEA00&#34;, &#34;#6200EA&#34;
     ]
 
-    repeats = math.ceil(N/len(colors))
-    tail = [hexshift(c) for c in colors*(repeats-1)]
+    repeats = math.ceil(N / len(colors))
+    tail = [hexshift(c) for c in colors * (repeats - 1)]
     return (colors + (tail if tail else []))[:N]
+
 
 def redbluecmap(n) -&gt; List[Tuple]:
     &#34;&#34;&#34;
@@ -105,17 +107,17 @@ def redbluecmap(n) -&gt; List[Tuple]:
     Returns:
         List of RGB tuples.
     &#34;&#34;&#34;
-    midpoint = math.ceil(n/2)
-    
+    midpoint = math.ceil(n / 2)
+
     # To get the appropriately-toned blues and reds, we create a list of colors,
     # then select the first section of each color.
     blues = list(
-        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
+        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n + 2)
     )[:midpoint]
     reds = list(
-        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
+        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n + 2)
     )[-midpoint:]
-    
+
     return list(reversed(reds)) + list(reversed(blues))
 
 
@@ -200,8 +202,8 @@ Citizen Kane).</p></div>
         &#34;#D81B60&#34;, &#34;#26A69A&#34;, &#34;#FFEA00&#34;, &#34;#6200EA&#34;
     ]
 
-    repeats = math.ceil(N/len(colors))
-    tail = [hexshift(c) for c in colors*(repeats-1)]
+    repeats = math.ceil(N / len(colors))
+    tail = [hexshift(c) for c in colors * (repeats - 1)]
     return (colors + (tail if tail else []))[:N]</code></pre>
 </details>
 </dd>
@@ -296,7 +298,8 @@ Citizen Kane).</p></div>
 
     # Find the character we&#39;re going to replace that&#39;s *not* the same character
     # as the one we got from the hexadecimal string.
-    while sub == char: sub = choice(h)
+    while sub == char:
+        sub = choice(h)
 
     # Return the subbed string.
     return color.replace(char, sub)</code></pre>
@@ -359,17 +362,17 @@ Citizen Kane).</p></div>
     Returns:
         List of RGB tuples.
     &#34;&#34;&#34;
-    midpoint = math.ceil(n/2)
-    
+    midpoint = math.ceil(n / 2)
+
     # To get the appropriately-toned blues and reds, we create a list of colors,
     # then select the first section of each color.
     blues = list(
-        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
+        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n + 2)
     )[:midpoint]
     reds = list(
-        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n+2)
+        sns.color_palette(&#34;coolwarm&#34;, as_cmap=False, n_colors=n + 2)
     )[-midpoint:]
-    
+
     return list(reversed(reds)) + list(reversed(blues))</code></pre>
 </details>
 </dd>

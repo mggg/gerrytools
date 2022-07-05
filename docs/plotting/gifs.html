@@ -31,15 +31,11 @@
 from tqdm import tqdm
 import imageio
 
-def gif_multidimensional(data, 
-                         proposed_info={}, 
-                         labels=[&#34;X values&#34;, &#34;Y values&#34;, &#34;Histogram values&#34;],
-                         filename=&#34;testfile&#34;, 
-                         folder=&#34;test&#34;, 
-                         limits=None,
-                         DPI=150,
-                         figsize=(12,8),
-                         ):
+
+def gif_multidimensional(
+    data, proposed_info={}, labels=[&#34;X values&#34;, &#34;Y values&#34;, &#34;Histogram values&#34;],
+    filename=&#34;testfile&#34;, folder=&#34;test&#34;, limits=None, DPI=150, figsize=(12, 8),
+):
     r&#34;&#34;&#34;
     Plot many multidimensional figures in their own `{folder}/{filename}/` directory. Each
     file will represent one ensemble of plans, and this will be stitched together to create
@@ -48,44 +44,46 @@ def gif_multidimensional(data,
     Args:
         data (dict): Dictionary with keys of `xs`, `ys`, `hists`, each one a list of length
             number of frames/ensembles, where each element is a list of all values in the ensemble.
-        proposed_info (dict, optional): Dictionary with keys of `colors`, `names`, 
-            `x`, `y`, `hist`; the \(i\)th color in `color` corresponds to the 
-            \(i\)th name in `names`, which corresponds to the \(i\)th value in 
+        proposed_info (dict, optional): Dictionary with keys of `colors`, `names`,
+            `x`, `y`, `hist`; the \(i\)th color in `color` corresponds to the
+            \(i\)th name in `names`, which corresponds to the \(i\)th value in
             `x`, `y`, and `hist`.
         filename (str): Name for the final gif, and for the folder the gif&#39;s frames are stored in
         folder (str): Folder containing all the frames/gifs.
-        figsize (tuple, optional): Figure size
+        figsize (tuple, optional): Figure size.
 
     Returns: None.
     &#34;&#34;&#34;
+    # Get the x- and y-values.
     xs = data[&#39;xs&#39;]
     ys = data[&#39;ys&#39;]
+
+    # TODO: Check what&#39;s actually happening here.
     hists = data[&#39;hists&#39;]
     assert len(xs) == len(ys) == len(hists)
+
     lower_bound = 1
     upper_bound = 1
     x_limits = (lower_bound * min_of_min(xs), upper_bound * max_of_max(xs))
     y_limits = (lower_bound * min_of_min(ys), upper_bound * max_of_max(ys))
     hist_limits = (int(lower_bound * min_of_min(hists)), int(upper_bound * max_of_max(hists)))
     limits = [x_limits, y_limits, hist_limits] if not limits else limits
-    
+
     save = {
-        &#34;folder&#34;:folder,
-        &#34;filename&#34;:filename,
-        &#34;DPI&#34;:DPI,
+        &#34;folder&#34;: folder,
+        &#34;filename&#34;: filename,
+        &#34;DPI&#34;: DPI,
     }
+
     print(&#34;Generating PNGs...&#34;)
+
     for i in tqdm(range(len(xs))):
         save[&#34;frame&#34;] = i
-        multidimensional(xs[i],
-                         ys[i],
-                         hists[i],
-                         labels=labels,
-                         limits=limits,
-                         proposed_info=proposed_info,
-                         figsize=figsize,
-                         save=save,
-                        )
+        multidimensional(
+            xs[i], ys[i], hists[i], labels=labels, limits=limits,
+            proposed_info=proposed_info, figsize=figsize, save=save,
+        )
+
     print(&#34;Generating gif...&#34;)
     images = []
     path = f&#34;{save[&#39;folder&#39;]}/{save[&#39;filename&#39;]}/{save[&#39;filename&#39;]}_&#34;
@@ -93,11 +91,11 @@ def gif_multidimensional(data,
     for i in tqdm(range(len(xs))):
         images.append(imageio.imread(f&#34;{path}{i}.png&#34;))
     imageio.mimsave(output, images)
-    return
 
 
 def min_of_min(big_list):
     return min([min(sub_list) for sub_list in big_list])
+
 
 def max_of_max(big_list):
     return max([max(sub_list) for sub_list in big_list])</code></pre>
@@ -132,22 +130,17 @@ number of frames/ensembles, where each element is a list of all values in the en
 <dt><strong><code>folder</code></strong> :&ensp;<code>str</code></dt>
 <dd>Folder containing all the frames/gifs.</dd>
 <dt><strong><code>figsize</code></strong> :&ensp;<code>tuple</code>, optional</dt>
-<dd>Figure size</dd>
+<dd>Figure size.</dd>
 </dl>
 <p>Returns: None.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def gif_multidimensional(data, 
-                         proposed_info={}, 
-                         labels=[&#34;X values&#34;, &#34;Y values&#34;, &#34;Histogram values&#34;],
-                         filename=&#34;testfile&#34;, 
-                         folder=&#34;test&#34;, 
-                         limits=None,
-                         DPI=150,
-                         figsize=(12,8),
-                         ):
+<pre><code class="python">def gif_multidimensional(
+    data, proposed_info={}, labels=[&#34;X values&#34;, &#34;Y values&#34;, &#34;Histogram values&#34;],
+    filename=&#34;testfile&#34;, folder=&#34;test&#34;, limits=None, DPI=150, figsize=(12, 8),
+):
     r&#34;&#34;&#34;
     Plot many multidimensional figures in their own `{folder}/{filename}/` directory. Each
     file will represent one ensemble of plans, and this will be stitched together to create
@@ -156,52 +149,53 @@ number of frames/ensembles, where each element is a list of all values in the en
     Args:
         data (dict): Dictionary with keys of `xs`, `ys`, `hists`, each one a list of length
             number of frames/ensembles, where each element is a list of all values in the ensemble.
-        proposed_info (dict, optional): Dictionary with keys of `colors`, `names`, 
-            `x`, `y`, `hist`; the \(i\)th color in `color` corresponds to the 
-            \(i\)th name in `names`, which corresponds to the \(i\)th value in 
+        proposed_info (dict, optional): Dictionary with keys of `colors`, `names`,
+            `x`, `y`, `hist`; the \(i\)th color in `color` corresponds to the
+            \(i\)th name in `names`, which corresponds to the \(i\)th value in
             `x`, `y`, and `hist`.
         filename (str): Name for the final gif, and for the folder the gif&#39;s frames are stored in
         folder (str): Folder containing all the frames/gifs.
-        figsize (tuple, optional): Figure size
+        figsize (tuple, optional): Figure size.
 
     Returns: None.
     &#34;&#34;&#34;
+    # Get the x- and y-values.
     xs = data[&#39;xs&#39;]
     ys = data[&#39;ys&#39;]
+
+    # TODO: Check what&#39;s actually happening here.
     hists = data[&#39;hists&#39;]
     assert len(xs) == len(ys) == len(hists)
+
     lower_bound = 1
     upper_bound = 1
     x_limits = (lower_bound * min_of_min(xs), upper_bound * max_of_max(xs))
     y_limits = (lower_bound * min_of_min(ys), upper_bound * max_of_max(ys))
     hist_limits = (int(lower_bound * min_of_min(hists)), int(upper_bound * max_of_max(hists)))
     limits = [x_limits, y_limits, hist_limits] if not limits else limits
-    
+
     save = {
-        &#34;folder&#34;:folder,
-        &#34;filename&#34;:filename,
-        &#34;DPI&#34;:DPI,
+        &#34;folder&#34;: folder,
+        &#34;filename&#34;: filename,
+        &#34;DPI&#34;: DPI,
     }
+
     print(&#34;Generating PNGs...&#34;)
+
     for i in tqdm(range(len(xs))):
         save[&#34;frame&#34;] = i
-        multidimensional(xs[i],
-                         ys[i],
-                         hists[i],
-                         labels=labels,
-                         limits=limits,
-                         proposed_info=proposed_info,
-                         figsize=figsize,
-                         save=save,
-                        )
+        multidimensional(
+            xs[i], ys[i], hists[i], labels=labels, limits=limits,
+            proposed_info=proposed_info, figsize=figsize, save=save,
+        )
+
     print(&#34;Generating gif...&#34;)
     images = []
     path = f&#34;{save[&#39;folder&#39;]}/{save[&#39;filename&#39;]}/{save[&#39;filename&#39;]}_&#34;
     output = f&#34;{save[&#39;folder&#39;]}/{save[&#39;filename&#39;]}.gif&#34;
     for i in tqdm(range(len(xs))):
         images.append(imageio.imread(f&#34;{path}{i}.png&#34;))
-    imageio.mimsave(output, images)
-    return</code></pre>
+    imageio.mimsave(output, images)</code></pre>
 </details>
 </dd>
 <dt id="evaltools.plotting.gifs.max_of_max"><code class="name flex">

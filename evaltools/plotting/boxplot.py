@@ -6,7 +6,7 @@ from .colors import defaultGray, citizenBlue, districtr
 
 def boxplot(
     ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1, 99),
-    rotation=0, ticksize=12, jitter=1/3
+    rotation=0, ticksize=12, jitter=1 / 3
 ) -> Axes:
     r"""
     Plot boxplots, which takes `scores` — a dictionary where each value
@@ -78,7 +78,7 @@ def boxplot(
                 ax.scatter(
                     boxplot + 1 + jitter_val,
                     score,
-                    color=districtr(plan+1).pop(),
+                    color=districtr(plan + 1).pop(),
                     edgecolor='black',
                     s=100,
                     alpha=0.9,

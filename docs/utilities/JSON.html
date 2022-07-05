@@ -28,16 +28,17 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">import json
-from pydantic import BaseModel, ValidationError, validator
-from typing import List, Union, Any
+from pydantic import BaseModel, validator
+from typing import Any
+
 
 class JSONtoObject(BaseModel):
     &#34;&#34;&#34;
     Plan specification models. To better work with multiple plans at once, this
     plan specification allows users to specify information which should remain
     consistent across all operations; for example, the `column` field should be
-    the name of the column in which the corresponding plan&#39;s assignment is stored
-    across all data products.
+    the name of the column in which the corresponding plan&#39;s assignment is
+    stored across all data products.
     &#34;&#34;&#34;
 
     column: str
@@ -67,18 +68,20 @@ class JSONtoObject(BaseModel):
         &#34;&#34;&#34;
         Validates the specified column name. For most of our purposes, we cannot
         include spaces, hyphens, percent signs, and other commonly-used special
-        characters. Furthermore, because these plans are often saved in shapefiles,
-        which have a 10-character column name limit, we force column names to be
-        10 or fewer characters.
+        characters. Furthermore, because these plans are often saved in
+        shapefiles, which have a 10-character column name limit, we force column
+        names to be 10 or fewer characters.
         &#34;&#34;&#34;
         # Check for column length.
-        if len(column) &gt; 10: raise ValueError(f&#34;Column name {column} exceeds 10-character limit.&#34;)
+        if len(column) &gt; 10:
+            raise ValueError(f&#34;Column name {column} exceeds 10-character limit.&#34;)
 
         # Check for illegal characters.
         illegal = {&#34;/&#34;, &#34;%&#34;, &#34;-&#34;, &#34;–&#34;, &#34;—&#34;, &#34; &#34;}
-        
+
         for c in illegal:
-            if c in column: raise ValueError(f&#34;Character {c} cannot be in column name.&#34;)
+            if c in column:
+                raise ValueError(f&#34;Character {c} cannot be in column name.&#34;)
 
         return column
 
@@ -100,15 +103,16 @@ def jsonify(location) -&gt; list:
 
         # First, check whether `data` is a list; if it is, deal with all the
         # plans individually and return the list.
-        if type(data) is list: return [
-            JSONtoObject(
-                column=p[&#34;column&#34;],
-                locator=p[&#34;locator&#34;],
-                title=p[&#34;title&#34;] if p.get(&#34;title&#34;, False) else None,
-                type=p[&#34;type&#34;] if p.get(&#34;type&#34;, False) else None
-            )
-            for p in data
-        ]
+        if isinstance(data, list):
+            return [
+                JSONtoObject(
+                    column=p[&#34;column&#34;],
+                    locator=p[&#34;locator&#34;],
+                    title=p[&#34;title&#34;] if p.get(&#34;title&#34;, False) else None,
+                    type=p[&#34;type&#34;] if p.get(&#34;type&#34;, False) else None
+                )
+                for p in data
+            ]
 
         # Otherwise, return a singleton list with a single plan.
         return [JSONtoObject(
@@ -160,15 +164,16 @@ information about districting plans.</p></div>
 
         # First, check whether `data` is a list; if it is, deal with all the
         # plans individually and return the list.
-        if type(data) is list: return [
-            JSONtoObject(
-                column=p[&#34;column&#34;],
-                locator=p[&#34;locator&#34;],
-                title=p[&#34;title&#34;] if p.get(&#34;title&#34;, False) else None,
-                type=p[&#34;type&#34;] if p.get(&#34;type&#34;, False) else None
-            )
-            for p in data
-        ]
+        if isinstance(data, list):
+            return [
+                JSONtoObject(
+                    column=p[&#34;column&#34;],
+                    locator=p[&#34;locator&#34;],
+                    title=p[&#34;title&#34;] if p.get(&#34;title&#34;, False) else None,
+                    type=p[&#34;type&#34;] if p.get(&#34;type&#34;, False) else None
+                )
+                for p in data
+            ]
 
         # Otherwise, return a singleton list with a single plan.
         return [JSONtoObject(
@@ -191,8 +196,8 @@ information about districting plans.</p></div>
 <div class="desc"><p>Plan specification models. To better work with multiple plans at once, this
 plan specification allows users to specify information which should remain
 consistent across all operations; for example, the <code>column</code> field should be
-the name of the column in which the corresponding plan's assignment is stored
-across all data products.</p>
+the name of the column in which the corresponding plan's assignment is
+stored across all data products.</p>
 <p>Create a new model by parsing and validating input data from keyword arguments.</p>
 <p>Raises ValidationError if the input data cannot be parsed to form a valid model.</p></div>
 <details class="source">
@@ -204,8 +209,8 @@ across all data products.</p>
     Plan specification models. To better work with multiple plans at once, this
     plan specification allows users to specify information which should remain
     consistent across all operations; for example, the `column` field should be
-    the name of the column in which the corresponding plan&#39;s assignment is stored
-    across all data products.
+    the name of the column in which the corresponding plan&#39;s assignment is
+    stored across all data products.
     &#34;&#34;&#34;
 
     column: str
@@ -235,18 +240,20 @@ across all data products.</p>
         &#34;&#34;&#34;
         Validates the specified column name. For most of our purposes, we cannot
         include spaces, hyphens, percent signs, and other commonly-used special
-        characters. Furthermore, because these plans are often saved in shapefiles,
-        which have a 10-character column name limit, we force column names to be
-        10 or fewer characters.
+        characters. Furthermore, because these plans are often saved in
+        shapefiles, which have a 10-character column name limit, we force column
+        names to be 10 or fewer characters.
         &#34;&#34;&#34;
         # Check for column length.
-        if len(column) &gt; 10: raise ValueError(f&#34;Column name {column} exceeds 10-character limit.&#34;)
+        if len(column) &gt; 10:
+            raise ValueError(f&#34;Column name {column} exceeds 10-character limit.&#34;)
 
         # Check for illegal characters.
         illegal = {&#34;/&#34;, &#34;%&#34;, &#34;-&#34;, &#34;–&#34;, &#34;—&#34;, &#34; &#34;}
-        
+
         for c in illegal:
-            if c in column: raise ValueError(f&#34;Character {c} cannot be in column name.&#34;)
+            if c in column:
+                raise ValueError(f&#34;Character {c} cannot be in column name.&#34;)
 
         return column</code></pre>
 </details>

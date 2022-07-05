@@ -74,7 +74,7 @@ def tabularized(state, submissions) -&gt; Tuple[pd.DataFrame, pd.DataFrame, pd.D
 
     Example:
         Prototypical example usage.
-        
+
             import us
             from evaltools.retrieve import submissions, tabularized
 
@@ -95,13 +95,13 @@ def tabularized(state, submissions) -&gt; Tuple[pd.DataFrame, pd.DataFrame, pd.D
     # of submissions).
     _plans = [s.dict() for s in submissions if s.type == &#34;plan&#34;]
     _cois = [s.dict() for s in submissions if s.type == &#34;coi&#34;]
-    
+
     # Create preliminary dataframes so we can do safe `merge`s rather than rely
     # explicitly on sorting; this also allows us to specify a sample size if
     # we&#39;re only looking to sample a specific number of plans.
     subset_plans = pd.DataFrame.from_records(_plans)
     subset_cois = pd.DataFrame.from_records(_cois)
-    
+
     # Get appropriate URLs and create dataframes.
     plans_url = csvs(state)
     cois_url = csvs(state, ptype=&#34;coi&#34;)
@@ -118,14 +118,19 @@ def tabularized(state, submissions) -&gt; Tuple[pd.DataFrame, pd.DataFrame, pd.D
         universe[&#34;id&#34;] = parse_id(universe[&#34;link&#34;])
 
     # Adjust column contents for all dataframes.
-    for df in [plans, cois, writtens]: df[&#34;datetime&#34;] = parse_datetime(df[&#34;datetime&#34;])
+    for df in [plans, cois, writtens]:
+        df[&#34;datetime&#34;] = parse_datetime(df[&#34;datetime&#34;])
 
     # Add the retrieved plan data to the dataframes *if the subset dataframes
     # contain items*.
-    if not subset_plans.empty: plans = plans.merge(subset_plans, on=&#34;id&#34;)
-    else: plans = pd.DataFrame()
-    if not subset_cois.empty: cois = cois.merge(subset_cois, on=&#34;id&#34;)
-    else: cois = pd.DataFrame()
+    if not subset_plans.empty:
+        plans = plans.merge(subset_plans, on=&#34;id&#34;)
+    else:
+        plans = pd.DataFrame()
+    if not subset_cois.empty:
+        cois = cois.merge(subset_cois, on=&#34;id&#34;)
+    else:
+        cois = pd.DataFrame()
 
     # Drop bad columns and rename. Not sure why we have to `inplace` things here,
     # but... fine.
@@ -133,7 +138,8 @@ def tabularized(state, submissions) -&gt; Tuple[pd.DataFrame, pd.DataFrame, pd.D
         if not df.empty:
             # Remove columns we don&#39;t necessarily care about.
             for col in [&#34;type_x&#34;, &#34;link_x&#34;, &#34;coalition&#34;]:
-                if col in list(df): df.drop(col, axis=1, inplace=True)
+                if col in list(df):
+                    df.drop(col, axis=1, inplace=True)
 
             # Rename the columns we do care about.
             df.rename({&#34;type_y&#34;: &#34;type&#34;, &#34;link_y&#34;: &#34;link&#34;}, axis=1, inplace=True)
@@ -169,11 +175,11 @@ def submissions(state, sample=None) -&gt; List[Submission]:
         # Retrieve the required data points.
         identifier = parse_id(entity[&#34;link&#34;], df=False)
         districtr = individual(identifier)
-        
+
         # Force all plan keys and values to strings.
         try:
             plan = {
-                str(k): str(v) if type(v) is not list else str(v[0])
+                str(k): str(v) if not isinstance(v, list) else str(v[0])
                 for k, v in districtr[&#34;plan&#34;][&#34;assignment&#34;].items()
             }
             units = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;name&#34;]
@@ -190,8 +196,9 @@ def submissions(state, sample=None) -&gt; List[Submission]:
                 tileset=tileset,
                 type=entity[&#34;type&#34;]
             ))
-        except: pass
-    
+        except BaseException:
+            pass
+
     return submissions
 
 
@@ -221,7 +228,7 @@ def individual(identifier) -&gt; dict:
     return json.loads(raw.text)
 
 
-def parse_id(l, df=True) -&gt; Union[str, pd.Series]:
+def parse_id(link, df=True) -&gt; Union[str, pd.Series]:
     &#34;&#34;&#34;
     Given a districtr link, parse out the districtr identifier.
 
@@ -233,8 +240,9 @@ def parse_id(l, df=True) -&gt; Union[str, pd.Series]:
     Returns:
         districtr ID.
     &#34;&#34;&#34;
-    if df: return l.str.split(&#34;/&#34;).str[-1].str.split(&#34;?&#34;).str[0]
-    return l.split(&#34;/&#34;)[-1].split(&#34;?&#34;)[0]
+    if df:
+        return link.str.split(&#34;/&#34;).str[-1].str.split(&#34;?&#34;).str[0]
+    return link.split(&#34;/&#34;)[-1].split(&#34;?&#34;)[0]
 
 
 def parse_datetime(d) -&gt; pd.Series:
@@ -251,7 +259,7 @@ def parse_datetime(d) -&gt; pd.Series:
     prefix = d.str.split(&#34;+&#34;).str[0]
     suffix = d.str.split(&#34;+&#34;).str[1].str.split(&#34; &#34;).str[0]
     dt = prefix + &#34; +&#34; + suffix
-    
+
     # Convert datetimes.
     return dt.apply(lambda r: datetime.strptime(r, &#34;%a %b %d %Y %X %Z %z&#34;))</code></pre>
 </details>
@@ -350,13 +358,13 @@ a pandas <code>DataFrame</code>.</p>
     prefix = d.str.split(&#34;+&#34;).str[0]
     suffix = d.str.split(&#34;+&#34;).str[1].str.split(&#34; &#34;).str[0]
     dt = prefix + &#34; +&#34; + suffix
-    
+
     # Convert datetimes.
     return dt.apply(lambda r: datetime.strptime(r, &#34;%a %b %d %Y %X %Z %z&#34;))</code></pre>
 </details>
 </dd>
 <dt id="evaltools.data.fetch.parse_id"><code class="name flex">
-<span>def <span class="ident">parse_id</span></span>(<span>l, df=True) ‑> Union[str, pandas.core.series.Series]</span>
+<span>def <span class="ident">parse_id</span></span>(<span>link, df=True) ‑> Union[str, pandas.core.series.Series]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Given a districtr link, parse out the districtr identifier.</p>
@@ -374,7 +382,7 @@ operations rather than built-in ones.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def parse_id(l, df=True) -&gt; Union[str, pd.Series]:
+<pre><code class="python">def parse_id(link, df=True) -&gt; Union[str, pd.Series]:
     &#34;&#34;&#34;
     Given a districtr link, parse out the districtr identifier.
 
@@ -386,8 +394,9 @@ operations rather than built-in ones.</dd>
     Returns:
         districtr ID.
     &#34;&#34;&#34;
-    if df: return l.str.split(&#34;/&#34;).str[-1].str.split(&#34;?&#34;).str[0]
-    return l.split(&#34;/&#34;)[-1].split(&#34;?&#34;)[0]</code></pre>
+    if df:
+        return link.str.split(&#34;/&#34;).str[-1].str.split(&#34;?&#34;).str[0]
+    return link.split(&#34;/&#34;)[-1].split(&#34;?&#34;)[0]</code></pre>
 </details>
 </dd>
 <dt id="evaltools.data.fetch.submissions"><code class="name flex">
@@ -437,11 +446,11 @@ submissions.</p>
         # Retrieve the required data points.
         identifier = parse_id(entity[&#34;link&#34;], df=False)
         districtr = individual(identifier)
-        
+
         # Force all plan keys and values to strings.
         try:
             plan = {
-                str(k): str(v) if type(v) is not list else str(v[0])
+                str(k): str(v) if not isinstance(v, list) else str(v[0])
                 for k, v in districtr[&#34;plan&#34;][&#34;assignment&#34;].items()
             }
             units = districtr[&#34;plan&#34;][&#34;units&#34;][&#34;name&#34;]
@@ -458,8 +467,9 @@ submissions.</p>
                 tileset=tileset,
                 type=entity[&#34;type&#34;]
             ))
-        except: pass
-    
+        except BaseException:
+            pass
+
     return submissions</code></pre>
 </details>
 </dd>
@@ -510,7 +520,7 @@ plans, cois, written = tabularized(state, subs)
 
     Example:
         Prototypical example usage.
-        
+
             import us
             from evaltools.retrieve import submissions, tabularized
 
@@ -531,13 +541,13 @@ plans, cois, written = tabularized(state, subs)
     # of submissions).
     _plans = [s.dict() for s in submissions if s.type == &#34;plan&#34;]
     _cois = [s.dict() for s in submissions if s.type == &#34;coi&#34;]
-    
+
     # Create preliminary dataframes so we can do safe `merge`s rather than rely
     # explicitly on sorting; this also allows us to specify a sample size if
     # we&#39;re only looking to sample a specific number of plans.
     subset_plans = pd.DataFrame.from_records(_plans)
     subset_cois = pd.DataFrame.from_records(_cois)
-    
+
     # Get appropriate URLs and create dataframes.
     plans_url = csvs(state)
     cois_url = csvs(state, ptype=&#34;coi&#34;)
@@ -554,14 +564,19 @@ plans, cois, written = tabularized(state, subs)
         universe[&#34;id&#34;] = parse_id(universe[&#34;link&#34;])
 
     # Adjust column contents for all dataframes.
-    for df in [plans, cois, writtens]: df[&#34;datetime&#34;] = parse_datetime(df[&#34;datetime&#34;])
+    for df in [plans, cois, writtens]:
+        df[&#34;datetime&#34;] = parse_datetime(df[&#34;datetime&#34;])
 
     # Add the retrieved plan data to the dataframes *if the subset dataframes
     # contain items*.
-    if not subset_plans.empty: plans = plans.merge(subset_plans, on=&#34;id&#34;)
-    else: plans = pd.DataFrame()
-    if not subset_cois.empty: cois = cois.merge(subset_cois, on=&#34;id&#34;)
-    else: cois = pd.DataFrame()
+    if not subset_plans.empty:
+        plans = plans.merge(subset_plans, on=&#34;id&#34;)
+    else:
+        plans = pd.DataFrame()
+    if not subset_cois.empty:
+        cois = cois.merge(subset_cois, on=&#34;id&#34;)
+    else:
+        cois = pd.DataFrame()
 
     # Drop bad columns and rename. Not sure why we have to `inplace` things here,
     # but... fine.
@@ -569,7 +584,8 @@ plans, cois, written = tabularized(state, subs)
         if not df.empty:
             # Remove columns we don&#39;t necessarily care about.
             for col in [&#34;type_x&#34;, &#34;link_x&#34;, &#34;coalition&#34;]:
-                if col in list(df): df.drop(col, axis=1, inplace=True)
+                if col in list(df):
+                    df.drop(col, axis=1, inplace=True)
 
             # Rename the columns we do care about.
             df.rename({&#34;type_y&#34;: &#34;type&#34;, &#34;link_y&#34;: &#34;link&#34;}, axis=1, inplace=True)

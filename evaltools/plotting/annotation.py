@@ -28,12 +28,12 @@ def arrow(
 
     if orientation == "horizontal":
         x = ax.get_xlim()[0]
-        y = ax.get_ylim()[0] - padding*ax.get_ylim()[1]
+        y = ax.get_ylim()[0] - padding * ax.get_ylim()[1]
         horizontal_align = "left"
         rotation = 0
     elif orientation == "vertical":
-        x = ax.get_xlim()[0] - padding*(sum(map(lambda x: abs(x), ax.get_xlim())))
-        y = sum(ax.get_ylim())/2
+        x = ax.get_xlim()[0] - padding * (sum(map(lambda x: abs(x), ax.get_xlim())))
+        y = sum(ax.get_ylim()) / 2
         horizontal_align = "center"
         rotation = 90
 
@@ -73,7 +73,7 @@ def ideal(ax, label, placement, orientation, color=defaultGray, alpha=0.1):
         raise TypeError("`placement` is not of correct type.")
 
     # If `placement` is a tuple, we draw a band.
-    if type(placement) is tuple:
+    if isinstance(placement, tuple):
         if orientation == "horizontal":
             xlims = orig_xlims
             ylims1 = [placement[0], placement[0]]
@@ -90,9 +90,9 @@ def ideal(ax, label, placement, orientation, color=defaultGray, alpha=0.1):
         idealprops = dict(color=color, alpha=alpha, label=label)
 
         if orientation == "horizontal":
-            ax.axhline(placement+0.5, **idealprops)
+            ax.axhline(placement + 0.5, **idealprops)
         else:
-            ax.axvline(placement+0.5, **idealprops)
+            ax.axvline(placement + 0.5, **idealprops)
 
     # Set the original x- and y-axis limits, and plot a legend.
     ax.set_xlim(orig_xlims)

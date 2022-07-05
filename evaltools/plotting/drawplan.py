@@ -6,7 +6,7 @@ from .districtnumbers import districtnumbers
 
 
 def drawplan(
-    districts, assignment, overlays=[], colors=None, numbers=False, lw=1/2,
+    districts, assignment, overlays=[], colors=None, numbers=False, lw=1 / 2,
     fontsize=15, edgecolor="black"
 ) -> Axes:
     """
@@ -50,7 +50,7 @@ def drawplan(
     if overlays:
         for overlay in overlays:
             overlay = overlay.to_crs(districts.crs)
-            overlay.plot(color="None", edgecolor=edgecolor, linewidth=1/8, ax=base)
+            overlay.plot(color="None", edgecolor=edgecolor, linewidth=1 / 8, ax=base)
 
     # If the `numbers` flag is passed, plot the numbers for each district.
     if numbers:

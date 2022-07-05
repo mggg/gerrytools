@@ -8,16 +8,17 @@ import matplotlib.pyplot as plt
 import geopandas as gpd
 import numpy as np
 import os
+import requests
+import tempfile
+import json
 
-root = Path(os.getcwd()) / Path("tests/test-resources/")
+from utils import remotegraphresource, remoteresource
 
-def zipped(suffix):
-    return "zip://" + str(Path(root / suffix))
 
 def test_drawgraph():
     # Read in the graph and the districts.
-    graph = Graph.from_json(root / "test-graph.json")
-    districts = gpd.read_file(zipped("test-districts.zip"))
+    graph = remotegraphresource("test-graph.json")
+    districts = gpd.read_file(remoteresource("test-districts.geojson"))
 
     # Plot districts on the same axes.
     ax = districts.plot(column="DISTRICT")
@@ -31,15 +32,20 @@ def test_drawgraph():
     assert type(single_axes) is not list
     assert type(multiple_axes) is list
 
+    plt.close()
+
 
 def test_drawplan():
     # Read in a districting plan.
-    districts = gpd.read_file(zipped("test-districts.zip"))
+    districts = gpd.read_file(remoteresource("test-districts.geojson"))
     districts["DISTRICT"] = districts["DISTRICT"] + 1
 
     # Draw the plan and make sure we get axes back.
     ax = drawplan(districts, assignment="DISTRICT", numbers=True)
     assert ax is not None
+
+    plt.close()
+
 
 def test_boxplot():
     means = [int(x) for x in np.random.normal(24, 6, size=10)]
@@ -58,10 +64,8 @@ def test_boxplot():
 
     fig, ax = plt.subplots(figsize=(12,6))
     ax = boxplot(ax, scores, labels, proposed_info=proposed_info, percentiles=(25,75))
-    plt.show()
+    plt.close()
 
 
 if __name__ == "__main__":
-    root = Path(os.getcwd()) / Path("test-resources/")
     test_boxplot()
-

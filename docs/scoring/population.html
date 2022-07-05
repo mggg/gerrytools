@@ -34,7 +34,7 @@ from gerrychain.updaters import Tally
 def deviations(P, popcolumn) -&gt; dict:
     &#34;&#34;&#34;
     Determines the districting plan&#39;s population deviation percentages.
-    
+
     Args:
         P (Partition): GerryChain Partition object.
         popcolumn (str): Column for tallying the desired population.
@@ -44,7 +44,7 @@ def deviations(P, popcolumn) -&gt; dict:
     &#34;&#34;&#34;
     # Create the partition and the corresponding updater.
     poptally = Tally(popcolumn, alias=popcolumn)
-    P.updaters = { popcolumn: poptally }
+    P.updaters = {popcolumn: poptally}
 
     # Return a dictionary that maps district names to population deviation
     # percentages.
@@ -54,13 +54,13 @@ def deviations(P, popcolumn) -&gt; dict:
 def unassigned_population(P, popcolumn):
     &#34;&#34;&#34;
     Determines the number of unassigned people in the districting plan.
-    
+
     Args:
         P: `Partition` object.
         popcolumn: Column for tallying the desired population.
 
     Returns:
-        Returns a 
+        Returns a
     &#34;&#34;&#34;
     pass</code></pre>
 </details>
@@ -93,7 +93,7 @@ def unassigned_population(P, popcolumn):
 <pre><code class="python">def deviations(P, popcolumn) -&gt; dict:
     &#34;&#34;&#34;
     Determines the districting plan&#39;s population deviation percentages.
-    
+
     Args:
         P (Partition): GerryChain Partition object.
         popcolumn (str): Column for tallying the desired population.
@@ -103,7 +103,7 @@ def unassigned_population(P, popcolumn):
     &#34;&#34;&#34;
     # Create the partition and the corresponding updater.
     poptally = Tally(popcolumn, alias=popcolumn)
-    P.updaters = { popcolumn: poptally }
+    P.updaters = {popcolumn: poptally}
 
     # Return a dictionary that maps district names to population deviation
     # percentages.
@@ -131,13 +131,13 @@ def unassigned_population(P, popcolumn):
 <pre><code class="python">def unassigned_population(P, popcolumn):
     &#34;&#34;&#34;
     Determines the number of unassigned people in the districting plan.
-    
+
     Args:
         P: `Partition` object.
         popcolumn: Column for tallying the desired population.
 
     Returns:
-        Returns a 
+        Returns a
     &#34;&#34;&#34;
     pass</code></pre>
 </details>

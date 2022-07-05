@@ -15,7 +15,8 @@ import math
 import cProfile
 import pytest
 
-root = Path(os.getcwd()) / Path("tests/test-resources/")
+from utils import remoteresource
+
 
 def test_estimate_cvap2020():
     al = us.states.AL
@@ -42,7 +43,7 @@ def test_estimate_cvap2020():
 @pytest.mark.skip(reason="Times out too often; virtually equivalent test to the previous one.")
 def test_estimate_cvap2010():
     al = us.states.AL
-    base = gpd.read_file(root/"AL-bgs")
+    base = gpd.read_file(remoteresource("AL-bgs.geojson"))
 
     triplets = [
         ("NHBLACKCVAP19", "BVAP19", "APBVAP20"),
@@ -81,8 +82,7 @@ def test_estimate_cvap2010():
 def test_cvap_tracts():
     al = us.states.AL
     special = cvap(al, geometry="tract", year=2019)
-    acs = acs5(al, geometry="tract", year=2019)
-    
+
     # Set some testing variables.
     columns = {
         "TRACT10", "CVAP19", "NHCVAP19", "NHAMINCVAP19", "NHASIANCVAP19", "NHBLACKCVAP19",
@@ -98,6 +98,7 @@ def test_cvap_tracts():
     # Do some assert-ing.
     assert set(list(special)) == columns
     assert len(special) == tracts
+
 
 def test_cvap_bgs():
     al = us.states.AL
@@ -118,6 +119,7 @@ def test_cvap_bgs():
     # Do some assert-ing.
     assert set(list(data)) == columns
     assert len(data) == bgs
+
 
 def test_acs5_tracts():
     AL = us.states.AL
@@ -150,6 +152,7 @@ def test_acs5_tracts():
     joined["WITHINMOE"] = joined["DIFF"] <= joined["CVAP19e"]
 
     assert joined["WITHINMOE"].all()
+
 
 def test_acs5_bgs():
     AL = us.states.AL
@@ -228,9 +231,8 @@ def test_census_bgs():
         # For each test case, confirm that we have the correct sum.
         for column, correct in cases: assert data[column].sum() == correct
 
-@pytest.mark.skip(
-    reason="Times out too often; virtually equivalent test to the previous one."
-)
+
+@pytest.mark.skip(reason="Times out too often; virtually equivalent test to the previous one.")
 def test_census_blocks():
     AL = us.states.AL
     blocks = 185976
@@ -247,21 +249,22 @@ def test_census_blocks():
         # For each test case, confirm that we have the correct sum.
         for column, correct in cases: assert data[column].sum() == correct
 
+
 @pytest.mark.skip(reason="Temporarily skipped; moved resources.")
 def test_assignmentcompressor_compress():
     # Get the GEOIDs from the blocks.
-    blocks = pd.read_csv(root / "test-assignments/test-block-ids.csv")
+    blocks = pd.read_csv(remoteresource("test-assignments/test-block-ids.csv"))
     geoids = set(blocks["GEOID20"].astype(str))
 
     # Delete the existing file.
-    location = root/"test-assignments/compressed.ac"
+    location = remoteresource("test-assignments/compressed.ac")
     if location.exists(): os.remove(location)
 
     # Create an AssignmentCompressor.
-    ac = AssignmentCompressor(geoids, window=10, location=root/"test-assignments/compressed.ac")
+    ac = AssignmentCompressor(geoids, window=10, location=remoteresource("test-assignments/compressed.ac"))
 
     with ac as compressor:
-        with jsonlines.open(root / "test-assignments/test-multiple-assignments.jsonl", mode="r") as reader:
+        with jsonlines.open(remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")) as reader:
             for submission in reader:
                 assignment = { str(k): str(v) for k, v in submission["assignment"].items() }
                 compressor.compress(assignment)
@@ -269,16 +272,16 @@ def test_assignmentcompressor_compress():
 @pytest.mark.skip(reason="Temporarily skipped; moved resources.")
 def test_assignmentcompressor_decompress():
     # Get the GEOIDs from the blocks.
-    blocks = pd.read_csv(root / "test-assignments/test-block-ids.csv")
+    blocks = pd.read_csv(remoteresource("test-assignments/test-block-ids.csv"))
     geoids = set(blocks["GEOID20"].astype(str))
 
     # Create an AssignmentCompressor and decompress all the assignments.
-    ac = AssignmentCompressor(geoids, location=root / "test-assignments/compressed.ac")
+    ac = AssignmentCompressor(geoids, location=remoteresource("test-assignments/compressed.ac"))
     decompresseds = [assignment for assignment in ac.decompress()]
 
     # Load all the original assignments into memory.
     originals = []
-    with jsonlines.open(root / "test-assignments/test-multiple-assignments.jsonl", mode="r") as reader:
+    with jsonlines.open(remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")) as reader:
         for submission in reader:
             assignment = { str(k): str(v) for k, v in submission["assignment"].items() }
             originals.append(assignment)
@@ -315,19 +318,19 @@ def test_match():
 @pytest.mark.skip(reason="Temporarily skipped; moved resources.")
 def test_assignmentcompressor_compress_all():
     # Get the GEOIDs from the blocks.
-    blocks = pd.read_csv(root / "test-assignments/test-block-ids.csv")
+    blocks = pd.read_csv(remoteresource("test-assignments/test-block-ids.csv"))
     geoids = set(blocks["GEOID20"].astype(str))
 
     # Delete the existing file.
-    location = root/"test-assignments/compressed.ac"
+    location = remoteresource("test-assignments/compressed.ac")
     if location.exists(): os.remove(location)
 
     # Create an AssignmentCompressor.
-    ac = AssignmentCompressor(geoids, location=root/"test-assignments/compressed.ac")
+    ac = AssignmentCompressor(geoids, location=remoteresource("test-assignments/compressed.ac"))
 
     # Get the assignments in one place.
     assignments = []
-    with jsonlines.open(root / "test-assignments/test-multiple-assignments.jsonl", mode="r") as reader:
+    with jsonlines.open(remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")) as reader:
         for submission in reader:
             assignment = { str(k): str(v) for k, v in submission["assignment"].items() }
             assignments.append(assignment)
@@ -338,19 +341,19 @@ def test_assignmentcompressor_compress_all():
 @pytest.mark.skip(reason="Temporarily skipped; moved resources.")
 def profile_assignmentcompressor_compress():
     # Get the GEOIDs from the blocks.
-    blocks = pd.read_csv(root / "test-assignments/test-block-ids.csv")
+    blocks = pd.read_csv(remoteresource("test-assignments/test-block-ids.csv"))
     geoids = set(blocks["GEOID20"].astype(str))
 
     # Delete the existing file.
-    location = root/"test-assignments/compressed.ac"
+    location = remoteresource("test-assignments/compressed.ac")
     if location.exists(): os.remove(location)
 
     # Create an AssignmentCompressor.
-    ac = AssignmentCompressor(geoids, location=root/"test-assignments/compressed.ac")
+    ac = AssignmentCompressor(geoids, location=remoteresource("test-assignments/compressed.ac"))
 
     # Get the assignments in one place.
     assignments = []
-    with jsonlines.open(root / "test-assignments/test-multiple-assignments.jsonl", mode="r") as reader:
+    with jsonlines.open(remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")) as reader:
         for submission in reader:
             assignment = { str(k): str(v) for k, v in submission["assignment"].items() }
             assignments.append(assignment)
@@ -360,20 +363,20 @@ def profile_assignmentcompressor_compress():
         with ac as compressor:
             for assignment in assignments: compressor.compress(assignment)
 
-    profiler.dump_stats(root/"test-assignments/compress.pstats")
+    profiler.dump_stats(remoteresource("test-assignments/compress.pstats"))
 
 @pytest.mark.skip(reason="Temporarily skipped; moved resources.")
 def profile_assignmentcompressor_decompress():
     # Get the GEOIDs from the blocks.
-    blocks = pd.read_csv(root / "test-assignments/test-block-ids.csv")
+    blocks = pd.read_csv(remoteresource("test-assignments/test-block-ids.csv"))
     geoids = set(blocks["GEOID20"].astype(str))
-    ac = AssignmentCompressor(geoids, location=root/"test-assignments/compressed.ac")
+    ac = AssignmentCompressor(geoids, location=remoteresource("test-assignments/compressed.ac"))
 
     # Profile decompression.
     with cProfile.Profile() as profiler:
         for _ in ac.decompress(): pass
 
-    profiler.dump_stats(root/"test-assignments/decompress.pstats")
+    profiler.dump_stats(remoteresource("test-assignments/decompress.pstats"))
 
 
 def test_submissions():
@@ -384,9 +387,6 @@ def test_submissions():
     # Try to get stuff.
     subs = submissions(state, sample=sample)
     plans, cois, written = tabularized(state, subs)
-
-    # Write these to file.
-    plans.to_csv(root / "test-districtr.csv", index=False)
 
     # Assert that we have the right number of plans; this should match the sample
     # size we set earlier.
@@ -400,15 +400,15 @@ def test_submissions():
 @pytest.mark.skip(reason="Temporarily skipped; moved resources.")
 def test_remap():
     # Read from file.
-    plans = pd.read_csv(root / "test-districtr.csv")
+    plans = pd.read_csv(remoteresource("test-districtr.csv"))
 
     # Get the population mapping.
 
     # Read the unit mappings in.
-    with open(root / "test-vtds-to-blocks.json") as f: vtds_to_blocks = json.load(f)
-    with open(root / "test-blocks-to-vtds.json") as f: blocks_to_vtds = json.load(f)
-    with open(root / "test-precincts-to-blocks.json") as f: precincts_to_blocks = json.load(f)
-    with open(root / "test-blocks-to-vtds.json") as f: blocks_to_vtds = json.load(f)
+    with open(remoteresource("test-vtds-to-blocks.json")) as f: vtds_to_blocks = json.load(f)
+    with open(remoteresource("test-blocks-to-vtds.json")) as f: blocks_to_vtds = json.load(f)
+    with open(remoteresource("test-precincts-to-blocks.json")) as f: precincts_to_blocks = json.load(f)
+    with open(remoteresource("test-blocks-to-vtds.json")) as f: blocks_to_vtds = json.load(f)
 
     # Create the mapping of mappings!
     unitmaps = {
@@ -419,7 +419,7 @@ def test_remap():
     # Remap things. Appears to work fine for now!
     plans = remap(plans, unitmaps)
 
+
 if __name__ == "__main__":
-    root = Path(os.getcwd()) / Path("test-resources/")
     # test_acs5_tracts()
-    test_cvap_bgs()
+    test_cvap_tracts()

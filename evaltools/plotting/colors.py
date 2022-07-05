@@ -5,7 +5,7 @@ import json
 from typing import List, Tuple
 from random import choice
 from string import hexdigits as hex
-from pathlib import Path
+import pkgutil
 
 """
 Default gray plotting color; used in histograms, violin plots, and arrows.
@@ -26,9 +26,7 @@ overlays = ["gainsboro", "silver", "darkgray", "gray", "dimgrey"]
 """
 LaTeX colors, [borrowed from here.](http://latexcolor.com/)
 """
-local = Path(__file__).parent.absolute()
-with open(local/"latexcolors.json") as r:
-    latex = json.load(r)
+latex = json.loads(pkgutil.get_data(__name__, "latexcolors.json"))
 
 
 def hexshift(color) -> str:
@@ -65,8 +63,8 @@ def districtr(N):
         "#D81B60", "#26A69A", "#FFEA00", "#6200EA"
     ]
 
-    repeats = math.ceil(N/len(colors))
-    tail = [hexshift(c) for c in colors*(repeats-1)]
+    repeats = math.ceil(N / len(colors))
+    tail = [hexshift(c) for c in colors * (repeats - 1)]
     return (colors + (tail if tail else []))[:N]
 
 
@@ -81,15 +79,15 @@ def redbluecmap(n) -> List[Tuple]:
     Returns:
         List of RGB tuples.
     """
-    midpoint = math.ceil(n/2)
+    midpoint = math.ceil(n / 2)
 
     # To get the appropriately-toned blues and reds, we create a list of colors,
     # then select the first section of each color.
     blues = list(
-        sns.color_palette("coolwarm", as_cmap=False, n_colors=n+2)
+        sns.color_palette("coolwarm", as_cmap=False, n_colors=n + 2)
     )[:midpoint]
     reds = list(
-        sns.color_palette("coolwarm", as_cmap=False, n_colors=n+2)
+        sns.color_palette("coolwarm", as_cmap=False, n_colors=n + 2)
     )[-midpoint:]
 
     return list(reversed(reds)) + list(reversed(blues))

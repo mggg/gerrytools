@@ -30,9 +30,10 @@
 <pre><code class="python">from matplotlib.axes import Axes
 from .colors import defaultGray
 
+
 def arrow(
     ax, text, orientation=&#34;horizontal&#34;, color=defaultGray, padding=0.1
-    ) -&gt; Axes:
+) -&gt; Axes:
     &#34;&#34;&#34;
     For some partisan metrics, we want to draw an arrow showing where the POV-party&#39;s
     advantage is. Depending on the orientation of the scores (histograms have
@@ -48,34 +49,33 @@ def arrow(
         color (str, optional): Color of the arrow.
         padding (float, optional): Spacing between the arrow and its axis. Defaults
             to `0.1`.
+
+    Returns:
+        matplotlib `Axes`.
     &#34;&#34;&#34;
 
     if orientation == &#34;horizontal&#34;:
         x = ax.get_xlim()[0]
-        y = ax.get_ylim()[0] - padding*ax.get_ylim()[1]
+        y = ax.get_ylim()[0] - padding * ax.get_ylim()[1]
         horizontal_align = &#34;left&#34;
         rotation = 0
     elif orientation == &#34;vertical&#34;:
-        x = ax.get_xlim()[0] -  padding*(sum(map(lambda x: abs(x), ax.get_xlim())))
-        y = sum(ax.get_ylim())/2
+        x = ax.get_xlim()[0] - padding * (sum(map(lambda x: abs(x), ax.get_xlim())))
+        y = sum(ax.get_ylim()) / 2
         horizontal_align = &#34;center&#34;
         rotation = 90
-    
-    ax.text(x, y,
-            text,
-            ha=horizontal_align,
-            va=&#34;center&#34;,
-            color=&#34;white&#34;,
-            rotation=rotation,
-            size=10,
-            bbox=dict(
-                boxstyle=&#34;rarrow,pad=0.3&#34;,
-                fc=color,
-                alpha=1,
-                ec=&#34;black&#34;,
-                )
-            )
+
+    ax.text(
+        x, y, text, ha=horizontal_align, va=&#34;center&#34;, color=&#34;white&#34;, rotation=rotation,
+        size=10, bbox=dict(
+            boxstyle=&#34;rarrow,pad=0.3&#34;, fc=color,
+            alpha=1,
+            ec=&#34;black&#34;,
+        )
+    )
+
     return ax
+
 
 def ideal(ax, label, placement, orientation, color=defaultGray, alpha=0.1):
     &#34;&#34;&#34;
@@ -101,7 +101,7 @@ def ideal(ax, label, placement, orientation, color=defaultGray, alpha=0.1):
         raise TypeError(&#34;`placement` is not of correct type.&#34;)
 
     # If `placement` is a tuple, we draw a band.
-    if type(placement) is tuple:
+    if isinstance(placement, tuple):
         if orientation == &#34;horizontal&#34;:
             xlims = orig_xlims
             ylims1 = [placement[0], placement[0]]
@@ -110,15 +110,17 @@ def ideal(ax, label, placement, orientation, color=defaultGray, alpha=0.1):
             xlims = placement
             ylims1 = [orig_ylims[0], orig_ylims[0]]
             ylims2 = [orig_ylims[1], orig_ylims[1]]
-        
+
         ax.fill_between(xlims, ylims1, ylims2, color=color, alpha=alpha, label=label)
     # Otherwise, draw a line.
     else:
         alpha = alpha if alpha else 0.5
         idealprops = dict(color=color, alpha=alpha, label=label)
 
-        if orientation == &#34;horizontal&#34;: ax.axhline(placement+0.5, **idealprops)
-        else: ax.axvline(placement+0.5, **idealprops)
+        if orientation == &#34;horizontal&#34;:
+            ax.axhline(placement + 0.5, **idealprops)
+        else:
+            ax.axvline(placement + 0.5, **idealprops)
 
     # Set the original x- and y-axis limits, and plot a legend.
     ax.set_xlim(orig_xlims)
@@ -158,14 +160,16 @@ values are <code>"horizontal"</code> and <code>"vertical"</code>. Defaults to <c
 <dt><strong><code>padding</code></strong> :&ensp;<code>float</code>, optional</dt>
 <dd>Spacing between the arrow and its axis. Defaults
 to <code>0.1</code>.</dd>
-</dl></div>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>matplotlib <code>Axes</code>.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def arrow(
     ax, text, orientation=&#34;horizontal&#34;, color=defaultGray, padding=0.1
-    ) -&gt; Axes:
+) -&gt; Axes:
     &#34;&#34;&#34;
     For some partisan metrics, we want to draw an arrow showing where the POV-party&#39;s
     advantage is. Depending on the orientation of the scores (histograms have
@@ -181,33 +185,31 @@ to <code>0.1</code>.</dd>
         color (str, optional): Color of the arrow.
         padding (float, optional): Spacing between the arrow and its axis. Defaults
             to `0.1`.
+
+    Returns:
+        matplotlib `Axes`.
     &#34;&#34;&#34;
 
     if orientation == &#34;horizontal&#34;:
         x = ax.get_xlim()[0]
-        y = ax.get_ylim()[0] - padding*ax.get_ylim()[1]
+        y = ax.get_ylim()[0] - padding * ax.get_ylim()[1]
         horizontal_align = &#34;left&#34;
         rotation = 0
     elif orientation == &#34;vertical&#34;:
-        x = ax.get_xlim()[0] -  padding*(sum(map(lambda x: abs(x), ax.get_xlim())))
-        y = sum(ax.get_ylim())/2
+        x = ax.get_xlim()[0] - padding * (sum(map(lambda x: abs(x), ax.get_xlim())))
+        y = sum(ax.get_ylim()) / 2
         horizontal_align = &#34;center&#34;
         rotation = 90
-    
-    ax.text(x, y,
-            text,
-            ha=horizontal_align,
-            va=&#34;center&#34;,
-            color=&#34;white&#34;,
-            rotation=rotation,
-            size=10,
-            bbox=dict(
-                boxstyle=&#34;rarrow,pad=0.3&#34;,
-                fc=color,
-                alpha=1,
-                ec=&#34;black&#34;,
-                )
-            )
+
+    ax.text(
+        x, y, text, ha=horizontal_align, va=&#34;center&#34;, color=&#34;white&#34;, rotation=rotation,
+        size=10, bbox=dict(
+            boxstyle=&#34;rarrow,pad=0.3&#34;, fc=color,
+            alpha=1,
+            ec=&#34;black&#34;,
+        )
+    )
+
     return ax</code></pre>
 </details>
 </dd>
@@ -262,7 +264,7 @@ values are <code>"horizontal"</code> or <code>"vertical"</code>.</dd>
         raise TypeError(&#34;`placement` is not of correct type.&#34;)
 
     # If `placement` is a tuple, we draw a band.
-    if type(placement) is tuple:
+    if isinstance(placement, tuple):
         if orientation == &#34;horizontal&#34;:
             xlims = orig_xlims
             ylims1 = [placement[0], placement[0]]
@@ -271,15 +273,17 @@ values are <code>"horizontal"</code> or <code>"vertical"</code>.</dd>
             xlims = placement
             ylims1 = [orig_ylims[0], orig_ylims[0]]
             ylims2 = [orig_ylims[1], orig_ylims[1]]
-        
+
         ax.fill_between(xlims, ylims1, ylims2, color=color, alpha=alpha, label=label)
     # Otherwise, draw a line.
     else:
         alpha = alpha if alpha else 0.5
         idealprops = dict(color=color, alpha=alpha, label=label)
 
-        if orientation == &#34;horizontal&#34;: ax.axhline(placement+0.5, **idealprops)
-        else: ax.axvline(placement+0.5, **idealprops)
+        if orientation == &#34;horizontal&#34;:
+            ax.axhline(placement + 0.5, **idealprops)
+        else:
+            ax.axvline(placement + 0.5, **idealprops)
 
     # Set the original x- and y-axis limits, and plot a legend.
     ax.set_xlim(orig_xlims)

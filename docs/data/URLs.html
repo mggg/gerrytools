@@ -29,6 +29,7 @@
 </summary>
 <pre><code class="python">import us
 
+
 def ids(state):
     &#34;&#34;&#34;
     URL for accessing districtr identifiers.
@@ -43,8 +44,10 @@ def ids(state):
     # If we&#39;re in michigan, then we use the &#39;beta&#39; pipeline instead of the &#39;prod&#39;
     # one.
     pipeline = &#34;beta&#34; if state == us.states.MI else &#34;prod&#34;
-    if state == us.states.MI: prefix = &#34;https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com&#34;
-    else: prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com&#34;
+    if state == us.states.MI:
+        prefix = &#34;https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com&#34;
+    else:
+        prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com&#34;
 
     return f&#34;{prefix}/{pipeline}/submissions/districtr-ids/{state.name.lower()}&#34;
 
@@ -61,11 +64,13 @@ def csvs(state, ptype=&#34;plan&#34;):
         String with the appropriate URL.
     &#34;&#34;&#34;
     pipeline = &#34;beta&#34; if state == us.states.MI else &#34;prod&#34;
-    if state == us.states.MI: prefix = &#34;https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com&#34;
-    else: prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com&#34;
+    if state == us.states.MI:
+        prefix = &#34;https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com&#34;
+    else:
+        prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com&#34;
 
     suffix = f&#34;?type={ptype}&amp;length=10000&#34;
-    
+
     return f&#34;{prefix}/{pipeline}/submissions/csv/{state.name.lower()}{suffix}&#34;
 
 
@@ -119,11 +124,13 @@ def one(identifier):
         String with the appropriate URL.
     &#34;&#34;&#34;
     pipeline = &#34;beta&#34; if state == us.states.MI else &#34;prod&#34;
-    if state == us.states.MI: prefix = &#34;https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com&#34;
-    else: prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com&#34;
+    if state == us.states.MI:
+        prefix = &#34;https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com&#34;
+    else:
+        prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com&#34;
 
     suffix = f&#34;?type={ptype}&amp;length=10000&#34;
-    
+
     return f&#34;{prefix}/{pipeline}/submissions/csv/{state.name.lower()}{suffix}&#34;</code></pre>
 </details>
 </dd>
@@ -158,8 +165,10 @@ districtr identifiers.</dd>
     # If we&#39;re in michigan, then we use the &#39;beta&#39; pipeline instead of the &#39;prod&#39;
     # one.
     pipeline = &#34;beta&#34; if state == us.states.MI else &#34;prod&#34;
-    if state == us.states.MI: prefix = &#34;https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com&#34;
-    else: prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com&#34;
+    if state == us.states.MI:
+        prefix = &#34;https://o1siz7rw0c.execute-api.us-east-2.amazonaws.com&#34;
+    else:
+        prefix = &#34;https://k61e3cz2ni.execute-api.us-east-2.amazonaws.com&#34;
 
     return f&#34;{prefix}/{pipeline}/submissions/districtr-ids/{state.name.lower()}&#34;</code></pre>
 </details>
