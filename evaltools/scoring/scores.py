@@ -24,15 +24,12 @@ from .partisan import (
 )
 from functools import partial
 from gerrychain import Partition, Graph
-from typing import Iterable, List, Mapping, Dict, Union, Any
+from typing import Iterable, List, Mapping, Dict, Union
 from tqdm import tqdm
 import gzip
 import json
-from .score_types import *
+from .types import Score, ScoreValue, Callable
 
-"""
-    Functionality for scoring plans/chains
-"""
 
 def summarize(part: Partition, scores: Iterable[Score]) -> Dict[str, ScoreValue]:
     """
@@ -54,27 +51,32 @@ def summarize(part: Partition, scores: Iterable[Score]) -> Dict[str, ScoreValue]
         summary[score.name] = score.apply(part)
     return summary
 
-def summarize_many(parts: Iterable[Partition], scores: Iterable[Score], plan_names: List[str] = [],
-                   output_file: str = None, compress: bool = False, verbose : bool = False) -> Union[List[Dict[str, ScoreValue]], None]:
+
+def summarize_many(
+    parts: Iterable[Partition], scores: Iterable[Score], plan_names: List[str] = [],
+    output_file: str = None, compress: bool = False, verbose: bool = False
+) -> Union[List[Dict[str, ScoreValue]], None]:
     """
     Summarize the given partitions by the passed scores.
 
     Args:
         parts (Iterable[Partition]): The plans to summarize.
         scores (Iterable[Score]): Which scores to include in the summaries.
-        plan_names (Iterable[str], optional): Plan identifiers, corresponding to plan by index.  If
-            no plan name exist for a given plan's index the plan's index is used as the identifier.
-            Default is `[]`, plans identified by index.
-        output_file (str, optional): Name of file to save the results jsonl encoding of the scores.
-            If None, returns a list of the dictionary summary of each plan.  Defaults to None.
-        compress (bool, optional): Whether to compress the output file with gzip.  Default is False.
+        plan_names (Iterable[str], optional): Plan identifiers, corresponding to
+            plan by index. If no plan name exists for a given plan's index, the
+            plan's index is used as the identifier. Default is `[]`, plans
+            identified by index.
+        output_file (str, optional): Name of file to save the results jsonl
+            encoding of the scores. If None, returns a list of the dictionary
+            summary of each plan. Defaults to None.
+        compress (bool, optional): Whether to compress the output file with gzip.
+            Default is False.
 
     Returns:
-        A list dictionaries that maps score names to the corresponding ScoreValues of the score
-        functions applied to each plan, if NO output file is passed.
-
-        If an output file IS specified, the plan summaries are written to file and the function
-        is void.
+        A list dictionaries that maps score names to the corresponding ScoreValues
+        of the score functions applied to each plan, if NO output file is passed.
+        If an output file IS specified, the plan summaries are written to file
+        and the function is void.
     """
     if output_file is None:
         if verbose:
@@ -90,25 +92,22 @@ def summarize_many(parts: Iterable[Partition], scores: Iterable[Score], plan_nam
                 plan_details = summarize(part, scores=scores)
                 try:
                     plan_details["id"] = plan_names[i]
-                except:
+                except BaseException:
                     plan_details["id"] = i
                 fout.write(json.dumps(plan_details) + "\n")
 
-"""
-    Commonly used score definitions
-"""
 
 def splits(
-        unit:str, names:bool=False, popcol:str=None, how:str="pandas",
-        alias:str=None
-    ) -> Score:
+    unit: str, names: bool = False, popcol: str = None, how: str = "pandas",
+    alias: str = None
+) -> Score:
     """
     Score representing the number of units split by the districting plan.
-    
+
     Bear in mind that this calculates the number of *unit splits*, not the number
     of *units split*: for example, if a district divides a county into three
     pieces, the former reports two splits (as a unit divided into three pieces is
-    cut twice), while the latter would report one split (as there is one county 
+    cut twice), while the latter would report one split (as there is one county
     being split).
 
     Args:
@@ -122,13 +121,14 @@ def splits(
             `"pandas"`.
         names (bool, optional): Whether we return the identifiers of the things
             being split.
-    
+
     Returns:
         A score object with the name `"{alias}_splits"` and associated function that takes a
         partition and returns a PlanWideScoreValue for the number of splits.
     """
-    if alias is None: alias = unit
-    
+    if alias is None:
+        alias = unit
+
     return Score(
         f"{alias}_splits",
         partial(_splits, unit=unit, how=how, popcol=popcol, names=names)
@@ -136,19 +136,19 @@ def splits(
 
 
 def pieces(
-        unit:str, names:bool=False, popcol:str=None, how:str="pandas",
-        alias:str=None
-    ) -> Score:
+    unit: str, names: bool = False, popcol: str = None, how: str = "pandas",
+    alias: str = None
+) -> Score:
     """
     Score representing the number of "unit pieces" produced by the plan. For example,
     consider a state with 100 counties. Suppose that one county is split twice,
     and another once. Then, there are 3 + 2 = 5 "pieces," disregarding the
     counties kept whole.
-    
+
     Bear in mind that this calculates the number of _unit splits_, not the number
     of _units split_: for example, if a district divides a county into three
     pieces, the former reports two splits (as a unit divided into three pieces is
-    cut twice), while the latter would report one split (as there is one county 
+    cut twice), while the latter would report one split (as there is one county
     being split).
 
     Args:
@@ -162,19 +162,24 @@ def pieces(
             `"pandas"`.
         names (bool, optional): Whether we return the identifiers of the things
             being split.
-    
+
     Returns:
         A score object with the name `"{alias}_pieces"` and associated function that takes a
         partition and returns a PlanWideScoreValue for the number of pieces.
     """
-    if alias is None: alias = unit
-    
+    if alias is None:
+        alias = unit
+
     return Score(
         f"{alias}_pieces",
         partial(_pieces, unit=unit, how=how, popcol=popcol, names=names)
     )
 
-def competitive_contests(election_cols: Iterable[str], party: str, points_within: float = 0.03, alias: str = None) -> Score:
+
+def competitive_contests(
+    election_cols: Iterable[str], party: str, points_within: float = 0.03,
+    alias: str = None
+) -> Score:
     """
     Score representing the number of competitive contests in a plan.
 
@@ -184,15 +189,21 @@ def competitive_contests(election_cols: Iterable[str], party: str, points_within
         party (str): The "point of view" political party.
         points_within (float, optional): The margin from 0.5 that is considered competitive.
             Default is 0.03, corresponding to a competitive range of 47%-53%.
-    
+
     Returns:
         A score object with name `"competitive_contests_0.03"` and associated function that takes a
         partition and returns a PlanWideScoreValue for the number of competitive districts.
     """
     if alias is None:
         alias = f"competitive_contests_{points_within}"
-    return Score(alias, partial(_competitive_contests, election_cols=election_cols,
-                                                  party=party, points_within=points_within))
+    return Score(
+        alias,
+        partial(
+            _competitive_contests, election_cols=election_cols, party=party,
+            points_within=points_within
+        )
+    )
+
 
 def swing_districts(election_cols: Iterable[str], party: str) -> Score:
     """
@@ -208,7 +219,11 @@ def swing_districts(election_cols: Iterable[str], party: str) -> Score:
         A score object with name `"swing_districts"` and associated function that takes a partition
         and returns a PlanWideScoreValue for the number of swing districts.
     """
-    return Score("swing_districts", partial(_swing_districts, election_cols=election_cols, party=party))
+    return Score(
+        "swing_districts",
+        partial(_swing_districts, election_cols=election_cols, party=party)
+    )
+
 
 def party_districts(election_cols: Iterable[str], party: str) -> Score:
     """
@@ -224,7 +239,11 @@ def party_districts(election_cols: Iterable[str], party: str) -> Score:
         A score object with name `"party_districts"` and associated function that takes a partition
         and returns a PlanWideScoreValue for the number of safe POV party districts.
     """
-    return Score("party_districts", partial(_party_districts, election_cols=election_cols, party=party))
+    return Score(
+        "party_districts",
+        partial(_party_districts, election_cols=election_cols, party=party)
+    )
+
 
 def opp_party_districts(election_cols: Iterable[str], party: str) -> Score:
     """
@@ -243,7 +262,11 @@ def opp_party_districts(election_cols: Iterable[str], party: str) -> Score:
         A score object with name `"opp_party_districts"` and associated function that takes a
         partition and returns a PlanWideScoreValue for the number of safe opposition party districts.
     """
-    return Score("opp_party_districts", partial(_opp_party_districts, election_cols=election_cols, party=party))
+    return Score(
+        "opp_party_districts",
+        partial(_opp_party_districts, election_cols=election_cols, party=party)
+    )
+
 
 def party_wins_by_district(election_cols: Iterable[str], party: str) -> Score:
     """
@@ -259,12 +282,16 @@ def party_wins_by_district(election_cols: Iterable[str], party: str) -> Score:
         partition and returns a DistrictWideScoreValue for the number of elections won by the POV
         party in each district.
     """
-    return Score("party_wins_by_district", partial(_party_wins_by_district, election_cols=election_cols, party=party))
+    return Score(
+        "party_wins_by_district",
+        partial(_party_wins_by_district, election_cols=election_cols, party=party)
+    )
+
 
 def seats(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
     """
     Score representing how many seats (districts) within a given plan the POV party won in each
-    election 
+    election
 
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
@@ -279,7 +306,11 @@ def seats(election_cols: Iterable[str], party: str, mean: bool = False) -> Score
         election.
     """
     prefix = "mean_" if mean else ""
-    return Score(f"{prefix}{party}_seats", partial(_seats, election_cols=election_cols, party=party, mean=mean))
+    return Score(
+        f"{prefix}{party}_seats",
+        partial(_seats, election_cols=election_cols, party=party, mean=mean)
+    )
+
 
 def aggregate_seats(election_cols: Iterable[str], party: str) -> Score:
     """
@@ -296,7 +327,10 @@ def aggregate_seats(election_cols: Iterable[str], party: str) -> Score:
         partition and returns an PlanWideScoreValue for the total number of seats won by the POV
         party across elections.
     """
-    return Score(f"aggregate_{party}_seats", partial(_aggregate_seats, election_cols=election_cols, party=party))
+    return Score(
+        f"aggregate_{party}_seats",
+        partial(_aggregate_seats, election_cols=election_cols, party=party)
+    )
 
 
 def responsive_proportionality(election_cols: Iterable[str], party: str) -> Score:
@@ -313,7 +347,13 @@ def responsive_proportionality(election_cols: Iterable[str], party: str) -> Scor
         partition and returns an PlanWideScoreValue for the responsive proportionality across the
         elections.
     """
-    return Score(f"responsive_proportionality", partial(_responsive_proportionality, election_cols=election_cols, party=party))
+    return Score(
+        "responsive_proportionality",
+        partial(
+            _responsive_proportionality, election_cols=election_cols, party=party
+        )
+    )
+
 
 def stable_proportionality(election_cols: Iterable[str], party: str) -> Score:
     """
@@ -329,7 +369,11 @@ def stable_proportionality(election_cols: Iterable[str], party: str) -> Score:
         partition and returns an PlanWideScoreValue for the stable proportionality across the
         elections.
     """
-    return Score(f"stable_proportionality", partial(_stable_proportionality, election_cols=election_cols, party=party))
+    return Score(
+        "stable_proportionality",
+        partial(_stable_proportionality, election_cols=election_cols, party=party)
+    )
+
 
 def efficiency_gap(election_cols: Iterable[str], mean: bool = False) -> Score:
     """
@@ -346,13 +390,17 @@ def efficiency_gap(election_cols: Iterable[str], mean: bool = False) -> Score:
         and returns a PlanWideScoreValue for efficiency gap metric.
     """
     prefix = "mean_" if mean else ""
-    return Score(f"{prefix}efficiency_gap", partial(_efficiency_gap, election_cols=election_cols, mean=mean))
+    return Score(
+        f"{prefix}efficiency_gap",
+        partial(_efficiency_gap, election_cols=election_cols, mean=mean)
+    )
+
 
 def simplified_efficiency_gap(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
     """
     Score representing the simplified efficiency gap metric of a plan with respect to a set of elections.
     The original formulation of efficiency gap quantifies the difference in "wasted" votes for the two
-    parties across the state, as a share of votes cast. This is sensitive to turnout effects. The 
+    parties across the state, as a share of votes cast. This is sensitive to turnout effects. The
     simplified score is equal to standard efficiency gap when the districts have equal turnout.
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
@@ -365,7 +413,13 @@ def simplified_efficiency_gap(election_cols: Iterable[str], party: str, mean: bo
         and returns a PlanWideScoreValue for efficiency gap metric.
     """
     prefix = "mean_" if mean else ""
-    return Score(f"{prefix}simplified_efficiency_gap", partial(_simplified_efficiency_gap, election_cols=election_cols, party=party, mean=mean))
+    return Score(
+        f"{prefix}simplified_efficiency_gap",
+        partial(
+            _simplified_efficiency_gap, election_cols=election_cols, party=party, mean=mean
+        )
+    )
+
 
 def mean_median(election_cols: Iterable[str], mean: bool = False) -> Score:
     """
@@ -382,7 +436,11 @@ def mean_median(election_cols: Iterable[str], mean: bool = False) -> Score:
         returns a PlanWideScoreValue for the mean median metric.
     """
     prefix = "mean_" if mean else ""
-    return Score(f"{prefix}mean_median", partial(_mean_median, election_cols=election_cols, mean=mean))
+    return Score(
+        f"{prefix}mean_median",
+        partial(_mean_median, election_cols=election_cols, mean=mean)
+    )
+
 
 def partisan_bias(election_cols: Iterable[str], mean: bool = False) -> Score:
     """
@@ -398,28 +456,41 @@ def partisan_bias(election_cols: Iterable[str], mean: bool = False) -> Score:
         returns a PlanWideScoreValue for partisan bias metric.
     """
     prefix = "mean_" if mean else ""
-    return Score(f"{prefix}partisan_bias", partial(_partisan_bias, election_cols=election_cols, mean=mean))
+    return Score(
+        f"{prefix}partisan_bias",
+        partial(_partisan_bias, election_cols=election_cols, mean=mean)
+    )
+
 
 def partisan_gini(election_cols: Iterable[str], mean: bool = False) -> Score:
     """
-    Score representing the partisan gini metric of a plan with respect to a set of elections.
+    Score representing the partisan gini metric of a plan with respect to a set
+    of elections.
 
     Args:
-        election_cols (Iterable[str]): The names of the election updaters over which to compute
+        election_cols (Iterable[str]): The names of the election updaters to compute
             results for.
         party (str): The "point of view" political party.
-        mean (bool): Whether to return the mean of the score over all elections, or a dictionary
-                     of the score for each election.
+        mean (bool): Whether to return the mean of the score over all elections,
+            or a dictionary of the score for each election.
 
     Returns:
-        A score object with name `"partisan_gini"` and associated function that takes a partition and
+        A score object with name `"partisan_gini"` and associated function that
+        takes a partition and
         returns a PlanWideScoreValue for the partisan gini metric.
     """
     prefix = "mean_" if mean else ""
-    return Score(f"{prefix}partisan_gini", partial(_partisan_gini, election_cols=election_cols, mean=mean))
+    return Score(
+        f"{prefix}partisan_gini",
+        partial(_partisan_gini, election_cols=election_cols, mean=mean)
+    )
 
-def eguia(election_cols: Iterable[str], party: str, graph: Graph, updaters: Mapping[str, Callable[[Partition], ScoreValue]],
-          county_col: str, totpop_col: str = "population", mean: bool = False) -> Score:
+
+def eguia(
+    election_cols: Iterable[str], party: str, graph: Graph,
+    updaters: Mapping[str, Callable[[Partition], ScoreValue]],
+    county_col: str, totpop_col: str = "population", mean: bool = False
+) -> Score:
     """
     Score representing the Equia metric of a plan with respect to a set of elections.
 
@@ -441,12 +512,18 @@ def eguia(election_cols: Iterable[str], party: str, graph: Graph, updaters: Mapp
 
     Returns:
         A score object with name `"eguia"` and associated function that takes a partition and returns
-        a PlanWideScoreValue for the eguia metric. 
+        a PlanWideScoreValue for the eguia metric.
     """
     county_part = Partition(graph, county_col, updaters=updaters)
     prefix = "mean_" if mean else ""
-    return Score(f"{prefix}eguia", partial(_eguia, election_cols=election_cols, party=party, 
-                                  county_part=county_part, totpop_col=totpop_col, mean=mean))
+
+    return Score(
+        f"{prefix}eguia",
+        partial(
+            _eguia, election_cols=election_cols, party=party, county_part=county_part,
+            totpop_col=totpop_col, mean=mean
+        )
+    )
 
 
 def demographic_tallies(population_cols: Iterable[str]) -> List[Score]:
@@ -461,9 +538,10 @@ def demographic_tallies(population_cols: Iterable[str]) -> List[Score]:
         and return a DistrictWideScoreValue for the demographic totals of each district.
     """
     return [
-            Score(col, partial(_tally_pop, pop_col=col))
-            for col in population_cols
-        ]
+        Score(col, partial(_tally_pop, pop_col=col))
+        for col in population_cols
+    ]
+
 
 def demographic_shares(population_cols: Mapping[str, Iterable[str]]) -> List[Score]:
     """
@@ -472,12 +550,12 @@ def demographic_shares(population_cols: Mapping[str, Iterable[str]]) -> List[Sco
     Args:
         population_cols (Mapping[str, Iterable[str]]): A mapping encoding the total population group
             divisor as well as the subgroups to create shares for.  The mapping has the format:
-            { \(P\) : [ \(P_1\), \(P_2\), ..., \(P_k\)], ...} where \(P\) is the population and 
-            \( P_i \subseteq P \) forall subgroups \(P_i\).
+            { \\(P\\) : [ \\(P_1\\), \\(P_2\\), ..., \\(P_k\\)], ...} where \\(P\\) is the population and
+            \\( P_i \\subseteq P \\) forall subgroups \\(P_i\\).
 
     Returns:
         A list of score objects named with the pattern `"{column}_share"` and with associated
-        functions that take a partition and return a DistrictWideScoreValue for the demographic 
+        functions that take a partition and return a DistrictWideScoreValue for the demographic
         share of each district.
     """
     scores = []
@@ -489,6 +567,7 @@ def demographic_shares(population_cols: Mapping[str, Iterable[str]]) -> List[Sco
         ])
     return scores
 
+
 def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: float = 0.5) -> List[Score]:
     """
     A list of scores representing the number of districts where a sub-population share is above
@@ -497,8 +576,8 @@ def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: f
     Args:
         population_cols (Mapping[str, Iterable[str]]): A mapping encoding the total population group
             divisor as well as the subgroups to create gingles district counters for.  The mapping
-            has the format: `{ \(P\) : [ \(P_1\), \(P_2\), ..., \(P_k\)], ...}` where \(P\) is the
-            population and \( P_i \subseteq P \) forall subgroups \(P_i\).
+            has the format: `{ \\(P\\) : [ \\(P_1\\), \\(P_2\\), ..., \\(P_k\\)], ...}` where \\(P\\) is the
+            population and \\( P_i \\subseteq P \\) forall subgroups \\(P_i\\).
 
     Returns:
         A list of score objects named with the pattern `"{column}_gingles_districts"` and with
@@ -509,11 +588,12 @@ def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: f
 
     for totalpop_col, subpop_cols in population_cols.items():
         scores.extend([
-            Score(f"{col}_gingles_districts", partial(_gingles_districts, subpop_col=col, 
+            Score(f"{col}_gingles_districts", partial(_gingles_districts, subpop_col=col,
                                                       totpop_col=totalpop_col, threshold=threshold))
             for col in subpop_cols
         ])
     return scores
+
 
 def max_deviation(totpop_col: str, pct: bool = False) -> Score:
     """
@@ -523,7 +603,7 @@ def max_deviation(totpop_col: str, pct: bool = False) -> Score:
     Args:
         totpop_col (str, optional): The name of the updater that computes total population by
             district.
-        pct (bool): Whether to return the maximum deviation as a count or as a percentage of 
+        pct (bool): Whether to return the maximum deviation as a count or as a percentage of
                     ideal district size.
     """
     return Score(f"{totpop_col}_max_deviation", partial(_max_deviation, totpop_col=totpop_col, pct=pct))

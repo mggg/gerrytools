@@ -7,7 +7,6 @@ from .dissolve import dissolve
 from .dualgraph import dualgraph
 from .unitmap import unitmap, invert
 from .dataframe import dataframe
-from gerrychain import Graph, Partition
 
 from .optimize import (
     minimize_dispersion, minimize_dispersion_with_parity, minimize_parity,

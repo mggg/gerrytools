@@ -1,0 +1,85 @@
+version: 2
+
+jobs:
+  test:
+    docker:
+      - image: python:3.9.6
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - run:
+          name: linting
+          command: |
+            flake8 --config=./.flake8
+      - run:
+          name: tests
+          command: |
+            ls $HOME
+            if [ ! -d "/home/circleci/conda" ]; then
+                wget https://repo.anaconda.com/miniconda/Miniconda3-py38_4.10.3-Linux-x86_64.sh
+                /bin/bash Miniconda3-py38_4.10.3-Linux-x86_64.sh -b -p $HOME/conda
+                export PATH=$HOME/conda/bin:$PATH
+                conda install -y -c defaults -c conda-forge sregistry
+            else
+                echo "Miniconda is already installed, continuing to build."
+            fi
+
+            # Conda configuration
+            conda config --set always_yes yes --set auto_update_conda false
+
+            # install dependencies in conda env
+            conda install pytest pytest-cov
+            conda install codecov
+            python -m pip install .[geo]
+            conda install shapely==1.6.4
+
+            # run tests
+            echo "backend: Agg" > "matplotlibrc"
+            pytest -v --runslow --cov=evaltools --junitxml=test-reports/junit.xml tests
+            codecov
+          environment:
+            PYTHONHASHSEED: "0"
+      - store_test_results:
+          path: test-reports
+      - store_artifacts:
+          path: test-reports
+
+  deploy:
+    docker:
+      - image: python:3.9.6
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - run:
+          name: install dependencies
+          command: |
+            pip install --upgrade setuptools wheel twine
+      - run:
+          name: set up .pypirc
+          command: |
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+      - run:
+          name: create package
+          command: |
+            python setup.py sdist
+            python setup.py bdist_wheel
+      - run:
+          name: upload to pypi
+          command: |
+            twine upload dist/*
+
+workflows:
+  version: 2
+  test_and_deploy:
+    jobs:
+      - test
+      - deploy:
+          requires:
+            - test
+          filters:
+            tags:
+              only: /v[0-9]+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/

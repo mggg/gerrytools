@@ -4,8 +4,8 @@ import pandas as pd
 
 
 def dataframe(
-        P: Partition, index:str="id", assignment:str="DISTRICT", columns:list=None
-    ) -> pd.DataFrame:
+    P: Partition, index: str = "id", assignment: str = "DISTRICT", columns: list = None
+) -> pd.DataFrame:
     """
     Converts a `Partition` into a `DataFrame`.
 
@@ -29,6 +29,7 @@ def dataframe(
     gdf[assignment] = gdf[index].map(assignedvertices)
 
     # Drop columns if necessary.
-    if columns: gdf = gdf[[assignment, index] + columns]
+    if columns:
+        gdf = gdf[[assignment, index] + columns]
 
     return gdf

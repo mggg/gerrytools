@@ -4,10 +4,11 @@ from matplotlib.axes import Axes
 from .colors import districtr
 from .districtnumbers import districtnumbers
 
+
 def drawplan(
-        districts, assignment, overlays=[], colors=None, numbers=False, lw=1/2,
-        fontsize=15, edgecolor="black"
-    ) -> Axes:
+    districts, assignment, overlays=[], colors=None, numbers=False, lw=1/2,
+    fontsize=15, edgecolor="black"
+) -> Axes:
     """
     Visualizes the districting plan defined by `assignment`.
 
@@ -23,7 +24,7 @@ def drawplan(
         lw (float, optional): Line thickness if there are more than 20 districts.
         fontsize (float, optional): District-number font size; passed to
             `districtnumbers`.
-    
+
     Returns:
         A `matplotlib` `Axes` object for the geometries attached to `districts`.
     """
@@ -50,9 +51,10 @@ def drawplan(
         for overlay in overlays:
             overlay = overlay.to_crs(districts.crs)
             overlay.plot(color="None", edgecolor=edgecolor, linewidth=1/8, ax=base)
-    
+
     # If the `numbers` flag is passed, plot the numbers for each district.
-    if numbers: base = districtnumbers(base, districts, assignment=assignment, fontsize=fontsize)
+    if numbers:
+        base = districtnumbers(base, districts, assignment=assignment, fontsize=fontsize)
 
     # Turn plot axes off.
     plt.axis("off")

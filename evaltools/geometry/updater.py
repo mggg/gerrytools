@@ -2,6 +2,7 @@ import geopandas as gpd
 import gerrychain
 from .optimize import minimize_dispersion, calculate_dispersion
 
+
 def dispersion_updater_closure(units: gpd.GeoDataFrame, enacted_col: str, pop_col: str, verbose: bool = False):
     """
     An updater to calculate best possible dispersion for a `gerrychain.Partition` object.
@@ -10,7 +11,7 @@ def dispersion_updater_closure(units: gpd.GeoDataFrame, enacted_col: str, pop_co
         units: The units to optimize on. E.g. Census blocks.
         enacted_col: The column in the GeoDataFrame with the enacted districts.
         proposed_col: The column in the GeoDataFrame with the proposed districts.
-        extra_constraints: Optional; A function that can add extra constraints 
+        extra_constraints: Optional; A function that can add extra constraints
             to the model, such as parity (in the case of WI).
         verbose: If true, do not suppress solver output. Otherwise, stay quiet.
 

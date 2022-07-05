@@ -1,15 +1,15 @@
 
 import os
 from os import path
-from pathlib import Path
+
 
 def rename(old, new):
     """
     Renames all files in the path specified by `old` to `new`; intended for use
     with directories containing shapefiles. For example, if a directory called
     `blocks20/` contains no shapefile called `blocks20.shp`, this is (a) bad
-    practice and (b) prevents GeoPandas from reading the shapefile from a partial
-    filepath (e.g. `gpd.read_file("blocks20/")`).
+    practice and (b) prevents GeoPandas from reading the shapefile from a
+    partial filepath (e.g. `gpd.read_file("blocks20/")`).
 
     Example:
         Basic usage.

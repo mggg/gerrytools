@@ -3,10 +3,11 @@ from matplotlib.axes import Axes
 import random
 from .colors import defaultGray, citizenBlue, districtr
 
+
 def boxplot(
-        ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1,99), rotation=0,
-        ticksize=12, jitter=1/3
-    ) -> Axes:
+    ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1, 99),
+    rotation=0, ticksize=12, jitter=1/3
+) -> Axes:
     r"""
     Plot boxplots, which takes `scores` — a dictionary where each value
     (corresponding to an ensemble, citizens' ensemble, or proposed plans),
@@ -89,5 +90,5 @@ def boxplot(
     if labels:
         ax.set_xlabel(labels[0], fontsize=24)
         ax.set_ylabel(labels[1], fontsize=24)
-    
+
     return ax

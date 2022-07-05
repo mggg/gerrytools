@@ -17,7 +17,12 @@ setup(
     install_requires=requirements,
     extras_require={
         "dev": [
-            "pdoc3"
+            "pdoc3",
+            "flake8",
+            "pytest",
+            "autopep8",
+            "codecov",
+            "pytest-cov"
         ]
     }
 )

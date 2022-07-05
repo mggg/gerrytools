@@ -1,0 +1,10 @@
+[flake8]
+
+exclude =
+    # Don't need to hit the git directory or the pycache.
+    .git,
+    __pycache__,
+    # Docs and tests should be excluded.
+    docs,
+    tests
+max-line-length=120

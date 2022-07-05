@@ -3,8 +3,7 @@ from evaltools.scoring import (
     deviations, splits, pieces, unassigned_units, unassigned_population,
     contiguous, reock
 )
-from evaltools.geometry import Partition
-from gerrychain.graph import Graph
+from gerrychain import Graph, Partition
 from pathlib import Path
 import geopandas as gpd
 from gerrychain.grid import Grid

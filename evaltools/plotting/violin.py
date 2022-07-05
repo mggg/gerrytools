@@ -4,13 +4,14 @@ import numpy as np
 import random
 from .colors import defaultGray, citizenBlue, districtr
 
+
 def violin(
-        ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1,99), rotation=0,
-        ticksize=12, jitter=1/3
-    ) -> Axes:
+    ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1, 99), rotation=0,
+    ticksize=12, jitter=1 / 3
+) -> Axes:
     r"""
-    Plot a violin plot, which takes `scores` — a dictionary where each value (corresponding to 
-    an ensemble, citizens' ensemble, or proposed plans), will be a list of lists, where each 
+    Plot a violin plot, which takes `scores` — a dictionary where each value (corresponding to
+    an ensemble, citizens' ensemble, or proposed plans), will be a list of lists, where each
     sublist will be its own violin. Proposed scores will be plotted as colored circles on
     their respective violin. Color the violins conditioned on the kind of the scores
     (ensemble or citizen), and trim each sublist to only the values between the percentiles.
@@ -82,7 +83,7 @@ def violin(
                 ax.scatter(
                     violin + 1 + jitter_val,
                     score,
-                    color=districtr(plan+1).pop(),
+                    color=districtr(plan + 1).pop(),
                     edgecolor='black',
                     s=100,
                     alpha=0.9,
@@ -94,5 +95,5 @@ def violin(
     if labels:
         ax.set_xlabel(labels[0], fontsize=24)
         ax.set_ylabel(labels[1], fontsize=24)
-    
+
     return ax

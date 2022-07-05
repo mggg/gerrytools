@@ -2,9 +2,10 @@
 from matplotlib.axes import Axes
 from .colors import defaultGray
 
+
 def arrow(
     ax, text, orientation="horizontal", color=defaultGray, padding=0.1
-    ) -> Axes:
+) -> Axes:
     """
     For some partisan metrics, we want to draw an arrow showing where the POV-party's
     advantage is. Depending on the orientation of the scores (histograms have
@@ -20,6 +21,9 @@ def arrow(
         color (str, optional): Color of the arrow.
         padding (float, optional): Spacing between the arrow and its axis. Defaults
             to `0.1`.
+
+    Returns:
+        matplotlib `Axes`.
     """
 
     if orientation == "horizontal":
@@ -28,26 +32,22 @@ def arrow(
         horizontal_align = "left"
         rotation = 0
     elif orientation == "vertical":
-        x = ax.get_xlim()[0] -  padding*(sum(map(lambda x: abs(x), ax.get_xlim())))
+        x = ax.get_xlim()[0] - padding*(sum(map(lambda x: abs(x), ax.get_xlim())))
         y = sum(ax.get_ylim())/2
         horizontal_align = "center"
         rotation = 90
-    
-    ax.text(x, y,
-            text,
-            ha=horizontal_align,
-            va="center",
-            color="white",
-            rotation=rotation,
-            size=10,
-            bbox=dict(
-                boxstyle="rarrow,pad=0.3",
-                fc=color,
-                alpha=1,
-                ec="black",
-                )
-            )
+
+    ax.text(
+        x, y, text, ha=horizontal_align, va="center", color="white", rotation=rotation,
+        size=10, bbox=dict(
+            boxstyle="rarrow,pad=0.3", fc=color,
+            alpha=1,
+            ec="black",
+        )
+    )
+
     return ax
+
 
 def ideal(ax, label, placement, orientation, color=defaultGray, alpha=0.1):
     """
@@ -82,15 +82,17 @@ def ideal(ax, label, placement, orientation, color=defaultGray, alpha=0.1):
             xlims = placement
             ylims1 = [orig_ylims[0], orig_ylims[0]]
             ylims2 = [orig_ylims[1], orig_ylims[1]]
-        
+
         ax.fill_between(xlims, ylims1, ylims2, color=color, alpha=alpha, label=label)
     # Otherwise, draw a line.
     else:
         alpha = alpha if alpha else 0.5
         idealprops = dict(color=color, alpha=alpha, label=label)
 
-        if orientation == "horizontal": ax.axhline(placement+0.5, **idealprops)
-        else: ax.axvline(placement+0.5, **idealprops)
+        if orientation == "horizontal":
+            ax.axhline(placement+0.5, **idealprops)
+        else:
+            ax.axvline(placement+0.5, **idealprops)
 
     # Set the original x- and y-axis limits, and plot a legend.
     ax.set_xlim(orig_xlims)

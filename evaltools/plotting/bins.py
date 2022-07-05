@@ -9,7 +9,7 @@ def bins(scores, width=None, labels=8) -> Tuple[array, List, List, Union[float, 
     Get necessary information for histograms. If we're working with only a few
     discrete, floating point values, then set the bin width to be relatively thin.
     Otherwise, adaptively set the bin width to the scale of our data.
-    
+
     Args:
         scores (list): The collection of all observations.
         width (int, optional): The width of the bins.
@@ -43,5 +43,5 @@ def bins(scores, width=None, labels=8) -> Tuple[array, List, List, Union[float, 
     for i, label in enumerate(tick_labels):
         if type(label) == np.float64:
             tick_labels[i] = round(label, 2)
-    
+
     return hist_bins, tick_bins, tick_labels, width

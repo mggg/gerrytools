@@ -6,6 +6,7 @@ import warnings
 A = TypeVar("A")
 B = TypeVar("B")
 
+
 def unitmap(source, target) -> dict:
     """
     Creates a mapping from source units to target units.
@@ -43,7 +44,7 @@ def unitmap(source, target) -> dict:
     mapping = mapping.reset_index()
     l, r = "l", "r"
     mapping.columns = [l, r]
-    
+
     return dict(zip(mapping[l], mapping[r]))
 
 
@@ -63,7 +64,9 @@ def invert(unitmap: Dict[A, B]) -> Dict[B, List[A]]:
     inverse: Dict[B, List[A]] = {}
 
     for s, t in unitmap.items():
-        if inverse.get(t, None): inverse[t].append(s)
-        else: inverse[t] = [s]
+        if inverse.get(t, None):
+            inverse[t].append(s)
+        else:
+            inverse[t] = [s]
 
     return inverse

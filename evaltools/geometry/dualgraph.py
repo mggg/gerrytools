@@ -3,9 +3,9 @@ from gerrychain.graph import Graph
 
 
 def dualgraph(
-        geometries, index=None, geometrycolumn="geometry", colmap={}, buffer=0,
-        edges_to_add=[], edges_to_cut=[]
-    ) -> Graph:
+    geometries, index=None, geometrycolumn="geometry", colmap={}, buffer=0,
+    edges_to_add=[], edges_to_cut=[]
+) -> Graph:
     """
     Generates a graph dual to the provided geometric data.
 
@@ -30,15 +30,19 @@ def dualgraph(
     geometries[geometrycolumn] = geometries[geometrycolumn].buffer(buffer)
 
     # Set indices and rename columns.
-    if index: geometries = geometries.set_index(index)
-    if colmap: geometries = geometries.rename(colmap, axis=1)
+    if index:
+        geometries = geometries.set_index(index)
+    if colmap:
+        geometries = geometries.rename(colmap, axis=1)
 
     # Generate the dual graph.
     dg = Graph.from_geodataframe(geometries, adjacency="rook")
 
     # Add and remove extraneous edges.
-    for add in edges_to_add: dg.add_edge(*add)
-    for cut in edges_to_cut: dg.remove_edge(*cut)
+    for add in edges_to_add:
+        dg.add_edge(*add)
+    for cut in edges_to_cut:
+        dg.remove_edge(*cut)
 
     # Return the graph!
     return dg

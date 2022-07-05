@@ -2,6 +2,7 @@
 from typing import Callable
 import ast
 
+
 def remap(plans, unitmaps, popmap=None) -> Callable:
     """
     Re-maps assignments to the specified set of units.
@@ -19,7 +20,7 @@ def remap(plans, unitmaps, popmap=None) -> Callable:
             units to larger ones.
 
     Returns:
-        A function 
+        A function
     """
     def _(row):
         # Get the assignment for the row.
@@ -31,7 +32,7 @@ def remap(plans, unitmaps, popmap=None) -> Callable:
         try:
             unitsType = row["units"]
             unitmap = unitmaps[unitsType]
-        except:
+        except BaseException:
             print(f"No unit mapping provided for {row['units']}; skipping.")
             return assignment
 
@@ -47,11 +48,14 @@ def remap(plans, unitmaps, popmap=None) -> Callable:
         unitmapdirection = "down"
 
         # Mark which kind of mapping we have.
-        if type(firstvalue) is list: unitmapdirection = "down"
-        else: unitmapdirection = "up"
+        if isinstance(firstvalue, list):
+            unitmapdirection = "down"
+        else:
+            unitmapdirection = "up"
 
         # Now, based on the mapping type, return the appropriate mapping.
-        if unitmapdirection == "down": return _down(unitmap, assignment)
+        if unitmapdirection == "down":
+            return _down(unitmap, assignment)
         return _up(unitmap, popmap, assignment)
 
     plans["plan"] = plans.apply(_, axis=1)
@@ -82,7 +86,7 @@ def _down(unitmap, assignment) -> dict:
             smaller: district
             for smaller in smallers
         })
-    
+
     return mapped
 
 

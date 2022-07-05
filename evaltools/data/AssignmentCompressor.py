@@ -3,11 +3,12 @@ from sortedcontainers import SortedDict, SortedList
 import zlib
 from typing import List
 
+
 class AssignmentCompressor:
     """
     A class for compressing and decompressing lots of assignments very, very
     quickly. Intended for use with ``jsonlines``-like libraries (where assignments
-    are read in line-by-line) or for network requests (where assignments are 
+    are read in line-by-line) or for network requests (where assignments are
     retrieved one-by-one). When decompressing, yields ``dict``s where keys are
     in sorted order.
 
@@ -88,12 +89,12 @@ class AssignmentCompressor:
                 or write). Defaults to `compressed.ac`.
         """
         self.identifiers = SortedList(identifiers)
-        self.default = frozenset(zip(self.identifiers, ["-1"]*len(self.identifiers)))
+        self.default = frozenset(zip(self.identifiers, ["-1"] * len(self.identifiers)))
         self.cache = []
         self.location = location
 
         # Error to users if the window is nonexistent.
-        if type(window) != int or window <= 0:
+        if not isinstance(window, int) or window <= 0:
             raise ValueError("Cache window width must be a positive integer.")
 
         self.window = window
@@ -121,7 +122,7 @@ class AssignmentCompressor:
         # dictionary with assignment values.
         indexer = SortedDict(self.default)
         indexer.update(assignment)
-        
+
         return indexer
 
     def __enter__(self):
@@ -138,7 +139,8 @@ class AssignmentCompressor:
         feeding items to the compressor) we can force the remaining items to be
         compressed and written to file.
         """
-        if self.cache: self._compress(force=True)
+        if self.cache:
+            self._compress(force=True)
 
     def compress_all(self, assignments):
         """
@@ -174,7 +176,7 @@ class AssignmentCompressor:
         if not set(assignment.keys()).issubset(self.identifiers):
             skip = True
             print(
-                "`assignment`'s keys are not a subset of `identifiers`; skipping. " + \
+                "`assignment`'s keys are not a subset of `identifiers`; skipping. " +
                 "Please ensure that all keys and values in `assignment` are strings.",
             )
 
@@ -217,7 +219,8 @@ class AssignmentCompressor:
                 # a separator; doing so will produce an empty bytestring (which,
                 # in turn, produces a dictionary with one key, corresponding to
                 # a null assignment).
-                if not force: writer.write(self.CHUNK_DELIMITER)
+                if not force:
+                    writer.write(self.CHUNK_DELIMITER)
 
             # Reset the cache.
             self.cache = []
@@ -234,8 +237,10 @@ class AssignmentCompressor:
         # we hit our separator or until the end of the file.
         with open(self.location, "rb") as _compressed_fin:
             for chunk in self._chunk(_compressed_fin):
-                if not chunk: break
-                for assignment in self._decompress(chunk): yield assignment
+                if not chunk:
+                    break
+                for assignment in self._decompress(chunk):
+                    yield assignment
 
     def _chunk(self, stream):
         """
@@ -269,7 +274,9 @@ class AssignmentCompressor:
                 yield part
 
             # If the chunk's empty, `yield` the remaining buffer and return.
-            if not chunk: yield b"".join(_buffer); break
+            if not chunk:
+                yield b"".join(_buffer)
+                break
 
     def _decompress(self, chunk) -> List[dict]:
         """
@@ -285,7 +292,7 @@ class AssignmentCompressor:
         # Decompress the chunk and split it on our delimiter.
         decompressed = zlib.decompress(chunk)
         decompressed_parts = decompressed.split(self.ASSIGNMENT_DELIMITER)
-        
+
         # For each of the parts, decode the bytes, make them into lists, and
         # match them to GEOIDs.
         decoded_parts = [part.decode() for part in decompressed_parts]

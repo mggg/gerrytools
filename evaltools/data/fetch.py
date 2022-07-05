@@ -46,7 +46,7 @@ def tabularized(state, submissions) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Data
 
     Example:
         Prototypical example usage.
-        
+
             import us
             from evaltools.retrieve import submissions, tabularized
 
@@ -67,13 +67,13 @@ def tabularized(state, submissions) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Data
     # of submissions).
     _plans = [s.dict() for s in submissions if s.type == "plan"]
     _cois = [s.dict() for s in submissions if s.type == "coi"]
-    
+
     # Create preliminary dataframes so we can do safe `merge`s rather than rely
     # explicitly on sorting; this also allows us to specify a sample size if
     # we're only looking to sample a specific number of plans.
     subset_plans = pd.DataFrame.from_records(_plans)
     subset_cois = pd.DataFrame.from_records(_cois)
-    
+
     # Get appropriate URLs and create dataframes.
     plans_url = csvs(state)
     cois_url = csvs(state, ptype="coi")
@@ -90,14 +90,19 @@ def tabularized(state, submissions) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Data
         universe["id"] = parse_id(universe["link"])
 
     # Adjust column contents for all dataframes.
-    for df in [plans, cois, writtens]: df["datetime"] = parse_datetime(df["datetime"])
+    for df in [plans, cois, writtens]:
+        df["datetime"] = parse_datetime(df["datetime"])
 
     # Add the retrieved plan data to the dataframes *if the subset dataframes
     # contain items*.
-    if not subset_plans.empty: plans = plans.merge(subset_plans, on="id")
-    else: plans = pd.DataFrame()
-    if not subset_cois.empty: cois = cois.merge(subset_cois, on="id")
-    else: cois = pd.DataFrame()
+    if not subset_plans.empty:
+        plans = plans.merge(subset_plans, on="id")
+    else:
+        plans = pd.DataFrame()
+    if not subset_cois.empty:
+        cois = cois.merge(subset_cois, on="id")
+    else:
+        cois = pd.DataFrame()
 
     # Drop bad columns and rename. Not sure why we have to `inplace` things here,
     # but... fine.
@@ -105,7 +110,8 @@ def tabularized(state, submissions) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Data
         if not df.empty:
             # Remove columns we don't necessarily care about.
             for col in ["type_x", "link_x", "coalition"]:
-                if col in list(df): df.drop(col, axis=1, inplace=True)
+                if col in list(df):
+                    df.drop(col, axis=1, inplace=True)
 
             # Rename the columns we do care about.
             df.rename({"type_y": "type", "link_y": "link"}, axis=1, inplace=True)
@@ -141,11 +147,11 @@ def submissions(state, sample=None) -> List[Submission]:
         # Retrieve the required data points.
         identifier = parse_id(entity["link"], df=False)
         districtr = individual(identifier)
-        
+
         # Force all plan keys and values to strings.
         try:
             plan = {
-                str(k): str(v) if type(v) is not list else str(v[0])
+                str(k): str(v) if not isinstance(v, list) else str(v[0])
                 for k, v in districtr["plan"]["assignment"].items()
             }
             units = districtr["plan"]["units"]["name"]
@@ -162,8 +168,9 @@ def submissions(state, sample=None) -> List[Submission]:
                 tileset=tileset,
                 type=entity["type"]
             ))
-        except: pass
-    
+        except BaseException:
+            pass
+
     return submissions
 
 
@@ -193,7 +200,7 @@ def individual(identifier) -> dict:
     return json.loads(raw.text)
 
 
-def parse_id(l, df=True) -> Union[str, pd.Series]:
+def parse_id(link, df=True) -> Union[str, pd.Series]:
     """
     Given a districtr link, parse out the districtr identifier.
 
@@ -205,8 +212,9 @@ def parse_id(l, df=True) -> Union[str, pd.Series]:
     Returns:
         districtr ID.
     """
-    if df: return l.str.split("/").str[-1].str.split("?").str[0]
-    return l.split("/")[-1].split("?")[0]
+    if df:
+        return link.str.split("/").str[-1].str.split("?").str[0]
+    return link.split("/")[-1].split("?")[0]
 
 
 def parse_datetime(d) -> pd.Series:
@@ -223,6 +231,6 @@ def parse_datetime(d) -> pd.Series:
     prefix = d.str.split("+").str[0]
     suffix = d.str.split("+").str[1].str.split(" ").str[0]
     dt = prefix + " +" + suffix
-    
+
     # Convert datetimes.
     return dt.apply(lambda r: datetime.strptime(r, "%a %b %d %Y %X %Z %z"))

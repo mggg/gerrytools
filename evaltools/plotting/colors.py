@@ -27,7 +27,8 @@ overlays = ["gainsboro", "silver", "darkgray", "gray", "dimgrey"]
 LaTeX colors, [borrowed from here.](http://latexcolor.com/)
 """
 local = Path(__file__).parent.absolute()
-with open(local/"latexcolors.json") as r: latex = json.load(r)
+with open(local/"latexcolors.json") as r:
+    latex = json.load(r)
 
 
 def hexshift(color) -> str:
@@ -47,10 +48,12 @@ def hexshift(color) -> str:
 
     # Find the character we're going to replace that's *not* the same character
     # as the one we got from the hexadecimal string.
-    while sub == char: sub = choice(h)
+    while sub == char:
+        sub = choice(h)
 
     # Return the subbed string.
     return color.replace(char, sub)
+
 
 def districtr(N):
     colors = [
@@ -66,6 +69,7 @@ def districtr(N):
     tail = [hexshift(c) for c in colors*(repeats-1)]
     return (colors + (tail if tail else []))[:N]
 
+
 def redbluecmap(n) -> List[Tuple]:
     """
     Generates a red/white/blue color palette in `n` colors with white at the
@@ -78,7 +82,7 @@ def redbluecmap(n) -> List[Tuple]:
         List of RGB tuples.
     """
     midpoint = math.ceil(n/2)
-    
+
     # To get the appropriately-toned blues and reds, we create a list of colors,
     # then select the first section of each color.
     blues = list(
@@ -87,7 +91,7 @@ def redbluecmap(n) -> List[Tuple]:
     reds = list(
         sns.color_palette("coolwarm", as_cmap=False, n_colors=n+2)
     )[-midpoint:]
-    
+
     return list(reversed(reds)) + list(reversed(blues))
 
 
@@ -128,4 +132,3 @@ def greens(n) -> list:
         List of RGB triples.
     """
     return list(sns.color_palette("Greens", as_cmap=False, n_colors=n))
-

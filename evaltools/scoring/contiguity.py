@@ -3,6 +3,7 @@ from typing import Union
 import gerrychain
 from gerrychain.constraints import contiguous as ctgs
 
+
 def contiguous(P: gerrychain.Partition) -> bool:
     """
     Determines whether the districting plan defined by the partition is
@@ -27,7 +28,7 @@ def unassigned_units(P: gerrychain.Partition, raw: bool = False) -> Union[float,
         P (Partition): GerryChain Partition object.
         raw (bool, optional): If `True`, report the raw number of unassigned
             units. Defaults to `False`.
-    
+
     Returns:
         `float` representing the proportion of units that are unassigned (or
         the whole number of unassigned units).
@@ -45,4 +46,4 @@ def unassigned_units(P: gerrychain.Partition, raw: bool = False) -> Union[float,
         for k, v in assignment.items() if v not in ["nan", "NaN", ""]
     })
 
-    return 1-(units_assigned_well/total) if not raw else (total-units_assigned_well)
+    return 1 - (units_assigned_well / total) if not raw else (total - units_assigned_well)

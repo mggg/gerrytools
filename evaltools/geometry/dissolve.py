@@ -3,8 +3,8 @@ from geopandas import GeoDataFrame
 
 
 def dissolve(
-        geometries, by="DISTRICTN", reset_index=True, keep=[], aggfunc="sum"
-    ) -> GeoDataFrame:
+    geometries, by="DISTRICTN", reset_index=True, keep=[], aggfunc="sum"
+) -> GeoDataFrame:
     """
     Dissolves `geometries` on the column `by`. Intended to dissolve a set of
     source geometries (e.g. VTDs, blocks, block groups, etc.) to district
@@ -29,6 +29,7 @@ def dissolve(
     # Pare down the geometries and dissolve.
     geometries = geometries[keep + [by, "geometry"]]
     geometries = geometries.dissolve(by=by, aggfunc=aggfunc)
-    if reset_index: geometries = geometries.reset_index()
+    if reset_index:
+        geometries = geometries.reset_index()
 
     return geometries

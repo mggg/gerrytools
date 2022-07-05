@@ -1,3 +1,4 @@
+
 from gerrychain import Partition
 from typing import Callable, Mapping, Union, NamedTuple
 
@@ -20,6 +21,7 @@ DistrictWideScoreValue = Mapping[DistrictID, Numeric]
 ElectionWideScoreValue = Mapping[ElectionID, Numeric]
 
 ScoreValue = Union[PlanWideScoreValue, DistrictWideScoreValue, ElectionWideScoreValue]
+
 
 class Score(NamedTuple):
     name: str

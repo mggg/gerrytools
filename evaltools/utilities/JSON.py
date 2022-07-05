@@ -1,15 +1,16 @@
 
 import json
-from pydantic import BaseModel, ValidationError, validator
-from typing import List, Union, Any
+from pydantic import BaseModel, validator
+from typing import Any
+
 
 class JSONtoObject(BaseModel):
     """
     Plan specification models. To better work with multiple plans at once, this
     plan specification allows users to specify information which should remain
     consistent across all operations; for example, the `column` field should be
-    the name of the column in which the corresponding plan's assignment is stored
-    across all data products.
+    the name of the column in which the corresponding plan's assignment is
+    stored across all data products.
     """
 
     column: str
@@ -39,18 +40,20 @@ class JSONtoObject(BaseModel):
         """
         Validates the specified column name. For most of our purposes, we cannot
         include spaces, hyphens, percent signs, and other commonly-used special
-        characters. Furthermore, because these plans are often saved in shapefiles,
-        which have a 10-character column name limit, we force column names to be
-        10 or fewer characters.
+        characters. Furthermore, because these plans are often saved in
+        shapefiles, which have a 10-character column name limit, we force column
+        names to be 10 or fewer characters.
         """
         # Check for column length.
-        if len(column) > 10: raise ValueError(f"Column name {column} exceeds 10-character limit.")
+        if len(column) > 10:
+            raise ValueError(f"Column name {column} exceeds 10-character limit.")
 
         # Check for illegal characters.
         illegal = {"/", "%", "-", "–", "—", " "}
-        
+
         for c in illegal:
-            if c in column: raise ValueError(f"Character {c} cannot be in column name.")
+            if c in column:
+                raise ValueError(f"Character {c} cannot be in column name.")
 
         return column
 
@@ -72,15 +75,16 @@ def jsonify(location) -> list:
 
         # First, check whether `data` is a list; if it is, deal with all the
         # plans individually and return the list.
-        if type(data) is list: return [
-            JSONtoObject(
-                column=p["column"],
-                locator=p["locator"],
-                title=p["title"] if p.get("title", False) else None,
-                type=p["type"] if p.get("type", False) else None
-            )
-            for p in data
-        ]
+        if type(data) is list:
+            return [
+                JSONtoObject(
+                    column=p["column"],
+                    locator=p["locator"],
+                    title=p["title"] if p.get("title", False) else None,
+                    type=p["type"] if p.get("type", False) else None
+                )
+                for p in data
+            ]
 
         # Otherwise, return a singleton list with a single plan.
         return [JSONtoObject(

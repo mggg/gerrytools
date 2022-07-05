@@ -10,8 +10,8 @@ from math import pi
 
 
 def reock(
-        geodata: Union[gpd.GeoDataFrame, Graph]
-    ) -> Callable[[GeographicPartition], Dict[Any, float]]:
+    geodata: Union[gpd.GeoDataFrame, Graph]
+) -> Callable[[GeographicPartition], Dict[Any, float]]:
     r"""
     Makes a Reock score function specialized to `geodata`.
 
@@ -32,110 +32,6 @@ def reock(
             geometries from.
     Returns:
         A per-district Reock score updater specialized to `geodata`.
-
-    </br>
-
-    Below, we provide short proofs of correctness for the optimizations utilized
-    in this updater. First, we show that the convex hull of a union of tiled
-    geometries is the same as the convex hull of the union of the geometries' convex
-    hulls. Next, we show that the convex hull of only the exterior tiled geometries
-    of a given polygon is the same as the convex hull of all the geometries.
-    Lastly, we show that the minimum bounding circle of a given polygon is the
-    same as the minimum bounding circle of the polygon's convex hull.
-
-    <div class="proof">
-        <p>
-            <i>Proof (equality of convex hulls of unions).</i> Let \(X\) be a simple
-            polygon in the plane; let \(S\) be a set of simple polygons \(s_1,
-            \dots, s_n\) which tile \(X\) such that \(\cup S = X\), and \(S^*\)
-            a set of polygons where \(s^*_i = \text{Hull}(s_i)\). Denote the
-            union of polygons in \(S^*\) by \(X^*\), so  that \(\cup S^* = X^*\).
-            Let \(V\) be the vertices which define \(\text{Hull}(X)\), and \(V^*\)
-            the vertices which define  \(\text{Hull}(X^*)\). We wish to show that
-            \(V = V^*\).
-        </p>
-        <p>
-            (\(\supseteq\)) Each vertex of \(s^*_i\) is a vertex of \(s_i\).
-            Consequently, the vertices of \(X^*\) are a subset of \(X\)'s
-            vertices, implying that \(\text{Hull}(X^*)\)'s vertices are a subset
-            of \(\text{Hull}(X)\)'s. As such, \(V \supseteq V^*\).
-        </p>
-
-        <p>
-            (\(\subseteq\)) Suppose, for the sake of contradiction, that \(V\)
-            contains a vertex \(v\) that is <i>not</i> contained in \(V^*\),
-            and that \(v\) is a vertex of the polygon \(s_i\). If \(v\) is not
-            in \(V^*\), then it can't be on the hull of \(X^*\); if \(v\)
-            can't be on the hull of \(X^*\), then it can't be on the hull
-            of \(s^*_i\). If \(v\) isn't on the hull of \(s^*_i\), then it is
-            a reflex vertex; if \(v\) is a reflex vertex, then it can't be on
-            the convex hull of \(X\), which is a contradiction. As such, \(V
-            \subseteq V^*\).
-        </p>
-        <p>
-            Because we have \(V \supseteq V^*\) and \(V \subseteq V^*\), we have
-            \(V=V^*\), and the convex hull of \(X\) is the same as the convex
-            hull of \(X^*\).
-        </p>
-    </div>
-
-    The above proof justifies an important optimization wherein only the points
-    defining the convex hulls of each polygon are stored, as opposed to storing
-    _all_ points defining each polygon. In practice, removing extraneous points
-    reduces the number of stored points by ~75%, which saves memory and
-    computation time. Even though the Reock score is computed using an expected
-    linear-time algorithm (which, in the worst case, performs quadratically),
-    reducing the number of points greatly reduces computation time.
-
-    <div class="proof">
-        <p>
-            <i>Proof (Equality of convex hull of exterior).</i> Let \(S^*\), \(X^*\),
-            and \(V^*\) be as before. Let \(\partial X^*\) be \(X^*\)'s <i>boundary</i>,
-            the set of points for which all \(\epsilon\)-neighborhoods intersect
-            both the interior and exterior faces of \(X^*\). Let \(I^*\) be the
-            subset of \(S^*\)'s polygons which do not contain a point on the
-            boundary (i.e. the <i>interior</i> polygons), and let \(E^*\) be the
-            subset of \(S^*\)'s polygons which contain a point on the boundary
-            (i.e. the <i>exterior</i> polygons). Note that \(S^* = I^* \sqcup
-            E^*\).
-        </p>
-        <p>
-            Because each vertex in \(V^*\) is a boundary point, \(E^*\) contains
-            all polygons with a vertex in \(V^*\). Because each vertex belongs
-            to a polygon in \(E^*\), we know that \(V^*\) is also the set of
-            vertices of \(\text{Hull}(\cup E^*)\). Now, because the hulls' vertices
-            are the same, we have that $$\text{Hull}(X^*) = \text{Hull}(\cup E^*)$$
-            which, because \(X^* = \cup S^*\), implies that $$\text{Hull}(\cup E^*)
-            = \text{Hull}\big(\cup(E^* \sqcup I^*)\big) = \text{Hull}(\cup S^*).$$
-        </p>
-    </div>
-
-    <div class="proof">
-        <p>
-            <i>Proof (equality of minimum bounding circles).</i> Given a polygon
-            \(P\), its minimum bounding disk \(D\) – whose boundary is the minimum
-            bounding circle \(C\) – necessarily contains \(P\)'s convex hull \(H\), the
-            minimally convex region containing \(P\), and is defined by at most
-            three vertices on \(H\). Thus, given two regions whose convex hulls are
-            the same, the same set of vertices on their hulls define the minimum
-            bounding disk.
-        </p>
-        <p>
-            Let \(H_X\) be the convex hull of \(X\). Because the convex hulls of
-            \(X\) and \(H_X\) are the same, the same set of vertices defines
-            their minimum bounding disks; as such, the minimum bounding circles
-            of \(X\) and \(H_X\) are the same.
-        </p>
-    </div>
-
-    The above proofs justify an additional important optimization for computing
-    Reock scores: because the vertices of our dual graph map bijectively to the
-    set of geometries to which they're dual, a district isn't a single polygon
-    but a _collection_ of them. Rather than find the convex hull (and minimum
-    bounding circle) of the points defining _all_ the geometries which make up the
-    district, we can more quickly find the hull (and minimum bounding circle) of
-    the points defining geometries which border other districts or border the
-    state itself.
     """
     if isinstance(geodata, gpd.GeoDataFrame):
         geometries = dict(geodata.geometry.apply(lambda p: p.convex_hull))

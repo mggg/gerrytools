@@ -7,9 +7,9 @@ from typing import Union, Tuple, List
 
 
 def drawgraph(
-        G, ax=None, x="INTPTLON20", y="INTPTLAT20", components=False, node_size=1,
-        **kwargs
-    ) -> Union[Axes, List[Tuple[Figure,Axes]]]:
+    G, ax=None, x="INTPTLON20", y="INTPTLAT20", components=False, node_size=1,
+    **kwargs
+) -> Union[Axes, List[Tuple[Figure, Axes]]]:
     """
     Draws a gerrychain Graph object. Returns a single Axes object (for dual
     graphs drawn whole) and lists of `(Figure, Axes)` pairs for graphs drawn
@@ -42,14 +42,16 @@ def drawgraph(
 
     # If `components` is true, plot the graph component-wise. Otherwise plot
     # normally. First, set some properties common to both graphs.
-    properties = {"pos": positions, "node_size": node_size }
+    properties = {"pos": positions, "node_size": node_size}
 
     # Initialize `pairs` to None.
     pairs = None
 
     if not components:
-        if not ax: axes = plt.axes()
-        else: axes = ax
+        if not ax:
+            axes = plt.axes()
+        else:
+            axes = ax
         nx.draw(G, ax=axes, **properties, **kwargs)
     else:
         # Create lists for figures and axes.
@@ -59,7 +61,8 @@ def drawgraph(
         for component in connected_components:
             # Create a new Figure object for each component.
             fig = plt.figure()
-            if not ax: ax = plt.axes()
+            if not ax:
+                ax = plt.axes()
 
             # Plot the graph.
             subgraph = G.subgraph(component)

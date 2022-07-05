@@ -3,6 +3,7 @@ import pandas as pd
 import censusdata
 from pathlib import Path
 
+
 def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
     """
     Retrieves and CSV-formats 5-year CVAP data for the provided state at
@@ -35,7 +36,7 @@ def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
         10: "NHWHITEBLACKCVAP",
         11: "NHBLACKAMINCVAP",
         12: "NHOTHCVAP",
-        13: "HCVAP" 
+        13: "HCVAP"
     }
 
     # First, load the raw data requested; allowed geometry values are "block group"
@@ -75,7 +76,7 @@ def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
 
         # For each of the records in the block, "collapse" them into a single
         # record.
-        block = instate_records[i:i+13]
+        block = instate_records[i:i + 13]
         for line in block:
             record[geometry.replace(" ", "").upper() + decade] = line["GEOID"]
             record[descriptions[line["lnnumber"]] + yearsuffix] = line["cvap_est"]
@@ -90,13 +91,14 @@ def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
 
     return data
 
+
 def acs5(state, geometry="tract", year=2020, columns=[], white="NHWHITEVAP") -> pd.DataFrame:
     """
     Retrieves ACS 5-year population estimates for the provided state, geometry
     level, and year. Also retrieves ACS-reported CVAP data, which closely matches
     that reported by the CVAP special tabulation; CVAP data are only returned at
     the tract level, and are otherwise reported as 0.
-    
+
     Args:
         state (us.State): `State` object for the desired state.
         geometry (str, optional): Geometry level at which data is retrieved.
@@ -157,18 +159,18 @@ def acs5(state, geometry="tract", year=2020, columns=[], white="NHWHITEVAP") -> 
         ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
     ))
     groups.update({
-        column: 
-            _variables(f"B05003{table}", 9, 9) + _variables(f"B05003{table}", 11, 11) + # men
-            _variables(f"B05003{table}", 20, 20) + _variables(f"B05003{table}", 22, 22) # women
+        column:
+            _variables(f"B05003{table}", 9, 9) + _variables(f"B05003{table}", 11, 11) +  # men
+            _variables(f"B05003{table}", 20, 20) + _variables(f"B05003{table}", 22, 22)  # women
         for column, table in cvaptables
     })
-    
+
     # Get all voting-age people and citizen voting-age people.
     groups["VAP" + yearsuffix] = _variables("B01001", 7, 25) + _variables("B01001", 31, 49)
-    groups["CVAP" + yearsuffix] = _variables(f"B05003", 9, 9) + \
-        _variables(f"B05003", 11, 11) + \
-        _variables(f"B05003", 20, 20) + \
-        _variables(f"B05003", 22, 22)
+    groups["CVAP" + yearsuffix] = _variables("B05003", 9, 9) + \
+        _variables("B05003", 11, 11) + \
+        _variables("B05003", 20, 20) + \
+        _variables("B05003", 22, 22)
 
     # TODO: all variables used across the data submodule should be packaged up
     # as a class, so we can access individual dictionaries of variables to add.
@@ -202,6 +204,7 @@ def acs5(state, geometry="tract", year=2020, columns=[], white="NHWHITEVAP") -> 
     data["POCVAP" + yearsuffix] = data["VAP" + yearsuffix] - data[white + yearsuffix]
     return data
 
+
 def _variables(prefix, start, stop, suffix="E") -> list:
     """
     Returns the ACS variable names from the provided prefix, start, stop, and
@@ -226,8 +229,9 @@ def _variables(prefix, start, stop, suffix="E") -> list:
     """
     return [
         f"{prefix}_{str(t).zfill(3)}{suffix}"
-        for t in range(start, stop+1)
+        for t in range(start, stop + 1)
     ]
+
 
 def _raw(geometry, year) -> pd.DataFrame:
     """
@@ -249,4 +253,4 @@ def _raw(geometry, year) -> pd.DataFrame:
     decade = "10" if year < 2020 else "20"
     yearsuffix = str(year)[2:]
 
-    return pd.read_csv(local/f"local/{geometry}{decade}-{yearsuffix}.zip", encoding="ISO-8859-1")
+    return pd.read_csv(local / f"local/{geometry}{decade}-{yearsuffix}.zip", encoding="ISO-8859-1")

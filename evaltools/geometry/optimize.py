@@ -10,9 +10,9 @@ import pandas as pd
 
 
 def arealoverlap(
-        left: gpd.GeoDataFrame, right: gpd.GeoDataFrame, assignment: str="DISTRICT",
-        crs=None
-    ) -> pd.DataFrame:
+    left: gpd.GeoDataFrame, right: gpd.GeoDataFrame, assignment: str = "DISTRICT",
+    crs=None
+) -> pd.DataFrame:
     r"""
     Given two GeoDataFrames, each encoding districting plans, computes the areal
     overlap between each pair of districts. `left` is the districting plan to be
@@ -37,8 +37,11 @@ def arealoverlap(
         Cost matrix \(C\), represented as a DataFrame.
     """
     # Force the two things to be the same CRS (or the provided CRS)
-    if crs: left = left.to_crs(crs); right = right.to_crs(crs)
-    else: right = right.to_crs(left.crs)
+    if crs:
+        left = left.to_crs(crs)
+        right = right.to_crs(crs)
+    else:
+        right = right.to_crs(left.crs)
 
     # An empty list of records for everything.
     records = []
@@ -63,9 +66,9 @@ def arealoverlap(
 
 
 def populationoverlap(
-        left: pd.DataFrame, right: pd.DataFrame, identifier: str="GEOID20",
-        population: str="TOTPOP20", assignment: str="DISTRICT"
-    ) -> pd.DataFrame:
+    left: pd.DataFrame, right: pd.DataFrame, identifier: str = "GEOID20",
+    population: str = "TOTPOP20", assignment: str = "DISTRICT"
+) -> pd.DataFrame:
     r"""
     Given two unit-level DataFrames — i.e. two dataframes where each row represents
     an atomic unit like Census blocks or VTDs, and each row contains a district
@@ -130,9 +133,9 @@ def populationoverlap(
 
 
 def optimalrelabeling(
-        left: Any, right: Any, maximize: bool=True,
-        costmatrix: Callable=populationoverlap
-    ) -> dict:
+    left: Any, right: Any, maximize: bool = True,
+    costmatrix: Callable = populationoverlap
+) -> dict:
     r"""
     Finds the optimal relabeling for two districting plans.
 
@@ -165,7 +168,7 @@ def optimalrelabeling(
             and column names new district labels. Examples of these are
             `evaltools.geometry.optimize.populationoverlap()` and
             `evaltools.geometry.optimize.arealoverlap()`.
-    
+
     Returns:
         A dictionary which maps district labels in `left` to district labels in
         `right`, according to the weighting scheme applied in `costmatrix`.
@@ -192,7 +195,7 @@ def optimalrelabeling(
     the districts \(L_i\) and \(R_j\), like in `evaltools.geometry.optimize.arealoverlap()`,
     or the amount of population the districts share, like in
     `evaltools.geometry.optimize.populationoverlap()`.
-    
+
     We then seek to find the set of weighted edges \(M\) such that all vertices
     \(l_i\) and \(r_j\) appear at most once in \(M\), and that the sum of \(M\)'s
     weights is as small (or as large) as possible. To do so, we take the adjacency
@@ -209,7 +212,7 @@ def optimalrelabeling(
     # we want to identify the indices of the preimage (row index) and column
     C = costmatrix(left, right)
     preimage, image = list(C.index), list(C)
-    
+
     # Now we do our linear sum assignment, getting back the indices which maximize
     # the total weight on the edges!
     preimageindices, imageindices = lsa(C, maximize=maximize)
@@ -220,10 +223,13 @@ def optimalrelabeling(
     return dict(zip(preimage, image))
 
 
-def ensure_column_types(units: gpd.GeoDataFrame, columns: List[str], expression: Callable[[Any], bool] = lambda x: x.startswith("int")) -> bool:
+def ensure_column_types(
+    units: gpd.GeoDataFrame, columns: List[str],
+    expression: Callable[[Any], bool] = lambda x: x.startswith("int")
+) -> bool:
     """
-    Ensure that the given columns in the GeoDataFrame have a type matching the 
-    filtering expression. This gives more flexibility over other type checking 
+    Ensure that the given columns in the GeoDataFrame have a type matching the
+    filtering expression. This gives more flexibility over other type checking
     methods.
 
     Args:
@@ -237,7 +243,10 @@ def ensure_column_types(units: gpd.GeoDataFrame, columns: List[str], expression:
     return all([expression(x.name) for x in units[columns].dtypes])
 
 
-def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None, verbose: bool = False) -> Dict[str, str]:
+def minimize_dispersion(
+    units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str,
+    extra_constraints=None, verbose: bool = False
+) -> Dict[str, str]:
     """
     Minimize core dispersion in a state given an column with enacted districts
     and a column with proposed numberings. Returns a dictionary relabeling the
@@ -247,7 +256,7 @@ def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col:
         units: The units to optimize on. E.g. Census blocks.
         enacted_col: The column in the GeoDataFrame with the enacted districts.
         proposed_col: The column in the GeoDataFrame with the proposed districts.
-        extra_constraints: Optional; A function that can add extra constraints 
+        extra_constraints: Optional; A function that can add extra constraints
             to the model, such as parity (in the case of WI).
         verbose: If true, do not suppress solver output. Otherwise, stay quiet.
 
@@ -258,7 +267,7 @@ def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col:
         raise TypeError("Your enacted and proposed columns must be an int type!")
 
     if not ensure_column_types(units, [pop_col], lambda x: x.startswith("int") or x.startswith("float")):
-        raise TypeError("Your pop col must be an int or float type!") 
+        raise TypeError("Your pop col must be an int or float type!")
 
     districts = list(set(units[proposed_col].astype(int)))
     model = gp.Model("state_model")
@@ -268,21 +277,21 @@ def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col:
 
     exprs = []
     if verbose:
-        wrapper = lambda x: tqdm.tqdm(x)
+        def wrapper(x): return tqdm.tqdm(x)
     else:
-        wrapper = lambda x: x
+        def wrapper(x): return x
 
     for district in wrapper(districts):  # iter over proposed
         enacted_intersection = units[units[proposed_col] == district].groupby(enacted_col).sum()[pop_col].to_dict()
 
-        for enacted, overlap_pop in enacted_intersection.items(): # maximize overlap; minimize dispersion
-            exprs.append(numbering[district-1, enacted-1]*overlap_pop)
-            
+        for enacted, overlap_pop in enacted_intersection.items():  # maximize overlap; minimize dispersion
+            exprs.append(numbering[district - 1, enacted - 1] * overlap_pop)
+
         if extra_constraints is not None:
             extra_constraints(model, numbering, district, districts)
 
-    model.addConstrs((numbering.sum("*", v)==1 for v in range(len(districts))), name="v")
-    model.addConstrs((numbering.sum(v, "*")==1 for v in range(len(districts))), name="h")
+    model.addConstrs((numbering.sum("*", v) == 1 for v in range(len(districts))), name="v")
+    model.addConstrs((numbering.sum(v, "*") == 1 for v in range(len(districts))), name="h")
 
     obj = gp.quicksum(exprs)
     model.setObjective(obj, GRB.MAXIMIZE)
@@ -294,13 +303,16 @@ def minimize_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col:
     numbering_mapping = {}
     for i in range(len(districts)):
         for j in range(len(districts)):
-            if solution[i*len(districts)+j].x:
+            if solution[i * len(districts) + j].x:
                 numbering_mapping[districts[i]] = districts[j]
 
     return numbering_mapping
 
 
-def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, verbose: bool = False) -> Dict[str, bool]:
+def minimize_parity(
+    units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str,
+    verbose: bool = False
+) -> Dict[str, bool]:
     """
     Minimize odd->even parity shift in a state given an column with enacted districts
     and a column with proposed numberings. Returns a dictionary with the parity of the
@@ -313,14 +325,14 @@ def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str
         verbose: If true, do not suppress solver output. Otherwise, stay quiet.
 
     Returns:
-        A dictionary mapping proposed labels to booleans values representing the optimal parity. 
+        A dictionary mapping proposed labels to booleans values representing the optimal parity.
         (True if even, False odd).
     """
     if not ensure_column_types(units, [enacted_col, proposed_col]):
         raise TypeError("Your enacted and proposed columns must be an int type!")
 
     if not ensure_column_types(units, [pop_col], lambda x: x.startswith("int") or x.startswith("float")):
-        raise TypeError("Your pop col must be an int or float type!") 
+        raise TypeError("Your pop col must be an int or float type!")
 
     model = gp.Model("parity_model")
     model.setParam('OutputFlag', int(verbose))
@@ -330,16 +342,16 @@ def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str
 
     exprs = []
     if verbose:
-        wrapper = lambda x: tqdm.tqdm(x)
+        def wrapper(x): return tqdm.tqdm(x)
     else:
-        wrapper = lambda x: x
+        def wrapper(x): return x
     for i, block in wrapper(units[[enacted_col, proposed_col, pop_col]].iterrows()):
         district = districts.index(int(block[proposed_col]))
         isOdd = bool((int(block[enacted_col]) % 2) == 1)
         exprs.append(isOdd * districts_even[district] * block[pop_col])
 
     obj = gp.quicksum(exprs)
-    model.addConstr(gp.quicksum(districts_even) == math.floor(len(districts)/2), "c0")
+    model.addConstr(gp.quicksum(districts_even) == math.floor(len(districts) / 2), "c0")
 
     model.setObjective(obj, GRB.MINIMIZE)
     model.optimize()
@@ -351,28 +363,32 @@ def minimize_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str
     return mapping
 
 
-def minimize_dispersion_with_parity(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints = None) -> Dict[str, str]:
+def minimize_dispersion_with_parity(
+    units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str,
+    extra_constraints=None
+) -> Dict[str, str]:
     """
-    Minimize dispersion and odd->even parity shift in a state given an column with 
-    enacted districts and a column with proposed numberings. Returns a dictionary 
+    Minimize dispersion and odd->even parity shift in a state given an column with
+    enacted districts and a column with proposed numberings. Returns a dictionary
     relabeling the proposed cols. Used in WI. Assumes that district labels are 1-indexed.
 
     Args:
         units: The units to optimize on. E.g. Census blocks.
         enacted_col: The column in the GeoDataFrame with the enacted districts.
         proposed_col: The column in the GeoDataFrame with the proposed districts.
-        extra_constraints: Optional; A function that can add extra constraints 
+        extra_constraints: Optional; A function that can add extra constraints
             to the model, such as parity (in the case of WI).
 
     Returns:
         A dictionary mapping proposed labels to optimized labels.
     """
     optimal_parity_mapping = minimize_parity(units, enacted_col, proposed_col, pop_col)
+
     def parity_constraint(model, numbering, district, districts):
         if optimal_parity_mapping[district]:
             model.addConstr(
                 gp.quicksum(
-                    numbering[district-1, x-1] for x in range(1, len(districts)+1) if x%2 == 0
+                    numbering[district - 1, x - 1] for x in range(1, len(districts) + 1) if x % 2 == 0
                 ) == 1
             )
 
