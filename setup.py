@@ -12,7 +12,7 @@ setup(
     author="MGGG Redistricting Lab",
     author_email="engineering@mggg.org",
     description="Tools for processing and visualizing districting plans.",
-    url="https://github.com/mggg/plan-evaluation-processing",
+    url="https://github.com/mggg/evaltools",
     packages=find_packages(exclude=["tests", "tutorials"]),
     install_requires=requirements,
     include_package_data=True,
@@ -22,7 +22,6 @@ setup(
             "flake8",
             "pytest",
             "autopep8",
-            "codecov",
             "pytest-cov"
         ]
     }

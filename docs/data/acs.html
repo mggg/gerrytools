@@ -263,7 +263,18 @@ def _variables(prefix, start, stop, suffix=&#34;E&#34;) -&gt; list:
     ]
 
 
-def _retrieve(year, geometry=&#34;block group&#34;):
+def _retrieve(year, geometry=&#34;tract&#34;):
+    &#34;&#34;&#34;
+    Downloads and extracts compressed CVAP data for the specified year.
+
+    Args:
+        year (int): Year for which we&#39;re grabbing CVAP data.
+        geometry (str, optional): Geometry level for which we&#39;re grabbing CVAP
+            data. Defaults to `&#34;tract&#34;`.
+
+    Returns:
+        In-memory text stream of decompressed CSV data.
+    &#34;&#34;&#34;
     # Create a mapping from geometry names to filenames.
     levels = {&#34;block group&#34;: &#34;BlockGr.csv&#34;, &#34;tract&#34;: &#34;Tract.csv&#34;}
     inverted = {v: k for k, v in levels.items()}

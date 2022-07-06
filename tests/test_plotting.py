@@ -2,17 +2,11 @@
 from evaltools.plotting import (
     drawgraph, drawplan, districtr, boxplot
 )
-from gerrychain.graph import Graph
-from pathlib import Path
 import matplotlib.pyplot as plt
 import geopandas as gpd
 import numpy as np
-import os
-import requests
-import tempfile
-import json
 
-from utils import remotegraphresource, remoteresource
+from .utils import remotegraphresource, remoteresource
 
 
 def test_drawgraph():

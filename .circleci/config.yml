@@ -1,3 +1,7 @@
+version: 2.1
+
+orbs: 
+  codecov: codecov/codecov@3.2.3
 
 jobs:
   test:
@@ -15,13 +19,14 @@ jobs:
           name: tests
           command: |
             python setup.py install
-            
-            pip install pytest pytest-cov codecov
+            pip install pytest pytest-cov coverage
             echo "backend: Agg" > "matplotlibrc"
 
-            pytest --cov=evaltools --junitxml=tests/test-reports/report.xml tests
+            pytest --cov-report xml:tests/test-reports/coverage.xml --cov=evaltools
           environment:
             PYTHONHASHSEED: "0"
+      - codecov/upload:
+          file: tests/test-reports/coverage.xml
       - store_test_results:
           path: tests/test-reports
       - store_artifacts:

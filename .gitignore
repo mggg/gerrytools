@@ -2,8 +2,9 @@
 __pycache__/
 *.egg-info/
 .vscode/
+.coverage*
 
 # Ignore large testing files.
-tests/test-resources/*
+tests/test-reports/*
 */**/*.png
 tests/*.ipynb

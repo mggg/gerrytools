@@ -1,18 +1,15 @@
 
 from evaltools.scoring import (
-    deviations, splits, pieces, unassigned_units, unassigned_population,
-    contiguous, reock
+    deviations, splits, pieces, unassigned_units, contiguous, reock
 )
-from gerrychain import Graph, Partition
-from pathlib import Path
+from gerrychain import Partition
 import geopandas as gpd
 from gerrychain.grid import Grid
 from shapely.geometry import box
 import math
-import os
 import pytest
 
-from utils import remoteresource, remotegraphresource
+from .utils import remotegraphresource
 
 
 def test_splits_pandas():

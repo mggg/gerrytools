@@ -15,7 +15,7 @@ import math
 import cProfile
 import pytest
 
-from utils import remoteresource
+from .utils import remoteresource
 
 
 def test_estimate_cvap2020():

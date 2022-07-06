@@ -20,7 +20,7 @@ from pathlib import Path
 import os
 import pytest
 
-from utils import remotegraphresource, remoteresource
+from .utils import remotegraphresource, remoteresource
 
 
 @pytest.mark.xfail(reason="Documentation and call signature do not match; clarification needed.")
