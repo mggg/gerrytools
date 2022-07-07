@@ -3,7 +3,6 @@ __pycache__/
 *.egg-info/
 .vscode/
 .coverage*
-.flake8
 
 # Ignore large testing files.
 tests/test-reports/*
