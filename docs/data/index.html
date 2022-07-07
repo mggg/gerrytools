@@ -38,6 +38,7 @@ from .fetch import submissions, tabularized, Submission
 from .remap import remap
 from .URLs import ids, one, csvs
 from .AssignmentCompressor import AssignmentCompressor
+from .geometries import geometries20
 
 __all__ = [
     &#34;submissions&#34;,
@@ -55,7 +56,8 @@ __all__ = [
     &#34;estimatecvap2010&#34;,
     &#34;estimatecvap2020&#34;,
     &#34;fetchgeometries&#34;,
-    &#34;census10&#34;
+    &#34;census10&#34;,
+    &#34;geometries20&#34;
 ]</code></pre>
 </details>
 </section>
@@ -79,6 +81,10 @@ __all__ = [
 <div class="desc"></div>
 </dd>
 <dt><code class="name"><a title="gerrytools.data.fetch" href="fetch.html">gerrytools.data.fetch</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt><code class="name"><a title="gerrytools.data.geometries" href="geometries.html">gerrytools.data.geometries</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -1044,6 +1050,71 @@ and be used to build other units of varying size.</p>
 
     # Download, extract, and return the geometries from the URL.
     return gpd.read_file(url)</code></pre>
+</details>
+</dd>
+<dt id="gerrytools.data.geometries20"><code class="name flex">
+<span>def <span class="ident">geometries20</span></span>(<span>state, filepath, geometry='tract')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Retrieves Lab-processed geometric data for the provided state and geometry
+level and writes it to the provided filepath.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>state</code></strong> :&ensp;<code>us.State</code></dt>
+<dd>State for which we retrieve data.</dd>
+<dt><strong><code>filepath</code></strong> :&ensp;<code>str</code></dt>
+<dd>Location to which we write the compressed data.</dd>
+<dt><strong><code>geometry</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Geometry level at which we retrieve data.
+Accepted values are <code>block group</code>, <code>block</code>, <code>congress</code>, <code>county</code>,
+<code>cousub</code>, <code>place</code>, <code>senate</code>, <code>house</code>, <code>tract</code>, and <code>vtd</code>. Defaults
+to <code>tract</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def geometries20(state, filepath, geometry=&#34;tract&#34;):
+    &#34;&#34;&#34;
+    Retrieves Lab-processed geometric data for the provided state and geometry
+    level and writes it to the provided filepath.
+
+    Args:
+        state (us.State): State for which we retrieve data.
+        filepath (str): Location to which we write the compressed data.
+        geometry (str, optional): Geometry level at which we retrieve data.
+            Accepted values are `block group`, `block`, `congress`, `county`,
+            `cousub`, `place`, `senate`, `house`, `tract`, and `vtd`. Defaults
+            to `tract`.
+    &#34;&#34;&#34;
+    # Create a mapping from standard geometry names to data.mggg.org geometry
+    # identifiers.
+    geometrymap = {
+        &#34;block group&#34;: &#34;bg&#34;,
+        &#34;block&#34;: &#34;block&#34;,
+        &#34;congress&#34;: &#34;cd116&#34;,
+        &#34;county&#34;: &#34;county&#34;,
+        &#34;cousub&#34;: &#34;cousub&#34;,
+        &#34;place&#34;: &#34;place&#34;,
+        &#34;senate&#34;: &#34;sldu&#34;,
+        &#34;house&#34;: &#34;sldl&#34;,
+        &#34;tract&#34;: &#34;tract&#34;,
+        &#34;vtd&#34;: &#34;vtd&#34;
+    }
+
+    # Check that the passed geometry is allowable.
+    if geometry not in set(geometrymap.keys()):
+        print(f&#34;Requested geometry \&#34;{geometry}\&#34; is not allowed; loading tracts.&#34;)
+        geometry = &#34;tract&#34;
+
+    # Specify the base url.
+    base = &#34;https://s3.us-east-2.amazonaws.com/data.mggg.org/census-2020/&#34;
+    suffix = f&#34;{state.abbr.lower()}/{state.abbr.lower()}_{geometrymap[geometry]}.zip&#34;
+
+    # Send the request!
+    request = requests.get(base + suffix)
+
+    with open(filepath, &#34;wb&#34;) as w: w.write(request.content)</code></pre>
 </details>
 </dd>
 <dt id="gerrytools.data.ids"><code class="name flex">
@@ -2158,6 +2229,7 @@ float: right;
 <li><code><a title="gerrytools.data.census" href="census.html">gerrytools.data.census</a></code></li>
 <li><code><a title="gerrytools.data.estimatecvap" href="estimatecvap.html">gerrytools.data.estimatecvap</a></code></li>
 <li><code><a title="gerrytools.data.fetch" href="fetch.html">gerrytools.data.fetch</a></code></li>
+<li><code><a title="gerrytools.data.geometries" href="geometries.html">gerrytools.data.geometries</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
@@ -2170,6 +2242,7 @@ float: right;
 <li><code><a title="gerrytools.data.estimatecvap2010" href="#gerrytools.data.estimatecvap2010">estimatecvap2010</a></code></li>
 <li><code><a title="gerrytools.data.estimatecvap2020" href="#gerrytools.data.estimatecvap2020">estimatecvap2020</a></code></li>
 <li><code><a title="gerrytools.data.fetchgeometries" href="#gerrytools.data.fetchgeometries">fetchgeometries</a></code></li>
+<li><code><a title="gerrytools.data.geometries20" href="#gerrytools.data.geometries20">geometries20</a></code></li>
 <li><code><a title="gerrytools.data.ids" href="#gerrytools.data.ids">ids</a></code></li>
 <li><code><a title="gerrytools.data.one" href="#gerrytools.data.one">one</a></code></li>
 <li><code><a title="gerrytools.data.remap" href="#gerrytools.data.remap">remap</a></code></li>

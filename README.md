@@ -88,4 +88,19 @@ And there we are — what once took hours of setup and parsing now takes less th
 minute.
 
 ## Contributing
-GerryTools is an active project.
+GerryTools is an active project, and has multiple contributors. If you'd like to
+contribute, here are a few house rules:
+
+1. After cloning this repository, run `sh setup.sh` to download and install
+necessary git hooks and linting configurations.
+2. **Follow the [PEP8 style guide](https://peps.python.org/pep-0008/)**. After
+installing the above git hooks, linting is performed before every push. PEP8 errors can be automatically corrected by running `autopep8 --in-place --aggressive -r gerrytools` on the command line from the root directory.
+3. **Write tests.** All changes, major or minor, **must** be accompanied by testing
+code. Code and tests will be immediately reviewed by Lab maintainers.
+4. Test coverage must stay **at least** the same; this can be checked by running
+`pytest --cov=evaltools` after the tests are added to `tests/`.
+5. **Write documentation.** All changes should be documented via docstrings,
+and code should be repletely commented. It's much easier to decipher commented
+code! Docstring documentation is compiled on every commit via git hooks.
+
+We look forward to your contributions!
