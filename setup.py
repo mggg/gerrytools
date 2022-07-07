@@ -9,7 +9,7 @@ requirements = [
 ]
 
 # Set the version --- ensure that the latest tag matches this value.
-VERSION = "1.0.1b"
+VERSION = "1.0.2"
 
 # Description.
 here = Path(__file__).parent
