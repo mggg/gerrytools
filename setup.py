@@ -7,8 +7,12 @@ requirements = [
     "imageio", "us", "pydantic", "censusdata", "seaborn", "maup"
 ]
 
+# Set the version --- ensure that the latest tag matches this value.
+VERSION = "0.0.0"
+
 setup(
     name="evaltools",
+    version=VERSION,
     author="MGGG Redistricting Lab",
     author_email="engineering@mggg.org",
     description="Tools for processing and visualizing districting plans.",
