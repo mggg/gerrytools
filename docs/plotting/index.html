@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>evaltools.plotting API documentation</title>
+<title>gerrytools.plotting API documentation</title>
 <meta name="description" content="Makes pretty pictures of districting plans, dual graphs, histograms, boxplots,
 and violin plots 🎻." />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -21,7 +21,7 @@ and violin plots 🎻." />
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>evaltools.plotting</code></h1>
+<h1 class="title">Module <code>gerrytools.plotting</code></h1>
 </header>
 <section id="section-intro">
 <p>Makes pretty pictures of districting plans, dual graphs, histograms, boxplots,
@@ -76,19 +76,19 @@ __all__ = [
 <section>
 <h2 class="section-title" id="header-submodules">Sub-modules</h2>
 <dl>
-<dt><code class="name"><a title="evaltools.plotting.annotation" href="annotation.html">evaltools.plotting.annotation</a></code></dt>
+<dt><code class="name"><a title="gerrytools.plotting.annotation" href="annotation.html">gerrytools.plotting.annotation</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.plotting.colors" href="colors.html">evaltools.plotting.colors</a></code></dt>
+<dt><code class="name"><a title="gerrytools.plotting.colors" href="colors.html">gerrytools.plotting.colors</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.plotting.gifs" href="gifs.html">evaltools.plotting.gifs</a></code></dt>
+<dt><code class="name"><a title="gerrytools.plotting.gifs" href="gifs.html">gerrytools.plotting.gifs</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.plotting.utils" href="utils.html">evaltools.plotting.utils</a></code></dt>
+<dt><code class="name"><a title="gerrytools.plotting.utils" href="utils.html">gerrytools.plotting.utils</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -99,7 +99,7 @@ __all__ = [
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="evaltools.plotting.arrow"><code class="name flex">
+<dt id="gerrytools.plotting.arrow"><code class="name flex">
 <span>def <span class="ident">arrow</span></span>(<span>ax, text, orientation='horizontal', color='#5c676f', padding=0.1) ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
@@ -175,7 +175,7 @@ to <code>0.1</code>.</dd>
     return ax</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.bins"><code class="name flex">
+<dt id="gerrytools.plotting.bins"><code class="name flex">
 <span>def <span class="ident">bins</span></span>(<span>scores, width=None, labels=8) ‑> Tuple[<built-in function array>, List, List, Union[float, int]]</span>
 </code></dt>
 <dd>
@@ -241,7 +241,7 @@ labels for the bins that are ticked, and the bin width.</p></div>
     return hist_bins, tick_bins, tick_labels, width</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.boxplot"><code class="name flex">
+<dt id="gerrytools.plotting.boxplot"><code class="name flex">
 <span>def <span class="ident">boxplot</span></span>(<span>ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1, 99), rotation=0, ticksize=12, jitter=0.3333333333333333) ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
@@ -259,7 +259,7 @@ trim each sublist to only the values between the specified percentiles.</p>
 <dd>Dictionary with keys of <code>ensemble</code>, <code>citizen</code>, <code>proposed</code>
 which map to lists of numerical scores.</dd>
 <dt><strong><code>proposed_info</code></strong> :&ensp;<code>dict</code>, optional</dt>
-<dd>Dictionary with keys of <code><a title="evaltools.plotting.colors" href="colors.html">evaltools.plotting.colors</a></code>, <code>names</code>;
+<dd>Dictionary with keys of <code><a title="gerrytools.plotting.colors" href="colors.html">gerrytools.plotting.colors</a></code>, <code>names</code>;
 the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th color in <code>color</code> corresponds to the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th name in <code>names</code>.</dd>
 <dt><strong><code>percentiles</code></strong> :&ensp;<code>tuple</code>, optional</dt>
 <dd>Observations outside this range of
@@ -377,7 +377,7 @@ adjust its detail points by a value drawn from <span><span class="MathJax_Previe
     return ax</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.choropleth"><code class="name flex">
+<dt id="gerrytools.plotting.choropleth"><code class="name flex">
 <span>def <span class="ident">choropleth</span></span>(<span>geometries, districts=None, assignment=None, demographic='BVAP', overlays=[], cmap='Purples', cbartitle=None, numbers=True, lw=0.125, fontsize=15, min=0, max=1, interval=0.1, colorbar=True) ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
@@ -546,7 +546,7 @@ overlays.</p></div>
     return base, None if not colorbar else cbar</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.districtnumbers"><code class="name flex">
+<dt id="gerrytools.plotting.districtnumbers"><code class="name flex">
 <span>def <span class="ident">districtnumbers</span></span>(<span>base, districts, assignment='DISTRICTN', boxstyle='circle,pad=0.2', fc='wheat', ec='black', lw=0.16666666666666666, fontsize=15) ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
@@ -620,7 +620,7 @@ markers. Defaults to circles with 0.2pt padding.</dd>
     return base</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.districtr"><code class="name flex">
+<dt id="gerrytools.plotting.districtr"><code class="name flex">
 <span>def <span class="ident">districtr</span></span>(<span>N)</span>
 </code></dt>
 <dd>
@@ -644,7 +644,7 @@ markers. Defaults to circles with 0.2pt padding.</dd>
     return (colors + (tail if tail else []))[:N]</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.drawgraph"><code class="name flex">
+<dt id="gerrytools.plotting.drawgraph"><code class="name flex">
 <span>def <span class="ident">drawgraph</span></span>(<span>G, ax=None, x='INTPTLON20', y='INTPTLAT20', components=False, node_size=1, **kwargs) ‑> Union[matplotlib.axes._axes.Axes, List[Tuple[matplotlib.figure.Figure, matplotlib.axes._axes.Axes]]]</span>
 </code></dt>
 <dd>
@@ -749,7 +749,7 @@ component.</p></div>
     return pairs if pairs else axes</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.drawplan"><code class="name flex">
+<dt id="gerrytools.plotting.drawplan"><code class="name flex">
 <span>def <span class="ident">drawplan</span></span>(<span>districts, assignment, overlays=[], colors=None, numbers=False, lw=0.5, fontsize=15, edgecolor='black') ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
@@ -773,7 +773,7 @@ districts.</dd>
 <dd>Line thickness if there are more than 20 districts.</dd>
 <dt><strong><code>fontsize</code></strong> :&ensp;<code>float</code>, optional</dt>
 <dd>District-number font size; passed to
-<code><a title="evaltools.plotting.districtnumbers" href="#evaltools.plotting.districtnumbers">districtnumbers()</a></code>.</dd>
+<code><a title="gerrytools.plotting.districtnumbers" href="#gerrytools.plotting.districtnumbers">districtnumbers()</a></code>.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A <code>matplotlib</code> <code>Axes</code> object for the geometries attached to <code>districts</code>.</p></div>
@@ -838,11 +838,11 @@ districts.</dd>
     return base</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.flare"><code class="name flex">
+<dt id="gerrytools.plotting.flare"><code class="name flex">
 <span>def <span class="ident">flare</span></span>(<span>n) ‑> list</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Returns a list of colors based on the <code><a title="evaltools.plotting.flare" href="#evaltools.plotting.flare">flare()</a></code> Matplotlib/seaborn colormap.</p>
+<div class="desc"><p>Returns a list of colors based on the <code><a title="gerrytools.plotting.flare" href="#gerrytools.plotting.flare">flare()</a></code> Matplotlib/seaborn colormap.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>n</code></strong> :&ensp;<code>int</code></dt>
@@ -867,7 +867,7 @@ districts.</dd>
     return list(sns.color_palette(&#34;flare&#34;, as_cmap=False, n_colors=n))</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.gif_multidimensional"><code class="name flex">
+<dt id="gerrytools.plotting.gif_multidimensional"><code class="name flex">
 <span>def <span class="ident">gif_multidimensional</span></span>(<span>data, proposed_info={}, labels=['X values', 'Y values', 'Histogram values'], filename='testfile', folder='test', limits=None, DPI=150, figsize=(12, 8))</span>
 </code></dt>
 <dd>
@@ -880,7 +880,7 @@ a gif.</p>
 <dd>Dictionary with keys of <code>xs</code>, <code>ys</code>, <code>hists</code>, each one a list of length
 number of frames/ensembles, where each element is a list of all values in the ensemble.</dd>
 <dt><strong><code>proposed_info</code></strong> :&ensp;<code>dict</code>, optional</dt>
-<dd>Dictionary with keys of <code><a title="evaltools.plotting.colors" href="colors.html">evaltools.plotting.colors</a></code>, <code>names</code>,
+<dd>Dictionary with keys of <code><a title="gerrytools.plotting.colors" href="colors.html">gerrytools.plotting.colors</a></code>, <code>names</code>,
 <code>x</code>, <code>y</code>, <code>hist</code>; the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th color in <code>color</code> corresponds to the
 <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th name in <code>names</code>, which corresponds to the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th value in
 <code>x</code>, <code>y</code>, and <code>hist</code>.</dd>
@@ -957,7 +957,7 @@ number of frames/ensembles, where each element is a list of all values in the en
     imageio.mimsave(output, images)</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.histogram"><code class="name flex">
+<dt id="gerrytools.plotting.histogram"><code class="name flex">
 <span>def <span class="ident">histogram</span></span>(<span>ax, scores, label=None, limits=(), proposed_info={}, ticksize=12, fontsize=24, jitter=False, bin_width=None) ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
@@ -978,7 +978,7 @@ which map to lists of numerical scores.</dd>
 <dd>X-axis limits (specify to force histogram to extend to
 these limits).</dd>
 <dt><strong><code>proposed_info</code></strong> :&ensp;<code>dict</code>, optional</dt>
-<dd>Dictionary with keys of <code><a title="evaltools.plotting.colors" href="colors.html">evaltools.plotting.colors</a></code>, <code>names</code>;
+<dd>Dictionary with keys of <code><a title="gerrytools.plotting.colors" href="colors.html">gerrytools.plotting.colors</a></code>, <code>names</code>;
 the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th color in <code>color</code> corresponds to the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th name in <code>names</code>.</dd>
 <dt><strong><code>ticksize</code></strong> :&ensp;<code>float</code>, optional</dt>
 <dd>Font size of tick labels.</dd>
@@ -1081,7 +1081,7 @@ same value</dd>
     return ax</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.ideal"><code class="name flex">
+<dt id="gerrytools.plotting.ideal"><code class="name flex">
 <span>def <span class="ident">ideal</span></span>(<span>ax, label, placement, orientation, color='#5c676f', alpha=0.1)</span>
 </code></dt>
 <dd>
@@ -1161,7 +1161,7 @@ values are <code>"horizontal"</code> or <code>"vertical"</code>.</dd>
     return ax</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.multidimensional"><code class="name flex">
+<dt id="gerrytools.plotting.multidimensional"><code class="name flex">
 <span>def <span class="ident">multidimensional</span></span>(<span>x, y, hist, labels=['X values', 'Y values', 'Histogram values'], bin_width=1, limits=None, proposed_info={}, figsize=(12, 8)) ‑> Tuple[matplotlib.axes._axes.Axes, matplotlib.axes._axes.Axes]</span>
 </code></dt>
 <dd>
@@ -1180,7 +1180,7 @@ and one metric as a histogram, below.</p>
 <dt><strong><code>limits</code></strong> :&ensp;<code>list</code>, optional</dt>
 <dd>x, y, and histogram limits, if wanted.</dd>
 <dt><strong><code>proposed_info</code></strong> :&ensp;<code>dict</code>, optional</dt>
-<dd>Dictionary with keys of <code><a title="evaltools.plotting.colors" href="colors.html">evaltools.plotting.colors</a></code>, <code>names</code>,
+<dd>Dictionary with keys of <code><a title="gerrytools.plotting.colors" href="colors.html">gerrytools.plotting.colors</a></code>, <code>names</code>,
 <code>x</code>, <code>y</code>, <code>hist</code>; the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th color in <code>color</code> corresponds to the
 <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th name in <code>names</code>, which corresponds to the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th value in
 <code>x</code>, <code>y</code>, and <code>hist</code>.</dd>
@@ -1249,7 +1249,7 @@ and one metric as a histogram, below.</p>
     return scatter_ax, hist_ax</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.purples"><code class="name flex">
+<dt id="gerrytools.plotting.purples"><code class="name flex">
 <span>def <span class="ident">purples</span></span>(<span>n) ‑> list</span>
 </code></dt>
 <dd>
@@ -1278,7 +1278,7 @@ and one metric as a histogram, below.</p>
     return list(sns.color_palette(&#34;Purples&#34;, as_cmap=False, n_colors=n))</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.redbluecmap"><code class="name flex">
+<dt id="gerrytools.plotting.redbluecmap"><code class="name flex">
 <span>def <span class="ident">redbluecmap</span></span>(<span>n) ‑> List[Tuple]</span>
 </code></dt>
 <dd>
@@ -1320,7 +1320,7 @@ and one metric as a histogram, below.</p>
     return list(reversed(reds)) + list(reversed(blues))</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.scatterplot"><code class="name flex">
+<dt id="gerrytools.plotting.scatterplot"><code class="name flex">
 <span>def <span class="ident">scatterplot</span></span>(<span>ax, x, y, labels=None, limits=set(), proposed_info={}, bins=None, axis_range=None) ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
@@ -1340,7 +1340,7 @@ scores as points.</p>
 <dd>Axis limits (specify to force plot to extend to
 these limits).</dd>
 <dt><strong><code>proposed_info</code></strong> :&ensp;<code>dict</code>, optional</dt>
-<dd>Dictionary with keys of <code><a title="evaltools.plotting.colors" href="colors.html">evaltools.plotting.colors</a></code>, <code>names</code>,
+<dd>Dictionary with keys of <code><a title="gerrytools.plotting.colors" href="colors.html">gerrytools.plotting.colors</a></code>, <code>names</code>,
 <code>x</code>, <code>y</code>; the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th color in <code>color</code> corresponds to the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th name
 in <code>names</code>, which corresponds to the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th value in <code>x</code> and <code>y</code>.</dd>
 </dl>
@@ -1409,7 +1409,7 @@ in <code>names</code>, which corresponds to the <span><span class="MathJax_Previ
     return ax</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.sealevel"><code class="name flex">
+<dt id="gerrytools.plotting.sealevel"><code class="name flex">
 <span>def <span class="ident">sealevel</span></span>(<span>ax, scores, num_districts, proposed_info, ticksize=12) ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
@@ -1425,7 +1425,7 @@ share (proportionality) is plotted as a thick blue line.</p>
 for proportionality. Each value is another dictionary, with keys for
 each election, values are the # seats.</dd>
 <dt><strong><code>proposed_info</code></strong> :&ensp;<code>dict</code>, optional</dt>
-<dd>Dictionary with keys of <code><a title="evaltools.plotting.colors" href="colors.html">evaltools.plotting.colors</a></code>, <code>names</code>;
+<dd>Dictionary with keys of <code><a title="gerrytools.plotting.colors" href="colors.html">gerrytools.plotting.colors</a></code>, <code>names</code>;
 the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th color in <code>color</code> corresponds to the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th name in <code>names</code>.</dd>
 <dt><strong><code>ticksize</code></strong> :&ensp;<code>float</code>, optional</dt>
 <dd>Font size for tick labels.</dd>
@@ -1491,7 +1491,7 @@ the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</scrip
     return ax</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.violin"><code class="name flex">
+<dt id="gerrytools.plotting.violin"><code class="name flex">
 <span>def <span class="ident">violin</span></span>(<span>ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1, 99), rotation=0, ticksize=12, jitter=0.3333333333333333) ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
@@ -1508,7 +1508,7 @@ their respective violin. Color the violins conditioned on the kind of the scores
 <dd>Dictionary with keys of <code>ensemble</code>, <code>citizen</code>, <code>proposed</code>
 which map to lists of numerical scores.</dd>
 <dt><strong><code>proposed_info</code></strong> :&ensp;<code>dict</code>, optional</dt>
-<dd>Dictionary with keys of <code><a title="evaltools.plotting.colors" href="colors.html">evaltools.plotting.colors</a></code>, <code>names</code>;
+<dd>Dictionary with keys of <code><a title="gerrytools.plotting.colors" href="colors.html">gerrytools.plotting.colors</a></code>, <code>names</code>;
 the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th color in <code>color</code> corresponds to the <span><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span>th name in `names.</dd>
 <dt><strong><code>percentiles</code></strong> :&ensp;<code>tuple</code>, optional</dt>
 <dd>Observations outside this range of
@@ -1652,7 +1652,7 @@ proof.appendChild(square);
 }
 </script>
 <header>
-<a class="homelink" rel="home" title="evaltools" href="https://github.com/mggg/plan-evaluation-processing">
+<a class="homelink" rel="home" title="gerrytools" href="https://github.com/mggg/gerrytools">
 <style>
 header > h1 { display: none; }
 img.resize {
@@ -1682,37 +1682,37 @@ float: right;
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="evaltools" href="../index.html">evaltools</a></code></li>
+<li><code><a title="gerrytools" href="../index.html">gerrytools</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-submodules">Sub-modules</a></h3>
 <ul>
-<li><code><a title="evaltools.plotting.annotation" href="annotation.html">evaltools.plotting.annotation</a></code></li>
-<li><code><a title="evaltools.plotting.colors" href="colors.html">evaltools.plotting.colors</a></code></li>
-<li><code><a title="evaltools.plotting.gifs" href="gifs.html">evaltools.plotting.gifs</a></code></li>
-<li><code><a title="evaltools.plotting.utils" href="utils.html">evaltools.plotting.utils</a></code></li>
+<li><code><a title="gerrytools.plotting.annotation" href="annotation.html">gerrytools.plotting.annotation</a></code></li>
+<li><code><a title="gerrytools.plotting.colors" href="colors.html">gerrytools.plotting.colors</a></code></li>
+<li><code><a title="gerrytools.plotting.gifs" href="gifs.html">gerrytools.plotting.gifs</a></code></li>
+<li><code><a title="gerrytools.plotting.utils" href="utils.html">gerrytools.plotting.utils</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="evaltools.plotting.arrow" href="#evaltools.plotting.arrow">arrow</a></code></li>
-<li><code><a title="evaltools.plotting.bins" href="#evaltools.plotting.bins">bins</a></code></li>
-<li><code><a title="evaltools.plotting.boxplot" href="#evaltools.plotting.boxplot">boxplot</a></code></li>
-<li><code><a title="evaltools.plotting.choropleth" href="#evaltools.plotting.choropleth">choropleth</a></code></li>
-<li><code><a title="evaltools.plotting.districtnumbers" href="#evaltools.plotting.districtnumbers">districtnumbers</a></code></li>
-<li><code><a title="evaltools.plotting.districtr" href="#evaltools.plotting.districtr">districtr</a></code></li>
-<li><code><a title="evaltools.plotting.drawgraph" href="#evaltools.plotting.drawgraph">drawgraph</a></code></li>
-<li><code><a title="evaltools.plotting.drawplan" href="#evaltools.plotting.drawplan">drawplan</a></code></li>
-<li><code><a title="evaltools.plotting.flare" href="#evaltools.plotting.flare">flare</a></code></li>
-<li><code><a title="evaltools.plotting.gif_multidimensional" href="#evaltools.plotting.gif_multidimensional">gif_multidimensional</a></code></li>
-<li><code><a title="evaltools.plotting.histogram" href="#evaltools.plotting.histogram">histogram</a></code></li>
-<li><code><a title="evaltools.plotting.ideal" href="#evaltools.plotting.ideal">ideal</a></code></li>
-<li><code><a title="evaltools.plotting.multidimensional" href="#evaltools.plotting.multidimensional">multidimensional</a></code></li>
-<li><code><a title="evaltools.plotting.purples" href="#evaltools.plotting.purples">purples</a></code></li>
-<li><code><a title="evaltools.plotting.redbluecmap" href="#evaltools.plotting.redbluecmap">redbluecmap</a></code></li>
-<li><code><a title="evaltools.plotting.scatterplot" href="#evaltools.plotting.scatterplot">scatterplot</a></code></li>
-<li><code><a title="evaltools.plotting.sealevel" href="#evaltools.plotting.sealevel">sealevel</a></code></li>
-<li><code><a title="evaltools.plotting.violin" href="#evaltools.plotting.violin">violin</a></code></li>
+<li><code><a title="gerrytools.plotting.arrow" href="#gerrytools.plotting.arrow">arrow</a></code></li>
+<li><code><a title="gerrytools.plotting.bins" href="#gerrytools.plotting.bins">bins</a></code></li>
+<li><code><a title="gerrytools.plotting.boxplot" href="#gerrytools.plotting.boxplot">boxplot</a></code></li>
+<li><code><a title="gerrytools.plotting.choropleth" href="#gerrytools.plotting.choropleth">choropleth</a></code></li>
+<li><code><a title="gerrytools.plotting.districtnumbers" href="#gerrytools.plotting.districtnumbers">districtnumbers</a></code></li>
+<li><code><a title="gerrytools.plotting.districtr" href="#gerrytools.plotting.districtr">districtr</a></code></li>
+<li><code><a title="gerrytools.plotting.drawgraph" href="#gerrytools.plotting.drawgraph">drawgraph</a></code></li>
+<li><code><a title="gerrytools.plotting.drawplan" href="#gerrytools.plotting.drawplan">drawplan</a></code></li>
+<li><code><a title="gerrytools.plotting.flare" href="#gerrytools.plotting.flare">flare</a></code></li>
+<li><code><a title="gerrytools.plotting.gif_multidimensional" href="#gerrytools.plotting.gif_multidimensional">gif_multidimensional</a></code></li>
+<li><code><a title="gerrytools.plotting.histogram" href="#gerrytools.plotting.histogram">histogram</a></code></li>
+<li><code><a title="gerrytools.plotting.ideal" href="#gerrytools.plotting.ideal">ideal</a></code></li>
+<li><code><a title="gerrytools.plotting.multidimensional" href="#gerrytools.plotting.multidimensional">multidimensional</a></code></li>
+<li><code><a title="gerrytools.plotting.purples" href="#gerrytools.plotting.purples">purples</a></code></li>
+<li><code><a title="gerrytools.plotting.redbluecmap" href="#gerrytools.plotting.redbluecmap">redbluecmap</a></code></li>
+<li><code><a title="gerrytools.plotting.scatterplot" href="#gerrytools.plotting.scatterplot">scatterplot</a></code></li>
+<li><code><a title="gerrytools.plotting.sealevel" href="#gerrytools.plotting.sealevel">sealevel</a></code></li>
+<li><code><a title="gerrytools.plotting.violin" href="#gerrytools.plotting.violin">violin</a></code></li>
 </ul>
 </li>
 </ul>

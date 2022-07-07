@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>evaltools.data API documentation</title>
+<title>gerrytools.data API documentation</title>
 <meta name="description" content="Facilities for processing data and districting plans in a standardized fashion." />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -20,7 +20,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>evaltools.data</code></h1>
+<h1 class="title">Module <code>gerrytools.data</code></h1>
 </header>
 <section id="section-intro">
 <p>Facilities for processing data and districting plans in a standardized fashion.</p>
@@ -62,23 +62,23 @@ __all__ = [
 <section>
 <h2 class="section-title" id="header-submodules">Sub-modules</h2>
 <dl>
-<dt><code class="name"><a title="evaltools.data.URLs" href="URLs.html">evaltools.data.URLs</a></code></dt>
+<dt><code class="name"><a title="gerrytools.data.URLs" href="URLs.html">gerrytools.data.URLs</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.data.acs" href="acs.html">evaltools.data.acs</a></code></dt>
+<dt><code class="name"><a title="gerrytools.data.acs" href="acs.html">gerrytools.data.acs</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.data.census" href="census.html">evaltools.data.census</a></code></dt>
+<dt><code class="name"><a title="gerrytools.data.census" href="census.html">gerrytools.data.census</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.data.estimatecvap" href="estimatecvap.html">evaltools.data.estimatecvap</a></code></dt>
+<dt><code class="name"><a title="gerrytools.data.estimatecvap" href="estimatecvap.html">gerrytools.data.estimatecvap</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.data.fetch" href="fetch.html">evaltools.data.fetch</a></code></dt>
+<dt><code class="name"><a title="gerrytools.data.fetch" href="fetch.html">gerrytools.data.fetch</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -89,7 +89,7 @@ __all__ = [
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="evaltools.data.acs5"><code class="name flex">
+<dt id="gerrytools.data.acs5"><code class="name flex">
 <span>def <span class="ident">acs5</span></span>(<span>state, geometry='tract', year=2020, columns=[], white='NHWHITEVAP') ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
@@ -235,7 +235,7 @@ POC populations.</dd>
     return data</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.census10"><code class="name flex">
+<dt id="gerrytools.data.census10"><code class="name flex">
 <span>def <span class="ident">census10</span></span>(<span>state, columns={}, geometry='block')</span>
 </code></dt>
 <dd>
@@ -303,7 +303,7 @@ designation and a unique identifier column for joining to geometries.</p></div>
     return clean</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.census20"><code class="name flex">
+<dt id="gerrytools.data.census20"><code class="name flex">
 <span>def <span class="ident">census20</span></span>(<span>state, table='P1', columns={}, geometry='block', key='75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65') ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
@@ -438,7 +438,7 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
     return merged</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.csvs"><code class="name flex">
+<dt id="gerrytools.data.csvs"><code class="name flex">
 <span>def <span class="ident">csvs</span></span>(<span>state, ptype='plan')</span>
 </code></dt>
 <dd>
@@ -478,7 +478,7 @@ designation and a <code>GEOID20</code> column for joining to geometries.</p></di
     return f&#34;{prefix}/{pipeline}/submissions/csv/{state.name.lower()}{suffix}&#34;</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.cvap"><code class="name flex">
+<dt id="gerrytools.data.cvap"><code class="name flex">
 <span>def <span class="ident">cvap</span></span>(<span>state, geometry='tract', year=2020) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
@@ -592,13 +592,13 @@ the ACS CVAP Special Tab for the specified year.</p></div>
     return data</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.estimatecvap2010"><code class="name flex">
+<dt id="gerrytools.data.estimatecvap2010"><code class="name flex">
 <span>def <span class="ident">estimatecvap2010</span></span>(<span>base, state, groups, ceiling, zfill, geometry10='tract', year=2019) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Function for turning old (2019) CVAP data on 2010 geometries into estimates
 for current CVAP data on 2020 geometries. <strong>This method serves a different
-purpose than <code><a title="evaltools.data.estimatecvap.estimatecvap2020" href="estimatecvap.html#evaltools.data.estimatecvap.estimatecvap2020">estimatecvap2020()</a></code>:</strong> this method
+purpose than <code><a title="gerrytools.data.estimatecvap.estimatecvap2020" href="estimatecvap.html#gerrytools.data.estimatecvap.estimatecvap2020">estimatecvap2020()</a></code>:</strong> this method
 is intended to put 2010-era CVAP data on 2020-era geometries, and uses
 geometric properties to do so.</p>
 <p>Users must supply a base <code>GeoDataFrame</code>
@@ -658,7 +658,7 @@ blocks fit neatly into the 2010 Census tracts.</dd>
     r&#34;&#34;&#34;
     Function for turning old (2019) CVAP data on 2010 geometries into estimates
     for current CVAP data on 2020 geometries. **This method serves a different
-    purpose than `evaltools.data.estimatecvap.estimatecvap2020()`:** this method
+    purpose than `gerrytools.data.estimatecvap.estimatecvap2020()`:** this method
     is intended to put 2010-era CVAP data on 2020-era geometries, and uses
     geometric properties to do so.
 
@@ -877,12 +877,12 @@ blocks fit neatly into the 2010 Census tracts.</dd>
     return weightedbase</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.estimatecvap2020"><code class="name flex">
+<dt id="gerrytools.data.estimatecvap2020"><code class="name flex">
 <span>def <span class="ident">estimatecvap2020</span></span>(<span>state) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data. <strong>This method serves
-a different purpose than <code><a title="evaltools.data.estimatecvap.estimatecvap2010" href="estimatecvap.html#evaltools.data.estimatecvap.estimatecvap2010">estimatecvap2010()</a></code>:</strong>
+a different purpose than <code><a title="gerrytools.data.estimatecvap.estimatecvap2010" href="estimatecvap.html#gerrytools.data.estimatecvap.estimatecvap2010">estimatecvap2010()</a></code>:</strong>
 rather than using geometric procedures to put CVAP data on old geometries,
 this method takes advantage of the Census's geographic hierarchy, and
 associates finer-grained 2020 CVAP data with 2020 blocks. <em>No geometric
@@ -903,7 +903,7 @@ and be used to build other units of varying size.</p>
 <pre><code class="python">def estimatecvap2020(state) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data. **This method serves
-    a different purpose than `evaltools.data.estimatecvap.estimatecvap2010()`:**
+    a different purpose than `gerrytools.data.estimatecvap.estimatecvap2010()`:**
     rather than using geometric procedures to put CVAP data on old geometries,
     this method takes advantage of the Census&#39;s geographic hierarchy, and
     associates finer-grained 2020 CVAP data with 2020 blocks. _No geometric
@@ -992,7 +992,7 @@ and be used to build other units of varying size.</p>
     return block</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.fetchgeometries"><code class="name flex">
+<dt id="gerrytools.data.fetchgeometries"><code class="name flex">
 <span>def <span class="ident">fetchgeometries</span></span>(<span>state, geometry) ‑> geopandas.geodataframe.GeoDataFrame</span>
 </code></dt>
 <dd>
@@ -1046,7 +1046,7 @@ and be used to build other units of varying size.</p>
     return gpd.read_file(url)</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.ids"><code class="name flex">
+<dt id="gerrytools.data.ids"><code class="name flex">
 <span>def <span class="ident">ids</span></span>(<span>state)</span>
 </code></dt>
 <dd>
@@ -1085,7 +1085,7 @@ districtr identifiers.</dd>
     return f&#34;{prefix}/{pipeline}/submissions/districtr-ids/{state.name.lower()}&#34;</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.one"><code class="name flex">
+<dt id="gerrytools.data.one"><code class="name flex">
 <span>def <span class="ident">one</span></span>(<span>identifier)</span>
 </code></dt>
 <dd>
@@ -1114,7 +1114,7 @@ districtr identifiers.</dd>
     return f&#34;https://districtr.org/.netlify/functions/planRead?id={identifier}&#34;</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.remap"><code class="name flex">
+<dt id="gerrytools.data.remap"><code class="name flex">
 <span>def <span class="ident">remap</span></span>(<span>plans, unitmaps, popmap=None) ‑> Callable</span>
 </code></dt>
 <dd>
@@ -1122,7 +1122,7 @@ districtr identifiers.</dd>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>plans</code></strong> :&ensp;<code>DataFrame</code></dt>
-<dd>The Pandas DataFrame produced by <code><a title="evaltools.data.tabularized" href="#evaltools.data.tabularized">tabularized()</a></code>.</dd>
+<dd>The Pandas DataFrame produced by <code><a title="gerrytools.data.tabularized" href="#gerrytools.data.tabularized">tabularized()</a></code>.</dd>
 <dt><strong><code>unitmaps</code></strong> :&ensp;<code>dict</code></dt>
 <dd>A dictionary whose keys are unit types appearing in the
 <code>unitsType</code> column, and whose values are dictionaries mapping unique
@@ -1200,8 +1200,8 @@ units to larger ones.</dd>
     return plans</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.submissions"><code class="name flex">
-<span>def <span class="ident">submissions</span></span>(<span>state, sample=None) ‑> List[<a title="evaltools.data.fetch.Submission" href="fetch.html#evaltools.data.fetch.Submission">Submission</a>]</span>
+<dt id="gerrytools.data.submissions"><code class="name flex">
+<span>def <span class="ident">submissions</span></span>(<span>state, sample=None) ‑> List[<a title="gerrytools.data.fetch.Submission" href="fetch.html#gerrytools.data.fetch.Submission">Submission</a>]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Retrieves raw districtr objects; this includes both plan- and COI-based
@@ -1274,7 +1274,7 @@ submissions.</p>
     return submissions</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.tabularized"><code class="name flex">
+<dt id="gerrytools.data.tabularized"><code class="name flex">
 <span>def <span class="ident">tabularized</span></span>(<span>state, submissions) ‑> Tuple[pandas.core.frame.DataFrame, pandas.core.frame.DataFrame, pandas.core.frame.DataFrame]</span>
 </code></dt>
 <dd>
@@ -1284,8 +1284,8 @@ submissions.</p>
 <dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
 <dd><code>us.State</code> object (e.g. <code>us.states.WI</code>).</dd>
 <dt><strong><code>submissions</code></strong> :&ensp;<code>list</code></dt>
-<dd>List of <code><a title="evaltools.data.Submission" href="#evaltools.data.Submission">Submission</a></code> objects returned from a call to
-<code><a title="evaltools.data.submissions" href="#evaltools.data.submissions">submissions()</a></code>.</dd>
+<dd>List of <code><a title="gerrytools.data.Submission" href="#gerrytools.data.Submission">Submission</a></code> objects returned from a call to
+<code><a title="gerrytools.data.submissions" href="#gerrytools.data.submissions">submissions()</a></code>.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>Three dataframes corresponding to plan-based submissions, COI-based
@@ -1293,7 +1293,7 @@ submissions, and written submissions to the provided state.</p>
 <h2 id="example">Example</h2>
 <p>Prototypical example usage.</p>
 <pre><code>import us
-from evaltools.retrieve import submissions, tabularized
+from gerrytools.retrieve import submissions, tabularized
 
 # Set the state.
 state = us.states.WI
@@ -1323,7 +1323,7 @@ plans, cois, written = tabularized(state, subs)
         Prototypical example usage.
 
             import us
-            from evaltools.retrieve import submissions, tabularized
+            from gerrytools.retrieve import submissions, tabularized
 
             # Set the state.
             state = us.states.WI
@@ -1394,7 +1394,7 @@ plans, cois, written = tabularized(state, subs)
     return plans, cois, writtens</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.variables"><code class="name flex">
+<dt id="gerrytools.data.variables"><code class="name flex">
 <span>def <span class="ident">variables</span></span>(<span>table) ‑> dict</span>
 </code></dt>
 <dd>
@@ -1477,7 +1477,7 @@ P4</a>.</p>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="evaltools.data.AssignmentCompressor"><code class="flex name class">
+<dt id="gerrytools.data.AssignmentCompressor"><code class="flex name class">
 <span>class <span class="ident">AssignmentCompressor</span></span>
 <span>(</span><span>identifiers, window=10, location='compressed.ac')</span>
 </code></dt>
@@ -1559,7 +1559,7 @@ is passed to the compressor.</dd>
 <dt><strong><code>location</code></strong></dt>
 <dd>The place to which compressed data is written or read.</dd>
 </dl>
-<p>Creates <code><a title="evaltools.data.AssignmentCompressor" href="#evaltools.data.AssignmentCompressor">AssignmentCompressor</a></code> instance.</p>
+<p>Creates <code><a title="gerrytools.data.AssignmentCompressor" href="#gerrytools.data.AssignmentCompressor">AssignmentCompressor</a></code> instance.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>identifiers</code></strong> :&ensp;<code>list</code></dt>
@@ -1875,7 +1875,7 @@ or write). Defaults to <code>compressed.ac</code>.</dd>
 </details>
 <h3>Methods</h3>
 <dl>
-<dt id="evaltools.data.AssignmentCompressor.compress"><code class="name flex">
+<dt id="gerrytools.data.AssignmentCompressor.compress"><code class="name flex">
 <span>def <span class="ident">compress</span></span>(<span>self, assignment)</span>
 </code></dt>
 <dd>
@@ -1925,7 +1925,7 @@ All keys and values in this dictionary must be strings.</dd>
         self._compress()</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.AssignmentCompressor.compress_all"><code class="name flex">
+<dt id="gerrytools.data.AssignmentCompressor.compress_all"><code class="name flex">
 <span>def <span class="ident">compress_all</span></span>(<span>self, assignments)</span>
 </code></dt>
 <dd>
@@ -1957,7 +1957,7 @@ strings.</dd>
             ac.compress(assignment)</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.AssignmentCompressor.decompress"><code class="name flex">
+<dt id="gerrytools.data.AssignmentCompressor.decompress"><code class="name flex">
 <span>def <span class="ident">decompress</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -1987,7 +1987,7 @@ assignments.</p>
                 yield assignment</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.AssignmentCompressor.match"><code class="name flex">
+<dt id="gerrytools.data.AssignmentCompressor.match"><code class="name flex">
 <span>def <span class="ident">match</span></span>(<span>self, assignment) ‑> sortedcontainers.sorteddict.SortedDict</span>
 </code></dt>
 <dd>
@@ -2028,7 +2028,7 @@ districts. All keys and values in this dictionary must be strings.</dd>
 </dd>
 </dl>
 </dd>
-<dt id="evaltools.data.Submission"><code class="flex name class">
+<dt id="gerrytools.data.Submission"><code class="flex name class">
 <span>class <span class="ident">Submission</span></span>
 <span>(</span><span>**data: Any)</span>
 </code></dt>
@@ -2068,31 +2068,31 @@ dot notation when accessing properties rather than dict notation.</p>
 </ul>
 <h3>Class variables</h3>
 <dl>
-<dt id="evaltools.data.Submission.id"><code class="name">var <span class="ident">id</span> : str</code></dt>
+<dt id="gerrytools.data.Submission.id"><code class="name">var <span class="ident">id</span> : str</code></dt>
 <dd>
 <div class="desc"><p>districtr identifier.</p></div>
 </dd>
-<dt id="evaltools.data.Submission.link"><code class="name">var <span class="ident">link</span> : str</code></dt>
+<dt id="gerrytools.data.Submission.link"><code class="name">var <span class="ident">link</span> : str</code></dt>
 <dd>
 <div class="desc"><p>A districtr URL.</p></div>
 </dd>
-<dt id="evaltools.data.Submission.plan"><code class="name">var <span class="ident">plan</span> : dict</code></dt>
+<dt id="gerrytools.data.Submission.plan"><code class="name">var <span class="ident">plan</span> : dict</code></dt>
 <dd>
 <div class="desc"><p>districtr plan object.</p></div>
 </dd>
-<dt id="evaltools.data.Submission.tileset"><code class="name">var <span class="ident">tileset</span> : str</code></dt>
+<dt id="gerrytools.data.Submission.tileset"><code class="name">var <span class="ident">tileset</span> : str</code></dt>
 <dd>
 <div class="desc"><p>Mapbox tileset URL.</p></div>
 </dd>
-<dt id="evaltools.data.Submission.type"><code class="name">var <span class="ident">type</span> : str</code></dt>
+<dt id="gerrytools.data.Submission.type"><code class="name">var <span class="ident">type</span> : str</code></dt>
 <dd>
 <div class="desc"><p>Not sure.</p></div>
 </dd>
-<dt id="evaltools.data.Submission.units"><code class="name">var <span class="ident">units</span> : str</code></dt>
+<dt id="gerrytools.data.Submission.units"><code class="name">var <span class="ident">units</span> : str</code></dt>
 <dd>
 <div class="desc"><p>Unit identifier (e.g. <code>GEOID</code>).</p></div>
 </dd>
-<dt id="evaltools.data.Submission.unitsType"><code class="name">var <span class="ident">unitsType</span> : str</code></dt>
+<dt id="gerrytools.data.Submission.unitsType"><code class="name">var <span class="ident">unitsType</span> : str</code></dt>
 <dd>
 <div class="desc"><p>Unit type (e.g. <code>blocks20</code>, <code>blockgroup</code>, etc.)</p></div>
 </dd>
@@ -2118,7 +2118,7 @@ proof.appendChild(square);
 }
 </script>
 <header>
-<a class="homelink" rel="home" title="evaltools" href="https://github.com/mggg/plan-evaluation-processing">
+<a class="homelink" rel="home" title="gerrytools" href="https://github.com/mggg/gerrytools">
 <style>
 header > h1 { display: none; }
 img.resize {
@@ -2148,57 +2148,57 @@ float: right;
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="evaltools" href="../index.html">evaltools</a></code></li>
+<li><code><a title="gerrytools" href="../index.html">gerrytools</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-submodules">Sub-modules</a></h3>
 <ul>
-<li><code><a title="evaltools.data.URLs" href="URLs.html">evaltools.data.URLs</a></code></li>
-<li><code><a title="evaltools.data.acs" href="acs.html">evaltools.data.acs</a></code></li>
-<li><code><a title="evaltools.data.census" href="census.html">evaltools.data.census</a></code></li>
-<li><code><a title="evaltools.data.estimatecvap" href="estimatecvap.html">evaltools.data.estimatecvap</a></code></li>
-<li><code><a title="evaltools.data.fetch" href="fetch.html">evaltools.data.fetch</a></code></li>
+<li><code><a title="gerrytools.data.URLs" href="URLs.html">gerrytools.data.URLs</a></code></li>
+<li><code><a title="gerrytools.data.acs" href="acs.html">gerrytools.data.acs</a></code></li>
+<li><code><a title="gerrytools.data.census" href="census.html">gerrytools.data.census</a></code></li>
+<li><code><a title="gerrytools.data.estimatecvap" href="estimatecvap.html">gerrytools.data.estimatecvap</a></code></li>
+<li><code><a title="gerrytools.data.fetch" href="fetch.html">gerrytools.data.fetch</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="two-column">
-<li><code><a title="evaltools.data.acs5" href="#evaltools.data.acs5">acs5</a></code></li>
-<li><code><a title="evaltools.data.census10" href="#evaltools.data.census10">census10</a></code></li>
-<li><code><a title="evaltools.data.census20" href="#evaltools.data.census20">census20</a></code></li>
-<li><code><a title="evaltools.data.csvs" href="#evaltools.data.csvs">csvs</a></code></li>
-<li><code><a title="evaltools.data.cvap" href="#evaltools.data.cvap">cvap</a></code></li>
-<li><code><a title="evaltools.data.estimatecvap2010" href="#evaltools.data.estimatecvap2010">estimatecvap2010</a></code></li>
-<li><code><a title="evaltools.data.estimatecvap2020" href="#evaltools.data.estimatecvap2020">estimatecvap2020</a></code></li>
-<li><code><a title="evaltools.data.fetchgeometries" href="#evaltools.data.fetchgeometries">fetchgeometries</a></code></li>
-<li><code><a title="evaltools.data.ids" href="#evaltools.data.ids">ids</a></code></li>
-<li><code><a title="evaltools.data.one" href="#evaltools.data.one">one</a></code></li>
-<li><code><a title="evaltools.data.remap" href="#evaltools.data.remap">remap</a></code></li>
-<li><code><a title="evaltools.data.submissions" href="#evaltools.data.submissions">submissions</a></code></li>
-<li><code><a title="evaltools.data.tabularized" href="#evaltools.data.tabularized">tabularized</a></code></li>
-<li><code><a title="evaltools.data.variables" href="#evaltools.data.variables">variables</a></code></li>
+<li><code><a title="gerrytools.data.acs5" href="#gerrytools.data.acs5">acs5</a></code></li>
+<li><code><a title="gerrytools.data.census10" href="#gerrytools.data.census10">census10</a></code></li>
+<li><code><a title="gerrytools.data.census20" href="#gerrytools.data.census20">census20</a></code></li>
+<li><code><a title="gerrytools.data.csvs" href="#gerrytools.data.csvs">csvs</a></code></li>
+<li><code><a title="gerrytools.data.cvap" href="#gerrytools.data.cvap">cvap</a></code></li>
+<li><code><a title="gerrytools.data.estimatecvap2010" href="#gerrytools.data.estimatecvap2010">estimatecvap2010</a></code></li>
+<li><code><a title="gerrytools.data.estimatecvap2020" href="#gerrytools.data.estimatecvap2020">estimatecvap2020</a></code></li>
+<li><code><a title="gerrytools.data.fetchgeometries" href="#gerrytools.data.fetchgeometries">fetchgeometries</a></code></li>
+<li><code><a title="gerrytools.data.ids" href="#gerrytools.data.ids">ids</a></code></li>
+<li><code><a title="gerrytools.data.one" href="#gerrytools.data.one">one</a></code></li>
+<li><code><a title="gerrytools.data.remap" href="#gerrytools.data.remap">remap</a></code></li>
+<li><code><a title="gerrytools.data.submissions" href="#gerrytools.data.submissions">submissions</a></code></li>
+<li><code><a title="gerrytools.data.tabularized" href="#gerrytools.data.tabularized">tabularized</a></code></li>
+<li><code><a title="gerrytools.data.variables" href="#gerrytools.data.variables">variables</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="evaltools.data.AssignmentCompressor" href="#evaltools.data.AssignmentCompressor">AssignmentCompressor</a></code></h4>
+<h4><code><a title="gerrytools.data.AssignmentCompressor" href="#gerrytools.data.AssignmentCompressor">AssignmentCompressor</a></code></h4>
 <ul class="">
-<li><code><a title="evaltools.data.AssignmentCompressor.compress" href="#evaltools.data.AssignmentCompressor.compress">compress</a></code></li>
-<li><code><a title="evaltools.data.AssignmentCompressor.compress_all" href="#evaltools.data.AssignmentCompressor.compress_all">compress_all</a></code></li>
-<li><code><a title="evaltools.data.AssignmentCompressor.decompress" href="#evaltools.data.AssignmentCompressor.decompress">decompress</a></code></li>
-<li><code><a title="evaltools.data.AssignmentCompressor.match" href="#evaltools.data.AssignmentCompressor.match">match</a></code></li>
+<li><code><a title="gerrytools.data.AssignmentCompressor.compress" href="#gerrytools.data.AssignmentCompressor.compress">compress</a></code></li>
+<li><code><a title="gerrytools.data.AssignmentCompressor.compress_all" href="#gerrytools.data.AssignmentCompressor.compress_all">compress_all</a></code></li>
+<li><code><a title="gerrytools.data.AssignmentCompressor.decompress" href="#gerrytools.data.AssignmentCompressor.decompress">decompress</a></code></li>
+<li><code><a title="gerrytools.data.AssignmentCompressor.match" href="#gerrytools.data.AssignmentCompressor.match">match</a></code></li>
 </ul>
 </li>
 <li>
-<h4><code><a title="evaltools.data.Submission" href="#evaltools.data.Submission">Submission</a></code></h4>
+<h4><code><a title="gerrytools.data.Submission" href="#gerrytools.data.Submission">Submission</a></code></h4>
 <ul class="two-column">
-<li><code><a title="evaltools.data.Submission.id" href="#evaltools.data.Submission.id">id</a></code></li>
-<li><code><a title="evaltools.data.Submission.link" href="#evaltools.data.Submission.link">link</a></code></li>
-<li><code><a title="evaltools.data.Submission.plan" href="#evaltools.data.Submission.plan">plan</a></code></li>
-<li><code><a title="evaltools.data.Submission.tileset" href="#evaltools.data.Submission.tileset">tileset</a></code></li>
-<li><code><a title="evaltools.data.Submission.type" href="#evaltools.data.Submission.type">type</a></code></li>
-<li><code><a title="evaltools.data.Submission.units" href="#evaltools.data.Submission.units">units</a></code></li>
-<li><code><a title="evaltools.data.Submission.unitsType" href="#evaltools.data.Submission.unitsType">unitsType</a></code></li>
+<li><code><a title="gerrytools.data.Submission.id" href="#gerrytools.data.Submission.id">id</a></code></li>
+<li><code><a title="gerrytools.data.Submission.link" href="#gerrytools.data.Submission.link">link</a></code></li>
+<li><code><a title="gerrytools.data.Submission.plan" href="#gerrytools.data.Submission.plan">plan</a></code></li>
+<li><code><a title="gerrytools.data.Submission.tileset" href="#gerrytools.data.Submission.tileset">tileset</a></code></li>
+<li><code><a title="gerrytools.data.Submission.type" href="#gerrytools.data.Submission.type">type</a></code></li>
+<li><code><a title="gerrytools.data.Submission.units" href="#gerrytools.data.Submission.units">units</a></code></li>
+<li><code><a title="gerrytools.data.Submission.unitsType" href="#gerrytools.data.Submission.unitsType">unitsType</a></code></li>
 </ul>
 </li>
 </ul>

@@ -13,4 +13,4 @@ def remotegraphresource(file):
     return Graph.from_json(temp.name)
 
 def remoteresource(file):
-    return f"https://evaltools-test-data.s3.amazonaws.com/{file}"
+    return f"https://gerrytools-test-data.s3.amazonaws.com/{file}"

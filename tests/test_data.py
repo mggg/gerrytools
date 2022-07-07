@@ -5,7 +5,7 @@ from pathlib import Path
 import os
 import pandas as pd
 import json
-from evaltools.data import (
+from gerrytools.data import (
     cvap, acs5, census20, variables, submissions, tabularized, AssignmentCompressor,
     remap, estimatecvap2010, estimatecvap2020
 )

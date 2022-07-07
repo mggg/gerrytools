@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>evaltools.scoring API documentation</title>
+<title>gerrytools.scoring API documentation</title>
 <meta name="description" content="Basic functionality for evaluating districting plans." />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -20,7 +20,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>evaltools.scoring</code></h1>
+<h1 class="title">Module <code>gerrytools.scoring</code></h1>
 </header>
 <section id="section-intro">
 <p>Basic functionality for evaluating districting plans.</p>
@@ -81,27 +81,27 @@ __all__ = [
 <section>
 <h2 class="section-title" id="header-submodules">Sub-modules</h2>
 <dl>
-<dt><code class="name"><a title="evaltools.scoring.contiguity" href="contiguity.html">evaltools.scoring.contiguity</a></code></dt>
+<dt><code class="name"><a title="gerrytools.scoring.contiguity" href="contiguity.html">gerrytools.scoring.contiguity</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.scoring.demographics" href="demographics.html">evaltools.scoring.demographics</a></code></dt>
+<dt><code class="name"><a title="gerrytools.scoring.demographics" href="demographics.html">gerrytools.scoring.demographics</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.scoring.partisan" href="partisan.html">evaltools.scoring.partisan</a></code></dt>
+<dt><code class="name"><a title="gerrytools.scoring.partisan" href="partisan.html">gerrytools.scoring.partisan</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.scoring.population" href="population.html">evaltools.scoring.population</a></code></dt>
+<dt><code class="name"><a title="gerrytools.scoring.population" href="population.html">gerrytools.scoring.population</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.scoring.scores" href="scores.html">evaltools.scoring.scores</a></code></dt>
+<dt><code class="name"><a title="gerrytools.scoring.scores" href="scores.html">gerrytools.scoring.scores</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="evaltools.scoring.types" href="types.html">evaltools.scoring.types</a></code></dt>
+<dt><code class="name"><a title="gerrytools.scoring.types" href="types.html">gerrytools.scoring.types</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -112,8 +112,8 @@ __all__ = [
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="evaltools.scoring.aggregate_seats"><code class="name flex">
-<span>def <span class="ident">aggregate_seats</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.aggregate_seats"><code class="name flex">
+<span>def <span class="ident">aggregate_seats</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing how many total seats (districts) within a given plan the POV party won across
@@ -155,8 +155,8 @@ party across elections.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.competitive_contests"><code class="name flex">
-<span>def <span class="ident">competitive_contests</span></span>(<span>election_cols: Iterable[str], party: str, points_within: float = 0.03, alias: str = None) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.competitive_contests"><code class="name flex">
+<span>def <span class="ident">competitive_contests</span></span>(<span>election_cols: Iterable[str], party: str, points_within: float = 0.03, alias: str = None) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the number of competitive contests in a plan.</p>
@@ -207,7 +207,7 @@ partition and returns a PlanWideScoreValue for the number of competitive distric
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.contiguous"><code class="name flex">
+<dt id="gerrytools.scoring.contiguous"><code class="name flex">
 <span>def <span class="ident">contiguous</span></span>(<span>P: gerrychain.partition.partition.Partition) ‑> bool</span>
 </code></dt>
 <dd>
@@ -238,8 +238,8 @@ contiguous.</p>
     return ctgs(P)</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.demographic_shares"><code class="name flex">
-<span>def <span class="ident">demographic_shares</span></span>(<span>population_cols: Mapping[str, Iterable[str]]) ‑> List[<a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a>]</span>
+<dt id="gerrytools.scoring.demographic_shares"><code class="name flex">
+<span>def <span class="ident">demographic_shares</span></span>(<span>population_cols: Mapping[str, Iterable[str]]) ‑> List[<a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a>]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>A list of scores representing subgroup population shares.</p>
@@ -285,8 +285,8 @@ share of each district.</p></div>
     return scores</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.demographic_tallies"><code class="name flex">
-<span>def <span class="ident">demographic_tallies</span></span>(<span>population_cols: Iterable[str]) ‑> List[<a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a>]</span>
+<dt id="gerrytools.scoring.demographic_tallies"><code class="name flex">
+<span>def <span class="ident">demographic_tallies</span></span>(<span>population_cols: Iterable[str]) ‑> List[<a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a>]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>A list of scores representing population tallies.</p>
@@ -319,7 +319,7 @@ and return a DistrictWideScoreValue for the demographic totals of each district.
     ]</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.demographic_updaters"><code class="name flex">
+<dt id="gerrytools.scoring.demographic_updaters"><code class="name flex">
 <span>def <span class="ident">demographic_updaters</span></span>(<span>demographic_keys: Iterable[str], aliases: Iterable[str] = None)</span>
 </code></dt>
 <dd>
@@ -336,7 +336,7 @@ and return a DistrictWideScoreValue for the demographic totals of each district.
     return updaters</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.deviations"><code class="name flex">
+<dt id="gerrytools.scoring.deviations"><code class="name flex">
 <span>def <span class="ident">deviations</span></span>(<span>P, popcolumn) ‑> dict</span>
 </code></dt>
 <dd>
@@ -374,8 +374,8 @@ and return a DistrictWideScoreValue for the demographic totals of each district.
     return deviation(P, attribute=popcolumn)</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.efficiency_gap"><code class="name flex">
-<span>def <span class="ident">efficiency_gap</span></span>(<span>election_cols: Iterable[str], mean: bool = False) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.efficiency_gap"><code class="name flex">
+<span>def <span class="ident">efficiency_gap</span></span>(<span>election_cols: Iterable[str], mean: bool = False) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the efficiency gap metric of a plan with respect to a set of elections.</p>
@@ -417,8 +417,8 @@ and returns a PlanWideScoreValue for efficiency gap metric.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.eguia"><code class="name flex">
-<span>def <span class="ident">eguia</span></span>(<span>election_cols: Iterable[str], party: str, graph: gerrychain.graph.graph.Graph, updaters: Mapping[str, Callable[[gerrychain.partition.partition.Partition], Union[float, int, Mapping[Union[int, str], Union[float, int]], Mapping[str, Union[float, int]]]]], county_col: str, totpop_col: str = 'population', mean: bool = False) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.eguia"><code class="name flex">
+<span>def <span class="ident">eguia</span></span>(<span>election_cols: Iterable[str], party: str, graph: gerrychain.graph.graph.Graph, updaters: Mapping[str, Callable[[gerrychain.partition.partition.Partition], Union[float, int, Mapping[Union[int, str], Union[float, int]], Mapping[str, Union[float, int]]]]], county_col: str, totpop_col: str = 'population', mean: bool = False) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the Equia metric of a plan with respect to a set of elections.</p>
@@ -494,8 +494,8 @@ a PlanWideScoreValue for the eguia metric.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.gingles_districts"><code class="name flex">
-<span>def <span class="ident">gingles_districts</span></span>(<span>population_cols: Mapping[str, Iterable[str]], threshold: float = 0.5) ‑> List[<a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a>]</span>
+<dt id="gerrytools.scoring.gingles_districts"><code class="name flex">
+<span>def <span class="ident">gingles_districts</span></span>(<span>population_cols: Mapping[str, Iterable[str]], threshold: float = 0.5) ‑> List[<a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a>]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>A list of scores representing the number of districts where a sub-population share is above
@@ -545,8 +545,8 @@ districts above the population share threshold.</p></div>
     return scores</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.max_deviation"><code class="name flex">
-<span>def <span class="ident">max_deviation</span></span>(<span>totpop_col: str, pct: bool = False) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.max_deviation"><code class="name flex">
+<span>def <span class="ident">max_deviation</span></span>(<span>totpop_col: str, pct: bool = False) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Returns the maximum deviation from ideal population size among all the districts.
@@ -578,8 +578,8 @@ ideal district size.</dd>
     return Score(f&#34;{totpop_col}_max_deviation&#34;, partial(_max_deviation, totpop_col=totpop_col, pct=pct))</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.mean_median"><code class="name flex">
-<span>def <span class="ident">mean_median</span></span>(<span>election_cols: Iterable[str], mean: bool = False) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.mean_median"><code class="name flex">
+<span>def <span class="ident">mean_median</span></span>(<span>election_cols: Iterable[str], mean: bool = False) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the mean median metric of a plan with respect to a set of elections.</p>
@@ -620,8 +620,8 @@ returns a PlanWideScoreValue for the mean median metric.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.opp_party_districts"><code class="name flex">
-<span>def <span class="ident">opp_party_districts</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.opp_party_districts"><code class="name flex">
+<span>def <span class="ident">opp_party_districts</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the number of districts in a plan that are always won by the opposition party
@@ -668,8 +668,8 @@ partition and returns a PlanWideScoreValue for the number of safe opposition par
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.partisan_bias"><code class="name flex">
-<span>def <span class="ident">partisan_bias</span></span>(<span>election_cols: Iterable[str], mean: bool = False) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.partisan_bias"><code class="name flex">
+<span>def <span class="ident">partisan_bias</span></span>(<span>election_cols: Iterable[str], mean: bool = False) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the partitisan bias metric of a plan with respect to a set of elections.</p>
@@ -709,8 +709,8 @@ returns a PlanWideScoreValue for partisan bias metric.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.partisan_gini"><code class="name flex">
-<span>def <span class="ident">partisan_gini</span></span>(<span>election_cols: Iterable[str], mean: bool = False) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.partisan_gini"><code class="name flex">
+<span>def <span class="ident">partisan_gini</span></span>(<span>election_cols: Iterable[str], mean: bool = False) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the partisan gini metric of a plan with respect to a set
@@ -758,8 +758,8 @@ returns a PlanWideScoreValue for the partisan gini metric.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.party_districts"><code class="name flex">
-<span>def <span class="ident">party_districts</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.party_districts"><code class="name flex">
+<span>def <span class="ident">party_districts</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the number of districts in a plan that are always won by the POV party over
@@ -799,8 +799,8 @@ and returns a PlanWideScoreValue for the number of safe POV party districts.</p>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.party_wins_by_district"><code class="name flex">
-<span>def <span class="ident">party_wins_by_district</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.party_wins_by_district"><code class="name flex">
+<span>def <span class="ident">party_wins_by_district</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing how many elections the POV party won in each district in a given plan.</p>
@@ -840,8 +840,8 @@ party in each district.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.pieces"><code class="name flex">
-<span>def <span class="ident">pieces</span></span>(<span>unit: str, names: bool = False, popcol: str = None, how: str = 'pandas', alias: str = None) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.pieces"><code class="name flex">
+<span>def <span class="ident">pieces</span></span>(<span>unit: str, names: bool = False, popcol: str = None, how: str = 'pandas', alias: str = None) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the number of "unit pieces" produced by the plan. For example,
@@ -918,7 +918,7 @@ partition and returns a PlanWideScoreValue for the number of pieces.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.reock"><code class="name flex">
+<dt id="gerrytools.scoring.reock"><code class="name flex">
 <span>def <span class="ident">reock</span></span>(<span>geodata: Union[geopandas.geodataframe.GeoDataFrame, gerrychain.graph.graph.Graph]) ‑> Callable[[gerrychain.partition.geographic.GeographicPartition], Dict[Any, float]]</span>
 </code></dt>
 <dd>
@@ -1002,8 +1002,8 @@ geometries from.</dd>
     return score_fn</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.responsive_proportionality"><code class="name flex">
-<span>def <span class="ident">responsive_proportionality</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.responsive_proportionality"><code class="name flex">
+<span>def <span class="ident">responsive_proportionality</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing how many the responsive proportionality across a set of elections.</p>
@@ -1045,8 +1045,8 @@ elections.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.seats"><code class="name flex">
-<span>def <span class="ident">seats</span></span>(<span>election_cols: Iterable[str], party: str, mean: bool = False) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.seats"><code class="name flex">
+<span>def <span class="ident">seats</span></span>(<span>election_cols: Iterable[str], party: str, mean: bool = False) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing how many seats (districts) within a given plan the POV party won in each
@@ -1094,8 +1094,8 @@ election.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.simplified_efficiency_gap"><code class="name flex">
-<span>def <span class="ident">simplified_efficiency_gap</span></span>(<span>election_cols: Iterable[str], party: str, mean: bool = False) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.simplified_efficiency_gap"><code class="name flex">
+<span>def <span class="ident">simplified_efficiency_gap</span></span>(<span>election_cols: Iterable[str], party: str, mean: bool = False) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the simplified efficiency gap metric of a plan with respect to a set of elections.
@@ -1146,8 +1146,8 @@ and returns a PlanWideScoreValue for efficiency gap metric.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.splits"><code class="name flex">
-<span>def <span class="ident">splits</span></span>(<span>unit: str, names: bool = False, popcol: str = None, how: str = 'pandas', alias: str = None) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.splits"><code class="name flex">
+<span>def <span class="ident">splits</span></span>(<span>unit: str, names: bool = False, popcol: str = None, how: str = 'pandas', alias: str = None) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the number of units split by the districting plan.</p>
@@ -1218,8 +1218,8 @@ partition and returns a PlanWideScoreValue for the number of splits.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.stable_proportionality"><code class="name flex">
-<span>def <span class="ident">stable_proportionality</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.stable_proportionality"><code class="name flex">
+<span>def <span class="ident">stable_proportionality</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing how many the stable proportionality across a set of elections.</p>
@@ -1259,8 +1259,8 @@ elections.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.summarize"><code class="name flex">
-<span>def <span class="ident">summarize</span></span>(<span>part: gerrychain.partition.partition.Partition, scores: Iterable[<a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a>]) ‑> Dict[str, Union[float, int, Mapping[Union[int, str], Union[float, int]], Mapping[str, Union[float, int]]]]</span>
+<dt id="gerrytools.scoring.summarize"><code class="name flex">
+<span>def <span class="ident">summarize</span></span>(<span>part: gerrychain.partition.partition.Partition, scores: Iterable[<a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a>]) ‑> Dict[str, Union[float, int, Mapping[Union[int, str], Union[float, int]], Mapping[str, Union[float, int]]]]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Summarize the given partition by the passed scores.</p>
@@ -1301,8 +1301,8 @@ applied to the plan.</p>
     return summary</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.summarize_many"><code class="name flex">
-<span>def <span class="ident">summarize_many</span></span>(<span>parts: Iterable[gerrychain.partition.partition.Partition], scores: Iterable[<a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a>], plan_names: List[str] = [], output_file: str = None, compress: bool = False, verbose: bool = False) ‑> Optional[List[Dict[str, Union[float, int, Mapping[Union[int, str], Union[float, int]], Mapping[str, Union[float, int]]]]]]</span>
+<dt id="gerrytools.scoring.summarize_many"><code class="name flex">
+<span>def <span class="ident">summarize_many</span></span>(<span>parts: Iterable[gerrychain.partition.partition.Partition], scores: Iterable[<a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a>], plan_names: List[str] = [], output_file: str = None, compress: bool = False, verbose: bool = False) ‑> Optional[List[Dict[str, Union[float, int, Mapping[Union[int, str], Union[float, int]], Mapping[str, Union[float, int]]]]]]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Summarize the given partitions by the passed scores.</p>
@@ -1379,8 +1379,8 @@ and the function is void.</p></div>
                 fout.write(json.dumps(plan_details) + &#34;\n&#34;)</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.swing_districts"><code class="name flex">
-<span>def <span class="ident">swing_districts</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="evaltools.scoring.types.Score" href="types.html#evaltools.scoring.types.Score">Score</a></span>
+<dt id="gerrytools.scoring.swing_districts"><code class="name flex">
+<span>def <span class="ident">swing_districts</span></span>(<span>election_cols: Iterable[str], party: str) ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Score representing the number of swing districts in a plan.
@@ -1421,7 +1421,7 @@ and returns a PlanWideScoreValue for the number of swing districts.</p></div>
     )</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.unassigned_population"><code class="name flex">
+<dt id="gerrytools.scoring.unassigned_population"><code class="name flex">
 <span>def <span class="ident">unassigned_population</span></span>(<span>P, popcolumn)</span>
 </code></dt>
 <dd>
@@ -1453,7 +1453,7 @@ and returns a PlanWideScoreValue for the number of swing districts.</p></div>
     pass</code></pre>
 </details>
 </dd>
-<dt id="evaltools.scoring.unassigned_units"><code class="name flex">
+<dt id="gerrytools.scoring.unassigned_units"><code class="name flex">
 <span>def <span class="ident">unassigned_units</span></span>(<span>P: gerrychain.partition.partition.Partition, raw: bool = False) ‑> Union[float, int]</span>
 </code></dt>
 <dd>
@@ -1528,7 +1528,7 @@ proof.appendChild(square);
 }
 </script>
 <header>
-<a class="homelink" rel="home" title="evaltools" href="https://github.com/mggg/plan-evaluation-processing">
+<a class="homelink" rel="home" title="gerrytools" href="https://github.com/mggg/gerrytools">
 <style>
 header > h1 { display: none; }
 img.resize {
@@ -1558,50 +1558,50 @@ float: right;
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="evaltools" href="../index.html">evaltools</a></code></li>
+<li><code><a title="gerrytools" href="../index.html">gerrytools</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-submodules">Sub-modules</a></h3>
 <ul>
-<li><code><a title="evaltools.scoring.contiguity" href="contiguity.html">evaltools.scoring.contiguity</a></code></li>
-<li><code><a title="evaltools.scoring.demographics" href="demographics.html">evaltools.scoring.demographics</a></code></li>
-<li><code><a title="evaltools.scoring.partisan" href="partisan.html">evaltools.scoring.partisan</a></code></li>
-<li><code><a title="evaltools.scoring.population" href="population.html">evaltools.scoring.population</a></code></li>
-<li><code><a title="evaltools.scoring.scores" href="scores.html">evaltools.scoring.scores</a></code></li>
-<li><code><a title="evaltools.scoring.types" href="types.html">evaltools.scoring.types</a></code></li>
+<li><code><a title="gerrytools.scoring.contiguity" href="contiguity.html">gerrytools.scoring.contiguity</a></code></li>
+<li><code><a title="gerrytools.scoring.demographics" href="demographics.html">gerrytools.scoring.demographics</a></code></li>
+<li><code><a title="gerrytools.scoring.partisan" href="partisan.html">gerrytools.scoring.partisan</a></code></li>
+<li><code><a title="gerrytools.scoring.population" href="population.html">gerrytools.scoring.population</a></code></li>
+<li><code><a title="gerrytools.scoring.scores" href="scores.html">gerrytools.scoring.scores</a></code></li>
+<li><code><a title="gerrytools.scoring.types" href="types.html">gerrytools.scoring.types</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="evaltools.scoring.aggregate_seats" href="#evaltools.scoring.aggregate_seats">aggregate_seats</a></code></li>
-<li><code><a title="evaltools.scoring.competitive_contests" href="#evaltools.scoring.competitive_contests">competitive_contests</a></code></li>
-<li><code><a title="evaltools.scoring.contiguous" href="#evaltools.scoring.contiguous">contiguous</a></code></li>
-<li><code><a title="evaltools.scoring.demographic_shares" href="#evaltools.scoring.demographic_shares">demographic_shares</a></code></li>
-<li><code><a title="evaltools.scoring.demographic_tallies" href="#evaltools.scoring.demographic_tallies">demographic_tallies</a></code></li>
-<li><code><a title="evaltools.scoring.demographic_updaters" href="#evaltools.scoring.demographic_updaters">demographic_updaters</a></code></li>
-<li><code><a title="evaltools.scoring.deviations" href="#evaltools.scoring.deviations">deviations</a></code></li>
-<li><code><a title="evaltools.scoring.efficiency_gap" href="#evaltools.scoring.efficiency_gap">efficiency_gap</a></code></li>
-<li><code><a title="evaltools.scoring.eguia" href="#evaltools.scoring.eguia">eguia</a></code></li>
-<li><code><a title="evaltools.scoring.gingles_districts" href="#evaltools.scoring.gingles_districts">gingles_districts</a></code></li>
-<li><code><a title="evaltools.scoring.max_deviation" href="#evaltools.scoring.max_deviation">max_deviation</a></code></li>
-<li><code><a title="evaltools.scoring.mean_median" href="#evaltools.scoring.mean_median">mean_median</a></code></li>
-<li><code><a title="evaltools.scoring.opp_party_districts" href="#evaltools.scoring.opp_party_districts">opp_party_districts</a></code></li>
-<li><code><a title="evaltools.scoring.partisan_bias" href="#evaltools.scoring.partisan_bias">partisan_bias</a></code></li>
-<li><code><a title="evaltools.scoring.partisan_gini" href="#evaltools.scoring.partisan_gini">partisan_gini</a></code></li>
-<li><code><a title="evaltools.scoring.party_districts" href="#evaltools.scoring.party_districts">party_districts</a></code></li>
-<li><code><a title="evaltools.scoring.party_wins_by_district" href="#evaltools.scoring.party_wins_by_district">party_wins_by_district</a></code></li>
-<li><code><a title="evaltools.scoring.pieces" href="#evaltools.scoring.pieces">pieces</a></code></li>
-<li><code><a title="evaltools.scoring.reock" href="#evaltools.scoring.reock">reock</a></code></li>
-<li><code><a title="evaltools.scoring.responsive_proportionality" href="#evaltools.scoring.responsive_proportionality">responsive_proportionality</a></code></li>
-<li><code><a title="evaltools.scoring.seats" href="#evaltools.scoring.seats">seats</a></code></li>
-<li><code><a title="evaltools.scoring.simplified_efficiency_gap" href="#evaltools.scoring.simplified_efficiency_gap">simplified_efficiency_gap</a></code></li>
-<li><code><a title="evaltools.scoring.splits" href="#evaltools.scoring.splits">splits</a></code></li>
-<li><code><a title="evaltools.scoring.stable_proportionality" href="#evaltools.scoring.stable_proportionality">stable_proportionality</a></code></li>
-<li><code><a title="evaltools.scoring.summarize" href="#evaltools.scoring.summarize">summarize</a></code></li>
-<li><code><a title="evaltools.scoring.summarize_many" href="#evaltools.scoring.summarize_many">summarize_many</a></code></li>
-<li><code><a title="evaltools.scoring.swing_districts" href="#evaltools.scoring.swing_districts">swing_districts</a></code></li>
-<li><code><a title="evaltools.scoring.unassigned_population" href="#evaltools.scoring.unassigned_population">unassigned_population</a></code></li>
-<li><code><a title="evaltools.scoring.unassigned_units" href="#evaltools.scoring.unassigned_units">unassigned_units</a></code></li>
+<li><code><a title="gerrytools.scoring.aggregate_seats" href="#gerrytools.scoring.aggregate_seats">aggregate_seats</a></code></li>
+<li><code><a title="gerrytools.scoring.competitive_contests" href="#gerrytools.scoring.competitive_contests">competitive_contests</a></code></li>
+<li><code><a title="gerrytools.scoring.contiguous" href="#gerrytools.scoring.contiguous">contiguous</a></code></li>
+<li><code><a title="gerrytools.scoring.demographic_shares" href="#gerrytools.scoring.demographic_shares">demographic_shares</a></code></li>
+<li><code><a title="gerrytools.scoring.demographic_tallies" href="#gerrytools.scoring.demographic_tallies">demographic_tallies</a></code></li>
+<li><code><a title="gerrytools.scoring.demographic_updaters" href="#gerrytools.scoring.demographic_updaters">demographic_updaters</a></code></li>
+<li><code><a title="gerrytools.scoring.deviations" href="#gerrytools.scoring.deviations">deviations</a></code></li>
+<li><code><a title="gerrytools.scoring.efficiency_gap" href="#gerrytools.scoring.efficiency_gap">efficiency_gap</a></code></li>
+<li><code><a title="gerrytools.scoring.eguia" href="#gerrytools.scoring.eguia">eguia</a></code></li>
+<li><code><a title="gerrytools.scoring.gingles_districts" href="#gerrytools.scoring.gingles_districts">gingles_districts</a></code></li>
+<li><code><a title="gerrytools.scoring.max_deviation" href="#gerrytools.scoring.max_deviation">max_deviation</a></code></li>
+<li><code><a title="gerrytools.scoring.mean_median" href="#gerrytools.scoring.mean_median">mean_median</a></code></li>
+<li><code><a title="gerrytools.scoring.opp_party_districts" href="#gerrytools.scoring.opp_party_districts">opp_party_districts</a></code></li>
+<li><code><a title="gerrytools.scoring.partisan_bias" href="#gerrytools.scoring.partisan_bias">partisan_bias</a></code></li>
+<li><code><a title="gerrytools.scoring.partisan_gini" href="#gerrytools.scoring.partisan_gini">partisan_gini</a></code></li>
+<li><code><a title="gerrytools.scoring.party_districts" href="#gerrytools.scoring.party_districts">party_districts</a></code></li>
+<li><code><a title="gerrytools.scoring.party_wins_by_district" href="#gerrytools.scoring.party_wins_by_district">party_wins_by_district</a></code></li>
+<li><code><a title="gerrytools.scoring.pieces" href="#gerrytools.scoring.pieces">pieces</a></code></li>
+<li><code><a title="gerrytools.scoring.reock" href="#gerrytools.scoring.reock">reock</a></code></li>
+<li><code><a title="gerrytools.scoring.responsive_proportionality" href="#gerrytools.scoring.responsive_proportionality">responsive_proportionality</a></code></li>
+<li><code><a title="gerrytools.scoring.seats" href="#gerrytools.scoring.seats">seats</a></code></li>
+<li><code><a title="gerrytools.scoring.simplified_efficiency_gap" href="#gerrytools.scoring.simplified_efficiency_gap">simplified_efficiency_gap</a></code></li>
+<li><code><a title="gerrytools.scoring.splits" href="#gerrytools.scoring.splits">splits</a></code></li>
+<li><code><a title="gerrytools.scoring.stable_proportionality" href="#gerrytools.scoring.stable_proportionality">stable_proportionality</a></code></li>
+<li><code><a title="gerrytools.scoring.summarize" href="#gerrytools.scoring.summarize">summarize</a></code></li>
+<li><code><a title="gerrytools.scoring.summarize_many" href="#gerrytools.scoring.summarize_many">summarize_many</a></code></li>
+<li><code><a title="gerrytools.scoring.swing_districts" href="#gerrytools.scoring.swing_districts">swing_districts</a></code></li>
+<li><code><a title="gerrytools.scoring.unassigned_population" href="#gerrytools.scoring.unassigned_population">unassigned_population</a></code></li>
+<li><code><a title="gerrytools.scoring.unassigned_units" href="#gerrytools.scoring.unassigned_units">unassigned_units</a></code></li>
 </ul>
 </li>
 </ul>

@@ -18,7 +18,7 @@
 </script>
 
 <header>
-    <a class="homelink" rel="home" title="evaltools" href="https://github.com/mggg/plan-evaluation-processing">
+    <a class="homelink" rel="home" title="gerrytools" href="https://github.com/mggg/gerrytools">
         <style>
             header > h1 { display: none; }
 

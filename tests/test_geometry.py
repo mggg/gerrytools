@@ -12,7 +12,7 @@ from gerrychain.proposals import recom
 from functools import partial
 import geopandas as gpd
 import requests
-from evaltools.geometry import (
+from gerrytools.geometry import (
     dissolve, dualgraph, unitmap, invert, dispersion_updater_closure, dataframe
 )
 import geopandas as gpd

@@ -22,7 +22,7 @@ jobs:
             pip install pytest pytest-cov coverage
             echo "backend: Agg" > "matplotlibrc"
 
-            pytest --cov-report xml:tests/test-reports/coverage.xml --cov=evaltools
+            pytest --cov-report xml:tests/test-reports/coverage.xml --cov=gerrytools
           environment:
             PYTHONHASHSEED: "0"
       - codecov/upload:

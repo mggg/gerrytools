@@ -6,5 +6,5 @@ __pycache__/
 
 # Ignore large testing files.
 tests/test-reports/*
-*/**/*.png
+*/**/*.svg
 tests/*.ipynb

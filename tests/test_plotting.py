@@ -1,5 +1,5 @@
 
-from evaltools.plotting import (
+from gerrytools.plotting import (
     drawgraph, drawplan, districtr, boxplot
 )
 import matplotlib.pyplot as plt

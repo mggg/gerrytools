@@ -14,7 +14,7 @@ def rename(old, new):
     Example:
         Basic usage.
 
-            from evaltools.utils import rename
+            from gerrytools.utils import rename
 
             old = "./data/geometries/to-be-renamed"
             new = "blocks20"

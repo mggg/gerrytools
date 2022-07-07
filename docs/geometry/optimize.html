@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>evaltools.geometry.optimize API documentation</title>
+<title>gerrytools.geometry.optimize API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -20,7 +20,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>evaltools.geometry.optimize</code></h1>
+<h1 class="title">Module <code>gerrytools.geometry.optimize</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
@@ -175,7 +175,7 @@ def optimalrelabeling(
             blocks), with at least three columns: one denoting a unique geometric
             identifier (e.g. `GEOID20`), one denoting the districting assignment,
             and another denoting the population of choice. If
-            `evaltools.geometry.optimize.arealoverlap()` is used, these must be
+            `gerrytools.geometry.optimize.arealoverlap()` is used, these must be
             GeoDataFrames where one row corresponds to one district, and one
             column denotes the districts&#39; unique identifiers.
         right (Any): Data structure which can be passed to `costmatrix` to construct
@@ -185,7 +185,7 @@ def optimalrelabeling(
             blocks), with at least three columns: one denoting a unique geometric
             identifier (e.g. `GEOID20`), one denoting the districting assignment,
             and another denoting the population of choice. If
-            `evaltools.geometry.optimize.arealoverlap()` is used, these must be
+            `gerrytools.geometry.optimize.arealoverlap()` is used, these must be
             GeoDataFrames where one row corresponds to one district, and one
             column denotes the districts&#39; unique identifiers.
         maximize (bool): Are we finding the largest or smallest linear sum over
@@ -194,8 +194,8 @@ def optimalrelabeling(
             `left` and `right` and spits out a cost matrix. This cost matrix is
             assumed to be a pandas DataFrame, with row indices old district labels
             and column names new district labels. Examples of these are
-            `evaltools.geometry.optimize.populationoverlap()` and
-            `evaltools.geometry.optimize.arealoverlap()`.
+            `gerrytools.geometry.optimize.populationoverlap()` and
+            `gerrytools.geometry.optimize.arealoverlap()`.
 
     Returns:
         A dictionary which maps district labels in `left` to district labels in
@@ -220,9 +220,9 @@ def optimalrelabeling(
     We then assign each edge a weight according to some function
     \(f: L\times R\ \to \mathbb{R}\), which consumes a pair of districts and returns
     a number. For example, this function could be the amount of area shared by
-    the districts \(L_i\) and \(R_j\), like in `evaltools.geometry.optimize.arealoverlap()`,
+    the districts \(L_i\) and \(R_j\), like in `gerrytools.geometry.optimize.arealoverlap()`,
     or the amount of population the districts share, like in
-    `evaltools.geometry.optimize.populationoverlap()`.
+    `gerrytools.geometry.optimize.populationoverlap()`.
 
     We then seek to find the set of weighted edges \(M\) such that all vertices
     \(l_i\) and \(r_j\) appear at most once in \(M\), and that the sum of \(M\)&#39;s
@@ -451,7 +451,7 @@ def calculate_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="evaltools.geometry.optimize.arealoverlap"><code class="name flex">
+<dt id="gerrytools.geometry.optimize.arealoverlap"><code class="name flex">
 <span>def <span class="ident">arealoverlap</span></span>(<span>left: geopandas.geodataframe.GeoDataFrame, right: geopandas.geodataframe.GeoDataFrame, assignment: str = 'DISTRICT', crs=None) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
@@ -539,7 +539,7 @@ identifier.</dd>
     return weighted</code></pre>
 </details>
 </dd>
-<dt id="evaltools.geometry.optimize.calculate_dispersion"><code class="name flex">
+<dt id="gerrytools.geometry.optimize.calculate_dispersion"><code class="name flex">
 <span>def <span class="ident">calculate_dispersion</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str) ‑> int</span>
 </code></dt>
 <dd>
@@ -579,7 +579,7 @@ and a column with proposed numberings. Used in WI.</p>
     return units[units[enacted_col] != units[proposed_col]][pop_col].sum()</code></pre>
 </details>
 </dd>
-<dt id="evaltools.geometry.optimize.ensure_column_types"><code class="name flex">
+<dt id="gerrytools.geometry.optimize.ensure_column_types"><code class="name flex">
 <span>def <span class="ident">ensure_column_types</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, columns: List[str], expression: Callable[[Any], bool] = &lt;function &lt;lambda&gt;&gt;) ‑> bool</span>
 </code></dt>
 <dd>
@@ -621,7 +621,7 @@ methods.</p>
     return all([expression(x.name) for x in units[columns].dtypes])</code></pre>
 </details>
 </dd>
-<dt id="evaltools.geometry.optimize.minimize_dispersion"><code class="name flex">
+<dt id="gerrytools.geometry.optimize.minimize_dispersion"><code class="name flex">
 <span>def <span class="ident">minimize_dispersion</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints=None, verbose: bool = False) ‑> Dict[str, str]</span>
 </code></dt>
 <dd>
@@ -714,7 +714,7 @@ to the model, such as parity (in the case of WI).</dd>
     return numbering_mapping</code></pre>
 </details>
 </dd>
-<dt id="evaltools.geometry.optimize.minimize_dispersion_with_parity"><code class="name flex">
+<dt id="gerrytools.geometry.optimize.minimize_dispersion_with_parity"><code class="name flex">
 <span>def <span class="ident">minimize_dispersion_with_parity</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, extra_constraints=None) ‑> Dict[str, str]</span>
 </code></dt>
 <dd>
@@ -773,7 +773,7 @@ to the model, such as parity (in the case of WI).</dd>
     return minimize_dispersion(units, enacted_col, proposed_col, pop_col, parity_constraint)</code></pre>
 </details>
 </dd>
-<dt id="evaltools.geometry.optimize.minimize_parity"><code class="name flex">
+<dt id="gerrytools.geometry.optimize.minimize_parity"><code class="name flex">
 <span>def <span class="ident">minimize_parity</span></span>(<span>units: geopandas.geodataframe.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str, verbose: bool = False) ‑> Dict[str, bool]</span>
 </code></dt>
 <dd>
@@ -852,7 +852,7 @@ proposed cols. Used in WI. Assumes that district labels are 1-indexed.</p>
     return mapping</code></pre>
 </details>
 </dd>
-<dt id="evaltools.geometry.optimize.optimalrelabeling"><code class="name flex">
+<dt id="gerrytools.geometry.optimize.optimalrelabeling"><code class="name flex">
 <span>def <span class="ident">optimalrelabeling</span></span>(<span>left: Any, right: Any, maximize: bool = True, costmatrix: Callable = &lt;function populationoverlap&gt;) ‑> dict</span>
 </code></dt>
 <dd>
@@ -867,7 +867,7 @@ DataFrames where one row corresponds to one atomic unit (e.g. Census
 blocks), with at least three columns: one denoting a unique geometric
 identifier (e.g. <code>GEOID20</code>), one denoting the districting assignment,
 and another denoting the population of choice. If
-<code><a title="evaltools.geometry.optimize.arealoverlap" href="#evaltools.geometry.optimize.arealoverlap">arealoverlap()</a></code> is used, these must be
+<code><a title="gerrytools.geometry.optimize.arealoverlap" href="#gerrytools.geometry.optimize.arealoverlap">arealoverlap()</a></code> is used, these must be
 GeoDataFrames where one row corresponds to one district, and one
 column denotes the districts' unique identifiers.</dd>
 <dt><strong><code>right</code></strong> :&ensp;<code>Any</code></dt>
@@ -878,7 +878,7 @@ DataFrames where one row corresponds to one atomic unit (e.g. Census
 blocks), with at least three columns: one denoting a unique geometric
 identifier (e.g. <code>GEOID20</code>), one denoting the districting assignment,
 and another denoting the population of choice. If
-<code><a title="evaltools.geometry.optimize.arealoverlap" href="#evaltools.geometry.optimize.arealoverlap">arealoverlap()</a></code> is used, these must be
+<code><a title="gerrytools.geometry.optimize.arealoverlap" href="#gerrytools.geometry.optimize.arealoverlap">arealoverlap()</a></code> is used, these must be
 GeoDataFrames where one row corresponds to one district, and one
 column denotes the districts' unique identifiers.</dd>
 <dt><strong><code>maximize</code></strong> :&ensp;<code>bool</code></dt>
@@ -889,8 +889,8 @@ the cost matrix? Defaults to <code>maximize=True</code>.</dd>
 <code>left</code> and <code>right</code> and spits out a cost matrix. This cost matrix is
 assumed to be a pandas DataFrame, with row indices old district labels
 and column names new district labels. Examples of these are
-<code><a title="evaltools.geometry.optimize.populationoverlap" href="#evaltools.geometry.optimize.populationoverlap">populationoverlap()</a></code> and
-<code><a title="evaltools.geometry.optimize.arealoverlap" href="#evaltools.geometry.optimize.arealoverlap">arealoverlap()</a></code>.</dd>
+<code><a title="gerrytools.geometry.optimize.populationoverlap" href="#gerrytools.geometry.optimize.populationoverlap">populationoverlap()</a></code> and
+<code><a title="gerrytools.geometry.optimize.arealoverlap" href="#gerrytools.geometry.optimize.arealoverlap">arealoverlap()</a></code>.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A dictionary which maps district labels in <code>left</code> to district labels in
@@ -911,9 +911,9 @@ we construct the <a href="https://bit.ly/39rDldy">bipartite graph</a> <span><spa
 <p>We then assign each edge a weight according to some function
 <span><span class="MathJax_Preview">f: L\times R\ \to \mathbb{R}</span><script type="math/tex">f: L\times R\ \to \mathbb{R}</script></span>, which consumes a pair of districts and returns
 a number. For example, this function could be the amount of area shared by
-the districts <span><span class="MathJax_Preview">L_i</span><script type="math/tex">L_i</script></span> and <span><span class="MathJax_Preview">R_j</span><script type="math/tex">R_j</script></span>, like in <code><a title="evaltools.geometry.optimize.arealoverlap" href="#evaltools.geometry.optimize.arealoverlap">arealoverlap()</a></code>,
+the districts <span><span class="MathJax_Preview">L_i</span><script type="math/tex">L_i</script></span> and <span><span class="MathJax_Preview">R_j</span><script type="math/tex">R_j</script></span>, like in <code><a title="gerrytools.geometry.optimize.arealoverlap" href="#gerrytools.geometry.optimize.arealoverlap">arealoverlap()</a></code>,
 or the amount of population the districts share, like in
-<code><a title="evaltools.geometry.optimize.populationoverlap" href="#evaltools.geometry.optimize.populationoverlap">populationoverlap()</a></code>.</p>
+<code><a title="gerrytools.geometry.optimize.populationoverlap" href="#gerrytools.geometry.optimize.populationoverlap">populationoverlap()</a></code>.</p>
 <p>We then seek to find the set of weighted edges <span><span class="MathJax_Preview">M</span><script type="math/tex">M</script></span> such that all vertices
 <span><span class="MathJax_Preview">l_i</span><script type="math/tex">l_i</script></span> and <span><span class="MathJax_Preview">r_j</span><script type="math/tex">r_j</script></span> appear at most once in <span><span class="MathJax_Preview">M</span><script type="math/tex">M</script></span>, and that the sum of <span><span class="MathJax_Preview">M</span><script type="math/tex">M</script></span>'s
 weights is as small (or as large) as possible. To do so, we take the adjacency
@@ -943,7 +943,7 @@ achieves <span><span class="MathJax_Preview">\textbf{O}(N^3)</span><script type=
             blocks), with at least three columns: one denoting a unique geometric
             identifier (e.g. `GEOID20`), one denoting the districting assignment,
             and another denoting the population of choice. If
-            `evaltools.geometry.optimize.arealoverlap()` is used, these must be
+            `gerrytools.geometry.optimize.arealoverlap()` is used, these must be
             GeoDataFrames where one row corresponds to one district, and one
             column denotes the districts&#39; unique identifiers.
         right (Any): Data structure which can be passed to `costmatrix` to construct
@@ -953,7 +953,7 @@ achieves <span><span class="MathJax_Preview">\textbf{O}(N^3)</span><script type=
             blocks), with at least three columns: one denoting a unique geometric
             identifier (e.g. `GEOID20`), one denoting the districting assignment,
             and another denoting the population of choice. If
-            `evaltools.geometry.optimize.arealoverlap()` is used, these must be
+            `gerrytools.geometry.optimize.arealoverlap()` is used, these must be
             GeoDataFrames where one row corresponds to one district, and one
             column denotes the districts&#39; unique identifiers.
         maximize (bool): Are we finding the largest or smallest linear sum over
@@ -962,8 +962,8 @@ achieves <span><span class="MathJax_Preview">\textbf{O}(N^3)</span><script type=
             `left` and `right` and spits out a cost matrix. This cost matrix is
             assumed to be a pandas DataFrame, with row indices old district labels
             and column names new district labels. Examples of these are
-            `evaltools.geometry.optimize.populationoverlap()` and
-            `evaltools.geometry.optimize.arealoverlap()`.
+            `gerrytools.geometry.optimize.populationoverlap()` and
+            `gerrytools.geometry.optimize.arealoverlap()`.
 
     Returns:
         A dictionary which maps district labels in `left` to district labels in
@@ -988,9 +988,9 @@ achieves <span><span class="MathJax_Preview">\textbf{O}(N^3)</span><script type=
     We then assign each edge a weight according to some function
     \(f: L\times R\ \to \mathbb{R}\), which consumes a pair of districts and returns
     a number. For example, this function could be the amount of area shared by
-    the districts \(L_i\) and \(R_j\), like in `evaltools.geometry.optimize.arealoverlap()`,
+    the districts \(L_i\) and \(R_j\), like in `gerrytools.geometry.optimize.arealoverlap()`,
     or the amount of population the districts share, like in
-    `evaltools.geometry.optimize.populationoverlap()`.
+    `gerrytools.geometry.optimize.populationoverlap()`.
 
     We then seek to find the set of weighted edges \(M\) such that all vertices
     \(l_i\) and \(r_j\) appear at most once in \(M\), and that the sum of \(M\)&#39;s
@@ -1019,7 +1019,7 @@ achieves <span><span class="MathJax_Preview">\textbf{O}(N^3)</span><script type=
     return dict(zip(preimage, image))</code></pre>
 </details>
 </dd>
-<dt id="evaltools.geometry.optimize.populationoverlap"><code class="name flex">
+<dt id="gerrytools.geometry.optimize.populationoverlap"><code class="name flex">
 <span>def <span class="ident">populationoverlap</span></span>(<span>left: pandas.core.frame.DataFrame, right: pandas.core.frame.DataFrame, identifier: str = 'GEOID20', population: str = 'TOTPOP20', assignment: str = 'DISTRICT') ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
@@ -1146,7 +1146,7 @@ proof.appendChild(square);
 }
 </script>
 <header>
-<a class="homelink" rel="home" title="evaltools" href="https://github.com/mggg/plan-evaluation-processing">
+<a class="homelink" rel="home" title="gerrytools" href="https://github.com/mggg/gerrytools">
 <style>
 header > h1 { display: none; }
 img.resize {
@@ -1176,19 +1176,19 @@ float: right;
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="evaltools.geometry" href="index.html">evaltools.geometry</a></code></li>
+<li><code><a title="gerrytools.geometry" href="index.html">gerrytools.geometry</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="evaltools.geometry.optimize.arealoverlap" href="#evaltools.geometry.optimize.arealoverlap">arealoverlap</a></code></li>
-<li><code><a title="evaltools.geometry.optimize.calculate_dispersion" href="#evaltools.geometry.optimize.calculate_dispersion">calculate_dispersion</a></code></li>
-<li><code><a title="evaltools.geometry.optimize.ensure_column_types" href="#evaltools.geometry.optimize.ensure_column_types">ensure_column_types</a></code></li>
-<li><code><a title="evaltools.geometry.optimize.minimize_dispersion" href="#evaltools.geometry.optimize.minimize_dispersion">minimize_dispersion</a></code></li>
-<li><code><a title="evaltools.geometry.optimize.minimize_dispersion_with_parity" href="#evaltools.geometry.optimize.minimize_dispersion_with_parity">minimize_dispersion_with_parity</a></code></li>
-<li><code><a title="evaltools.geometry.optimize.minimize_parity" href="#evaltools.geometry.optimize.minimize_parity">minimize_parity</a></code></li>
-<li><code><a title="evaltools.geometry.optimize.optimalrelabeling" href="#evaltools.geometry.optimize.optimalrelabeling">optimalrelabeling</a></code></li>
-<li><code><a title="evaltools.geometry.optimize.populationoverlap" href="#evaltools.geometry.optimize.populationoverlap">populationoverlap</a></code></li>
+<li><code><a title="gerrytools.geometry.optimize.arealoverlap" href="#gerrytools.geometry.optimize.arealoverlap">arealoverlap</a></code></li>
+<li><code><a title="gerrytools.geometry.optimize.calculate_dispersion" href="#gerrytools.geometry.optimize.calculate_dispersion">calculate_dispersion</a></code></li>
+<li><code><a title="gerrytools.geometry.optimize.ensure_column_types" href="#gerrytools.geometry.optimize.ensure_column_types">ensure_column_types</a></code></li>
+<li><code><a title="gerrytools.geometry.optimize.minimize_dispersion" href="#gerrytools.geometry.optimize.minimize_dispersion">minimize_dispersion</a></code></li>
+<li><code><a title="gerrytools.geometry.optimize.minimize_dispersion_with_parity" href="#gerrytools.geometry.optimize.minimize_dispersion_with_parity">minimize_dispersion_with_parity</a></code></li>
+<li><code><a title="gerrytools.geometry.optimize.minimize_parity" href="#gerrytools.geometry.optimize.minimize_parity">minimize_parity</a></code></li>
+<li><code><a title="gerrytools.geometry.optimize.optimalrelabeling" href="#gerrytools.geometry.optimize.optimalrelabeling">optimalrelabeling</a></code></li>
+<li><code><a title="gerrytools.geometry.optimize.populationoverlap" href="#gerrytools.geometry.optimize.populationoverlap">populationoverlap</a></code></li>
 </ul>
 </li>
 </ul>

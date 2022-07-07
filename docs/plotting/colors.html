@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>evaltools.plotting.colors API documentation</title>
+<title>gerrytools.plotting.colors API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -20,7 +20,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>evaltools.plotting.colors</code></h1>
+<h1 class="title">Module <code>gerrytools.plotting.colors</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
@@ -165,16 +165,16 @@ def greens(n) -&gt; list:
 <section>
 <h2 class="section-title" id="header-variables">Global variables</h2>
 <dl>
-<dt id="evaltools.plotting.colors.citizenBlue"><code class="name">var <span class="ident">citizenBlue</span></code></dt>
+<dt id="gerrytools.plotting.colors.citizenBlue"><code class="name">var <span class="ident">citizenBlue</span></code></dt>
 <dd>
 <div class="desc"><p>Overlay colors for choropleth maps.</p></div>
 </dd>
-<dt id="evaltools.plotting.colors.defaultGray"><code class="name">var <span class="ident">defaultGray</span></code></dt>
+<dt id="gerrytools.plotting.colors.defaultGray"><code class="name">var <span class="ident">defaultGray</span></code></dt>
 <dd>
 <div class="desc"><p>Citizen ensemble blue color; used in histograms, violin plots, and arrows. (Aka
 Citizen Kane).</p></div>
 </dd>
-<dt id="evaltools.plotting.colors.overlays"><code class="name">var <span class="ident">overlays</span></code></dt>
+<dt id="gerrytools.plotting.colors.overlays"><code class="name">var <span class="ident">overlays</span></code></dt>
 <dd>
 <div class="desc"><p>LaTeX colors, <a href="http://latexcolor.com/">borrowed from here.</a></p></div>
 </dd>
@@ -183,7 +183,7 @@ Citizen Kane).</p></div>
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="evaltools.plotting.colors.districtr"><code class="name flex">
+<dt id="gerrytools.plotting.colors.districtr"><code class="name flex">
 <span>def <span class="ident">districtr</span></span>(<span>N)</span>
 </code></dt>
 <dd>
@@ -207,11 +207,11 @@ Citizen Kane).</p></div>
     return (colors + (tail if tail else []))[:N]</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.colors.flare"><code class="name flex">
+<dt id="gerrytools.plotting.colors.flare"><code class="name flex">
 <span>def <span class="ident">flare</span></span>(<span>n) ‑> list</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Returns a list of colors based on the <code><a title="evaltools.plotting.colors.flare" href="#evaltools.plotting.colors.flare">flare()</a></code> Matplotlib/seaborn colormap.</p>
+<div class="desc"><p>Returns a list of colors based on the <code><a title="gerrytools.plotting.colors.flare" href="#gerrytools.plotting.colors.flare">flare()</a></code> Matplotlib/seaborn colormap.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>n</code></strong> :&ensp;<code>int</code></dt>
@@ -236,7 +236,7 @@ Citizen Kane).</p></div>
     return list(sns.color_palette(&#34;flare&#34;, as_cmap=False, n_colors=n))</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.colors.greens"><code class="name flex">
+<dt id="gerrytools.plotting.colors.greens"><code class="name flex">
 <span>def <span class="ident">greens</span></span>(<span>n) ‑> list</span>
 </code></dt>
 <dd>
@@ -265,7 +265,7 @@ Citizen Kane).</p></div>
     return list(sns.color_palette(&#34;Greens&#34;, as_cmap=False, n_colors=n))</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.colors.hexshift"><code class="name flex">
+<dt id="gerrytools.plotting.colors.hexshift"><code class="name flex">
 <span>def <span class="ident">hexshift</span></span>(<span>color) ‑> str</span>
 </code></dt>
 <dd>
@@ -305,7 +305,7 @@ Citizen Kane).</p></div>
     return color.replace(char, sub)</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.colors.purples"><code class="name flex">
+<dt id="gerrytools.plotting.colors.purples"><code class="name flex">
 <span>def <span class="ident">purples</span></span>(<span>n) ‑> list</span>
 </code></dt>
 <dd>
@@ -334,7 +334,7 @@ Citizen Kane).</p></div>
     return list(sns.color_palette(&#34;Purples&#34;, as_cmap=False, n_colors=n))</code></pre>
 </details>
 </dd>
-<dt id="evaltools.plotting.colors.redbluecmap"><code class="name flex">
+<dt id="gerrytools.plotting.colors.redbluecmap"><code class="name flex">
 <span>def <span class="ident">redbluecmap</span></span>(<span>n) ‑> List[Tuple]</span>
 </code></dt>
 <dd>
@@ -398,7 +398,7 @@ proof.appendChild(square);
 }
 </script>
 <header>
-<a class="homelink" rel="home" title="evaltools" href="https://github.com/mggg/plan-evaluation-processing">
+<a class="homelink" rel="home" title="gerrytools" href="https://github.com/mggg/gerrytools">
 <style>
 header > h1 { display: none; }
 img.resize {
@@ -428,24 +428,24 @@ float: right;
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="evaltools.plotting" href="index.html">evaltools.plotting</a></code></li>
+<li><code><a title="gerrytools.plotting" href="index.html">gerrytools.plotting</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-variables">Global variables</a></h3>
 <ul class="">
-<li><code><a title="evaltools.plotting.colors.citizenBlue" href="#evaltools.plotting.colors.citizenBlue">citizenBlue</a></code></li>
-<li><code><a title="evaltools.plotting.colors.defaultGray" href="#evaltools.plotting.colors.defaultGray">defaultGray</a></code></li>
-<li><code><a title="evaltools.plotting.colors.overlays" href="#evaltools.plotting.colors.overlays">overlays</a></code></li>
+<li><code><a title="gerrytools.plotting.colors.citizenBlue" href="#gerrytools.plotting.colors.citizenBlue">citizenBlue</a></code></li>
+<li><code><a title="gerrytools.plotting.colors.defaultGray" href="#gerrytools.plotting.colors.defaultGray">defaultGray</a></code></li>
+<li><code><a title="gerrytools.plotting.colors.overlays" href="#gerrytools.plotting.colors.overlays">overlays</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="two-column">
-<li><code><a title="evaltools.plotting.colors.districtr" href="#evaltools.plotting.colors.districtr">districtr</a></code></li>
-<li><code><a title="evaltools.plotting.colors.flare" href="#evaltools.plotting.colors.flare">flare</a></code></li>
-<li><code><a title="evaltools.plotting.colors.greens" href="#evaltools.plotting.colors.greens">greens</a></code></li>
-<li><code><a title="evaltools.plotting.colors.hexshift" href="#evaltools.plotting.colors.hexshift">hexshift</a></code></li>
-<li><code><a title="evaltools.plotting.colors.purples" href="#evaltools.plotting.colors.purples">purples</a></code></li>
-<li><code><a title="evaltools.plotting.colors.redbluecmap" href="#evaltools.plotting.colors.redbluecmap">redbluecmap</a></code></li>
+<li><code><a title="gerrytools.plotting.colors.districtr" href="#gerrytools.plotting.colors.districtr">districtr</a></code></li>
+<li><code><a title="gerrytools.plotting.colors.flare" href="#gerrytools.plotting.colors.flare">flare</a></code></li>
+<li><code><a title="gerrytools.plotting.colors.greens" href="#gerrytools.plotting.colors.greens">greens</a></code></li>
+<li><code><a title="gerrytools.plotting.colors.hexshift" href="#gerrytools.plotting.colors.hexshift">hexshift</a></code></li>
+<li><code><a title="gerrytools.plotting.colors.purples" href="#gerrytools.plotting.colors.purples">purples</a></code></li>
+<li><code><a title="gerrytools.plotting.colors.redbluecmap" href="#gerrytools.plotting.colors.redbluecmap">redbluecmap</a></code></li>
 </ul>
 </li>
 </ul>

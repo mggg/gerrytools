@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>evaltools.data.estimatecvap API documentation</title>
+<title>gerrytools.data.estimatecvap API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -20,7 +20,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>evaltools.data.estimatecvap</code></h1>
+<h1 class="title">Module <code>gerrytools.data.estimatecvap</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
@@ -39,7 +39,7 @@ from ..geometry import unitmap
 def estimatecvap2020(state) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data. **This method serves
-    a different purpose than `evaltools.data.estimatecvap.estimatecvap2010()`:**
+    a different purpose than `gerrytools.data.estimatecvap.estimatecvap2010()`:**
     rather than using geometric procedures to put CVAP data on old geometries,
     this method takes advantage of the Census&#39;s geographic hierarchy, and
     associates finer-grained 2020 CVAP data with 2020 blocks. _No geometric
@@ -200,7 +200,7 @@ def estimatecvap2010(
     r&#34;&#34;&#34;
     Function for turning old (2019) CVAP data on 2010 geometries into estimates
     for current CVAP data on 2020 geometries. **This method serves a different
-    purpose than `evaltools.data.estimatecvap.estimatecvap2020()`:** this method
+    purpose than `gerrytools.data.estimatecvap.estimatecvap2020()`:** this method
     is intended to put 2010-era CVAP data on 2020-era geometries, and uses
     geometric properties to do so.
 
@@ -426,13 +426,13 @@ def estimatecvap2010(
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="evaltools.data.estimatecvap.estimatecvap2010"><code class="name flex">
+<dt id="gerrytools.data.estimatecvap.estimatecvap2010"><code class="name flex">
 <span>def <span class="ident">estimatecvap2010</span></span>(<span>base, state, groups, ceiling, zfill, geometry10='tract', year=2019) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Function for turning old (2019) CVAP data on 2010 geometries into estimates
 for current CVAP data on 2020 geometries. <strong>This method serves a different
-purpose than <code><a title="evaltools.data.estimatecvap.estimatecvap2020" href="#evaltools.data.estimatecvap.estimatecvap2020">estimatecvap2020()</a></code>:</strong> this method
+purpose than <code><a title="gerrytools.data.estimatecvap.estimatecvap2020" href="#gerrytools.data.estimatecvap.estimatecvap2020">estimatecvap2020()</a></code>:</strong> this method
 is intended to put 2010-era CVAP data on 2020-era geometries, and uses
 geometric properties to do so.</p>
 <p>Users must supply a base <code>GeoDataFrame</code>
@@ -492,7 +492,7 @@ blocks fit neatly into the 2010 Census tracts.</dd>
     r&#34;&#34;&#34;
     Function for turning old (2019) CVAP data on 2010 geometries into estimates
     for current CVAP data on 2020 geometries. **This method serves a different
-    purpose than `evaltools.data.estimatecvap.estimatecvap2020()`:** this method
+    purpose than `gerrytools.data.estimatecvap.estimatecvap2020()`:** this method
     is intended to put 2010-era CVAP data on 2020-era geometries, and uses
     geometric properties to do so.
 
@@ -711,12 +711,12 @@ blocks fit neatly into the 2010 Census tracts.</dd>
     return weightedbase</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.estimatecvap.estimatecvap2020"><code class="name flex">
+<dt id="gerrytools.data.estimatecvap.estimatecvap2020"><code class="name flex">
 <span>def <span class="ident">estimatecvap2020</span></span>(<span>state) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data. <strong>This method serves
-a different purpose than <code><a title="evaltools.data.estimatecvap.estimatecvap2010" href="#evaltools.data.estimatecvap.estimatecvap2010">estimatecvap2010()</a></code>:</strong>
+a different purpose than <code><a title="gerrytools.data.estimatecvap.estimatecvap2010" href="#gerrytools.data.estimatecvap.estimatecvap2010">estimatecvap2010()</a></code>:</strong>
 rather than using geometric procedures to put CVAP data on old geometries,
 this method takes advantage of the Census's geographic hierarchy, and
 associates finer-grained 2020 CVAP data with 2020 blocks. <em>No geometric
@@ -737,7 +737,7 @@ and be used to build other units of varying size.</p>
 <pre><code class="python">def estimatecvap2020(state) -&gt; pd.DataFrame:
     &#34;&#34;&#34;
     Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data. **This method serves
-    a different purpose than `evaltools.data.estimatecvap.estimatecvap2010()`:**
+    a different purpose than `gerrytools.data.estimatecvap.estimatecvap2010()`:**
     rather than using geometric procedures to put CVAP data on old geometries,
     this method takes advantage of the Census&#39;s geographic hierarchy, and
     associates finer-grained 2020 CVAP data with 2020 blocks. _No geometric
@@ -826,7 +826,7 @@ and be used to build other units of varying size.</p>
     return block</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.estimatecvap.fetchgeometries"><code class="name flex">
+<dt id="gerrytools.data.estimatecvap.fetchgeometries"><code class="name flex">
 <span>def <span class="ident">fetchgeometries</span></span>(<span>state, geometry) ‑> geopandas.geodataframe.GeoDataFrame</span>
 </code></dt>
 <dd>
@@ -880,7 +880,7 @@ and be used to build other units of varying size.</p>
     return gpd.read_file(url)</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.estimatecvap.mapbase"><code class="name flex">
+<dt id="gerrytools.data.estimatecvap.mapbase"><code class="name flex">
 <span>def <span class="ident">mapbase</span></span>(<span>base, state, geometry, baseindex='GEOID20')</span>
 </code></dt>
 <dd>
@@ -956,7 +956,7 @@ proof.appendChild(square);
 }
 </script>
 <header>
-<a class="homelink" rel="home" title="evaltools" href="https://github.com/mggg/plan-evaluation-processing">
+<a class="homelink" rel="home" title="gerrytools" href="https://github.com/mggg/gerrytools">
 <style>
 header > h1 { display: none; }
 img.resize {
@@ -986,15 +986,15 @@ float: right;
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="evaltools.data" href="index.html">evaltools.data</a></code></li>
+<li><code><a title="gerrytools.data" href="index.html">gerrytools.data</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="evaltools.data.estimatecvap.estimatecvap2010" href="#evaltools.data.estimatecvap.estimatecvap2010">estimatecvap2010</a></code></li>
-<li><code><a title="evaltools.data.estimatecvap.estimatecvap2020" href="#evaltools.data.estimatecvap.estimatecvap2020">estimatecvap2020</a></code></li>
-<li><code><a title="evaltools.data.estimatecvap.fetchgeometries" href="#evaltools.data.estimatecvap.fetchgeometries">fetchgeometries</a></code></li>
-<li><code><a title="evaltools.data.estimatecvap.mapbase" href="#evaltools.data.estimatecvap.mapbase">mapbase</a></code></li>
+<li><code><a title="gerrytools.data.estimatecvap.estimatecvap2010" href="#gerrytools.data.estimatecvap.estimatecvap2010">estimatecvap2010</a></code></li>
+<li><code><a title="gerrytools.data.estimatecvap.estimatecvap2020" href="#gerrytools.data.estimatecvap.estimatecvap2020">estimatecvap2020</a></code></li>
+<li><code><a title="gerrytools.data.estimatecvap.fetchgeometries" href="#gerrytools.data.estimatecvap.fetchgeometries">fetchgeometries</a></code></li>
+<li><code><a title="gerrytools.data.estimatecvap.mapbase" href="#gerrytools.data.estimatecvap.mapbase">mapbase</a></code></li>
 </ul>
 </li>
 </ul>

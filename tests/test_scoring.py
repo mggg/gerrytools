@@ -1,5 +1,5 @@
 
-from evaltools.scoring import (
+from gerrytools.scoring import (
     deviations, splits, pieces, unassigned_units, contiguous, reock
 )
 from gerrychain import Partition

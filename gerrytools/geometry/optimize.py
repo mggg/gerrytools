@@ -147,7 +147,7 @@ def optimalrelabeling(
             blocks), with at least three columns: one denoting a unique geometric
             identifier (e.g. `GEOID20`), one denoting the districting assignment,
             and another denoting the population of choice. If
-            `evaltools.geometry.optimize.arealoverlap()` is used, these must be
+            `gerrytools.geometry.optimize.arealoverlap()` is used, these must be
             GeoDataFrames where one row corresponds to one district, and one
             column denotes the districts' unique identifiers.
         right (Any): Data structure which can be passed to `costmatrix` to construct
@@ -157,7 +157,7 @@ def optimalrelabeling(
             blocks), with at least three columns: one denoting a unique geometric
             identifier (e.g. `GEOID20`), one denoting the districting assignment,
             and another denoting the population of choice. If
-            `evaltools.geometry.optimize.arealoverlap()` is used, these must be
+            `gerrytools.geometry.optimize.arealoverlap()` is used, these must be
             GeoDataFrames where one row corresponds to one district, and one
             column denotes the districts' unique identifiers.
         maximize (bool): Are we finding the largest or smallest linear sum over
@@ -166,8 +166,8 @@ def optimalrelabeling(
             `left` and `right` and spits out a cost matrix. This cost matrix is
             assumed to be a pandas DataFrame, with row indices old district labels
             and column names new district labels. Examples of these are
-            `evaltools.geometry.optimize.populationoverlap()` and
-            `evaltools.geometry.optimize.arealoverlap()`.
+            `gerrytools.geometry.optimize.populationoverlap()` and
+            `gerrytools.geometry.optimize.arealoverlap()`.
 
     Returns:
         A dictionary which maps district labels in `left` to district labels in
@@ -192,9 +192,9 @@ def optimalrelabeling(
     We then assign each edge a weight according to some function
     \(f: L\times R\ \to \mathbb{R}\), which consumes a pair of districts and returns
     a number. For example, this function could be the amount of area shared by
-    the districts \(L_i\) and \(R_j\), like in `evaltools.geometry.optimize.arealoverlap()`,
+    the districts \(L_i\) and \(R_j\), like in `gerrytools.geometry.optimize.arealoverlap()`,
     or the amount of population the districts share, like in
-    `evaltools.geometry.optimize.populationoverlap()`.
+    `gerrytools.geometry.optimize.populationoverlap()`.
 
     We then seek to find the set of weighted edges \(M\) such that all vertices
     \(l_i\) and \(r_j\) appear at most once in \(M\), and that the sum of \(M\)'s

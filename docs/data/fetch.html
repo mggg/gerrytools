@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>evaltools.data.fetch API documentation</title>
+<title>gerrytools.data.fetch API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -20,7 +20,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>evaltools.data.fetch</code></h1>
+<h1 class="title">Module <code>gerrytools.data.fetch</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
@@ -76,7 +76,7 @@ def tabularized(state, submissions) -&gt; Tuple[pd.DataFrame, pd.DataFrame, pd.D
         Prototypical example usage.
 
             import us
-            from evaltools.retrieve import submissions, tabularized
+            from gerrytools.retrieve import submissions, tabularized
 
             # Set the state.
             state = us.states.WI
@@ -271,7 +271,7 @@ def parse_datetime(d) -&gt; pd.Series:
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="evaltools.data.fetch.as_dataframe"><code class="name flex">
+<dt id="gerrytools.data.fetch.as_dataframe"><code class="name flex">
 <span>def <span class="ident">as_dataframe</span></span>(<span>url) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
@@ -298,7 +298,7 @@ a pandas <code>DataFrame</code>.</p>
     return pd.read_csv(io.StringIO(raw.decode(&#34;utf-8&#34;)), parse_dates=True)</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.fetch.individual"><code class="name flex">
+<dt id="gerrytools.data.fetch.individual"><code class="name flex">
 <span>def <span class="ident">individual</span></span>(<span>identifier) ‑> dict</span>
 </code></dt>
 <dd>
@@ -328,11 +328,11 @@ a pandas <code>DataFrame</code>.</p>
     return json.loads(raw.text)</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.fetch.parse_datetime"><code class="name flex">
+<dt id="gerrytools.data.fetch.parse_datetime"><code class="name flex">
 <span>def <span class="ident">parse_datetime</span></span>(<span>d) ‑> pandas.core.series.Series</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Parses the timestamps in the dataframe returned by <code><a title="evaltools.data.fetch.as_dataframe" href="#evaltools.data.fetch.as_dataframe">as_dataframe()</a></code>.</p>
+<div class="desc"><p>Parses the timestamps in the dataframe returned by <code><a title="gerrytools.data.fetch.as_dataframe" href="#gerrytools.data.fetch.as_dataframe">as_dataframe()</a></code>.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>d</code></strong> :&ensp;<code>str</code></dt>
@@ -363,7 +363,7 @@ a pandas <code>DataFrame</code>.</p>
     return dt.apply(lambda r: datetime.strptime(r, &#34;%a %b %d %Y %X %Z %z&#34;))</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.fetch.parse_id"><code class="name flex">
+<dt id="gerrytools.data.fetch.parse_id"><code class="name flex">
 <span>def <span class="ident">parse_id</span></span>(<span>link, df=True) ‑> Union[str, pandas.core.series.Series]</span>
 </code></dt>
 <dd>
@@ -399,8 +399,8 @@ operations rather than built-in ones.</dd>
     return link.split(&#34;/&#34;)[-1].split(&#34;?&#34;)[0]</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.fetch.submissions"><code class="name flex">
-<span>def <span class="ident">submissions</span></span>(<span>state, sample=None) ‑> List[<a title="evaltools.data.fetch.Submission" href="#evaltools.data.fetch.Submission">Submission</a>]</span>
+<dt id="gerrytools.data.fetch.submissions"><code class="name flex">
+<span>def <span class="ident">submissions</span></span>(<span>state, sample=None) ‑> List[<a title="gerrytools.data.fetch.Submission" href="#gerrytools.data.fetch.Submission">Submission</a>]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Retrieves raw districtr objects; this includes both plan- and COI-based
@@ -473,7 +473,7 @@ submissions.</p>
     return submissions</code></pre>
 </details>
 </dd>
-<dt id="evaltools.data.fetch.tabularized"><code class="name flex">
+<dt id="gerrytools.data.fetch.tabularized"><code class="name flex">
 <span>def <span class="ident">tabularized</span></span>(<span>state, submissions) ‑> Tuple[pandas.core.frame.DataFrame, pandas.core.frame.DataFrame, pandas.core.frame.DataFrame]</span>
 </code></dt>
 <dd>
@@ -483,8 +483,8 @@ submissions.</p>
 <dt><strong><code>state</code></strong> :&ensp;<code>State</code></dt>
 <dd><code>us.State</code> object (e.g. <code>us.states.WI</code>).</dd>
 <dt><strong><code>submissions</code></strong> :&ensp;<code>list</code></dt>
-<dd>List of <code><a title="evaltools.data.fetch.Submission" href="#evaltools.data.fetch.Submission">Submission</a></code> objects returned from a call to
-<code><a title="evaltools.data.fetch.submissions" href="#evaltools.data.fetch.submissions">submissions()</a></code>.</dd>
+<dd>List of <code><a title="gerrytools.data.fetch.Submission" href="#gerrytools.data.fetch.Submission">Submission</a></code> objects returned from a call to
+<code><a title="gerrytools.data.fetch.submissions" href="#gerrytools.data.fetch.submissions">submissions()</a></code>.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>Three dataframes corresponding to plan-based submissions, COI-based
@@ -492,7 +492,7 @@ submissions, and written submissions to the provided state.</p>
 <h2 id="example">Example</h2>
 <p>Prototypical example usage.</p>
 <pre><code>import us
-from evaltools.retrieve import submissions, tabularized
+from gerrytools.retrieve import submissions, tabularized
 
 # Set the state.
 state = us.states.WI
@@ -522,7 +522,7 @@ plans, cois, written = tabularized(state, subs)
         Prototypical example usage.
 
             import us
-            from evaltools.retrieve import submissions, tabularized
+            from gerrytools.retrieve import submissions, tabularized
 
             # Set the state.
             state = us.states.WI
@@ -598,7 +598,7 @@ plans, cois, written = tabularized(state, subs)
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="evaltools.data.fetch.Submission"><code class="flex name class">
+<dt id="gerrytools.data.fetch.Submission"><code class="flex name class">
 <span>class <span class="ident">Submission</span></span>
 <span>(</span><span>**data: Any)</span>
 </code></dt>
@@ -638,31 +638,31 @@ dot notation when accessing properties rather than dict notation.</p>
 </ul>
 <h3>Class variables</h3>
 <dl>
-<dt id="evaltools.data.fetch.Submission.id"><code class="name">var <span class="ident">id</span> : str</code></dt>
+<dt id="gerrytools.data.fetch.Submission.id"><code class="name">var <span class="ident">id</span> : str</code></dt>
 <dd>
 <div class="desc"><p>districtr identifier.</p></div>
 </dd>
-<dt id="evaltools.data.fetch.Submission.link"><code class="name">var <span class="ident">link</span> : str</code></dt>
+<dt id="gerrytools.data.fetch.Submission.link"><code class="name">var <span class="ident">link</span> : str</code></dt>
 <dd>
 <div class="desc"><p>A districtr URL.</p></div>
 </dd>
-<dt id="evaltools.data.fetch.Submission.plan"><code class="name">var <span class="ident">plan</span> : dict</code></dt>
+<dt id="gerrytools.data.fetch.Submission.plan"><code class="name">var <span class="ident">plan</span> : dict</code></dt>
 <dd>
 <div class="desc"><p>districtr plan object.</p></div>
 </dd>
-<dt id="evaltools.data.fetch.Submission.tileset"><code class="name">var <span class="ident">tileset</span> : str</code></dt>
+<dt id="gerrytools.data.fetch.Submission.tileset"><code class="name">var <span class="ident">tileset</span> : str</code></dt>
 <dd>
 <div class="desc"><p>Mapbox tileset URL.</p></div>
 </dd>
-<dt id="evaltools.data.fetch.Submission.type"><code class="name">var <span class="ident">type</span> : str</code></dt>
+<dt id="gerrytools.data.fetch.Submission.type"><code class="name">var <span class="ident">type</span> : str</code></dt>
 <dd>
 <div class="desc"><p>Not sure.</p></div>
 </dd>
-<dt id="evaltools.data.fetch.Submission.units"><code class="name">var <span class="ident">units</span> : str</code></dt>
+<dt id="gerrytools.data.fetch.Submission.units"><code class="name">var <span class="ident">units</span> : str</code></dt>
 <dd>
 <div class="desc"><p>Unit identifier (e.g. <code>GEOID</code>).</p></div>
 </dd>
-<dt id="evaltools.data.fetch.Submission.unitsType"><code class="name">var <span class="ident">unitsType</span> : str</code></dt>
+<dt id="gerrytools.data.fetch.Submission.unitsType"><code class="name">var <span class="ident">unitsType</span> : str</code></dt>
 <dd>
 <div class="desc"><p>Unit type (e.g. <code>blocks20</code>, <code>blockgroup</code>, etc.)</p></div>
 </dd>
@@ -688,7 +688,7 @@ proof.appendChild(square);
 }
 </script>
 <header>
-<a class="homelink" rel="home" title="evaltools" href="https://github.com/mggg/plan-evaluation-processing">
+<a class="homelink" rel="home" title="gerrytools" href="https://github.com/mggg/gerrytools">
 <style>
 header > h1 { display: none; }
 img.resize {
@@ -718,31 +718,31 @@ float: right;
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="evaltools.data" href="index.html">evaltools.data</a></code></li>
+<li><code><a title="gerrytools.data" href="index.html">gerrytools.data</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="two-column">
-<li><code><a title="evaltools.data.fetch.as_dataframe" href="#evaltools.data.fetch.as_dataframe">as_dataframe</a></code></li>
-<li><code><a title="evaltools.data.fetch.individual" href="#evaltools.data.fetch.individual">individual</a></code></li>
-<li><code><a title="evaltools.data.fetch.parse_datetime" href="#evaltools.data.fetch.parse_datetime">parse_datetime</a></code></li>
-<li><code><a title="evaltools.data.fetch.parse_id" href="#evaltools.data.fetch.parse_id">parse_id</a></code></li>
-<li><code><a title="evaltools.data.fetch.submissions" href="#evaltools.data.fetch.submissions">submissions</a></code></li>
-<li><code><a title="evaltools.data.fetch.tabularized" href="#evaltools.data.fetch.tabularized">tabularized</a></code></li>
+<li><code><a title="gerrytools.data.fetch.as_dataframe" href="#gerrytools.data.fetch.as_dataframe">as_dataframe</a></code></li>
+<li><code><a title="gerrytools.data.fetch.individual" href="#gerrytools.data.fetch.individual">individual</a></code></li>
+<li><code><a title="gerrytools.data.fetch.parse_datetime" href="#gerrytools.data.fetch.parse_datetime">parse_datetime</a></code></li>
+<li><code><a title="gerrytools.data.fetch.parse_id" href="#gerrytools.data.fetch.parse_id">parse_id</a></code></li>
+<li><code><a title="gerrytools.data.fetch.submissions" href="#gerrytools.data.fetch.submissions">submissions</a></code></li>
+<li><code><a title="gerrytools.data.fetch.tabularized" href="#gerrytools.data.fetch.tabularized">tabularized</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="evaltools.data.fetch.Submission" href="#evaltools.data.fetch.Submission">Submission</a></code></h4>
+<h4><code><a title="gerrytools.data.fetch.Submission" href="#gerrytools.data.fetch.Submission">Submission</a></code></h4>
 <ul class="two-column">
-<li><code><a title="evaltools.data.fetch.Submission.id" href="#evaltools.data.fetch.Submission.id">id</a></code></li>
-<li><code><a title="evaltools.data.fetch.Submission.link" href="#evaltools.data.fetch.Submission.link">link</a></code></li>
-<li><code><a title="evaltools.data.fetch.Submission.plan" href="#evaltools.data.fetch.Submission.plan">plan</a></code></li>
-<li><code><a title="evaltools.data.fetch.Submission.tileset" href="#evaltools.data.fetch.Submission.tileset">tileset</a></code></li>
-<li><code><a title="evaltools.data.fetch.Submission.type" href="#evaltools.data.fetch.Submission.type">type</a></code></li>
-<li><code><a title="evaltools.data.fetch.Submission.units" href="#evaltools.data.fetch.Submission.units">units</a></code></li>
-<li><code><a title="evaltools.data.fetch.Submission.unitsType" href="#evaltools.data.fetch.Submission.unitsType">unitsType</a></code></li>
+<li><code><a title="gerrytools.data.fetch.Submission.id" href="#gerrytools.data.fetch.Submission.id">id</a></code></li>
+<li><code><a title="gerrytools.data.fetch.Submission.link" href="#gerrytools.data.fetch.Submission.link">link</a></code></li>
+<li><code><a title="gerrytools.data.fetch.Submission.plan" href="#gerrytools.data.fetch.Submission.plan">plan</a></code></li>
+<li><code><a title="gerrytools.data.fetch.Submission.tileset" href="#gerrytools.data.fetch.Submission.tileset">tileset</a></code></li>
+<li><code><a title="gerrytools.data.fetch.Submission.type" href="#gerrytools.data.fetch.Submission.type">type</a></code></li>
+<li><code><a title="gerrytools.data.fetch.Submission.units" href="#gerrytools.data.fetch.Submission.units">units</a></code></li>
+<li><code><a title="gerrytools.data.fetch.Submission.unitsType" href="#gerrytools.data.fetch.Submission.unitsType">unitsType</a></code></li>
 </ul>
 </li>
 </ul>

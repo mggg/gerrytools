@@ -8,15 +8,15 @@ requirements = [
 ]
 
 # Set the version --- ensure that the latest tag matches this value.
-VERSION = "0.0.0"
+VERSION = "0.0.1"
 
 setup(
-    name="evaltools",
+    name="gerrytools",
     version=VERSION,
     author="MGGG Redistricting Lab",
     author_email="engineering@mggg.org",
     description="Tools for processing and visualizing districting plans.",
-    url="https://github.com/mggg/evaltools",
+    url="https://github.com/mggg/gerrytools",
     packages=find_packages(exclude=["tests", "tutorials"]),
     install_requires=requirements,
     include_package_data=True,

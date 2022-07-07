@@ -11,7 +11,7 @@ from ..geometry import unitmap
 def estimatecvap2020(state) -> pd.DataFrame:
     """
     Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data. **This method serves
-    a different purpose than `evaltools.data.estimatecvap.estimatecvap2010()`:**
+    a different purpose than `gerrytools.data.estimatecvap.estimatecvap2010()`:**
     rather than using geometric procedures to put CVAP data on old geometries,
     this method takes advantage of the Census's geographic hierarchy, and
     associates finer-grained 2020 CVAP data with 2020 blocks. _No geometric
@@ -172,7 +172,7 @@ def estimatecvap2010(
     r"""
     Function for turning old (2019) CVAP data on 2010 geometries into estimates
     for current CVAP data on 2020 geometries. **This method serves a different
-    purpose than `evaltools.data.estimatecvap.estimatecvap2020()`:** this method
+    purpose than `gerrytools.data.estimatecvap.estimatecvap2020()`:** this method
     is intended to put 2010-era CVAP data on 2020-era geometries, and uses
     geometric properties to do so.
 
