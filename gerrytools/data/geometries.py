@@ -42,4 +42,5 @@ def geometries20(state, filepath, geometry="tract"):
     # Send the request!
     request = requests.get(base + suffix)
 
-    with open(filepath, "wb") as w: w.write(request.content)
+    with open(filepath, "wb") as w:
+        w.write(request.content)

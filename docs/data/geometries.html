@@ -70,7 +70,8 @@ def geometries20(state, filepath, geometry=&#34;tract&#34;):
     # Send the request!
     request = requests.get(base + suffix)
 
-    with open(filepath, &#34;wb&#34;) as w: w.write(request.content)</code></pre>
+    with open(filepath, &#34;wb&#34;) as w:
+        w.write(request.content)</code></pre>
 </details>
 </section>
 <section>
@@ -142,7 +143,8 @@ to <code>tract</code>.</dd>
     # Send the request!
     request = requests.get(base + suffix)
 
-    with open(filepath, &#34;wb&#34;) as w: w.write(request.content)</code></pre>
+    with open(filepath, &#34;wb&#34;) as w:
+        w.write(request.content)</code></pre>
 </details>
 </dd>
 </dl>

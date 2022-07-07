@@ -18,8 +18,8 @@ jobs:
       - run:
           name: tests
           command: |
-            python setup.py install
             pip install pytest pytest-cov coverage
+            python setup.py install
             echo "backend: Agg" > "matplotlibrc"
 
             pytest --cov-report xml:tests/test-reports/coverage.xml --cov=gerrytools
@@ -70,4 +70,4 @@ workflows:
             tags:
               only: /[0-9].*/
             branches:
-              only: main
+              ignore: /.*/
