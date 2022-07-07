@@ -62,12 +62,15 @@ workflows:
   version: 2
   test_and_deploy:
     jobs:
-      - test
+      - test:
+          filters:
+            tags:
+              only: /.*/
       - deploy:
           requires:
             - test
           filters:
             tags:
-              only: /[0-9].*/
+              only: /.*/
             branches:
               ignore: /.*/
