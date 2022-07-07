@@ -9,6 +9,7 @@ from .fetch import submissions, tabularized, Submission
 from .remap import remap
 from .URLs import ids, one, csvs
 from .AssignmentCompressor import AssignmentCompressor
+from .geometries import geometries20
 
 __all__ = [
     "submissions",
@@ -26,5 +27,6 @@ __all__ = [
     "estimatecvap2010",
     "estimatecvap2020",
     "fetchgeometries",
-    "census10"
+    "census10",
+    "geometries20"
 ]

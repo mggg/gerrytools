@@ -1,5 +1,6 @@
 
 from setuptools import setup, find_packages
+import pypandoc
 
 requirements = [
     "pandas", "scipy", "networkx", "geopandas", "shapely", "matplotlib",
@@ -8,7 +9,8 @@ requirements = [
 ]
 
 # Set the version --- ensure that the latest tag matches this value.
-VERSION = "0.0.1"
+VERSION = "0.0.2"
+DESCRIPTION = pypandoc.convert_file("README.md", "rst")
 
 setup(
     name="gerrytools",
@@ -16,6 +18,8 @@ setup(
     author="MGGG Redistricting Lab",
     author_email="engineering@mggg.org",
     description="Tools for processing and visualizing districting plans.",
+    long_description=DESCRIPTION,
+    long_description_content_type="text/x-rst",
     url="https://github.com/mggg/gerrytools",
     packages=find_packages(exclude=["tests", "tutorials"]),
     install_requires=requirements,
@@ -26,7 +30,8 @@ setup(
             "flake8",
             "pytest",
             "autopep8",
-            "pytest-cov"
+            "pytest-cov",
+            "pypandoc"
         ]
     }
 )
