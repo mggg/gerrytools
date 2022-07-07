@@ -68,6 +68,6 @@ workflows:
             - test
           filters:
             tags:
-              only: [0-9].*
+              only: /[0-9].*/
             branches:
               only: main
