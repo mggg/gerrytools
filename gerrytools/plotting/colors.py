@@ -25,7 +25,7 @@ Overlay colors for choropleth maps.
 
 latex = json.loads(pkgutil.get_data(__name__, "latexcolors.json"))
 """
-LaTeX colors, [borrowed from here.](http://latexcolor.com/)
+A dictionary of nice LaTeX colors, [borrowed from here.](http://latexcolor.com/)
 """
 
 def hexshift(color) -> str:

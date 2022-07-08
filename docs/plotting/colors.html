@@ -35,27 +35,26 @@ from random import choice
 from string import hexdigits as hex
 import pkgutil
 
+defaultGray = &#34;#5c676f&#34;
 &#34;&#34;&#34;
 Default gray plotting color; used in histograms, violin plots, and arrows.
 &#34;&#34;&#34;
-defaultGray = &#34;#5c676f&#34;
 
+citizenBlue = &#34;#4693b3&#34;
 &#34;&#34;&#34;
 Citizen ensemble blue color; used in histograms, violin plots, and arrows. (Aka
 Citizen Kane).
 &#34;&#34;&#34;
-citizenBlue = &#34;#4693b3&#34;
 
+overlays = [&#34;gainsboro&#34;, &#34;silver&#34;, &#34;darkgray&#34;, &#34;gray&#34;, &#34;dimgrey&#34;]
 &#34;&#34;&#34;
 Overlay colors for choropleth maps.
 &#34;&#34;&#34;
-overlays = [&#34;gainsboro&#34;, &#34;silver&#34;, &#34;darkgray&#34;, &#34;gray&#34;, &#34;dimgrey&#34;]
 
-&#34;&#34;&#34;
-LaTeX colors, [borrowed from here.](http://latexcolor.com/)
-&#34;&#34;&#34;
 latex = json.loads(pkgutil.get_data(__name__, &#34;latexcolors.json&#34;))
-
+&#34;&#34;&#34;
+A dictionary of nice LaTeX colors, [borrowed from here.](http://latexcolor.com/)
+&#34;&#34;&#34;
 
 def hexshift(color) -&gt; str:
     &#34;&#34;&#34;
@@ -167,16 +166,20 @@ def greens(n) -&gt; list:
 <dl>
 <dt id="gerrytools.plotting.colors.citizenBlue"><code class="name">var <span class="ident">citizenBlue</span></code></dt>
 <dd>
-<div class="desc"><p>Overlay colors for choropleth maps.</p></div>
-</dd>
-<dt id="gerrytools.plotting.colors.defaultGray"><code class="name">var <span class="ident">defaultGray</span></code></dt>
-<dd>
 <div class="desc"><p>Citizen ensemble blue color; used in histograms, violin plots, and arrows. (Aka
 Citizen Kane).</p></div>
 </dd>
+<dt id="gerrytools.plotting.colors.defaultGray"><code class="name">var <span class="ident">defaultGray</span></code></dt>
+<dd>
+<div class="desc"><p>Default gray plotting color; used in histograms, violin plots, and arrows.</p></div>
+</dd>
+<dt id="gerrytools.plotting.colors.latex"><code class="name">var <span class="ident">latex</span></code></dt>
+<dd>
+<div class="desc"><p>A dictionary of nice LaTeX colors, <a href="http://latexcolor.com/">borrowed from here.</a></p></div>
+</dd>
 <dt id="gerrytools.plotting.colors.overlays"><code class="name">var <span class="ident">overlays</span></code></dt>
 <dd>
-<div class="desc"><p>LaTeX colors, <a href="http://latexcolor.com/">borrowed from here.</a></p></div>
+<div class="desc"><p>Overlay colors for choropleth maps.</p></div>
 </dd>
 </dl>
 </section>
@@ -435,6 +438,7 @@ float: right;
 <ul class="">
 <li><code><a title="gerrytools.plotting.colors.citizenBlue" href="#gerrytools.plotting.colors.citizenBlue">citizenBlue</a></code></li>
 <li><code><a title="gerrytools.plotting.colors.defaultGray" href="#gerrytools.plotting.colors.defaultGray">defaultGray</a></code></li>
+<li><code><a title="gerrytools.plotting.colors.latex" href="#gerrytools.plotting.colors.latex">latex</a></code></li>
 <li><code><a title="gerrytools.plotting.colors.overlays" href="#gerrytools.plotting.colors.overlays">overlays</a></code></li>
 </ul>
 </li>
