@@ -7,27 +7,26 @@ from random import choice
 from string import hexdigits as hex
 import pkgutil
 
+defaultGray = "#5c676f"
 """
 Default gray plotting color; used in histograms, violin plots, and arrows.
 """
-defaultGray = "#5c676f"
 
+citizenBlue = "#4693b3"
 """
 Citizen ensemble blue color; used in histograms, violin plots, and arrows. (Aka
 Citizen Kane).
 """
-citizenBlue = "#4693b3"
 
+overlays = ["gainsboro", "silver", "darkgray", "gray", "dimgrey"]
 """
 Overlay colors for choropleth maps.
 """
-overlays = ["gainsboro", "silver", "darkgray", "gray", "dimgrey"]
 
+latex = json.loads(pkgutil.get_data(__name__, "latexcolors.json"))
 """
 LaTeX colors, [borrowed from here.](http://latexcolor.com/)
 """
-latex = json.loads(pkgutil.get_data(__name__, "latexcolors.json"))
-
 
 def hexshift(color) -> str:
     """
