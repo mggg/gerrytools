@@ -28,6 +28,7 @@ latex = json.loads(pkgutil.get_data(__name__, "latexcolors.json"))
 A dictionary of nice LaTeX colors, [borrowed from here.](http://latexcolor.com/)
 """
 
+
 def hexshift(color) -> str:
     """
     Randomly modifies the provided hexadecimal color.
