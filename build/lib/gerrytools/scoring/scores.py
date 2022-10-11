@@ -1,4 +1,4 @@
-from gerrytools.geometry.compactness import (
+from evaltools.geometry.compactness import (
     _reock,
     _convex_hull,
     _polsby_popper,

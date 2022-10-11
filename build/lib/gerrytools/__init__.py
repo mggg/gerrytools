@@ -1,0 +1,5 @@
+
+"""
+
+.. include:: ../docs/introduction.md
+"""
