@@ -55,3 +55,9 @@ def drawplan(
     plt.axis("off")
 
     return base
+j = pd.read_csv("../../../../sc-secure/Jessamine.txt", dtype={"Block":str}).rename(columns={"Block":"GEOID20", "District":"assignment"})
+sc_block = gpd.read_file("http://data.mggg.org.s3-website.us-east-2.amazonaws.com/census-2020/sc/sc_block.zip")
+j = j.merge(sc_block, on = "GEOID20")
+sc_county = gpd.read_file("http://data.mggg.org.s3-website.us-east-2.amazonaws.com/census-2020/sc/sc_county.zip")
+ax = drawplan(j, 'assignment', overlays=[sc_county], colors=None, numbers=False, lw=1/2) 
+ax.figure.savefig("jessamine.png", dpi=300, bbox_inches="tight", transparent=True)
