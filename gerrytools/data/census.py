@@ -23,12 +23,14 @@ def _rjoin(df, columns) -> Iterable:
     return reduce(lambda l, r: l + r, stringified[1:], stringified[0])
 
 
-def census10(state, columns={}, geometry="block"):
+def census10(state, table="P8", columns={}, geometry="block"):
     """
     Retrieves `geometry`-level 2010 Summary File 1 data via the Census API.
 
     Args:
         state (State): `us.State` object (e.g. `us.states.WI`).
+        table (string, optional): Table from which we retrieve data. Defaults to 
+           the P8 table, which gets population by race regardless of ethnicity.
         columns (dict, optional): Dictionary which maps Census column names (from
             the correct table) to human-readable names. We require this to be a
             dictionary, _not_ a list, as specifying human-readable names will
@@ -42,25 +44,39 @@ def census10(state, columns={}, geometry="block"):
         A DataFrame with columns renamed according to their Census description
         designation and a unique identifier column for joining to geometries.
     """
+    # Check whether the geometry is right. If not, warn the user and set it
+    # properly.
+    if geometry not in {"block", "tract", "block group"}:
+        print(f"Geometry \"{geometry}\" not accepted; defaulting to \"block\".")
+        geometry = "block"
+
+    # Check whether we're providing an appropriate table name.
+    if table not in {"P8", "P9", "P10", "P11"}:
+        print(f"Table \"{table}\" not accepted; defaulting to \"P8.\"")
+        table = "P8"
+
     # Create the right geometry identifiers.
     geometries = [("state", str(state.fips)), ("county", "*"), ("tract", "*")]
     if geometry in {"block group", "block"}:
         geometries += [(geometry, "*")]
-
+    
     # Create an identifier column.
     identifier = geometry.replace(" ", "").upper() + "10"
-
+    
+    varmap = columns if columns else variables(table)
+    vars = list(varmap.keys())
     # Download data.
     raw = censusdata.download(
         "sf1", 2010, censusdata.censusgeo(geometries),
-        ["GEO_ID"] + list(columns.keys()),
+        ["GEO_ID"] + vars,
     )
 
     # Rename columns and send back to the caller!
     raw = raw.rename({"GEO_ID": identifier, **columns}, axis=1)
     raw[identifier] = raw[identifier].str[9:]
     clean = raw.reset_index(drop=True)
-
+    
+    clean = clean.rename(varmap, axis=1)
     return clean
 
 
@@ -187,11 +203,12 @@ def variables(table) -> dict:
     # append a "VAP" to the end to signify these are people of voting age;
     # otherwise, we add "POP."
     categories = ["WHITE", "BLACK", "AMIN", "ASIAN", "NHPI", "OTH"]
-    prefix = "NH" if table in {"P2", "P4"} else ""
-    suffix = "VAP" if table in {"P3", "P4"} else "POP"
+    prefix = "NH" if table in {"P2", "P4", "P9", "P11"} else ""
+    suffix = "VAP" if table in {"P3", "P4", "P10", "P11"} else "POP"
+    year_suff = "20" if table in {"P1", "P2", "P3", "P4"} else "10"
     combos = list(pd.core.common.flatten(
         [
-            prefix + "".join(list(combo)) + suffix + "20"
+            prefix + "".join(list(combo)) + suffix + year_suff
             for i in range(1, len(categories) + 1)
             for combo in list(combinations(categories, i))
         ]
@@ -201,7 +218,7 @@ def variables(table) -> dict:
     # the descriptor. Each of these tranches should have a width of 6 choose i,
     # where i is the number of categories in the combination. For example, the
     # second tranch (from 13 to 27) has width 15, as 6C2=15.
-    if table in {"P1", "P3"}:
+    if table in {"P1", "P3", "P8", "P10"}:
         tranches = [(3, 8), (11, 25), (27, 46), (48, 62), (64, 69), (71, 71)]
     else:
         tranches = [(5, 10), (13, 27), (29, 48), (50, 64), (66, 71), (73, 73)]
@@ -211,16 +228,20 @@ def variables(table) -> dict:
 
     # Edit these for specific tables. For example, in tables P2 and P3, we want
     # to get the total Hispanic population and the total population.
-    if table in {"P2", "P4"}:
+    if table in {"P2", "P4", "P9", "P11"}:
         numbers = [1, 2] + numbers
-        hcol = "HVAP20" if table == "P4" else "HPOP20"
-        tcol = "VAP20" if table == "P4" else "TOTPOP20"
+        hcol = f"HVAP{year_suff}" if table in {"P4", "P11"} else f"HPOP20{year_suff}"
+        tcol = f"VAP20{year_suff}" if table in {"P4", "P11"} else f"TOTPOP20{year_suff}"
         combos = [tcol, hcol] + combos
     else:
         numbers = [1] + numbers
-        tcol = "VAP20" if table in {"P3", "P4"} else "TOTPOP20"
+        tcol = f"VAP{year_suff}" if table in {"P3", "P4", "P10", "P11"} else f"TOTPOP{year_suff}"
         combos = [tcol] + combos
 
     # Create the variable names and zip the names together with the combinations.
-    names = [f"{table}_{str(n).zfill(3)}N" for n in numbers]
+    if year_suff == "20":
+        names = [f"{table}_{str(n).zfill(3)}N" for n in numbers]
+    else: 
+        names = [f"P{str(table.split('P')[-1]).zfill(3)}{str(n).zfill(3)}" for n in numbers] 
     return dict(zip(names, combos))
+

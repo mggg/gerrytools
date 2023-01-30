@@ -1,6 +1,10 @@
-
+import geopandas as gpd
 from geopandas import GeoDataFrame
-
+from pandas import DataFrame
+from copy import deepcopy
+from typing import Mapping, Any, Optional, Sequence, Tuple
+from collections import defaultdict, Counter
+from shapely.ops import unary_union
 
 def dissolve(
     geometries, by="DISTRICTN", reset_index=True, keep=[], aggfunc="sum"
@@ -33,3 +37,144 @@ def dissolve(
         geometries = geometries.reset_index()
 
     return geometries
+
+
+def hierarchical_block_dissolve(
+    state,
+    block_assignment: DataFrame,
+    district_col: str,
+    area_consistency_tol: float = 1e-4
+) -> Tuple[GeoDataFrame, Counter]:
+    """Hierarchically dissolves Census blocks into polygons by assignment.
+    Dissolving blocks into districts for an entire state is a notoriously
+    expensive operation. However, real-life plans tend to preserve block group
+    and county boundaries in many places. This suggests a dissolving algorithm
+    that leverages the Census hierarchy (blocks -> block groups -> tracts ->
+    counties) and merges the largest whole polygons possible---for instance,
+    if a whole county is contained within a district, we use the precomputed
+    county polygon rather than dissolving its constituent blocks.
+    `GeoDataFrame`s of Census data must have the same CRS and Census vintage.
+    They must be indexed by their vintage-specific `GEOID` (e.g. `GEOID10`
+    or `GEOID20`).
+    Args:
+        state (State): us.states.STATE
+        block_assignment: A DataFrame with block ids and a district column.
+        district_col: Name of column with plan districts.
+        area_consistency_tol: Relative tolerance for area consistency check.
+    Raises:
+        ValueError: If the CRSes of the `GeoDataFrame`s do not match
+            or `block_gdf` is unspecified.
+        DisolveError: If areas are not approximately consistent
+            between block unions and hierarchical unions.
+    Returns:
+        A tuple containing a `GeoDataFrame` of dissolved district polygons
+        (indexed by label) and counts of polygons used from each level
+        in the hierarchy.
+    """
+    state_abbr = str(state.abbr).lower()
+    base = "http://data.mggg.org.s3-website.us-east-2.amazonaws.com/census-2020"
+
+    block_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_block.zip").set_index("GEOID20")
+    bg_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_bg.zip").to_crs(block_gdf.crs).set_index("GEOID20")
+    tract_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_tract.zip").to_crs(block_gdf.crs).set_index("GEOID20")
+    county_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_county.zip").to_crs(block_gdf.crs).set_index("GEOID20")
+
+    block_assignment = block_assignment.set_index("GEOID20").to_dict()[district_col]
+
+    level_gdfs = {
+        level: gdf
+        for gdf, level in zip((block_gdf, bg_gdf, tract_gdf, county_gdf),
+                              ('block', 'bg', 'tract', 'county'))
+        if gdf is not None
+    }
+
+    # Build nesting indices of Census geometries.
+    # Block GeoIDs are 15-16 characters long. The first 15 characters are
+    # numerals representing the state (2) + county (3) + tract (6) +
+    # block group (1) + block (3). There is an optional one-character block
+    # suffix. (See https://www.census.gov/programs-surveys/geography/
+    # guidance/geo-identifiers.html)
+
+    level_prefixes = {'county': 5, 'tract': 11, 'bg': 12, 'block': 16}
+    level_geoids_to_blocks = _group_by_level(
+        {str(b): b for b in block_gdf.index}, level_prefixes)
+    level_geoids_to_assignments = _group_by_level(
+        block_assignment, level_prefixes)
+
+    # Find the minimal set of geometries representing each assignment.
+    levels = tuple(
+        level
+        for level, _ in sorted(level_prefixes.items(), key=lambda kv: kv[1])
+        if level in level_gdfs
+    )  # sorted largest geometry (smallest prefix) -> smallest geometry
+    level_geoms = {
+        level: dict(gdf.geometry)
+        for level, gdf in level_gdfs.items()
+    }
+    geoms_by_assignment = defaultdict(list)
+    blocks_by_assignment = defaultdict(set)
+    for block, assignment in block_assignment.items():
+        blocks_by_assignment[assignment].add(block)
+    remaining_blocks_by_assignment = deepcopy(blocks_by_assignment)
+    level_counts = Counter()
+
+    for level in levels:
+        level_assignments = level_geoids_to_assignments[level]
+        for level_geoid, assignments in level_assignments.items():
+            if len(assignments) == 1:
+                # This unit *may* be wholly contained in a single district.
+                assignment, = tuple(assignments)
+                remaining_blocks = remaining_blocks_by_assignment[assignment]
+                level_blocks = level_geoids_to_blocks[level][level_geoid]
+                if level_blocks.issubset(remaining_blocks):
+                    # If we match, save the geometry and remove the
+                    # corresponding blocks from the assignment's
+                    # remaining blocks.
+                    level_geom = level_geoms[level][level_geoid]
+                    geoms_by_assignment[assignment].append(level_geom)
+                    remaining_blocks_by_assignment[assignment] -= level_blocks
+                    level_counts[level] += 1
+
+    # Dissolve geometries by assignment.
+    dissolved_gdf = GeoDataFrame([
+        {'label': assignment, 'geometry': unary_union(geometries)}
+        for assignment, geometries in geoms_by_assignment.items()
+    ]).sort_values(by='label').set_index('label')
+    dissolved_gdf.crs = block_gdf.crs
+
+    # Basic consistency check: district areas should approximately match.
+    block_geoms = level_geoms['block']
+    areas_from_blocks = {
+        assignment: sum(block_geoms[b].area for b in block_geoids)
+        for assignment, block_geoids in blocks_by_assignment.items()
+    }
+    dissolved_areas = dict(dissolved_gdf.geometry.apply(lambda g: g.area))
+    for assignment, ref_area in areas_from_blocks.items():
+        dissolved_area = dissolved_areas[assignment]
+        relative_diff = abs(dissolved_area - ref_area) / ref_area
+        if relative_diff >= area_consistency_tol:
+            raise DissolveError(
+                f'Area consistency check failed for district {assignment} '
+                'after hierarchical dissolve. '
+                '(area from blocks is {:.8f}, dissolved area is {:.8f}'.format(
+                    ref_area, dissolved_area
+                ))
+
+    return dissolved_gdf, level_counts
+
+def _group_by_level(
+    block_geoids: Mapping[str, Any],
+    level_prefixes: Mapping[str, int]
+):
+    """Groups values associated with block GeoIDs by level."""
+    level_geoids_to_val = {level: defaultdict(set) for level in level_prefixes}
+    for block_geoid, val in block_geoids.items():
+        for level, prefix in level_prefixes.items():
+            level_geoid = block_geoid[:prefix]
+            level_geoids_to_val[level][level_geoid].add(val)
+    return level_geoids_to_val
+
+
+class DissolveError(Exception):
+    """Raised when a custom dissolve operation fails."""
+

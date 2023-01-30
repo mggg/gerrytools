@@ -78,7 +78,7 @@ def boxplot(
                 ax.scatter(
                     boxplot + 1 + jitter_val,
                     score,
-                    color=districtr(plan + 1).pop(),
+                    color=scores["proposed"]["colors"][boxplot] if scores["proposed"]["colors"] else districtr(plan + 1).pop(),
                     edgecolor='black',
                     s=100,
                     alpha=0.9,

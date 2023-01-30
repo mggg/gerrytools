@@ -1,4 +1,12 @@
 from .splits import _splits, _pieces
+from gerrytools.geometry.compactness import (
+    _reock,
+    _convex_hull,
+    _polsby_popper,
+    _schwartzberg,
+    _cut_edges,
+    _pop_polygon
+)
 from .demographics import (
     _pop_shares,
     _tally_pop,
@@ -594,6 +602,71 @@ def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: f
         ])
     return scores
 
+def reock(gdf: GeoDataFrame, crs: str) -> Score:
+    """
+    Returns the reock score for each district in a plan.
+    Args:
+        gdf (GeoDataFrame): Geodataframe for the plan.
+        crs (str): Desired projection for the geodataframe.
+    Returns:
+        A dictionary with districts as keys and reock scores as values.
+    """
+    return Score("reock", partial(_reock, gdf=gdf, crs=crs))
+
+def polsby_popper(dissolved_gdf: GeoDataFrame, crs: str) -> Score:
+    """
+    Returns the polsby-popper score for each district in a plan.
+    Args:
+        dissolved_gdf (GeoDataFrame): Dissolved geodataframe for the plan.
+        crs (str): Desired projection for the geodataframe.
+    Returns:
+        A dictionary with districts as keys and polsby-popper scores as values.
+    """
+
+    return Score("polsby_popper", partial(_polsby_popper, dissolved_gdf=dissolved_gdf, crs=crs))
+
+def schwartzberg(dissolved_gdf: GeoDataFrame, crs:str) -> Score:
+    """
+    Returns the schwartzberg score for each district in a plan.
+    Args:
+        dissolved_gdf (GeoDataFrame): Dissolved geodataframe for the plan.
+        crs (str): Desired projection for the geodataframe.
+    Returns:
+        A dictionary with districts as keys and schwartzberg scores as values.
+    """
+    return Score("schwartzberg", partial(_schwartzberg, dissolved_gdf=dissolved_gdf, crs=crs))
+
+def convex_hull(dissolved_gdf: GeoDataFrame, crs: str, index: str = "GEOID20") -> Score:
+    """
+    Returns the convex-hull score for each district in a plan.
+    Args:
+        disolved_gdf (GeoDataFrame): Dissolved geodataframe for the plan.
+        crs (str): Desired projection for the geodataframe.
+    Returns:
+        A dictionary with districts as keys and convex-hull scores as values.
+    """
+    return Score("convex_hull", partial(_convex_hull, dissolved_gdf=dissolved_gdf, crs=crs, index=index))
+
+def pop_polygon(block_gdf: GeoDataFrame, gdf: GeoDataFrame, crs: str, pop_col: str = "TOTPOP20", assignment_col: str = "assignment") -> Score:
+    """
+    Returns the population polygon compactness metric for each district in a plan.
+    Args:
+        block_gdf (GeoDataFrame): Block level shapefile for the state.
+        gdf (GeoDataFrame): Dissolved geodataframe for the plan.
+        crs (str): Desired projection for the geodataframe.
+        pop_col (str): Population column reflected in block_gdf and gdf.
+        assignment_col (str, optional): Column of the geodataframe with the district assignment.
+            Defaults to `GEOID20`.
+    Returns:
+        A dictionary with districts as keys and population polygon scores as values.
+    """
+    return Score("pop_polygon", partial(_pop_polygon, block_gdf=block_gdf, gdf=gdf, crs=crs, pop_col=pop_col, assignment_col=assignment_col))
+
+def cut_edges() -> Score:
+    """
+    Returns the number of cut edges in a plan.
+    """
+    return Score("cut_edges", partial(_cut_edges))
 
 def max_deviation(totpop_col: str, pct: bool = False) -> Score:
     """
