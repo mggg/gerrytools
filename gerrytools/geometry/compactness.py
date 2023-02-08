@@ -1,30 +1,29 @@
 from gerrychain import (
     Graph,
-    Partition, 
-    GeographicPartition
+    Partition
 )
 from gerrychain.updaters import (
-    perimeter,
-    exterior_boundaries,
-    interior_boundaries,
     boundary_nodes,
+    perimeter,
     cut_edges_by_part,
-    Tally, # TODO: ask why this isn't already in GeographicPartition
-    perimeter, 
-    exterior_boundaries, 
-    interior_boundaries
+    Tally,
+    interior_boundaries,
+    exterior_boundaries
 )
-
+import geopandas as gpd
 from geopandas import GeoDataFrame
 from cv2 import minEnclosingCircle
 from shapely.ops import unary_union
-from .dissolve import dissolve
 from math import pi, sqrt
 import numpy as np
 
+
 def _reock(partition: Partition, gdf: GeoDataFrame, crs: str):
     """
-    TODO: Add documentation.
+    partition (Partition): The Partition to for the plan to calculate reock
+                           on.
+    gdf (GeoDataFrame): GeoDataFrame corresponding to the plan area.
+    crs (str): The crs to use for reprojection of the GeoDataFrame.
     """
     gdf = gdf.to_crs(crs)
     gdf_graph = Graph.from_geodataframe(gdf, ignore_errors=True)
@@ -34,7 +33,7 @@ def _reock(partition: Partition, gdf: GeoDataFrame, crs: str):
                                   "boundary_nodes": boundary_nodes,
                                   "area": Tally("area", alias="area"),
                               }
-                             )
+                              )
     geometries = dict(gdf.geometry.apply(lambda p: p.convex_hull))
 
     boundary = set.union(*(set(e) for e in geo_partition["cut_edges"])).union(
@@ -52,6 +51,7 @@ def _reock(partition: Partition, gdf: GeoDataFrame, crs: str):
         part_scores[part] = score
     return part_scores
 
+
 def _polsby_popper(partition: Partition, dissolved_gdf: GeoDataFrame, crs: str):
     """
     TODO : Add documentation
@@ -59,7 +59,7 @@ def _polsby_popper(partition: Partition, dissolved_gdf: GeoDataFrame, crs: str):
     dissolved_gdf = dissolved_gdf.to_crs(crs)
     gdf_graph = Graph.from_geodataframe(dissolved_gdf, ignore_errors=True)
     geo_partition = Partition(graph=gdf_graph,
-                              assignment={n:n for n in gdf_graph.nodes},
+                              assignment={n: n for n in gdf_graph.nodes},
                               updaters={
                                 "area": Tally("area", alias="area"),
                                 "perimeter": perimeter,
@@ -71,16 +71,18 @@ def _polsby_popper(partition: Partition, dissolved_gdf: GeoDataFrame, crs: str):
     part_scores = {}
     for part, _ in geo_partition.parts.items():
         part_scores[part] = (4*pi*geo_partition['area'][part])/(
-        geo_partition['perimeter'][part] ** 2)
+                             geo_partition['perimeter'][part] ** 2)
     return part_scores
+
 
 def _schwartzberg(partition: Partition, dissolved_gdf: GeoDataFrame, crs: str):
     """
     TODO: Add documentation
     """
     polsby_scores = _polsby_popper(partition, dissolved_gdf, crs)
-    part_scores = {k : 1/sqrt(polsby_scores[k]) for k in polsby_scores.keys()}
+    part_scores = {k: 1/sqrt(polsby_scores[k]) for k in polsby_scores.keys()}
     return part_scores
+
 
 def _convex_hull(partition: Partition, dissolved_gdf: GeoDataFrame, crs: str, index: str = "GEOID20"):
     """
@@ -101,16 +103,17 @@ def _convex_hull(partition: Partition, dissolved_gdf: GeoDataFrame, crs: str, in
 def _cut_edges(partition: Partition):
     return len(partition["cut_edges"])
 
+
 def _pop_polygon(partition: Partition, block_gdf: GeoDataFrame, gdf: GeoDataFrame, pop_col: str, crs: str):
-    block_gdf = block_gdf.to_crs(crs)  
+    block_gdf = block_gdf.to_crs(crs)
 
     gdf_graph = Graph.from_geodataframe(gdf)
 
-    geo_partition = Partition(graph = gdf_graph,
-                              assignment = partition.assignment,
-                              updaters = {"population":Tally(pop_col, alias="population")})
+    geo_partition = Partition(graph=gdf_graph,
+                              assignment=partition.assignment,
+                              updaters={"population": Tally(pop_col, alias="population")})
 
-    district_hulls = dict(gdf.geometry.apply(lambda p : p.convex_hull))
+    district_hulls = dict(gdf.geometry.apply(lambda p: p.convex_hull))
 
     pop_polygon_scores = {}
     for part, nodes in geo_partition.parts.items():

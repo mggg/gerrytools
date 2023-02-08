@@ -2,9 +2,10 @@ import geopandas as gpd
 from geopandas import GeoDataFrame
 from pandas import DataFrame
 from copy import deepcopy
-from typing import Mapping, Any, Optional, Sequence, Tuple
+from typing import Mapping, Any, Tuple
 from collections import defaultdict, Counter
 from shapely.ops import unary_union
+
 
 def dissolve(
     geometries, by="DISTRICTN", reset_index=True, keep=[], aggfunc="sum"
@@ -74,10 +75,14 @@ def hierarchical_block_dissolve(
     state_abbr = str(state.abbr).lower()
     base = "http://data.mggg.org.s3-website.us-east-2.amazonaws.com/census-2020"
 
-    block_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_block.zip").set_index("GEOID20")
-    bg_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_bg.zip").to_crs(block_gdf.crs).set_index("GEOID20")
-    tract_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_tract.zip").to_crs(block_gdf.crs).set_index("GEOID20")
-    county_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_county.zip").to_crs(block_gdf.crs).set_index("GEOID20")
+    block_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_block.zip"
+                              ).set_index("GEOID20")
+    bg_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_bg.zip"
+                           ).to_crs(block_gdf.crs).set_index("GEOID20")
+    tract_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_tract.zip"
+                              ).to_crs(block_gdf.crs).set_index("GEOID20")
+    county_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_county.zip"
+                               ).to_crs(block_gdf.crs).set_index("GEOID20")
 
     block_assignment = block_assignment.set_index("GEOID20").to_dict()[district_col]
 
@@ -162,6 +167,7 @@ def hierarchical_block_dissolve(
 
     return dissolved_gdf, level_counts
 
+
 def _group_by_level(
     block_geoids: Mapping[str, Any],
     level_prefixes: Mapping[str, int]
@@ -177,4 +183,3 @@ def _group_by_level(
 
 class DissolveError(Exception):
     """Raised when a custom dissolve operation fails."""
-

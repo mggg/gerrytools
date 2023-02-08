@@ -34,11 +34,11 @@ def drawplan(
     districts = districts.to_crs("epsg:3857")
     districts[assignment] = districts[assignment].astype(int)
     districts = districts.sort_values(by=assignment)
-    if colors == None:
-      districts["colorindex"] = list(range(N))
+    if colors is None:
+        districts["colorindex"] = list(range(N))
 
-      # Assign colors.
-      districts["color"] = districtr(N)
+        # Assign colors.
+        districts["color"] = districtr(N)
 
     # Plot the districts.
     base = districts.plot(

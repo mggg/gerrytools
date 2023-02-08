@@ -1,5 +1,6 @@
 from matplotlib.axes import Axes
 import numpy as np
+from .colors import districtr
 
 
 def scatterplot(ax, x, y, labels=None, limits=set(), bins=None, axis_range=None) -> Axes:
@@ -11,7 +12,7 @@ def scatterplot(ax, x, y, labels=None, limits=set(), bins=None, axis_range=None)
         ax (Axes): `Axes` object on which the histogram is plotted.
         x (list): Score on the x-axis. This will be a list of lists, where each
            sub-list corresponds to the scores for an individual plan.
-        y (list): Score on the y-axis. This will be a list of lsits where each 
+        y (list): Score on the y-axis. This will be a list of lsits where each
            sub-list corresponds to the scores for an individual plan.
         labels (list, optional): Strings for x- and y-axis labels.
         limits (tuple, optional): Axis limits (specify to force plot to extend to
@@ -21,16 +22,15 @@ def scatterplot(ax, x, y, labels=None, limits=set(), bins=None, axis_range=None)
     Returns:
         Axes object on which the scatterplot is plotted.
     """
-    
-    for x_score, y_score in zip(x, y): 
+
+    for x_score, y_score in zip(x, y):
         for i in range(len(x_score)):
             x = x_score[i]
             y = y_score[i]
             ax.scatter(
                 x + 0.5,
                 y + 0.5,
-                label=f"{names[i] if names else ''}",
-                color=f"{colors[i] if colors else districtr(i).pop()},
+                color=f"{districtr(i).pop()}",
                 s=150,
                 edgecolor='black',
             )
