@@ -44,7 +44,7 @@ def boxplot(
 
     # Specify the boxplots' style.
     boxstyle = {
-        "lw": 2,
+        "lw": 1/2,
         "color": facecolor,
     }
 
@@ -90,7 +90,7 @@ def boxplot(
                     label=proposed_info["names"][plan] if boxplot == 0 else None,
                 )
         ax.legend()
-        ax.grid(axis='x')
+        
 
     if labels:
         ax.set_xlabel(labels[0], fontsize=24)
