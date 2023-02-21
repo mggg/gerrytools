@@ -1,12 +1,12 @@
-
 from gerrytools.scoring import (
-    deviations, splits, pieces, unassigned_units, contiguous, reock
+    deviations, splits, pieces, unassigned_units, contiguous, reock, 
+    polsby_popper, schwartzberg, convex_hull, pop_polygon
 )
 from gerrychain import Partition
 import geopandas as gpd
 from gerrychain.grid import Grid
 from shapely.geometry import box
-import math
+from math import pi
 import pytest
 
 from .utils import remotegraphresource
@@ -146,6 +146,38 @@ def test_unassigned_units():
     assert bads == wholebads
 
 
+def test_polsby_popper_squares_geodataframe():
+    grid = Grid((10, 10))
+    gdf = gpd.GeodataFrame([
+        {'node': (x, y), 'geometry': box(x, y, x+1, y+1)}
+        for (x, y) in grid.graph
+    ]).set_index('node')
+
+    gdf.set_crs(epsg=4269)
+
+    expected_dist_score = pi/4
+
+    scored = polsby_popper(gdf, gdf.crs).apply(grid)
+    for dist_score in scored.vales():
+        assert abs(dist_score - expected_dist_score) < 1e-4
+
+
+def test_schwartzberg_squares_geodataframe():
+    grid = Grid((10, 10))
+    gdf = gpd.GeodataFrame([
+        {'node': (x, y), 'geometry': box(x, y, x+1, y+1)}
+        for (x, y) in grid.graph
+    ]).set_index('node')
+
+    gdf.set_crs(epsg=4269)
+
+    expected_dist_score = 4/pi
+
+    scored = polsby_popper(gdf, gdf.crs).apply(grid)
+    for dist_score in scored.vales():
+        assert abs(dist_score - expected_dist_score) < 1e-4
+
+
 @pytest.mark.skip(reason="Tests should use real-world data.")
 def test_reock_score_squares_geodataframe():
     grid = Grid((10, 10))
@@ -157,7 +189,7 @@ def test_reock_score_squares_geodataframe():
 
     # The Reock score of a square inscribed in a circle is
     # area(square) / area(circle) = 2/π.
-    expected_dist_score = 2/ math.pi
+    expected_dist_score = 2 / pi
     scored = score_fn(grid)
 
     assert scored.keys() == grid.parts.keys()
@@ -174,12 +206,13 @@ def test_reock_score_squares_graph():
 
     # The Reock score of a square inscribed in a circle is
     # area(square) / area(circle) = 2/π.
-    expected_dist_score = 2 / math.pi
+    expected_dist_score = 2 /pi
     scored = score_fn(grid)
 
     assert scored.keys() == grid.parts.keys()
     for dist_score in scored.values():
         assert abs(dist_score - expected_dist_score) < 1e-4
+
 
 @pytest.mark.skip(reason="Tests should use real-world data.")
 def test_reock_score_disconnected():
@@ -188,7 +221,7 @@ def test_reock_score_disconnected():
         data['geometry'] = box(x, y, x + 1, y + 1)
     score_fn = reock(grid.graph)
 
-    # Break district 0 into two disconnected pieces 
+    # Break district 0 into two disconnected pieces
     # (while preserving convex hull perimeter),
     # adding a disconnected component to district 3
     # (quadrupling convex hull perimeter).
@@ -196,10 +229,10 @@ def test_reock_score_disconnected():
 
     scored = score_fn(grid_disconnected)
     assert scored.keys() == grid_disconnected.parts.keys()
-    assert abs(scored[0] - ((23 / 25) * (2 / math.pi))) < 1e-4
-    assert abs(scored[1] - (2 / math.pi)) < 1e-4
-    assert abs(scored[2] - (2 / math.pi)) < 1e-4
-    assert abs(scored[3] == (27 / 25) * (math.pi / 2)) < 1e-4
+    assert abs(scored[0] - ((23 / 25) * (2 / pi))) < 1e-4
+    assert abs(scored[1] - (2 / pi)) < 1e-4
+    assert abs(scored[2] - (2 / pi)) < 1e-4
+    assert abs(scored[3] == (27 / 25) * (pi / 2)) < 1e-4
 
 if __name__ == "__main__":
     pass

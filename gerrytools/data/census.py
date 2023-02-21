@@ -253,7 +253,7 @@ def variables(table) -> dict:
         if table in {"P3", "P4", "P10", "P11"}:
             tcol = f"VAP{year_suff}"
         else:
-            f"TOTPOP{year_suff}"
+            tcol = f"TOTPOP{year_suff}"
         combos = [tcol] + combos
 
     # Create the variable names and zip the names together

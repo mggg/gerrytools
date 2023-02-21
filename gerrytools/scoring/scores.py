@@ -30,6 +30,7 @@ from .partisan import (
     _stable_proportionality,
     _responsive_proportionality,
 )
+from geopandas import GeoDataFrame
 from functools import partial
 from gerrychain import Partition, Graph
 from typing import Iterable, List, Mapping, Dict, Union
