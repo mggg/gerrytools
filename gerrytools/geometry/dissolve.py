@@ -46,14 +46,14 @@ def dissolve(
 @dataclass
 class StateHierarchy:
     """A collection of `GeoDataFrame`s representing a state."""
-    state: us.states.STATE
+    state: us.states.State
     blocks: Optional[gpd.GeoDataFrame]
     block_groups: Optional[gpd.GeoDataFrame]
     tracts: Optional[gpd.GeoDataFrame]
     counties: Optional[gpd.GeoDataFrame]
 
     @staticmethod
-    def from_s3(cls, state: us.states.STATE, base: str = S3_CENSUS_2020_BASE) -> 'StateHierarchy':
+    def from_s3(cls, state: us.states.State, base: str = S3_CENSUS_2020_BASE) -> 'StateHierarchy':
         """Loads 2020 U.S. Census data from S3 (data.mggg)."""
         state_abbr = str(state.abbr).lower()
         blocks = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_block.zip").set_index("GEOID20")
