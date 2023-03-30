@@ -1,11 +1,14 @@
+import us
 import geopandas as gpd
+from dataclasses import dataclass
 from geopandas import GeoDataFrame
 from pandas import DataFrame
 from copy import deepcopy
-from typing import Mapping, Any, Tuple
+from typing import Mapping, Any, Optional, Tuple
 from collections import defaultdict, Counter
 from shapely.ops import unary_union
 
+S3_CENSUS_2020_BASE = "http://data.mggg.org.s3-website.us-east-2.amazonaws.com/census-2020"
 
 def dissolve(
     geometries, by="DISTRICTN", reset_index=True, keep=[], aggfunc="sum"
@@ -40,8 +43,37 @@ def dissolve(
     return geometries
 
 
+@dataclass
+class StateHierarchy:
+    """A collection of `GeoDataFrame`s representing a state."""
+    state: us.states.STATE
+    blocks: Optional[gpd.GeoDataFrame]
+    block_groups: Optional[gpd.GeoDataFrame]
+    tracts: Optional[gpd.GeoDataFrame]
+    counties: Optional[gpd.GeoDataFrame]
+
+    @staticmethod
+    def from_s3(cls, state: us.states.STATE, base: str = S3_CENSUS_2020_BASE) -> 'StateHierarchy':
+        """Loads 2020 U.S. Census data from S3 (data.mggg)."""
+        state_abbr = str(state.abbr).lower()
+        blocks = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_block.zip").set_index("GEOID20")
+        block_groups = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_bg.zip").to_crs(blocks.crs).set_index("GEOID20")
+        tracts = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_tract.zip").to_crs(blocks.crs).set_index("GEOID20")
+        counties = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_county.zip").to_crs(blocks.crs).set_index("GEOID20")
+
+        return cls(
+            state=state,
+            blocks=blocks,
+            block_groups=block_groups,
+            tracts=tracts,
+            counties=counties
+        )
+        
+    # TODO: load from GerryDB.
+
+
 def hierarchical_block_dissolve(
-    state,
+    state: StateHierarchy,
     block_assignment: DataFrame,
     district_col: str,
     area_consistency_tol: float = 1e-4
@@ -58,7 +90,7 @@ def hierarchical_block_dissolve(
     They must be indexed by their vintage-specific `GEOID` (e.g. `GEOID10`
     or `GEOID20`).
     Args:
-        state (State): us.states.STATE
+        state (State): `StateHierarchy` with Census units for a state.
         block_assignment: A DataFrame with block ids and a district column.
         district_col: Name of column with plan districts.
         area_consistency_tol: Relative tolerance for area consistency check.
@@ -72,23 +104,12 @@ def hierarchical_block_dissolve(
         (indexed by label) and counts of polygons used from each level
         in the hierarchy.
     """
-    state_abbr = str(state.abbr).lower()
-    base = "http://data.mggg.org.s3-website.us-east-2.amazonaws.com/census-2020"
-
-    block_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_block.zip"
-                              ).set_index("GEOID20")
-    bg_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_bg.zip"
-                           ).to_crs(block_gdf.crs).set_index("GEOID20")
-    tract_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_tract.zip"
-                              ).to_crs(block_gdf.crs).set_index("GEOID20")
-    county_gdf = gpd.read_file(f"{base}/{state_abbr}/{state_abbr}_county.zip"
-                               ).to_crs(block_gdf.crs).set_index("GEOID20")
-
     block_assignment = block_assignment.set_index("GEOID20").to_dict()[district_col]
 
     level_gdfs = {
         level: gdf
-        for gdf, level in zip((block_gdf, bg_gdf, tract_gdf, county_gdf),
+        for gdf, level in zip((state.blocks, state.block_groups,
+                               state.tracts, state.counties),
                               ('block', 'bg', 'tract', 'county'))
         if gdf is not None
     }
@@ -102,7 +123,7 @@ def hierarchical_block_dissolve(
 
     level_prefixes = {'county': 5, 'tract': 11, 'bg': 12, 'block': 16}
     level_geoids_to_blocks = _group_by_level(
-        {str(b): b for b in block_gdf.index}, level_prefixes)
+        {str(b): b for b in state.blocks.index}, level_prefixes)
     level_geoids_to_assignments = _group_by_level(
         block_assignment, level_prefixes)
 
@@ -145,7 +166,7 @@ def hierarchical_block_dissolve(
         {'label': assignment, 'geometry': unary_union(geometries)}
         for assignment, geometries in geoms_by_assignment.items()
     ]).sort_values(by='label').set_index('label')
-    dissolved_gdf.crs = block_gdf.crs
+    dissolved_gdf.crs = state.blocks.crs
 
     # Basic consistency check: district areas should approximately match.
     block_geoms = level_geoms['block']
