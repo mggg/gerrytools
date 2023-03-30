@@ -31,7 +31,7 @@ def census10(state, table="P8", columns={}, geometry="block"):
     Args:
         state (State): `us.State` object (e.g. `us.states.WI`).
         table (string, optional): Table from which we retrieve data.
-           Defaults to the P8 table, which gets population by race
+           Defaults to the P8 table, which contains population by race
            regardless of ethnicity.
         columns (dict, optional): Dictionary which maps Census column names
             (from the correct table) to human-readable names. We require this
@@ -50,15 +50,12 @@ def census10(state, table="P8", columns={}, geometry="block"):
     # Check whether the geometry is right. If not, warn the user and set it
     # properly.
     if geometry not in {"block", "tract", "block group"}:
-        print(f"Geometry \"{geometry}\" not accepted; defaulting"
-              "to \"block\".")
-        geometry = "block"
+        raise ValueError(f'Geometry "{geometry}" not accepted.')
 
     # Check whether we're providing an appropriate table name.
     if table not in {"P8", "P9", "P10", "P11"}:
-        print(f"Table \"{table}\" not accepted; defaulting to \"P8.\"")
-        table = "P8"
-
+        raise ValueError(f'Unknown table "{table}".')
+    
     # Create the right geometry identifiers.
     geometries = [("state", str(state.fips)), ("county", "*"), ("tract", "*")]
     if geometry in {"block group", "block"}:
