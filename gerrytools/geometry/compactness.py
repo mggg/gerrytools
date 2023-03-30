@@ -52,11 +52,10 @@ def _reock(partition: Partition, gdf: GeoDataFrame, crs: str):
     return part_scores
 
 
-def _polsby_popper(partition: Partition, dissolved_gdf: GeoDataFrame, crs: str):
+def _polsby_popper(partition: Partition, dissolved_gdf: GeoDataFrame):
     """
     TODO : Add documentation
     """
-    dissolved_gdf = dissolved_gdf.to_crs(crs)
     gdf_graph = Graph.from_geodataframe(dissolved_gdf, ignore_errors=True)
     geo_partition = Partition(graph=gdf_graph,
                               assignment={n: n for n in gdf_graph.nodes},
@@ -75,20 +74,19 @@ def _polsby_popper(partition: Partition, dissolved_gdf: GeoDataFrame, crs: str):
     return part_scores
 
 
-def _schwartzberg(partition: Partition, dissolved_gdf: GeoDataFrame, crs: str):
+def _schwartzberg(partition: Partition, dissolved_gdf: GeoDataFrame):
     """
     TODO: Add documentation
     """
-    polsby_scores = _polsby_popper(partition, dissolved_gdf, crs)
+    polsby_scores = _polsby_popper(partition, dissolved_gdf)
     part_scores = {k: 1/sqrt(polsby_scores[k]) for k in polsby_scores.keys()}
     return part_scores
 
 
-def _convex_hull(partition: Partition, dissolved_gdf: GeoDataFrame, crs: str, index: str = "GEOID20"):
+def _convex_hull(partition: Partition, dissolved_gdf: GeoDataFrame):
     """
     TODO: Add documentation.
     """
-    dissolved_gdf = dissolved_gdf.to_crs(crs)
     state_geom = dissolved_gdf.dissolve().iloc[0].geometry
 
     # Boundary-clipped convex hulls
@@ -104,9 +102,7 @@ def _cut_edges(partition: Partition):
     return len(partition["cut_edges"])
 
 
-def _pop_polygon(partition: Partition, block_gdf: GeoDataFrame, gdf: GeoDataFrame, pop_col: str, crs: str):
-    block_gdf = block_gdf.to_crs(crs)
-
+def _pop_polygon(partition: Partition, block_gdf: GeoDataFrame, gdf: GeoDataFrame, pop_col: str):
     gdf_graph = Graph.from_geodataframe(gdf)
 
     geo_partition = Partition(graph=gdf_graph,
