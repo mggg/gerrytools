@@ -1,5 +1,6 @@
-
+from dataclasses import dataclass
 from gerrychain import Partition
+from geopandas import GeoDataFrame
 from typing import Callable, Mapping, Union, NamedTuple
 
 """
@@ -22,7 +23,8 @@ ElectionWideScoreValue = Mapping[ElectionID, Numeric]
 
 ScoreValue = Union[PlanWideScoreValue, DistrictWideScoreValue, ElectionWideScoreValue]
 
-
-class Score(NamedTuple):
+@dataclass
+class Score:
     name: str
-    apply: Callable[[Partition], ScoreValue]
+    apply: Callable[[Union[Partition, GeoDataFrame]], ScoreValue]
+    dissolved: bool = False

@@ -9,12 +9,13 @@ from .scores import (
     responsive_proportionality, stable_proportionality, efficiency_gap,
     simplified_efficiency_gap, mean_median, partisan_bias, partisan_gini,
     summarize, summarize_many, demographic_shares, demographic_tallies,
-    gingles_districts, max_deviation, eguia
+    gingles_districts, max_deviation, eguia, reock, polsby_popper,
+    schwartzberg, convex_hull, pop_polygon, cut_edges,
+    
 )
 from .population import deviations, unassigned_population
 from .contiguity import unassigned_units, contiguous
 from .demographics import demographic_updaters
-from .reock import reock
 
 __all__ = [
     "splits",
@@ -46,4 +47,9 @@ __all__ = [
     "gingles_districts",
     "max_deviation",
     "eguia",
+    "polsby_popper",
+    "schwartzberg",
+    "convex_hull",
+    "pop_polygon",
+    "cut_edges",
 ]

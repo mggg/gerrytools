@@ -1,15 +1,37 @@
 from gerrytools.scoring import (
     deviations, splits, pieces, unassigned_units, contiguous, reock, 
-    polsby_popper, schwartzberg, convex_hull, pop_polygon
+    polsby_popper, schwartzberg, convex_hull, pop_polygon, summarize
 )
-from gerrychain import Partition
+from gerrychain import Graph, Partition
 import geopandas as gpd
 from gerrychain.grid import Grid
 from shapely.geometry import box
 from math import pi
+from pathlib import Path
 import pytest
 
 from .utils import remotegraphresource
+
+@pytest.fixture(scope="module")
+def ia_dataframe():
+    """`GeoDataFrame` of Iowa counties."""
+    shp_path = Path(__file__).resolve().parent / "fixtures" / "ia_county_with_enacted_2020.zip"
+    return gpd.read_file(shp_path)
+
+
+@pytest.fixture(scope="module")
+def ia_graph():
+    """NetworkX `Graph` of Iowa counties."""
+    return Graph.from_json(
+        Path(__file__).resolve().parent
+        / "fixtures"
+        / "ia_county_with_enacted_2020.json"
+    )
+   
+    
+@pytest.fixture(scope="module") 
+def ia_enacted(ia_graph):
+    return Partition(graph=ia_graph, assignment="DISTRICT") 
 
 
 def test_splits_pandas():
@@ -144,9 +166,43 @@ def test_unassigned_units():
 
     # These two things should report the same number, since none are unassigned.
     assert bads == wholebads
+    
 
+def test_polsby_popper__iowa_counties(ia_enacted, ia_dataframe):
+    scores = summarize(ia_enacted, [polsby_popper()], gdf=ia_dataframe, join_on="GEOID20")
+    avg_polsby = sum(scores["polsby_popper"].values()) / len(scores["polsby_popper"])
+    # Outside source: the value returned by Dave's for the enacted Iowa plan in 0.3116,
+    # which is sufficiently close to our value (any differences are likely attributable
+    # to resolution).
+    # https://davesredistricting.org/maps#ratings::628d5e9a-bd35-4248-aa8c-73af095e0135
+    assert abs(avg_polsby - 0.31076) < 1e-4
+    
 
-def test_polsby_popper_squares_geodataframe():
+def test_schwartzberg__iowa_counties(ia_enacted, ia_dataframe):
+    scores = summarize(ia_enacted, [schwartzberg()], gdf=ia_dataframe, join_on="GEOID20")
+    avg_schwartzberg = sum(scores["schwartzberg"].values()) / len(scores["schwartzberg"])
+    # Ground truth computed from known-good Polsby-Popper scores; recall that
+    # for a single district, Schwartzberg = 1/sqrt(Polsby-Popper).
+    assert abs(avg_schwartzberg - 1.811256) < 1e-4
+    
+    
+def test_schwartzberg__iowa_counties(ia_enacted, ia_dataframe):
+    scores = summarize(ia_enacted, [convex_hull()], gdf=ia_dataframe, join_on="GEOID20")
+    avg_convex_hull = sum(scores["convex_hull"].values()) / len(scores["convex_hull"])
+    # Ground truth computed from known-good Polsby-Popper scores; recall that
+    # for a single district, convex_hull = 1/sqrt(Polsby-Popper).
+    assert abs(avg_convex_hull - 1.811256) < 1e-4
+    
+
+def test_convex_hull__iowa_counties(ia_enacted, ia_dataframe):
+    scores = summarize(ia_enacted, [convex_hull()], gdf=ia_dataframe, join_on = "GEOID20")
+    avg_ch = sum(scores["convex_hull"].values())/len(scores["convex_hull"])
+    # TODO: find an exact source of comparison for this metric.
+    # Without boundary clipping, the score should be 0.74379 or so.
+    assert abs(avg_ch - 0.77202) < 1e-4
+    
+
+def test_polsby_popper__squares():
     grid = Grid((10, 10))
     gdf = gpd.GeodataFrame([
         {'node': (x, y), 'geometry': box(x, y, x+1, y+1)}
@@ -162,7 +218,7 @@ def test_polsby_popper_squares_geodataframe():
         assert abs(dist_score - expected_dist_score) < 1e-4
 
 
-def test_schwartzberg_squares_geodataframe():
+def test_schwartzberg__squares():
     grid = Grid((10, 10))
     gdf = gpd.GeodataFrame([
         {'node': (x, y), 'geometry': box(x, y, x+1, y+1)}
@@ -177,6 +233,15 @@ def test_schwartzberg_squares_geodataframe():
     for dist_score in scored.vales():
         assert abs(dist_score - expected_dist_score) < 1e-4
 
+def test_reock__iowa_counties(ia_enacted, ia_dataframe):
+    scores = summarize(ia_enacted, [reock()], gdf=ia_dataframe, join_on = "GEOID20")
+    avg_reock = sum(scores["reock"].values())/len(scores["reock"])
+
+     # Outside source: the value returned by Dave's for the enacted Iowa plan in 0.3825,
+    # which is sufficiently close to our value (any differences are likely attributable
+    # to resolution).
+    # https://davesredistricting.org/maps#ratings::628d5e9a-bd35-4248-aa8c-73af095e0135
+    assert abs(avg_reock - 0.38247) < 1e-4
 
 @pytest.mark.skip(reason="Tests should use real-world data.")
 def test_reock_score_squares_geodataframe():
@@ -233,6 +298,9 @@ def test_reock_score_disconnected():
     assert abs(scored[1] - (2 / pi)) < 1e-4
     assert abs(scored[2] - (2 / pi)) < 1e-4
     assert abs(scored[3] == (27 / 25) * (pi / 2)) < 1e-4
+
+
+  
 
 if __name__ == "__main__":
     pass
