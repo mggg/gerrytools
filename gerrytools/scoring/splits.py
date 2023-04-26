@@ -36,13 +36,9 @@ def _grouper(P: Partition, unit: str, popcol: str = None) -> list:
 
     # Group by unit, then get the units split.
     groups = list(pdf.groupby(by=unit))
-
-    for _, group in groups:
-        group = group.drop(group[group[popcol] < 1].index) if popcol else group
-
-    # Return the groups.
-    return groups
-
+    
+    return [group[group[popcol] > 0].copy() if popcol else group for group in groups]
+    
 
 def _splits(
     P: Partition, unit: str, names: bool = False, popcol: str = None, how: str = "pandas",
