@@ -36,7 +36,7 @@ def _grouper(P: Partition, unit: str, popcol: str = None) -> list:
 
     # Group by unit, then get the units split.
     groups = list(pdf.groupby(by=unit))
-    
+
     return [group[group[popcol] > 0].copy() if popcol else group for group in groups]
     
 
