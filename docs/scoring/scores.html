@@ -1784,6 +1784,150 @@ and returns a PlanWideScoreValue for the number of swing districts.</p></div>
     )</code></pre>
 </details>
 </dd>
+
+<dt id="gerrytools.scoring.scores.polsbvy_popper"><code class="name flex">
+<span>def <span class="ident">polsby_popper</span></span>() ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
+</code></dt>
+<dd>
+<div class="desc"><p>    Returns the polsby-popper score for each district in a plan.
+</p>
+<h2 id="args">Args</h2>
+
+<h2 id="returns">Returns</h2>
+<p>A dictionary with districts as keys and polsby-popper scores as values.
+</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def polsby_popper() -&gt; Score:
+    &#34;&#34;&#34;
+    Returns the polsby-popper score for each district in a plan.
+    
+    Returns:
+        A dictionary with districts as keys and polsby-popper scores as values.
+    return Score(&#34;polsby_popper&#34;, _polsby_popper, dissolved=True)
+
+  
+    )</code></pre>
+</details>
+</dd>
+
+<dt id="gerrytools.scoring.scores.polsby_popper"><code class="name flex">
+<span>def <span class="ident">polsby_popper</span></span>() ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
+</code></dt>
+<dd>
+<div class="desc"><p>    Returns the polsby-popper score for each district in a plan.
+</p>
+<h2 id="args">Args</h2>
+
+<h2 id="returns">Returns</h2>
+<p>A dictionary with districts as keys and polsby-popper scores as values.
+</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def polsby_popper() -&gt; Score:
+    &#34;&#34;&#34;
+    Returns the polsby-popper score for each district in a plan.
+    
+    Returns:
+        A dictionary with districts as keys and polsby-popper scores as values.
+    return Score(&#34;polsby_popper&#34;, _polsby_popper, dissolved=True)
+
+  
+    )</code></pre>
+</details>
+</dd>
+
+<dt id="gerrytools.scoring.scores.schwartzberg"><code class="name flex">
+<span>def <span class="ident">schwartzberg</span></span>() ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
+</code></dt>
+<dd>
+<div class="desc"><p>       Returns the schwartzberg score for each district in a plan.
+
+<h2 id="args">Args</h2>
+
+<h2 id="returns">Returns</h2>
+<p>A dictionary with districts as keys and schwartzberg scores as values.
+</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def schwartzberg() -&gt; Score:
+    &#34;&#34;&#34;
+    Returns the schwartzberg score for each district in a plan.
+    
+    Returns:
+        A dictionary with districts as keys and schwartzberg scores as values.
+    return Score(&#34;schwartzberg&#34;, _schwartzberg, dissolved=True)
+
+  
+    )</code></pre>
+</details>
+</dd>
+
+<dt id="gerrytools.scoring.scores.convex_hull"><code class="name flex">
+<span>def <span class="ident">convex_hull</span></span>() ‑> <a title="gerrytools.scoring.types.Score" href="types.html#gerrytools.scoring.types.Score">Score</a></span>
+</code></dt>
+<dd>
+<div class="desc"><p>    Returns the convex-hull score for each district in a plan.
+</p>
+<h2 id="args">Args</h2>
+
+<h2 id="returns">Returns</h2>
+<p>A dictionary with districts as keys and convex-hull scores as values.
+</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def convex_hull() -&gt; Score:
+    &#34;&#34;&#34;
+    Returns the convex-hull score for each district in a plan.
+    
+    Returns:
+        A dictionary with districts as keys and convex-hull scores as values.
+    return Score(&#34;convex_hull&#34;, _convex_hull, dissolved=True)
+
+  
+    )</code></pre>
+</details>
+</dd>
+<dd>
+<div class="desc"><p>S    Returns the population polygon compactness metric for each district in a plan.
+</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>block_gdf</code></strong> :&ensp;<code>GeoDataFrame</code><strong></dt>
+<dd>Block level shapefile for the state.</dd>
+<dt><strong><code>pop_col</code></strong> :&ensp;<code>str</code></dt>
+<dd>Population column reflected in block_gdf and gdf.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>A dictionary with districts as keys and population polygon scores as values.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def pop_polygon(block_gdf: GeoDataFrame, pop_col: str) -&gt; Score:
+    &#34;&#34;&#34;
+    Returns the population polygon compactness metric for each district in a plan.
+    Args:
+        block_gdf (GeoDataFrame): Block level shapefile for the state.
+        pop_col (str): Population column reflected in block_gdf and gdf.
+    Returns:
+        A dictionary with districts as keys and population polygon scores as values.
+    &#34;&#34;&#34;
+    return Score(
+        &#34;pop_polygon&#34;,
+        partial(_pop_polygon, block_gdf=block_gdf, pop_col=pop_col), dissolved=True)
+    )</code></pre>
+</details>
+</dd>
+
 </dl>
 </section>
 <section>
