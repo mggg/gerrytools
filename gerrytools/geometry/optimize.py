@@ -437,8 +437,8 @@ def calculate_dispersion_per_district(units: gpd.GeoDataFrame, enacted_col: str,
         people displaced from the enacted plan to the proposed plan.
     """
     if units[enacted_col].dtype != units[proposed_col].dtype:
-        units[enacted_col] = units[enacted_col].astype(float).astype(int)
-        units[proposed_col] = units[proposed_col].astype(float).astype(int)
+        raise TypeError("Your enacted and proposed columns must have the same type!")
+
 
     dispersion_dict = {district: sum(units[pop_col][(units[enacted_col] == district)
                                      & (units[proposed_col] != district)])
