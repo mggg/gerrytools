@@ -1,11 +1,9 @@
-
 from matplotlib.axes import Axes
+
 from .colors import defaultGray
 
 
-def arrow(
-    ax, text, orientation="horizontal", color=defaultGray, padding=0.1
-) -> Axes:
+def arrow(ax, text, orientation="horizontal", color=defaultGray, padding=0.1) -> Axes:
     """
     For some partisan metrics, we want to draw an arrow showing where the POV-party's
     advantage is. Depending on the orientation of the scores (histograms have
@@ -38,12 +36,20 @@ def arrow(
         rotation = 90
 
     ax.text(
-        x, y, text, ha=horizontal_align, va="center", color="white", rotation=rotation,
-        size=10, bbox=dict(
-            boxstyle="rarrow,pad=0.3", fc=color,
+        x,
+        y,
+        text,
+        ha=horizontal_align,
+        va="center",
+        color="white",
+        rotation=rotation,
+        size=10,
+        bbox=dict(
+            boxstyle="rarrow,pad=0.3",
+            fc=color,
             alpha=1,
             ec="black",
-        )
+        ),
     )
 
     return ax

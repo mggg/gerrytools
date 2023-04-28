@@ -1,13 +1,21 @@
-
-from matplotlib.axes import Axes
-import numpy as np
 import random
-from .colors import defaultGray, citizenBlue, districtr
+
+import numpy as np
+from matplotlib.axes import Axes
+
+from .colors import citizenBlue, defaultGray, districtr
 
 
 def violin(
-    ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1, 99), rotation=0,
-    ticksize=12, jitter=1 / 3
+    ax,
+    scores,
+    xticklabels=None,
+    labels=None,
+    proposed_info={},
+    percentiles=(1, 99),
+    rotation=0,
+    ticksize=12,
+    jitter=1 / 3,
 ) -> Axes:
     r"""
     Plot a violin plot, which takes `scores` — a dictionary where each value (corresponding to
@@ -66,7 +74,7 @@ def violin(
 
     # Set xticks, xlabels, and x-axis limits.
     if not xticklabels:
-        xticklabels = range(1, len(scores['ensemble']) + 1)
+        xticklabels = range(1, len(scores["ensemble"]) + 1)
     ax.set_xticks(range(1, len(ensemble) + 1))
     ax.set_xticklabels(xticklabels, fontsize=ticksize, rotation=rotation)
     ax.set_xlim(0.5, len(ensemble) + 0.5)
@@ -79,19 +87,24 @@ def violin(
             for plan, score in enumerate(scores["proposed"][violin]):
                 # Horizontally jitter proposed scores if there are multiple scores
                 # at the same height.
-                jitter_val = random.uniform(-jitter, jitter) if scores["proposed"][violin].count(score) > 1 else 0
+                jitter_val = (
+                    random.uniform(-jitter, jitter)
+                    if scores["proposed"][violin].count(score) > 1
+                    else 0
+                )
                 ax.scatter(
                     violin + 1 + jitter_val,
                     score,
-                    color=scores["proposed"]["colors"][violin] if scores["proposed"]["colors"]
-                                 else districtr(plan + 1).pop(),
-                    edgecolor='black',
+                    color=scores["proposed"]["colors"][violin]
+                    if scores["proposed"]["colors"]
+                    else districtr(plan + 1).pop(),
+                    edgecolor="black",
                     s=100,
                     alpha=0.9,
                     label=proposed_info["names"][plan] if violin == 0 else None,
                 )
         ax.legend()
-        ax.grid(axis='x')
+        ax.grid(axis="x")
 
     if labels:
         ax.set_xlabel(labels[0], fontsize=24)

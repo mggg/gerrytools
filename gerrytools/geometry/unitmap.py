@@ -1,7 +1,7 @@
-
-from typing import List, Dict, TypeVar
-import maup
 import warnings
+from typing import Dict, List, TypeVar
+
+import maup
 
 A = TypeVar("A")
 B = TypeVar("B")

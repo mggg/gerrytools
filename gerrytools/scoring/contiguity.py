@@ -41,9 +41,10 @@ def unassigned_units(P: gerrychain.Partition, raw: bool = False) -> Union[float,
 
     # Next, check for "bad" assignments for units: this includes empty strings
     # and NaNs, for now.
-    units_assigned_well = len({
-        k: v
-        for k, v in assignment.items() if v not in ["nan", "NaN", ""]
-    })
+    units_assigned_well = len(
+        {k: v for k, v in assignment.items() if v not in ["nan", "NaN", ""]}
+    )
 
-    return 1 - (units_assigned_well / total) if not raw else (total - units_assigned_well)
+    return (
+        1 - (units_assigned_well / total) if not raw else (total - units_assigned_well)
+    )

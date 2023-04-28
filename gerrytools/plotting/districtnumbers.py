@@ -1,12 +1,17 @@
-
 from matplotlib.axes import Axes
 
 # If district numbers are to be plotted, plot those too!
 
 
 def districtnumbers(
-    base, districts, assignment="DISTRICTN", boxstyle="circle,pad=0.2",
-    fc="wheat", ec="black", lw=1 / 6, fontsize=15
+    base,
+    districts,
+    assignment="DISTRICTN",
+    boxstyle="circle,pad=0.2",
+    fc="wheat",
+    ec="black",
+    lw=1 / 6,
+    fontsize=15,
 ) -> Axes:
     """
     Plots district numbers on top of overlaid district geometries.
@@ -33,11 +38,14 @@ def districtnumbers(
     for district, identifier in zip(districts["geometry"], districts[assignment]):
         x, y = list(district.representative_point().coords)[0]
         base.annotate(
-            identifier, (x, y), xytext=(x, y), xycoords="data", fontsize=fontsize,
-            ha="center", va="center",
-            bbox=dict(
-                boxstyle=boxstyle, fc=fc, ec=ec, alpha=1, linewidth=lw
-            )
+            identifier,
+            (x, y),
+            xytext=(x, y),
+            xycoords="data",
+            fontsize=fontsize,
+            ha="center",
+            va="center",
+            bbox=dict(boxstyle=boxstyle, fc=fc, ec=ec, alpha=1, linewidth=lw),
         )
 
     return base

@@ -1,7 +1,7 @@
-
-from sortedcontainers import SortedDict, SortedList
 import zlib
 from typing import List
+
+from sortedcontainers import SortedDict, SortedList
 
 
 class AssignmentCompressor:
@@ -178,8 +178,8 @@ class AssignmentCompressor:
         if not set(assignment.keys()).issubset(self.identifiers):
             skip = True
             print(
-                "`assignment`'s keys are not a subset of `identifiers`; skipping. " +
-                "Please ensure that all keys and values in `assignment` are strings.",
+                "`assignment`'s keys are not a subset of `identifiers`; skipping. "
+                + "Please ensure that all keys and values in `assignment` are strings.",
             )
 
         # Join the things on the district separator, encode the whole thing, and
@@ -298,7 +298,9 @@ class AssignmentCompressor:
         # For each of the parts, decode the bytes, make them into lists, and
         # match them to GEOIDs.
         decoded_parts = [part.decode() for part in decompressed_parts]
-        split_parts = [part.split(self.DISTRICT_DELIMITER.decode()) for part in decoded_parts]
+        split_parts = [
+            part.split(self.DISTRICT_DELIMITER.decode()) for part in decoded_parts
+        ]
         indexed_parts = [dict(zip(self.identifiers, part)) for part in split_parts]
 
         return indexed_parts

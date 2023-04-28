@@ -1,10 +1,10 @@
+from functools import reduce
+from itertools import combinations
+from typing import Iterable
 
+import censusdata
 import pandas as pd
 import requests
-import censusdata
-from itertools import combinations
-from functools import reduce
-from typing import Iterable
 
 
 def _rjoin(df, columns) -> Iterable:
@@ -20,8 +20,7 @@ def _rjoin(df, columns) -> Iterable:
         An iterable representing the column of concatenated column entries.
     """
     stringified = [df[c].astype(str) for c in columns]
-    return reduce(lambda left, right: left + right,
-                  stringified[1:], stringified[0])
+    return reduce(lambda left, right: left + right, stringified[1:], stringified[0])
 
 
 def census10(state, table="P8", columns={}, geometry="block"):
@@ -55,7 +54,7 @@ def census10(state, table="P8", columns={}, geometry="block"):
     # Check whether we're providing an appropriate table name.
     if table not in {"P8", "P9", "P10", "P11"}:
         raise ValueError(f'Unknown table "{table}".')
-    
+
     # Create the right geometry identifiers.
     geometries = [("state", str(state.fips)), ("county", "*"), ("tract", "*")]
     if geometry in {"block group", "block"}:
@@ -68,7 +67,9 @@ def census10(state, table="P8", columns={}, geometry="block"):
     vars = list(varmap.keys())
     # Download data.
     raw = censusdata.download(
-        "sf1", 2010, censusdata.censusgeo(geometries),
+        "sf1",
+        2010,
+        censusdata.censusgeo(geometries),
         ["GEO_ID"] + vars,
     )
 
@@ -82,8 +83,11 @@ def census10(state, table="P8", columns={}, geometry="block"):
 
 
 def census20(
-    state, table="P1", columns={}, geometry="block",
-    key="75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65"
+    state,
+    table="P1",
+    columns={},
+    geometry="block",
+    key="75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65",
 ) -> pd.DataFrame:
     """
     Retrieves `geometry`-level 2020 Decennial Census PL94-171 data via the
@@ -112,13 +116,12 @@ def census20(
     # Check whether the geometry is right. If not, warn the user and set it
     # properly.
     if geometry not in {"block", "tract", "block group"}:
-        print(f"Geometry \"{geometry}\" not accepted; defaulting"
-              "to \"block\".")
+        print(f'Geometry "{geometry}" not accepted; defaulting' 'to "block".')
         geometry = "block"
 
     # Check whether we're providing an appropriate table name.
     if table not in {"P1", "P2", "P3", "P4"}:
-        print(f"Table \"{table}\" not accepted; defaulting to \"P1.\"")
+        print(f'Table "{table}" not accepted; defaulting to "P1."')
         table = "P1"
 
     # Set the base Census API URL and get the keys for the provided table.
@@ -161,9 +164,7 @@ def census20(
         unescaped.append(("get", ",".join(varchunk)))
 
         # Create an escaped query string from the previous.
-        escaped = "?" + "&".join(
-            f"{param}={value}" for param, value in unescaped
-        )
+        escaped = "?" + "&".join(f"{param}={value}" for param, value in unescaped)
 
         # Send the request and create a dataframe.
         req = requests.get(base + escaped).json()
@@ -177,8 +178,7 @@ def census20(
 
     # Merge the dataframes, rename everything, make the columns
     # ints, and return.
-    merged = reduce(lambda left, right: pd.merge(left, right,
-                    on="GEOID20"), mergeable)
+    merged = reduce(lambda left, right: pd.merge(left, right, on="GEOID20"), mergeable)
     merged = merged.rename(varmap, axis=1)
     merged = merged.astype({var: int for var in varmap.values()})
 
@@ -212,13 +212,15 @@ def variables(table) -> dict:
     prefix = "NH" if table in {"P2", "P4", "P9", "P11"} else ""
     suffix = "VAP" if table in {"P3", "P4", "P10", "P11"} else "POP"
     year_suff = "20" if table in {"P1", "P2", "P3", "P4"} else "10"
-    combos = list(pd.core.common.flatten(
-        [
-            prefix + "".join(list(combo)) + suffix + year_suff
-            for i in range(1, len(categories) + 1)
-            for combo in list(combinations(categories, i))
-        ]
-    ))
+    combos = list(
+        pd.core.common.flatten(
+            [
+                prefix + "".join(list(combo)) + suffix + year_suff
+                for i in range(1, len(categories) + 1)
+                for combo in list(combinations(categories, i))
+            ]
+        )
+    )
 
     # Now, for each of the combinations, we map the appropriate variable
     # name to the descriptor. Each of these tranches should have a width
@@ -231,8 +233,7 @@ def variables(table) -> dict:
         tranches = [(5, 10), (13, 27), (29, 48), (50, 64), (66, 71), (73, 73)]
 
     # Create variable numbers.
-    numbers = list(pd.core.common.flatten([list(range(i, j + 1))
-                   for i, j in tranches]))
+    numbers = list(pd.core.common.flatten([list(range(i, j + 1)) for i, j in tranches]))
 
     # Edit these for specific tables. For example, in tables P2 and P3, we want
     # to get the total Hispanic population and the total population.
@@ -258,6 +259,7 @@ def variables(table) -> dict:
     if year_suff == "20":
         names = [f"{table}_{str(n).zfill(3)}N" for n in numbers]
     else:
-        names = [f"P{str(table.split('P')[-1]).zfill(3)}{str(n).zfill(3)}"
-                 for n in numbers]
+        names = [
+            f"P{str(table.split('P')[-1]).zfill(3)}{str(n).zfill(3)}" for n in numbers
+        ]
     return dict(zip(names, combos))

@@ -1,15 +1,14 @@
-
 """
 Facilities for processing data and districting plans in a standardized fashion.
 """
-from .acs import cvap, acs5
-from .census import census20, census10, variables
-from .estimatecvap import estimatecvap2010, estimatecvap2020, fetchgeometries
-from .fetch import submissions, tabularized, Submission
-from .remap import remap
-from .URLs import ids, one, csvs
+from .acs import acs5, cvap
 from .AssignmentCompressor import AssignmentCompressor
+from .census import census10, census20, variables
+from .estimatecvap import estimatecvap2010, estimatecvap2020, fetchgeometries
+from .fetch import Submission, submissions, tabularized
 from .geometries import geometries20
+from .remap import remap
+from .URLs import csvs, ids, one
 
 __all__ = [
     "submissions",
@@ -28,5 +27,5 @@ __all__ = [
     "estimatecvap2020",
     "fetchgeometries",
     "census10",
-    "geometries20"
+    "geometries20",
 ]

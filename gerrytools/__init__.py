@@ -1,4 +1,3 @@
-
 """
 
 .. include:: ../docs/introduction.md

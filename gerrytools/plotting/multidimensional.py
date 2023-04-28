@@ -1,15 +1,22 @@
-
-from matplotlib.axes import Axes
 from typing import Tuple
-from .scatterplot import scatterplot
-from .histogram import histogram
-from matplotlib import gridspec
+
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
+from matplotlib.axes import Axes
+
+from .histogram import histogram
+from .scatterplot import scatterplot
 
 
 def multidimensional(
-    x, y, hist, labels=["X values", "Y values", "Histogram values"], bin_width=1,
-    limits=None, proposed_info={}, figsize=(12, 8)
+    x,
+    y,
+    hist,
+    labels=["X values", "Y values", "Histogram values"],
+    bin_width=1,
+    limits=None,
+    proposed_info={},
+    figsize=(12, 8),
 ) -> Tuple[Axes, Axes]:
     r"""
     Plot a multidimensional figure, comparing two metrics as a scatterplot above
@@ -37,7 +44,11 @@ def multidimensional(
     scatter_labels = labels[:2]
     scatter_ax = plt.subplot(gs[0])
     scatter_ax = scatterplot(
-        scatter_ax, x, y, labels=scatter_labels, limits=scatter_limits,
+        scatter_ax,
+        x,
+        y,
+        labels=scatter_labels,
+        limits=scatter_limits,
         proposed_info=proposed_info,
     )
 
@@ -51,13 +62,17 @@ def multidimensional(
     hist_label = labels[-1]
     hist_ax = plt.subplot(gs[1])
     hist_ax = histogram(
-        hist_ax, scores, label=hist_label, limits=hist_limits, proposed_info=proposed_info,
+        hist_ax,
+        scores,
+        label=hist_label,
+        limits=hist_limits,
+        proposed_info=proposed_info,
         bin_width=bin_width,
     )
 
     hist_ax.get_yaxis().set_visible(False)
-    hist_ax.spines['top'].set_visible(False)
-    hist_ax.spines['right'].set_visible(False)
-    hist_ax.spines['left'].set_visible(False)
+    hist_ax.spines["top"].set_visible(False)
+    hist_ax.spines["right"].set_visible(False)
+    hist_ax.spines["left"].set_visible(False)
 
     return scatter_ax, hist_ax

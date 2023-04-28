@@ -1,13 +1,13 @@
+import io
+import json
+from datetime import datetime
+from typing import List, Tuple, Union
 
 import pandas as pd
 import requests
-import json
-import io
-from datetime import datetime
 from pydantic import BaseModel
-from typing import Tuple, List, Union
 
-from .URLs import ids, csvs, one
+from .URLs import csvs, ids, one
 
 
 class Submission(BaseModel):
@@ -15,6 +15,7 @@ class Submission(BaseModel):
     Provides a base model for data retrieved from districtr. Allows us to use
     dot notation when accessing properties rather than dict notation.
     """
+
     link: str
     """A districtr URL."""
     plan: dict
@@ -31,8 +32,7 @@ class Submission(BaseModel):
     """Not sure."""
 
 
-def tabularized(state, submissions) -> Tuple[pd.DataFrame,
-                                             pd.DataFrame, pd.DataFrame]:
+def tabularized(state, submissions) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Returns districtr submission information in a tabular format.
 
@@ -115,8 +115,7 @@ def tabularized(state, submissions) -> Tuple[pd.DataFrame,
                     df.drop(col, axis=1, inplace=True)
 
             # Rename the columns we do care about.
-            df.rename({"type_y": "type", "link_y": "link"}, axis=1,
-                      inplace=True)
+            df.rename({"type_y": "type", "link_y": "link"}, axis=1, inplace=True)
 
     return plans, cois, writtens
 
@@ -161,15 +160,17 @@ def submissions(state, sample=None) -> List[Submission]:
             tileset = districtr["plan"]["units"]["tilesets"][0]["sourceLayer"]
 
             # Create a new Submission.
-            submissions.append(Submission(
-                link=entity["link"],
-                id=identifier,
-                plan=plan,
-                units=units,
-                unitsType=unitsType,
-                tileset=tileset,
-                type=entity["type"]
-            ))
+            submissions.append(
+                Submission(
+                    link=entity["link"],
+                    id=identifier,
+                    plan=plan,
+                    units=units,
+                    unitsType=unitsType,
+                    tileset=tileset,
+                    type=entity["type"],
+                )
+            )
         except BaseException:
             pass
 

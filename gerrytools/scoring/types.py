@@ -1,7 +1,8 @@
 from dataclasses import dataclass
-from gerrychain import Partition
+from typing import Callable, Mapping, NamedTuple, Union
+
 from geopandas import GeoDataFrame
-from typing import Callable, Mapping, Union, NamedTuple
+from gerrychain import Partition
 
 """
     Typing Definitions:
@@ -22,6 +23,7 @@ DistrictWideScoreValue = Mapping[DistrictID, Numeric]
 ElectionWideScoreValue = Mapping[ElectionID, Numeric]
 
 ScoreValue = Union[PlanWideScoreValue, DistrictWideScoreValue, ElectionWideScoreValue]
+
 
 @dataclass
 class Score:

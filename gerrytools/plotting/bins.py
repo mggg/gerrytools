@@ -1,7 +1,7 @@
+from typing import List, Tuple, Union
 
 import numpy as np
 from numpy import array
-from typing import Tuple, List, Union
 
 
 def bins(scores, width=None, labels=8) -> Tuple[array, List, List, Union[float, int]]:

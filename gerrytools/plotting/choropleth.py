@@ -1,17 +1,27 @@
-
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.axes import Axes
 import numpy as np
+from matplotlib.axes import Axes
 
 from .colors import overlays as overlaycolors
 from .districtnumbers import districtnumbers
 
 
 def choropleth(
-    geometries, districts=None, assignment=None, demographic="BVAP",
-    overlays=[], cmap="Purples", cbartitle=None, numbers=True, lw=1 / 8,
-    fontsize=15, min=0, max=1, interval=1 / 10, colorbar=True
+    geometries,
+    districts=None,
+    assignment=None,
+    demographic="BVAP",
+    overlays=[],
+    cmap="Purples",
+    cbartitle=None,
+    numbers=True,
+    lw=1 / 8,
+    fontsize=15,
+    min=0,
+    max=1,
+    interval=1 / 10,
+    colorbar=True,
 ) -> Axes:
     r"""
     Visualization of population shares or totals in a state's map.
@@ -83,14 +93,17 @@ def choropleth(
         linewidth=lw,
         vmin=min,
         vmax=max,
-        ax=base
+        ax=base,
     )
 
     # Create and plot the colorbar on the right side of the figure.
     if colorbar:
         cbar = fig.colorbar(
-            plt.cm.ScalarMappable(cmap=colorbarmap, norm=norm), shrink=0.5,
-            location="right", ax=base, ticks=ticks
+            plt.cm.ScalarMappable(cmap=colorbarmap, norm=norm),
+            shrink=0.5,
+            location="right",
+            ax=base,
+            ticks=ticks,
         )
         cbar.ax.set_yticklabels(labels)
         cbar.ax.set_ylabel(cbartitle)
@@ -100,20 +113,19 @@ def choropleth(
     # Plot each of the overlays, adjusting CRSes and applying colors as we go.
     for idx, geom in enumerate(overlays):
         geom = geom.to_crs(geometries.crs)
-        geom.boundary.plot(edgecolor=overlaycolors[-(idx + 1)], linewidth=1 / 4, ax=base)
+        geom.boundary.plot(
+            edgecolor=overlaycolors[-(idx + 1)], linewidth=1 / 4, ax=base
+        )
 
     # If district geometries are provided, plot them as well.
     if districts is not None:
-        districts.plot(
-            edgecolor="black",
-            linewidth=3 / 2,
-            ax=base,
-            color="None"
-        )
+        districts.plot(edgecolor="black", linewidth=3 / 2, ax=base, color="None")
 
     # If district numbers are to be plotted, plot those too!
     if numbers:
-        base = districtnumbers(base, districts, assignment=assignment, fontsize=fontsize)
+        base = districtnumbers(
+            base, districts, assignment=assignment, fontsize=fontsize
+        )
 
     # Turn plot vertical/horizontal axes off and return base Axes.
     base.set_axis_off()

@@ -1,9 +1,10 @@
+import random
 
+import numpy as np
 from matplotlib.axes import Axes
+
 from .colors import defaultGray
 from .utils import sort_elections
-import numpy as np
-import random
 
 
 def sealevel(ax, scores, num_districts, proposed_info, ticksize=12) -> Axes:
@@ -29,13 +30,19 @@ def sealevel(ax, scores, num_districts, proposed_info, ticksize=12) -> Axes:
             shares_by_plan[plan].append(scores[plan][election])
 
     ax.plot(
-        shares_by_plan['statewide'], marker='o', markersize=10, lw=5,
+        shares_by_plan["statewide"],
+        marker="o",
+        markersize=10,
+        lw=5,
         label="Proportionality",
     )
 
-    for i, plan in enumerate(proposed_info['names']):
+    for i, plan in enumerate(proposed_info["names"]):
         for j in range(len(shares_by_plan[plan])):
-            if len(set([shares_by_plan[plan][j] for plan in shares_by_plan.keys()])) > 1:
+            if (
+                len(set([shares_by_plan[plan][j] for plan in shares_by_plan.keys()]))
+                > 1
+            ):
                 jitter = random.uniform(-0.02, 0.02)
             else:
                 0
@@ -43,7 +50,10 @@ def sealevel(ax, scores, num_districts, proposed_info, ticksize=12) -> Axes:
             shares_by_plan[plan][j] = shares_by_plan[plan][j] + jitter
 
         ax.plot(
-            shares_by_plan[plan], marker='o', linestyle='--', color=proposed_info['colors'][i],
+            shares_by_plan[plan],
+            marker="o",
+            linestyle="--",
+            color=proposed_info["colors"][i],
             label=plan,
         )
 

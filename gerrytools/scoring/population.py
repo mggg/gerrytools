@@ -1,4 +1,3 @@
-
 from gerrychain.constraints.validity import deviation_from_ideal as deviation
 from gerrychain.updaters import Tally
 

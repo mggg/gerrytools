@@ -1,12 +1,20 @@
+import random
 
 from matplotlib.axes import Axes
-import random
-from .colors import defaultGray, citizenBlue, districtr
+
+from .colors import citizenBlue, defaultGray, districtr
 
 
 def boxplot(
-    ax, scores, xticklabels=None, labels=None, proposed_info={}, percentiles=(1, 99),
-    rotation=0, ticksize=12, jitter=1 / 3
+    ax,
+    scores,
+    xticklabels=None,
+    labels=None,
+    proposed_info={},
+    percentiles=(1, 99),
+    rotation=0,
+    ticksize=12,
+    jitter=1 / 3,
 ) -> Axes:
     r"""
     Plot boxplots, which takes `scores` — a dictionary where each value
@@ -44,7 +52,7 @@ def boxplot(
 
     # Specify the boxplots' style.
     boxstyle = {
-        "lw": 1/2,
+        "lw": 1 / 2,
         "color": facecolor,
     }
 
@@ -61,7 +69,7 @@ def boxplot(
 
     # Set xticks, xlabels, and x-axis limits
     if not xticklabels:
-        xticklabels = range(1, len(scores['ensemble']) + 1)
+        xticklabels = range(1, len(scores["ensemble"]) + 1)
     ax.set_xticks(range(1, len(ensemble) + 1))
     ax.set_xticklabels(xticklabels, fontsize=ticksize, rotation=rotation)
     ax.set_xlim(0.5, len(ensemble) + 0.5)
@@ -74,7 +82,11 @@ def boxplot(
             for plan, score in enumerate(scores["proposed"][boxplot]):
                 # Horizontally jitter proposed scores if there are multiple scores
                 # at the same height.
-                jitter_val = random.uniform(-jitter, jitter) if scores["proposed"][boxplot].count(score) > 1 else 0
+                jitter_val = (
+                    random.uniform(-jitter, jitter)
+                    if scores["proposed"][boxplot].count(score) > 1
+                    else 0
+                )
                 color_val = ""
                 if "colors" in scores["proposed"]:
                     color_val = scores["proposed"]["colors"][boxplot]
@@ -84,13 +96,12 @@ def boxplot(
                     boxplot + 1 + jitter_val,
                     score,
                     color=color_val,
-                    edgecolor='black',
+                    edgecolor="black",
                     s=100,
                     alpha=0.9,
                     label=proposed_info["names"][plan] if boxplot == 0 else None,
                 )
         ax.legend()
-        
 
     if labels:
         ax.set_xlabel(labels[0], fontsize=24)

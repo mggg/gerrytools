@@ -1,25 +1,33 @@
-
-from gerrychain import (
-    GeographicPartition,
-    Partition,
-    Graph,
-    MarkovChain,
-    updaters,
-    constraints,
-    accept,
-)
-from gerrychain.proposals import recom
 from functools import partial
-from gerrytools.geometry import (
-    dissolve, dualgraph, unitmap, invert, dispersion_updater_closure, dataframe
-)
+
 import geopandas as gpd
 import pytest
+from gerrychain import (
+    GeographicPartition,
+    Graph,
+    MarkovChain,
+    Partition,
+    accept,
+    constraints,
+    updaters,
+)
+from gerrychain.proposals import recom
+
+from gerrytools.geometry import (
+    dataframe,
+    dispersion_updater_closure,
+    dissolve,
+    dualgraph,
+    invert,
+    unitmap,
+)
 
 from .utils import remotegraphresource, remoteresource
 
 
-@pytest.mark.xfail(reason="Documentation and call signature do not match; clarification needed.")
+@pytest.mark.xfail(
+    reason="Documentation and call signature do not match; clarification needed."
+)
 def test_dispersion_calc():
     gdf = gpd.read_file("./test-resources/test-vtds/")
     gdf["CONGRESS"] = gdf["CONGRESS"].astype(int)
@@ -27,7 +35,7 @@ def test_dispersion_calc():
 
     my_updaters = {
         "population": updaters.Tally("TOTPOP", alias="population"),
-        "dispersion": dispersion_updater_closure(gdf, "CONGRESS", "TOTPOP")
+        "dispersion": dispersion_updater_closure(gdf, "CONGRESS", "TOTPOP"),
     }
 
     initial_partition = GeographicPartition(
@@ -39,10 +47,16 @@ def test_dispersion_calc():
     )
 
     proposal = partial(
-        recom, pop_col="TOTPOP", pop_target=ideal_population, epsilon=0.10, node_repeats=2
+        recom,
+        pop_col="TOTPOP",
+        pop_target=ideal_population,
+        epsilon=0.10,
+        node_repeats=2,
     )
 
-    pop_constraint = constraints.within_percent_of_ideal_population(initial_partition, 0.02)
+    pop_constraint = constraints.within_percent_of_ideal_population(
+        initial_partition, 0.02
+    )
 
     chain = MarkovChain(
         proposal=proposal,
@@ -71,7 +85,9 @@ def test_dissolve():
     districts = districts[["geometry", "G20PREDBID"]]
 
     keep = ["G20PREDBID"]
-    districts["DISTRICT"] = [0]*(len(districts)//2) + [1]*(len(districts)-len(districts)//2)
+    districts["DISTRICT"] = [0] * (len(districts) // 2) + [1] * (
+        len(districts) - len(districts) // 2
+    )
     dissolved = dissolve(districts, by="DISTRICT", keep=keep)
     dissolved["NAME"] = ["A", "B"]
 
@@ -98,9 +114,7 @@ def test_dualgraph():
     )
 
     # Create another adjusted dual graph, this time with more things mucked up.
-    nameadjusted = dualgraph(
-        districts, index="NAME", colmap={"G20PREDBID": "BIDEN"}
-    )
+    nameadjusted = dualgraph(districts, index="NAME", colmap={"G20PREDBID": "BIDEN"})
 
     # Check that there are different edges in `default` and `adjusted`, and that
     # edges were added and cut.
@@ -137,7 +151,9 @@ def test_unitmap():
 def test_dataframe():
     G = remotegraphresource("test-graph.json")
 
-    P = Partition(graph=G, assignment={v: d["COUNTYFP20"] for v, d in G.nodes(data=True)})
+    P = Partition(
+        graph=G, assignment={v: d["COUNTYFP20"] for v, d in G.nodes(data=True)}
+    )
     df = dataframe(P, assignment="COUNTYFP20")
     df = df.rename({"id": "GEOID20"}, axis=1)
 

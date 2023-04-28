@@ -1,9 +1,9 @@
-
-import pandas as pd
-import censusdata
 import io
 from urllib.request import urlopen
 from zipfile import ZipFile
+
+import censusdata
+import pandas as pd
 
 
 def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
@@ -39,14 +39,13 @@ def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
         10: "NHWHITEBLACKCVAP",
         11: "NHBLACKAMINCVAP",
         12: "NHOTHCVAP",
-        13: "HCVAP"
+        13: "HCVAP",
     }
 
     # First, load the raw data requested; allowed geometry values are
     # "block group" and "tract."
     if geometry not in {"block group", "tract"}:
-        print(f"Requested geometry \"{geometry}\" is not allowed; "
-              "loading tracts.")
+        print(f'Requested geometry "{geometry}" is not allowed; ' "loading tracts.")
         geometry = "tract"
 
     abbrv = geometry if geometry == "tract" else "block group"
@@ -80,27 +79,27 @@ def cvap(state, geometry="tract", year=2020) -> pd.DataFrame:
 
         # For each of the records in the block, "collapse" them into a single
         # record.
-        block = instate_records[i:i + 13]
+        block = instate_records[i : i + 13]
         for line in block:
             record[geometry.replace(" ", "").upper() + decade] = line["GEOID"]
-            record[descriptions[line["lnnumber"]] + yearsuffix] = \
-                line["cvap_est"]
-            record[descriptions[line["lnnumber"]] + f"{yearsuffix}e"] = \
-                line["cvap_moe"]
+            record[descriptions[line["lnnumber"]] + yearsuffix] = line["cvap_est"]
+            record[descriptions[line["lnnumber"]] + f"{yearsuffix}e"] = line["cvap_moe"]
 
         collapsed.append(record)
 
     # Create a dataframe and a POCCVAP column; all people minus non-Hispanic
     # White.
     data = pd.DataFrame().from_records(collapsed)
-    data[f"POCCVAP{yearsuffix}"] = data[f"CVAP{yearsuffix}"] - \
-        data[f"NHWHITECVAP{yearsuffix}"]
+    data[f"POCCVAP{yearsuffix}"] = (
+        data[f"CVAP{yearsuffix}"] - data[f"NHWHITECVAP{yearsuffix}"]
+    )
 
     return data
 
 
-def acs5(state, geometry="tract", year=2020, columns=[], white="NHWHITEVAP") \
-  -> pd.DataFrame:
+def acs5(
+    state, geometry="tract", year=2020, columns=[], white="NHWHITEVAP"
+) -> pd.DataFrame:
     """
     Retrieves ACS 5-year population estimates for the provided state, geometry
     level, and year. Also retrieves ACS-reported CVAP data, which closely
@@ -146,45 +145,69 @@ def acs5(state, geometry="tract", year=2020, columns=[], white="NHWHITEVAP") \
     # White as their *only* race, including people who identified as
     # Hispanic and White.
     vapnames = [
-        "WHITEVAP", "BLACKVAP", "AMINVAP", "ASIANVAP", "NHPIVAP", "OTHVAP",
-        "2MOREVAP", "NHWHITEVAP", "HVAP"
+        "WHITEVAP",
+        "BLACKVAP",
+        "AMINVAP",
+        "ASIANVAP",
+        "NHPIVAP",
+        "OTHVAP",
+        "2MOREVAP",
+        "NHWHITEVAP",
+        "HVAP",
     ]
-    vaptables = list(zip(
-        [column + yearsuffix for column in vapnames],
-        ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
-    ))
-    groups.update({
-        column: _variables(f"B01001{table}", 7, 16) +
-        _variables(f"B01001{table}", 22, 31)
-        for column, table in vaptables
-    })
+    vaptables = list(
+        zip(
+            [column + yearsuffix for column in vapnames],
+            ["A", "B", "C", "D", "E", "F", "G", "H", "I"],
+        )
+    )
+    groups.update(
+        {
+            column: _variables(f"B01001{table}", 7, 16)
+            + _variables(f"B01001{table}", 22, 31)
+            for column, table in vaptables
+        }
+    )
 
     # Get CVAP columns; the same goes for these columns as does the above,
     # except these columns are 18 years and older *and* citizens.
     cvapnames = [
-        "WHITECVAP", "BLACKCVAP", "AMINCVAP", "ASIANCVAP", "NHPICVAP",
-        "OTHCVAP", "2MORECVAP", "NHWHITECVAP", "HCVAP"
+        "WHITECVAP",
+        "BLACKCVAP",
+        "AMINCVAP",
+        "ASIANCVAP",
+        "NHPICVAP",
+        "OTHCVAP",
+        "2MORECVAP",
+        "NHWHITECVAP",
+        "HCVAP",
     ]
-    cvaptables = list(zip(
-        [name + yearsuffix for name in cvapnames],
-        ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
-    ))
-    groups.update({
-        column:
-            _variables(f"B05003{table}", 9, 9) +
-            _variables(f"B05003{table}", 11, 11) +  # men
-            _variables(f"B05003{table}", 20, 20) +
-            _variables(f"B05003{table}", 22, 22)  # women
-        for column, table in cvaptables
-    })
+    cvaptables = list(
+        zip(
+            [name + yearsuffix for name in cvapnames],
+            ["A", "B", "C", "D", "E", "F", "G", "H", "I"],
+        )
+    )
+    groups.update(
+        {
+            column: _variables(f"B05003{table}", 9, 9)
+            + _variables(f"B05003{table}", 11, 11)
+            + _variables(f"B05003{table}", 20, 20)  # men
+            + _variables(f"B05003{table}", 22, 22)  # women
+            for column, table in cvaptables
+        }
+    )
 
     # Get all voting-age people and citizen voting-age people.
-    groups["VAP" + yearsuffix] = _variables("B01001", 7, 25) + \
-        _variables("B01001", 31, 49)
-    groups["CVAP" + yearsuffix] = _variables("B05003", 9, 9) + \
-        _variables("B05003", 11, 11) + \
-        _variables("B05003", 20, 20) + \
-        _variables("B05003", 22, 22)
+    groups["VAP" + yearsuffix] = _variables("B01001", 7, 25) + _variables(
+        "B01001", 31, 49
+    )
+    groups["CVAP" + yearsuffix] = (
+        _variables("B05003", 9, 9)
+        + _variables("B05003", 11, 11)
+        + _variables("B05003", 20, 20)
+        + _variables("B05003", 22, 22)
+    )
 
     # TODO: all variables used across the data submodule should be packaged up
     # as a class, so we can access individual dictionaries of variables to add.
@@ -192,24 +215,27 @@ def acs5(state, geometry="tract", year=2020, columns=[], white="NHWHITEVAP") \
     # us the voting-age population variables for the ACS 5-year estimates.
 
     # Get the list of all columns.
-    allcols = list(popcolumns.keys()) + [c for k in groups.values() for c
-                                         in k] + columns
+    allcols = (
+        list(popcolumns.keys()) + [c for k in groups.values() for c in k] + columns
+    )
 
     # Retrieve the data from the Census API.
     data = censusdata.download(
-        "acs5", year,
+        "acs5",
+        year,
         censusdata.censusgeo(
-            [("state", str(state.fips).zfill(2)), ("county", "*"),
-                (geometry, "*")]
+            [("state", str(state.fips).zfill(2)), ("county", "*"), (geometry, "*")]
         ),
-        ["GEO_ID"] + allcols
+        ["GEO_ID"] + allcols,
     )
 
     # Rework columns.
     data = data.reset_index(drop=True)
     data["GEO_ID"] = data["GEO_ID"].str.split("US").str[1]
-    data = data.rename({"GEO_ID": geometry.replace(" ", "").upper() +
-                       ("10" if year < 2020 else "20")}, axis=1)
+    data = data.rename(
+        {"GEO_ID": geometry.replace(" ", "").upper() + ("10" if year < 2020 else "20")},
+        axis=1,
+    )
     data = data.rename(popcolumns, axis=1)
 
     # Collapse column groups.
@@ -218,8 +244,9 @@ def acs5(state, geometry="tract", year=2020, columns=[], white="NHWHITEVAP") \
         data = data.drop(group, axis=1)
 
     # Create a POCVAP column.
-    data[f"POCVAP{yearsuffix}"] = data[f"VAP{yearsuffix}"] - \
-        data[f"{white}{yearsuffix}"]
+    data[f"POCVAP{yearsuffix}"] = (
+        data[f"VAP{yearsuffix}"] - data[f"{white}{yearsuffix}"]
+    )
     return data
 
 
@@ -246,10 +273,7 @@ def _variables(prefix, start, stop, suffix="E") -> list:
     Returns:
         A list of ACS5 variable names.
     """
-    return [
-        f"{prefix}_{str(t).zfill(3)}{suffix}"
-        for t in range(start, stop + 1)
-    ]
+    return [f"{prefix}_{str(t).zfill(3)}{suffix}" for t in range(start, stop + 1)]
 
 
 def _retrieve(year, geometry="tract"):
@@ -277,8 +301,7 @@ def _retrieve(year, geometry="tract"):
     with urlopen(root + suffix) as resource:
         with ZipFile(io.BytesIO(resource.read())) as archive:
             files = {
-                inverted[file]: archive.read(file).decode(
-                    encoding="ISO-8859-1")
+                inverted[file]: archive.read(file).decode(encoding="ISO-8859-1")
                 for file in archive.namelist()
                 if file == levels[geometry]
             }
@@ -305,5 +328,4 @@ def _raw(geometry, year) -> pd.DataFrame:
     """
     # Retrieve the data at the specified geometry level and return
     # it as a dataframe.
-    return pd.read_csv(io.StringIO(_retrieve(year, geometry)),
-                       encoding="ISO-8859-1")
+    return pd.read_csv(io.StringIO(_retrieve(year, geometry)), encoding="ISO-8859-1")

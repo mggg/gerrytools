@@ -1,7 +1,7 @@
+from typing import List, Union
 
 from gerrychain import Partition
 from gerrychain.updaters import CountySplit
-from typing import List, Union
 
 from ..geometry import dataframe
 
@@ -30,22 +30,28 @@ def _grouper(P: Partition, unit: str, popcol: str = None) -> list:
     # Not to be confused with a probability distribution function. That's not what
     # this is.
     pdf = dataframe(
-        P, index="id", assignment="DISTRICT",
-        columns=[unit] + ([popcol] if popcol else [])
+        P,
+        index="id",
+        assignment="DISTRICT",
+        columns=[unit] + ([popcol] if popcol else []),
     )
 
     # Group by unit, then get the units split.
     groups = list(pdf.groupby(by=unit))
 
     return [
-        (identifier, group[group[popcol] > 0].copy())
-        if popcol else (identifier, group)
+        (identifier, group[group[popcol] > 0].copy()) if popcol else (identifier, group)
         for identifier, group in groups
     ]
 
+
 def _splits(
-    P: Partition, unit: str, names: bool = False, popcol: str = None, how: str = "pandas",
-    unit_info_updater_col: str = None
+    P: Partition,
+    unit: str,
+    names: bool = False,
+    popcol: str = None,
+    how: str = "pandas",
+    unit_info_updater_col: str = None,
 ) -> Union[int, List[str]]:
     """
     Determines the number of units split by the districting plan.
@@ -77,7 +83,7 @@ def _splits(
     """
     # Validate the `how` parameter.
     if how not in {"pandas", "gerrychain"}:
-        print(f"\"{how}\" is not a valid parameter to `how`. Defaulting to pandas.")
+        print(f'"{how}" is not a valid parameter to `how`. Defaulting to pandas.')
         how = "pandas"
 
     # If we're calculating splits from a dataframe, create the dataframe and do
@@ -86,7 +92,8 @@ def _splits(
         # Get the groups for each unit, then do the appropriate calculations.
         groups = _grouper(P, unit, popcol)
         geometrysplits = [
-            identifier for identifier, group in groups
+            identifier
+            for identifier, group in groups
             if len(group["DISTRICT"].unique()) > 1
         ]
 
@@ -104,8 +111,12 @@ def _splits(
 
 
 def _pieces(
-    P: Partition, unit: str, names: bool = False, popcol: str = None, how: str = "pandas",
-    unit_info_updater_col: str = None
+    P: Partition,
+    unit: str,
+    names: bool = False,
+    popcol: str = None,
+    how: str = "pandas",
+    unit_info_updater_col: str = None,
 ) -> Union[int, List[str]]:
     """
     Determines the number of "unit pieces" produced by the plan. For example,
@@ -140,7 +151,7 @@ def _pieces(
     """
     # Validate the `how` parameter.
     if how not in {"pandas", "gerrychain"}:
-        print(f"\"{how}\" is not a valid parameter to `how`. Defaulting to pandas.")
+        print(f'"{how}" is not a valid parameter to `how`. Defaulting to pandas.')
         how = "pandas"
 
     # If they just want the list of names, return the splits.
@@ -151,11 +162,13 @@ def _pieces(
     # the number of pieces instead of whether the unit's split.
     if how == "pandas":
         groups = _grouper(P, unit, popcol=popcol)
-        geometrypieces = sum([
-            len(group["DISTRICT"].unique())
-            for _, group in groups
-            if len(group["DISTRICT"].unique()) > 1
-        ])
+        geometrypieces = sum(
+            [
+                len(group["DISTRICT"].unique())
+                for _, group in groups
+                if len(group["DISTRICT"].unique()) > 1
+            ]
+        )
 
     if how == "gerrychain":
         if unit_info_updater_col is None:

@@ -1,6 +1,5 @@
-
-from typing import Callable
 import ast
+from typing import Callable
 
 
 def remap(plans, unitmaps, popmap=None) -> Callable:
@@ -22,6 +21,7 @@ def remap(plans, unitmaps, popmap=None) -> Callable:
     Returns:
         A function
     """
+
     def _(row):
         # Get the assignment for the row.
         assignment = ast.literal_eval(row["plan"])
@@ -84,10 +84,7 @@ def _down(unitmap, assignment) -> dict:
     # the keys correspond, and assign them appropriately.
     for bigger, district in assignment.items():
         smallers = unitmap[bigger]
-        mapped.update({
-            smaller: district
-            for smaller in smallers
-        })
+        mapped.update({smaller: district for smaller in smallers})
 
     return mapped
 

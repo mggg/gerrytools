@@ -1,14 +1,13 @@
+from typing import List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import networkx as nx
-from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-from typing import Union, Tuple, List
+from matplotlib.figure import Figure
 
 
 def drawgraph(
-    G, ax=None, x="INTPTLON20", y="INTPTLAT20", components=False, node_size=1,
-    **kwargs
+    G, ax=None, x="INTPTLON20", y="INTPTLAT20", components=False, node_size=1, **kwargs
 ) -> Union[Axes, List[Tuple[Figure, Axes]]]:
     """
     Draws a gerrychain Graph object. Returns a single Axes object (for dual
@@ -36,8 +35,7 @@ def drawgraph(
     """
     # Create a mapping from identifiers to positions.
     positions = {
-        v: (properties[x], properties[y])
-        for v, properties in G.nodes(data=True)
+        v: (properties[x], properties[y]) for v, properties in G.nodes(data=True)
     }
 
     # If `components` is true, plot the graph component-wise. Otherwise plot

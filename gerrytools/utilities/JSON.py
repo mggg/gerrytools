@@ -1,7 +1,7 @@
-
 import json
-from pydantic import BaseModel, validator
 from typing import Any
+
+from pydantic import BaseModel, validator
 
 
 class JSONtoObject(BaseModel):
@@ -81,14 +81,16 @@ def jsonify(location) -> list:
                     column=p["column"],
                     locator=p["locator"],
                     title=p["title"] if p.get("title", False) else None,
-                    type=p["type"] if p.get("type", False) else None
+                    type=p["type"] if p.get("type", False) else None,
                 )
                 for p in data
             ]
 
         # Otherwise, return a singleton list with a single plan.
-        return [JSONtoObject(
-            column=data["column"],
-            locator=data["locator"],
-            title=data["title"] if data.get("title", False) else None
-        )]
+        return [
+            JSONtoObject(
+                column=data["column"],
+                locator=data["locator"],
+                title=data["title"] if data.get("title", False) else None,
+            )
+        ]

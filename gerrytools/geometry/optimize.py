@@ -1,17 +1,19 @@
+import math
+from typing import Any, Callable, Dict, List
 
-from typing import Dict, List, Any, Callable
 import geopandas as gpd
-import tqdm
 import gurobipy as gp
+import pandas as pd
+import tqdm
 from gurobipy import GRB
 from scipy.optimize import linear_sum_assignment as lsa
-import math
-import pandas as pd
 
 
 def arealoverlap(
-    left: gpd.GeoDataFrame, right: gpd.GeoDataFrame, assignment: str = "DISTRICT",
-    crs=None
+    left: gpd.GeoDataFrame,
+    right: gpd.GeoDataFrame,
+    assignment: str = "DISTRICT",
+    crs=None,
 ) -> pd.DataFrame:
     r"""
     Given two GeoDataFrames, each encoding districting plans, computes the areal
@@ -53,10 +55,12 @@ def arealoverlap(
     # enacted districts.
     for pid, pdistrict in zip(left[assignment], left["geometry"]):
         image.append(pid)
-        records.append({
-            eid: pdistrict.intersection(edistrict).area
-            for eid, edistrict in zip(right[assignment], right["geometry"])
-        })
+        records.append(
+            {
+                eid: pdistrict.intersection(edistrict).area
+                for eid, edistrict in zip(right[assignment], right["geometry"])
+            }
+        )
 
     # Create a dataframe from that!
     weighted = pd.DataFrame.from_records(records)
@@ -66,8 +70,11 @@ def arealoverlap(
 
 
 def populationoverlap(
-    left: pd.DataFrame, right: pd.DataFrame, identifier: str = "GEOID20",
-    population: str = "TOTPOP20", assignment: str = "DISTRICT"
+    left: pd.DataFrame,
+    right: pd.DataFrame,
+    identifier: str = "GEOID20",
+    population: str = "TOTPOP20",
+    assignment: str = "DISTRICT",
 ) -> pd.DataFrame:
     r"""
     Given two unit-level DataFrames — i.e. two dataframes where each row represents
@@ -121,9 +128,9 @@ def populationoverlap(
         agg = subright.groupby(assignment, as_index=False).sum()
 
         # Now figure out the shared populations.
-        records.append({
-            i: shared for i, shared in zip(agg[assignment], agg[population])
-        })
+        records.append(
+            {i: shared for i, shared in zip(agg[assignment], agg[population])}
+        )
 
     # Create the cost matrix!
     C = pd.DataFrame.from_records(records).fillna(0)
@@ -133,8 +140,10 @@ def populationoverlap(
 
 
 def optimalrelabeling(
-    left: Any, right: Any, maximize: bool = True,
-    costmatrix: Callable = populationoverlap
+    left: Any,
+    right: Any,
+    maximize: bool = True,
+    costmatrix: Callable = populationoverlap,
 ) -> dict:
     r"""
     Finds the optimal relabeling for two districting plans.
@@ -224,8 +233,9 @@ def optimalrelabeling(
 
 
 def ensure_column_types(
-    units: gpd.GeoDataFrame, columns: List[str],
-    expression: Callable[[Any], bool] = lambda x: x.startswith("int")
+    units: gpd.GeoDataFrame,
+    columns: List[str],
+    expression: Callable[[Any], bool] = lambda x: x.startswith("int"),
 ) -> bool:
     """
     Ensure that the given columns in the GeoDataFrame have a type matching the
@@ -244,8 +254,12 @@ def ensure_column_types(
 
 
 def minimize_dispersion(
-    units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str,
-    extra_constraints=None, verbose: bool = False
+    units: gpd.GeoDataFrame,
+    enacted_col: str,
+    proposed_col: str,
+    pop_col: str,
+    extra_constraints=None,
+    verbose: bool = False,
 ) -> Dict[str, str]:
     """
     Minimize core dispersion in a state given an column with enacted districts
@@ -266,32 +280,53 @@ def minimize_dispersion(
     if not ensure_column_types(units, [enacted_col, proposed_col]):
         raise TypeError("Your enacted and proposed columns must be an int type!")
 
-    if not ensure_column_types(units, [pop_col], lambda x: x.startswith("int") or x.startswith("float")):
+    if not ensure_column_types(
+        units, [pop_col], lambda x: x.startswith("int") or x.startswith("float")
+    ):
         raise TypeError("Your pop col must be an int or float type!")
 
     districts = list(set(units[proposed_col].astype(int)))
     model = gp.Model("state_model")
-    model.setParam('OutputFlag', int(verbose))
+    model.setParam("OutputFlag", int(verbose))
 
-    numbering = model.addVars(len(districts), len(districts), vtype=GRB.BINARY, name="numbering")
+    numbering = model.addVars(
+        len(districts), len(districts), vtype=GRB.BINARY, name="numbering"
+    )
 
     exprs = []
     if verbose:
-        def wrapper(x): return tqdm.tqdm(x)
+
+        def wrapper(x):
+            return tqdm.tqdm(x)
+
     else:
-        def wrapper(x): return x
+
+        def wrapper(x):
+            return x
 
     for district in wrapper(districts):  # iter over proposed
-        enacted_intersection = units[units[proposed_col] == district].groupby(enacted_col).sum()[pop_col].to_dict()
+        enacted_intersection = (
+            units[units[proposed_col] == district]
+            .groupby(enacted_col)
+            .sum()[pop_col]
+            .to_dict()
+        )
 
-        for enacted, overlap_pop in enacted_intersection.items():  # maximize overlap; minimize dispersion
+        for (
+            enacted,
+            overlap_pop,
+        ) in enacted_intersection.items():  # maximize overlap; minimize dispersion
             exprs.append(numbering[district - 1, enacted - 1] * overlap_pop)
 
         if extra_constraints is not None:
             extra_constraints(model, numbering, district, districts)
 
-    model.addConstrs((numbering.sum("*", v) == 1 for v in range(len(districts))), name="v")
-    model.addConstrs((numbering.sum(v, "*") == 1 for v in range(len(districts))), name="h")
+    model.addConstrs(
+        (numbering.sum("*", v) == 1 for v in range(len(districts))), name="v"
+    )
+    model.addConstrs(
+        (numbering.sum(v, "*") == 1 for v in range(len(districts))), name="h"
+    )
 
     obj = gp.quicksum(exprs)
     model.setObjective(obj, GRB.MAXIMIZE)
@@ -310,8 +345,11 @@ def minimize_dispersion(
 
 
 def minimize_parity(
-    units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str,
-    verbose: bool = False
+    units: gpd.GeoDataFrame,
+    enacted_col: str,
+    proposed_col: str,
+    pop_col: str,
+    verbose: bool = False,
 ) -> Dict[str, bool]:
     """
     Minimize odd->even parity shift in a state given an column with enacted districts
@@ -332,20 +370,30 @@ def minimize_parity(
     if not ensure_column_types(units, [enacted_col, proposed_col]):
         raise TypeError("Your enacted and proposed columns must be an int type!")
 
-    if not ensure_column_types(units, [pop_col], lambda x: x.startswith("int") or x.startswith("float")):
+    if not ensure_column_types(
+        units, [pop_col], lambda x: x.startswith("int") or x.startswith("float")
+    ):
         raise TypeError("Your pop col must be an int or float type!")
 
     model = gp.Model("parity_model")
-    model.setParam('OutputFlag', int(verbose))
+    model.setParam("OutputFlag", int(verbose))
 
     districts = list(set(units[proposed_col].astype(int)))
-    districts_even = model.addVars(len(districts), vtype=GRB.BINARY, name="districts_even")
+    districts_even = model.addVars(
+        len(districts), vtype=GRB.BINARY, name="districts_even"
+    )
 
     exprs = []
     if verbose:
-        def wrapper(x): return tqdm.tqdm(x)
+
+        def wrapper(x):
+            return tqdm.tqdm(x)
+
     else:
-        def wrapper(x): return x
+
+        def wrapper(x):
+            return x
+
     for i, block in wrapper(units[[enacted_col, proposed_col, pop_col]].iterrows()):
         district = districts.index(int(block[proposed_col]))
         isOdd = bool((int(block[enacted_col]) % 2) == 1)
@@ -365,8 +413,11 @@ def minimize_parity(
 
 
 def minimize_dispersion_with_parity(
-    units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str,
-    extra_constraints=None
+    units: gpd.GeoDataFrame,
+    enacted_col: str,
+    proposed_col: str,
+    pop_col: str,
+    extra_constraints=None,
 ) -> Dict[str, str]:
     """
     Minimize dispersion and odd->even parity shift in a state given an column with
@@ -390,16 +441,23 @@ def minimize_dispersion_with_parity(
         if optimal_parity_mapping[district]:
             model.addConstr(
                 gp.quicksum(
-                    numbering[district - 1, x - 1] for x in range(1, len(districts) + 1) if x % 2 == 0
-                ) == 1
+                    numbering[district - 1, x - 1]
+                    for x in range(1, len(districts) + 1)
+                    if x % 2 == 0
+                )
+                == 1
             )
 
         extra_constraints(model, numbering, district, districts)
 
-    return minimize_dispersion(units, enacted_col, proposed_col, pop_col, parity_constraint)
+    return minimize_dispersion(
+        units, enacted_col, proposed_col, pop_col, parity_constraint
+    )
 
 
-def calculate_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str) -> int:
+def calculate_dispersion(
+    units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str
+) -> int:
     """
     Calculates core dispersion in a state given an column with enacted districts
     and a column with proposed numberings. Used in WI.
@@ -419,9 +477,9 @@ def calculate_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col
     return units[units[enacted_col] != units[proposed_col]][pop_col].sum()
 
 
-def calculate_dispersion_per_district(units: gpd.GeoDataFrame, enacted_col: str,
-                                      proposed_col: str, pop_col: str) -> \
-                                      Dict[int, int]:
+def calculate_dispersion_per_district(
+    units: gpd.GeoDataFrame, enacted_col: str, proposed_col: str, pop_col: str
+) -> Dict[int, int]:
     """
     Calculates dispersion per district in a state given a column with enacted districts
     and a column with proposed districts. Used in GA.
@@ -439,9 +497,13 @@ def calculate_dispersion_per_district(units: gpd.GeoDataFrame, enacted_col: str,
     if units[enacted_col].dtype != units[proposed_col].dtype:
         raise TypeError("Your enacted and proposed columns must have the same type!")
 
-
-    dispersion_dict = {district: sum(units[pop_col][(units[enacted_col] == district)
-                                     & (units[proposed_col] != district)])
-                       for district in sorted(units[enacted_col].unique())}
+    dispersion_dict = {
+        district: sum(
+            units[pop_col][
+                (units[enacted_col] == district) & (units[proposed_col] != district)
+            ]
+        )
+        for district in sorted(units[enacted_col].unique())
+    }
 
     return dispersion_dict

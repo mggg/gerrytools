@@ -1,23 +1,22 @@
-
 """
 Makes pretty pictures of districting plans, dual graphs, histograms, boxplots,
 and violin plots 🎻.
 """
 
-from .drawplan import drawplan
-from .drawgraph import drawgraph
-from .colors import redbluecmap, flare, purples, districtr, latex
-from .histogram import histogram
-from .violin import violin
+from .annotation import arrow, ideal
+from .bins import bins
 from .boxplot import boxplot
+from .choropleth import choropleth
+from .colors import districtr, flare, latex, purples, redbluecmap
+from .districtnumbers import districtnumbers
+from .drawgraph import drawgraph
+from .drawplan import drawplan
+from .gifs import gif_multidimensional
+from .histogram import histogram
+from .multidimensional import multidimensional
 from .scatterplot import scatterplot
 from .sealevel import sealevel
-from .multidimensional import multidimensional
-from .gifs import gif_multidimensional
-from .bins import bins
-from .annotation import arrow, ideal
-from .districtnumbers import districtnumbers
-from .choropleth import choropleth
+from .violin import violin
 
 __all__ = [
     "drawplan",
@@ -38,5 +37,5 @@ __all__ = [
     "bins",
     "districtnumbers",
     "latex",
-    "choropleth"
+    "choropleth",
 ]

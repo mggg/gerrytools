@@ -1,10 +1,8 @@
-
-from gerrytools.plotting import (
-    drawgraph, drawplan, districtr, boxplot
-)
-import matplotlib.pyplot as plt
 import geopandas as gpd
+import matplotlib.pyplot as plt
 import numpy as np
+
+from gerrytools.plotting import boxplot, districtr, drawgraph, drawplan
 
 from .utils import remotegraphresource, remoteresource
 
@@ -47,8 +45,12 @@ def test_boxplot():
     num_proposed = 3
 
     scores = {
-        "ensemble": [[int(x) for x in np.random.normal(m, 4, size=1000)] for m in means],
-        "proposed": [[int(x) for x in np.random.normal(m, 8, size=num_proposed)] for m in means],
+        "ensemble": [
+            [int(x) for x in np.random.normal(m, 4, size=1000)] for m in means
+        ],
+        "proposed": [
+            [int(x) for x in np.random.normal(m, 8, size=num_proposed)] for m in means
+        ],
     }
 
     proposed_info = {

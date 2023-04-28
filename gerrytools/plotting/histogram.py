@@ -1,13 +1,21 @@
+import random
 
 from matplotlib.axes import Axes
-import random
+
 from .bins import bins
-from .colors import defaultGray, citizenBlue, districtr
+from .colors import citizenBlue, defaultGray, districtr
 
 
 def histogram(
-    ax, scores, label=None, limits=tuple(), proposed_info={}, ticksize=12,
-    fontsize=24, jitter=False, bin_width=None
+    ax,
+    scores,
+    label=None,
+    limits=tuple(),
+    proposed_info={},
+    ticksize=12,
+    fontsize=24,
+    jitter=False,
+    bin_width=None,
 ) -> Axes:
     r"""
     Plot a histogram with the ensemble scores in bins and the proposed plans'
@@ -38,9 +46,13 @@ def histogram(
     all_scores = scores["ensemble"] + scores["citizen"] + scores["proposed"]
     if not bin_width:
         # Get the necessary bins, ticks, labels, and bin width.
-        hist_bins, tick_bins, tick_labels, bin_width = bins(set(all_scores).union(limits))
+        hist_bins, tick_bins, tick_labels, bin_width = bins(
+            set(all_scores).union(limits)
+        )
     else:
-        hist_bins, tick_bins, tick_labels, bin_width = bins(set(all_scores).union(limits), bin_width)
+        hist_bins, tick_bins, tick_labels, bin_width = bins(
+            set(all_scores).union(limits), bin_width
+        )
 
     # Set xticks and xticklabels.
     ax.set_xticks(tick_bins)

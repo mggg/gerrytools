@@ -1,43 +1,41 @@
-from .splits import _splits, _pieces
-from gerrytools.geometry.compactness import (
-    _reock,
-    _convex_hull,
-    _polsby_popper,
-    _schwartzberg,
-    _cut_edges,
-    _pop_polygon
-)
-from .demographics import (
-    _pop_shares,
-    _tally_pop,
-    _gingles_districts,
-    _max_deviation,
-)
-from .partisan import (
-    _competitive_contests,
-    _swing_districts,
-    _party_districts,
-    _opp_party_districts,
-    _party_wins_by_district,
-    _seats,
-    _aggregate_seats,
-    _efficiency_gap,
-    _simplified_efficiency_gap,
-    _mean_median,
-    _partisan_bias,
-    _partisan_gini,
-    _eguia,
-    _stable_proportionality,
-    _responsive_proportionality,
-)
-from geopandas import GeoDataFrame
-from functools import partial
-from gerrychain import Partition, Graph
-from typing import Iterable, List, Mapping, Dict, Optional, Union
-from tqdm import tqdm
 import gzip
 import json
-from .types import Score, ScoreValue, Callable
+from functools import partial
+from typing import Dict, Iterable, List, Mapping, Optional, Union
+
+from geopandas import GeoDataFrame
+from gerrychain import Graph, Partition
+from tqdm import tqdm
+
+from gerrytools.geometry.compactness import (
+    _convex_hull,
+    _cut_edges,
+    _polsby_popper,
+    _pop_polygon,
+    _reock,
+    _schwartzberg,
+)
+
+from .demographics import _gingles_districts, _max_deviation, _pop_shares, _tally_pop
+from .partisan import (
+    _aggregate_seats,
+    _competitive_contests,
+    _efficiency_gap,
+    _eguia,
+    _mean_median,
+    _opp_party_districts,
+    _partisan_bias,
+    _partisan_gini,
+    _party_districts,
+    _party_wins_by_district,
+    _responsive_proportionality,
+    _seats,
+    _simplified_efficiency_gap,
+    _stable_proportionality,
+    _swing_districts,
+)
+from .splits import _pieces, _splits
+from .types import Callable, Score, ScoreValue
 
 
 def summarize(
@@ -55,10 +53,10 @@ def summarize(
         gdf (GeoDataFrame): Geometries of nodes in the dual graph used by `part`.
             Only necessary when using scoring functions that rely on dissolved
             district geometries (most geometric scoring functions).
-        join_on (str): Field used to join `part.graph` to `gdf`. 
+        join_on (str): Field used to join `part.graph` to `gdf`.
             If not specified, geometries are joined by matching the index of `gdf`
             to the node keys of `part.graph`.
-            
+
     Raises:
         ValueError: If `gdf` is not specified and at least one score in `scores`
             is dissolved.
@@ -83,12 +81,12 @@ def summarize(
                 for node, label in part.assignment.items()
             }
             gdf = gdf.set_index(join_on)
-            
+
         gdf["assignment"] = assignment
         dissolved_gdf = gdf.dissolve(by="assignment")
     else:
         dissolved_gdf = None
-    
+
     summary = {}
     for score in scores:
         if score.dissolved:
@@ -100,11 +98,13 @@ def summarize(
 
 def summarize_many(
     parts: Iterable[Partition],
-    scores: Iterable[Score],  
+    scores: Iterable[Score],
     gdf: Optional[GeoDataFrame] = None,
     join_on: Optional[str] = None,
     plan_names: List[str] = None,
-    output_file: str = None, compress: bool = False, verbose: bool = False
+    output_file: str = None,
+    compress: bool = False,
+    verbose: bool = False,
 ) -> Union[List[Dict[str, ScoreValue]], None]:
     """
     Summarize the given partitions by the passed scores.
@@ -136,7 +136,7 @@ def summarize_many(
     """
     if plan_names is None:
         plan_names = []
-        
+
     if output_file is None:
         if verbose:
             result = []
@@ -145,7 +145,9 @@ def summarize_many(
             return result
         return [summarize(part, scores=scores) for part in parts]
     else:
-        with gzip.open(f"{output_file}.gz", "wt") if compress else open(output_file, "w") as fout:
+        with gzip.open(f"{output_file}.gz", "wt") if compress else open(
+            output_file, "w"
+        ) as fout:
             iterator = tqdm(enumerate(parts)) if verbose else enumerate(parts)
             for i, part in iterator:
                 plan_details = summarize(part, scores=scores, gdf=gdf, join_on=join_on)
@@ -157,8 +159,11 @@ def summarize_many(
 
 
 def splits(
-    unit: str, names: bool = False, popcol: str = None, how: str = "pandas",
-    alias: str = None
+    unit: str,
+    names: bool = False,
+    popcol: str = None,
+    how: str = "pandas",
+    alias: str = None,
 ) -> Score:
     """
     Score representing the number of units split by the districting plan.
@@ -190,13 +195,16 @@ def splits(
 
     return Score(
         f"{alias}_splits",
-        partial(_splits, unit=unit, how=how, popcol=popcol, names=names)
+        partial(_splits, unit=unit, how=how, popcol=popcol, names=names),
     )
 
 
 def pieces(
-    unit: str, names: bool = False, popcol: str = None, how: str = "pandas",
-    alias: str = None
+    unit: str,
+    names: bool = False,
+    popcol: str = None,
+    how: str = "pandas",
+    alias: str = None,
 ) -> Score:
     """
     Score representing the number of "unit pieces" produced by the plan. For example,
@@ -231,13 +239,15 @@ def pieces(
 
     return Score(
         f"{alias}_pieces",
-        partial(_pieces, unit=unit, how=how, popcol=popcol, names=names)
+        partial(_pieces, unit=unit, how=how, popcol=popcol, names=names),
     )
 
 
 def competitive_contests(
-    election_cols: Iterable[str], party: str, points_within: float = 0.03,
-    alias: str = None
+    election_cols: Iterable[str],
+    party: str,
+    points_within: float = 0.03,
+    alias: str = None,
 ) -> Score:
     """
     Score representing the number of competitive contests in a plan.
@@ -258,9 +268,11 @@ def competitive_contests(
     return Score(
         alias,
         partial(
-            _competitive_contests, election_cols=election_cols, party=party,
-            points_within=points_within
-        )
+            _competitive_contests,
+            election_cols=election_cols,
+            party=party,
+            points_within=points_within,
+        ),
     )
 
 
@@ -280,7 +292,7 @@ def swing_districts(election_cols: Iterable[str], party: str) -> Score:
     """
     return Score(
         "swing_districts",
-        partial(_swing_districts, election_cols=election_cols, party=party)
+        partial(_swing_districts, election_cols=election_cols, party=party),
     )
 
 
@@ -300,7 +312,7 @@ def party_districts(election_cols: Iterable[str], party: str) -> Score:
     """
     return Score(
         "party_districts",
-        partial(_party_districts, election_cols=election_cols, party=party)
+        partial(_party_districts, election_cols=election_cols, party=party),
     )
 
 
@@ -323,7 +335,7 @@ def opp_party_districts(election_cols: Iterable[str], party: str) -> Score:
     """
     return Score(
         "opp_party_districts",
-        partial(_opp_party_districts, election_cols=election_cols, party=party)
+        partial(_opp_party_districts, election_cols=election_cols, party=party),
     )
 
 
@@ -343,7 +355,7 @@ def party_wins_by_district(election_cols: Iterable[str], party: str) -> Score:
     """
     return Score(
         "party_wins_by_district",
-        partial(_party_wins_by_district, election_cols=election_cols, party=party)
+        partial(_party_wins_by_district, election_cols=election_cols, party=party),
     )
 
 
@@ -367,7 +379,7 @@ def seats(election_cols: Iterable[str], party: str, mean: bool = False) -> Score
     prefix = "mean_" if mean else ""
     return Score(
         f"{prefix}{party}_seats",
-        partial(_seats, election_cols=election_cols, party=party, mean=mean)
+        partial(_seats, election_cols=election_cols, party=party, mean=mean),
     )
 
 
@@ -388,7 +400,7 @@ def aggregate_seats(election_cols: Iterable[str], party: str) -> Score:
     """
     return Score(
         f"aggregate_{party}_seats",
-        partial(_aggregate_seats, election_cols=election_cols, party=party)
+        partial(_aggregate_seats, election_cols=election_cols, party=party),
     )
 
 
@@ -408,9 +420,7 @@ def responsive_proportionality(election_cols: Iterable[str], party: str) -> Scor
     """
     return Score(
         "responsive_proportionality",
-        partial(
-            _responsive_proportionality, election_cols=election_cols, party=party
-        )
+        partial(_responsive_proportionality, election_cols=election_cols, party=party),
     )
 
 
@@ -430,7 +440,7 @@ def stable_proportionality(election_cols: Iterable[str], party: str) -> Score:
     """
     return Score(
         "stable_proportionality",
-        partial(_stable_proportionality, election_cols=election_cols, party=party)
+        partial(_stable_proportionality, election_cols=election_cols, party=party),
     )
 
 
@@ -451,11 +461,13 @@ def efficiency_gap(election_cols: Iterable[str], mean: bool = False) -> Score:
     prefix = "mean_" if mean else ""
     return Score(
         f"{prefix}efficiency_gap",
-        partial(_efficiency_gap, election_cols=election_cols, mean=mean)
+        partial(_efficiency_gap, election_cols=election_cols, mean=mean),
     )
 
 
-def simplified_efficiency_gap(election_cols: Iterable[str], party: str, mean: bool = False) -> Score:
+def simplified_efficiency_gap(
+    election_cols: Iterable[str], party: str, mean: bool = False
+) -> Score:
     """
     Score representing the simplified efficiency gap metric of a plan with respect to a set of elections.
     The original formulation of efficiency gap quantifies the difference in "wasted" votes for the two
@@ -475,8 +487,11 @@ def simplified_efficiency_gap(election_cols: Iterable[str], party: str, mean: bo
     return Score(
         f"{prefix}simplified_efficiency_gap",
         partial(
-            _simplified_efficiency_gap, election_cols=election_cols, party=party, mean=mean
-        )
+            _simplified_efficiency_gap,
+            election_cols=election_cols,
+            party=party,
+            mean=mean,
+        ),
     )
 
 
@@ -497,7 +512,7 @@ def mean_median(election_cols: Iterable[str], mean: bool = False) -> Score:
     prefix = "mean_" if mean else ""
     return Score(
         f"{prefix}mean_median",
-        partial(_mean_median, election_cols=election_cols, mean=mean)
+        partial(_mean_median, election_cols=election_cols, mean=mean),
     )
 
 
@@ -517,7 +532,7 @@ def partisan_bias(election_cols: Iterable[str], mean: bool = False) -> Score:
     prefix = "mean_" if mean else ""
     return Score(
         f"{prefix}partisan_bias",
-        partial(_partisan_bias, election_cols=election_cols, mean=mean)
+        partial(_partisan_bias, election_cols=election_cols, mean=mean),
     )
 
 
@@ -541,14 +556,18 @@ def partisan_gini(election_cols: Iterable[str], mean: bool = False) -> Score:
     prefix = "mean_" if mean else ""
     return Score(
         f"{prefix}partisan_gini",
-        partial(_partisan_gini, election_cols=election_cols, mean=mean)
+        partial(_partisan_gini, election_cols=election_cols, mean=mean),
     )
 
 
 def eguia(
-    election_cols: Iterable[str], party: str, graph: Graph,
+    election_cols: Iterable[str],
+    party: str,
+    graph: Graph,
     updaters: Mapping[str, Callable[[Partition], ScoreValue]],
-    county_col: str, totpop_col: str = "population", mean: bool = False
+    county_col: str,
+    totpop_col: str = "population",
+    mean: bool = False,
 ) -> Score:
     """
     Score representing the Equia metric of a plan with respect to a set of elections.
@@ -579,9 +598,13 @@ def eguia(
     return Score(
         f"{prefix}eguia",
         partial(
-            _eguia, election_cols=election_cols, party=party, county_part=county_part,
-            totpop_col=totpop_col, mean=mean
-        )
+            _eguia,
+            election_cols=election_cols,
+            party=party,
+            county_part=county_part,
+            totpop_col=totpop_col,
+            mean=mean,
+        ),
     )
 
 
@@ -596,10 +619,7 @@ def demographic_tallies(population_cols: Iterable[str]) -> List[Score]:
         A list of score objects named by `"{column}"` and with associated functions that take a partition
         and return a DistrictWideScoreValue for the demographic totals of each district.
     """
-    return [
-        Score(col, partial(_tally_pop, pop_col=col))
-        for col in population_cols
-    ]
+    return [Score(col, partial(_tally_pop, pop_col=col)) for col in population_cols]
 
 
 def demographic_shares(population_cols: Mapping[str, Iterable[str]]) -> List[Score]:
@@ -620,14 +640,21 @@ def demographic_shares(population_cols: Mapping[str, Iterable[str]]) -> List[Sco
     scores = []
 
     for totalpop_col, subpop_cols in population_cols.items():
-        scores.extend([
-            Score(f"{col}_share", partial(_pop_shares, subpop_col=col, totpop_col=totalpop_col))
-            for col in subpop_cols
-        ])
+        scores.extend(
+            [
+                Score(
+                    f"{col}_share",
+                    partial(_pop_shares, subpop_col=col, totpop_col=totalpop_col),
+                )
+                for col in subpop_cols
+            ]
+        )
     return scores
 
 
-def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: float = 0.5) -> List[Score]:
+def gingles_districts(
+    population_cols: Mapping[str, Iterable[str]], threshold: float = 0.5
+) -> List[Score]:
     """
     A list of scores representing the number of districts where a sub-population share is above
     a given threshold.  When the threshold is 50% these are commonly called Gingles' Districts.
@@ -646,12 +673,22 @@ def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: f
     scores = []
 
     for totalpop_col, subpop_cols in population_cols.items():
-        scores.extend([
-            Score(f"{col}_gingles_districts", partial(_gingles_districts, subpop_col=col,
-                                                      totpop_col=totalpop_col, threshold=threshold))
-            for col in subpop_cols
-        ])
+        scores.extend(
+            [
+                Score(
+                    f"{col}_gingles_districts",
+                    partial(
+                        _gingles_districts,
+                        subpop_col=col,
+                        totpop_col=totalpop_col,
+                        threshold=threshold,
+                    ),
+                )
+                for col in subpop_cols
+            ]
+        )
     return scores
+
 
 def reock() -> Score:
     """
@@ -661,15 +698,17 @@ def reock() -> Score:
     """
     return Score("reock", _reock, dissolved=True)
 
+
 def polsby_popper() -> Score:
     """
     Returns the polsby-popper score for each district in a plan.
-    
+
     Returns:
         A dictionary with districts as keys and polsby-popper scores as values.
     """
 
     return Score("polsby_popper", _polsby_popper, dissolved=True)
+
 
 def schwartzberg() -> Score:
     """
@@ -679,14 +718,16 @@ def schwartzberg() -> Score:
     """
     return Score("schwartzberg", _schwartzberg, dissolved=True)
 
-def convex_hull()  -> Score:
+
+def convex_hull() -> Score:
     """
     Returns the convex-hull score for each district in a plan.
-    
+
     Returns:
         A dictionary with districts as keys and convex-hull scores as values.
     """
     return Score("convex_hull", _convex_hull, dissolved=True)
+
 
 def pop_polygon(block_gdf: GeoDataFrame, pop_col: str = "TOTPOP20") -> Score:
     """
@@ -697,13 +738,19 @@ def pop_polygon(block_gdf: GeoDataFrame, pop_col: str = "TOTPOP20") -> Score:
     Returns:
         A dictionary with districts as keys and population polygon scores as values.
     """
-    return Score("pop_polygon", partial(_pop_polygon, block_gdf=block_gdf, pop_col=pop_col), dissolved=True)
+    return Score(
+        "pop_polygon",
+        partial(_pop_polygon, block_gdf=block_gdf, pop_col=pop_col),
+        dissolved=True,
+    )
+
 
 def cut_edges() -> Score:
     """
     Returns the number of cut edges in a plan.
     """
     return Score("cut_edges", partial(_cut_edges))
+
 
 def max_deviation(totpop_col: str, pct: bool = False) -> Score:
     """
@@ -716,4 +763,7 @@ def max_deviation(totpop_col: str, pct: bool = False) -> Score:
         pct (bool): Whether to return the maximum deviation as a count or as a percentage of
                     ideal district size.
     """
-    return Score(f"{totpop_col}_max_deviation", partial(_max_deviation, totpop_col=totpop_col, pct=pct))
+    return Score(
+        f"{totpop_col}_max_deviation",
+        partial(_max_deviation, totpop_col=totpop_col, pct=pct),
+    )

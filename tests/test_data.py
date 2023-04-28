@@ -1,17 +1,27 @@
-
-import jsonlines
-import os
-import pandas as pd
-import json
-from gerrytools.data import (
-    cvap, acs5, census20, census10, variables, submissions, tabularized, AssignmentCompressor,
-    remap, estimatecvap2010, estimatecvap2020
-)
-import us
-import geopandas as gpd
-import math
 import cProfile
+import json
+import math
+import os
+
+import geopandas as gpd
+import jsonlines
+import pandas as pd
 import pytest
+import us
+
+from gerrytools.data import (
+    AssignmentCompressor,
+    acs5,
+    census10,
+    census20,
+    cvap,
+    estimatecvap2010,
+    estimatecvap2020,
+    remap,
+    submissions,
+    tabularized,
+    variables,
+)
 
 from .utils import remoteresource
 
@@ -22,9 +32,7 @@ def test_estimate_cvap2020():
 
     # Set the test cases for two random block groups. These were hand-calculated
     # from the set of Alabama test data retrieved from data.mggg.org.
-    tests = {
-        "010379610003": ("010379610003012", 17, 698, 565)
-    }
+    tests = {"010379610003": ("010379610003012", 17, 698, 565)}
 
     # Check two random block groups to check whether they're correct; we ask
     # whether the test value and the reported value are within one millionth of
@@ -32,32 +40,31 @@ def test_estimate_cvap2020():
     for bgid, (blockid, blockvap, bgvap, bgcvap) in tests.items():
         # Calculate the estimated BCVAP for the block and check whether it matches
         # that in the dataframe.
-        est = bgcvap*(blockvap/bgvap)
+        est = bgcvap * (blockvap / bgvap)
         reported = estimated[estimated["GEOID20"] == blockid]["NHBLACKCVAP20"]
 
         # Check that they're close.
         assert math.isclose(est, reported, abs_tol=1e-6)
 
 
-@pytest.mark.skip(reason="Times out too often; virtually equivalent test to the previous one.")
+@pytest.mark.skip(
+    reason="Times out too often; virtually equivalent test to the previous one."
+)
 def test_estimate_cvap2010():
     al = us.states.AL
     base = gpd.read_file(remoteresource("AL-bgs.geojson"))
 
     triplets = [
         ("NHBLACKCVAP19", "BVAP19", "APBVAP20"),
-        ("NHASIANCVAP19", "ASIANVAP19", "ASIANVAP20")
+        ("NHASIANCVAP19", "ASIANVAP19", "ASIANVAP20"),
     ]
 
     # Try estimating some CVAP! More rigorous tests should be added later.
-    estimated = estimatecvap2010(base, al, triplets, 1, 1/10)
+    estimated = estimatecvap2010(base, al, triplets, 1, 1 / 10)
 
     # Set the test cases for two random block groups. These were hand-calculated
     # from the set of Alabama test data retrieved from data.mggg.org.
-    tests = {
-        "010950307012": 19.6857142,
-        "010770113001": 2
-    }
+    tests = {"010950307012": 19.6857142, "010770113001": 2}
 
     # Check two random block groups to check whether they're correct; we ask
     # whether the test value and the reported value are within one millionth of
@@ -66,9 +73,7 @@ def test_estimate_cvap2010():
         row = estimated.loc[estimated["GEOID20"] == bgid]
         assert math.isclose(list(row["NHBCVAP20_EST"])[0], ground, abs_tol=1e-6)
 
-    tests = {
-        "010919733003": 0.5993019060318456*0
-    }
+    tests = {"010919733003": 0.5993019060318456 * 0}
 
     # Check that there are no NaNs in the columns. This is important to check because
     # Alabama has a county where there are 0 Asian CVAP19 and 0 Asian VAP19 people.
@@ -84,12 +89,33 @@ def test_cvap_tracts():
 
     # Set some testing variables.
     columns = {
-        "TRACT10", "CVAP19", "NHCVAP19", "NHAMINCVAP19", "NHASIANCVAP19", "NHBLACKCVAP19",
-        "NHNHPICVAP19", "NHWHITECVAP19", "NHWHITEAMINCVAP19", "NHWHITEASIANCVAP19",
-        "NHWHITEBLACKCVAP19", "NHBLACKAMINCVAP19", "NHOTHCVAP19", "HCVAP19",
-        "POCCVAP19", "CVAP19e", "NHCVAP19e", "NHAMINCVAP19e", "NHASIANCVAP19e",
-        "NHBLACKCVAP19e", "NHNHPICVAP19e", "NHWHITECVAP19e", "NHWHITEAMINCVAP19e",
-        "NHWHITEASIANCVAP19e", "NHWHITEBLACKCVAP19e", "NHBLACKAMINCVAP19e", "NHOTHCVAP19e",
+        "TRACT10",
+        "CVAP19",
+        "NHCVAP19",
+        "NHAMINCVAP19",
+        "NHASIANCVAP19",
+        "NHBLACKCVAP19",
+        "NHNHPICVAP19",
+        "NHWHITECVAP19",
+        "NHWHITEAMINCVAP19",
+        "NHWHITEASIANCVAP19",
+        "NHWHITEBLACKCVAP19",
+        "NHBLACKAMINCVAP19",
+        "NHOTHCVAP19",
+        "HCVAP19",
+        "POCCVAP19",
+        "CVAP19e",
+        "NHCVAP19e",
+        "NHAMINCVAP19e",
+        "NHASIANCVAP19e",
+        "NHBLACKCVAP19e",
+        "NHNHPICVAP19e",
+        "NHWHITECVAP19e",
+        "NHWHITEAMINCVAP19e",
+        "NHWHITEASIANCVAP19e",
+        "NHWHITEBLACKCVAP19e",
+        "NHBLACKAMINCVAP19e",
+        "NHOTHCVAP19e",
         "HCVAP19e",
     }
     tracts = 1181
@@ -105,13 +131,34 @@ def test_cvap_bgs():
 
     # Set some testing variables.
     columns = {
-        "BLOCKGROUP10", "CVAP19", "NHCVAP19", "NHAMINCVAP19", "NHASIANCVAP19", "NHBLACKCVAP19",
-        "NHNHPICVAP19", "NHWHITECVAP19", "NHWHITEAMINCVAP19", "NHWHITEASIANCVAP19",
-        "NHWHITEBLACKCVAP19", "NHBLACKAMINCVAP19", "NHOTHCVAP19", "HCVAP19",
-        "POCCVAP19", "CVAP19e", "NHCVAP19e", "NHAMINCVAP19e", "NHASIANCVAP19e",
-        "NHBLACKCVAP19e", "NHNHPICVAP19e", "NHWHITECVAP19e", "NHWHITEAMINCVAP19e",
-        "NHWHITEASIANCVAP19e", "NHWHITEBLACKCVAP19e", "NHBLACKAMINCVAP19e", "NHOTHCVAP19e",
-        "HCVAP19e"
+        "BLOCKGROUP10",
+        "CVAP19",
+        "NHCVAP19",
+        "NHAMINCVAP19",
+        "NHASIANCVAP19",
+        "NHBLACKCVAP19",
+        "NHNHPICVAP19",
+        "NHWHITECVAP19",
+        "NHWHITEAMINCVAP19",
+        "NHWHITEASIANCVAP19",
+        "NHWHITEBLACKCVAP19",
+        "NHBLACKAMINCVAP19",
+        "NHOTHCVAP19",
+        "HCVAP19",
+        "POCCVAP19",
+        "CVAP19e",
+        "NHCVAP19e",
+        "NHAMINCVAP19e",
+        "NHASIANCVAP19e",
+        "NHBLACKCVAP19e",
+        "NHNHPICVAP19e",
+        "NHWHITECVAP19e",
+        "NHWHITEAMINCVAP19e",
+        "NHWHITEASIANCVAP19e",
+        "NHWHITEBLACKCVAP19e",
+        "NHBLACKAMINCVAP19e",
+        "NHOTHCVAP19e",
+        "HCVAP19e",
     }
     bgs = 3438
 
@@ -126,11 +173,37 @@ def test_acs5_tracts():
 
     tracts = 1181
     columns = {
-        "TOTPOP19", "WHITE19", "BLACK19", "AMIN19", "ASIAN19", "NHPI19", "OTH19",
-        "2MORE19", "NHISP19", "WHITEVAP19", "BLACKVAP19", "AMINVAP19", "ASIANVAP19",
-        "NHPIVAP19", "OTHVAP19", "2MOREVAP19", "HVAP19", "TRACT10", "VAP19",
-        "WHITECVAP19", "BLACKCVAP19", "AMINCVAP19", "ASIANCVAP19", "NHPICVAP19", "OTHCVAP19",
-        "2MORECVAP19", "NHWHITECVAP19", "HCVAP19", "CVAP19", "POCVAP19", "NHWHITEVAP19"
+        "TOTPOP19",
+        "WHITE19",
+        "BLACK19",
+        "AMIN19",
+        "ASIAN19",
+        "NHPI19",
+        "OTH19",
+        "2MORE19",
+        "NHISP19",
+        "WHITEVAP19",
+        "BLACKVAP19",
+        "AMINVAP19",
+        "ASIANVAP19",
+        "NHPIVAP19",
+        "OTHVAP19",
+        "2MOREVAP19",
+        "HVAP19",
+        "TRACT10",
+        "VAP19",
+        "WHITECVAP19",
+        "BLACKCVAP19",
+        "AMINCVAP19",
+        "ASIANCVAP19",
+        "NHPICVAP19",
+        "OTHCVAP19",
+        "2MORECVAP19",
+        "NHWHITECVAP19",
+        "HCVAP19",
+        "CVAP19",
+        "POCVAP19",
+        "NHWHITEVAP19",
     }
 
     # Assert some stuff.
@@ -158,11 +231,37 @@ def test_acs5_bgs():
     data = acs5(AL, geometry="block group", year=2019)
     bgs = 3438
     columns = {
-        "TOTPOP19", "WHITE19", "BLACK19", "AMIN19", "ASIAN19", "NHPI19", "OTH19",
-        "2MORE19", "NHISP19", "WHITEVAP19", "BLACKVAP19", "AMINVAP19", "ASIANVAP19",
-        "NHPIVAP19", "OTHVAP19", "2MOREVAP19", "HVAP19", "BLOCKGROUP10", "VAP19",
-        "WHITECVAP19", "BLACKCVAP19", "AMINCVAP19", "ASIANCVAP19", "NHPICVAP19", "OTHCVAP19",
-        "2MORECVAP19", "NHWHITECVAP19", "HCVAP19", "CVAP19", "POCVAP19", "NHWHITEVAP19"
+        "TOTPOP19",
+        "WHITE19",
+        "BLACK19",
+        "AMIN19",
+        "ASIAN19",
+        "NHPI19",
+        "OTH19",
+        "2MORE19",
+        "NHISP19",
+        "WHITEVAP19",
+        "BLACKVAP19",
+        "AMINVAP19",
+        "ASIANVAP19",
+        "NHPIVAP19",
+        "OTHVAP19",
+        "2MOREVAP19",
+        "HVAP19",
+        "BLOCKGROUP10",
+        "VAP19",
+        "WHITECVAP19",
+        "BLACKCVAP19",
+        "AMINCVAP19",
+        "ASIANCVAP19",
+        "NHPICVAP19",
+        "OTHCVAP19",
+        "2MORECVAP19",
+        "NHWHITECVAP19",
+        "HCVAP19",
+        "CVAP19",
+        "POCVAP19",
+        "NHWHITEVAP19",
     }
 
     # Assert some stuff.
@@ -176,41 +275,17 @@ def test_acs5_bgs():
 # of geography, checking that the columns on the data and the columns below sum
 # to the same values.
 CENSUSTESTDATA = {
-    "P1": [
-        ("TOTPOP20", 5024279),
-        ("WHITEASIANPOP20", 18510)
-    ],
-    "P2": [
-        ("NHWHITEAMINASIANPOP20", 821),
-        ("HPOP20", 264047)
-    ],
-    "P3": [
-        ("WHITEASIANOTHVAP20", 201),
-        ("VAP20", 3917166)
-    ],
-    "P4": [
-        ("NHBLACKASIANOTHVAP20", 31),
-        ("HVAP20", 166856)
-    ]
+    "P1": [("TOTPOP20", 5024279), ("WHITEASIANPOP20", 18510)],
+    "P2": [("NHWHITEAMINASIANPOP20", 821), ("HPOP20", 264047)],
+    "P3": [("WHITEASIANOTHVAP20", 201), ("VAP20", 3917166)],
+    "P4": [("NHBLACKASIANOTHVAP20", 31), ("HVAP20", 166856)],
 }
 
 CENSUS10TESTDATA = {
-    "P8": [
-        ("TOTPOP10", 4779736),
-        ("WHITEBLACKPOP10", 19666)
-    ],
-    "P9": [
-        ("NHBLACKAMINASIANPOP10", 72),
-        ("HPOP10", 185602)
-    ],
-    "P10": [
-        ("VAP10", 3647277),
-        ("WHITEBLACKVAP10", 4567)
-    ],
-    "P11": [
-        ("NHBLACKAMINASIANVAP10", 47),
-        ("HVAP10", 118336)
-    ]
+    "P8": [("TOTPOP10", 4779736), ("WHITEBLACKPOP10", 19666)],
+    "P9": [("NHBLACKAMINASIANPOP10", 72), ("HPOP10", 185602)],
+    "P10": [("VAP10", 3647277), ("WHITEBLACKVAP10", 4567)],
+    "P11": [("NHBLACKAMINASIANVAP10", 47), ("HVAP10", 118336)],
 }
 
 
@@ -290,7 +365,9 @@ def test_census10_bgs():
             assert data[column].sum() == correct
 
 
-@pytest.mark.skip(reason="Times out too often; virtually equivalent test to the previous one.")
+@pytest.mark.skip(
+    reason="Times out too often; virtually equivalent test to the previous one."
+)
 def test_census_blocks():
     AL = us.states.AL
     blocks = 185976
@@ -339,12 +416,18 @@ def test_assignmentcompressor_compress():
         os.remove(location)
 
     # Create an AssignmentCompressor.
-    ac = AssignmentCompressor(geoids, window=10, location=remoteresource("test-assignments/compressed.ac"))
+    ac = AssignmentCompressor(
+        geoids, window=10, location=remoteresource("test-assignments/compressed.ac")
+    )
 
     with ac as compressor:
-        with jsonlines.open(remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")) as reader:
+        with jsonlines.open(
+            remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")
+        ) as reader:
             for submission in reader:
-                assignment = {str(k): str(v) for k, v in submission["assignment"].items()}
+                assignment = {
+                    str(k): str(v) for k, v in submission["assignment"].items()
+                }
                 compressor.compress(assignment)
 
 
@@ -355,12 +438,16 @@ def test_assignmentcompressor_decompress():
     geoids = set(blocks["GEOID20"].astype(str))
 
     # Create an AssignmentCompressor and decompress all the assignments.
-    ac = AssignmentCompressor(geoids, location=remoteresource("test-assignments/compressed.ac"))
+    ac = AssignmentCompressor(
+        geoids, location=remoteresource("test-assignments/compressed.ac")
+    )
     decompresseds = [assignment for assignment in ac.decompress()]
 
     # Load all the original assignments into memory.
     originals = []
-    with jsonlines.open(remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")) as reader:
+    with jsonlines.open(
+        remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")
+    ) as reader:
         for submission in reader:
             assignment = {str(k): str(v) for k, v in submission["assignment"].items()}
             originals.append(assignment)
@@ -408,11 +495,15 @@ def test_assignmentcompressor_compress_all():
         os.remove(location)
 
     # Create an AssignmentCompressor.
-    ac = AssignmentCompressor(geoids, location=remoteresource("test-assignments/compressed.ac"))
+    ac = AssignmentCompressor(
+        geoids, location=remoteresource("test-assignments/compressed.ac")
+    )
 
     # Get the assignments in one place.
     assignments = []
-    with jsonlines.open(remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")) as reader:
+    with jsonlines.open(
+        remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")
+    ) as reader:
         for submission in reader:
             assignment = {str(k): str(v) for k, v in submission["assignment"].items()}
             assignments.append(assignment)
@@ -433,11 +524,15 @@ def profile_assignmentcompressor_compress():
         os.remove(location)
 
     # Create an AssignmentCompressor.
-    ac = AssignmentCompressor(geoids, location=remoteresource("test-assignments/compressed.ac"))
+    ac = AssignmentCompressor(
+        geoids, location=remoteresource("test-assignments/compressed.ac")
+    )
 
     # Get the assignments in one place.
     assignments = []
-    with jsonlines.open(remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")) as reader:
+    with jsonlines.open(
+        remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")
+    ) as reader:
         for submission in reader:
             assignment = {str(k): str(v) for k, v in submission["assignment"].items()}
             assignments.append(assignment)
@@ -456,7 +551,9 @@ def profile_assignmentcompressor_decompress():
     # Get the GEOIDs from the blocks.
     blocks = pd.read_csv(remoteresource("test-assignments/test-block-ids.csv"))
     geoids = set(blocks["GEOID20"].astype(str))
-    ac = AssignmentCompressor(geoids, location=remoteresource("test-assignments/compressed.ac"))
+    ac = AssignmentCompressor(
+        geoids, location=remoteresource("test-assignments/compressed.ac")
+    )
 
     # Profile decompression.
     with cProfile.Profile() as profiler:
@@ -497,14 +594,12 @@ def test_remap():
         vtds_to_blocks = json.load(f)
     # with open(remoteresource("test-blocks-to-vtds.json")) as f:
     #    blocks_to_vtds = json.load(f)
-    with open(remoteresource("test-precincts-to-blocks.json")) as f: precincts_to_blocks = json.load(f)
+    with open(remoteresource("test-precincts-to-blocks.json")) as f:
+        precincts_to_blocks = json.load(f)
     # with open(remoteresource("test-blocks-to-vtds.json")) as f: blocks_to_vtds = json.load(f)
 
     # Create the mapping of mappings!
-    unitmaps = {
-        "2020 VTDs": vtds_to_blocks,
-        "Precincts": precincts_to_blocks
-    }
+    unitmaps = {"2020 VTDs": vtds_to_blocks, "Precincts": precincts_to_blocks}
 
     # Remap things. Appears to work fine for now!
     plans = remap(plans, unitmaps)

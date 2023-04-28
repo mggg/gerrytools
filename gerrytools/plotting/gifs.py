@@ -1,12 +1,18 @@
+import imageio
+from tqdm import tqdm
 
 from .multidimensional import multidimensional
-from tqdm import tqdm
-import imageio
 
 
 def gif_multidimensional(
-    data, proposed_info={}, labels=["X values", "Y values", "Histogram values"],
-    filename="testfile", folder="test", limits=None, DPI=150, figsize=(12, 8),
+    data,
+    proposed_info={},
+    labels=["X values", "Y values", "Histogram values"],
+    filename="testfile",
+    folder="test",
+    limits=None,
+    DPI=150,
+    figsize=(12, 8),
 ):
     r"""
     Plot many multidimensional figures in their own `{folder}/{filename}/` directory. Each
@@ -27,18 +33,21 @@ def gif_multidimensional(
     Returns: None.
     """
     # Get the x- and y-values.
-    xs = data['xs']
-    ys = data['ys']
+    xs = data["xs"]
+    ys = data["ys"]
 
     # TODO: Check what's actually happening here.
-    hists = data['hists']
+    hists = data["hists"]
     assert len(xs) == len(ys) == len(hists)
 
     lower_bound = 1
     upper_bound = 1
     x_limits = (lower_bound * min_of_min(xs), upper_bound * max_of_max(xs))
     y_limits = (lower_bound * min_of_min(ys), upper_bound * max_of_max(ys))
-    hist_limits = (int(lower_bound * min_of_min(hists)), int(upper_bound * max_of_max(hists)))
+    hist_limits = (
+        int(lower_bound * min_of_min(hists)),
+        int(upper_bound * max_of_max(hists)),
+    )
     limits = [x_limits, y_limits, hist_limits] if not limits else limits
 
     save = {
@@ -52,8 +61,14 @@ def gif_multidimensional(
     for i in tqdm(range(len(xs))):
         save["frame"] = i
         multidimensional(
-            xs[i], ys[i], hists[i], labels=labels, limits=limits,
-            proposed_info=proposed_info, figsize=figsize, save=save,
+            xs[i],
+            ys[i],
+            hists[i],
+            labels=labels,
+            limits=limits,
+            proposed_info=proposed_info,
+            figsize=figsize,
+            save=save,
         )
 
     print("Generating gif...")

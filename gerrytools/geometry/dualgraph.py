@@ -1,10 +1,14 @@
-
 from gerrychain.graph import Graph
 
 
 def dualgraph(
-    geometries, index=None, geometrycolumn="geometry", colmap={}, buffer=0,
-    edges_to_add=[], edges_to_cut=[]
+    geometries,
+    index=None,
+    geometrycolumn="geometry",
+    colmap={},
+    buffer=0,
+    edges_to_add=[],
+    edges_to_cut=[],
 ) -> Graph:
     """
     Generates a graph dual to the provided geometric data.

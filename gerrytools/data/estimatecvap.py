@@ -1,10 +1,11 @@
-import pandas as pd
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 from pandas import DataFrame
+
+from ..geometry import unitmap
 from .acs import acs5, cvap
 from .census import census20
-from ..geometry import unitmap
 
 
 def estimatecvap2020(state) -> pd.DataFrame:
@@ -38,16 +39,21 @@ def estimatecvap2020(state) -> pd.DataFrame:
 
     # Name the VAP columns.
     vapcolumns = [
-        "NHWHITEVAP20", "NHASIANVAP20", "NHBLACKVAP20", "NHNHPIVAP20",
-        "NHAMINVAP20", "NHWHITEASIANVAP20", "NHWHITEAMINVAP20",
-        "NHWHITEBLACKVAP20", "NHBLACKAMINVAP20"
+        "NHWHITEVAP20",
+        "NHASIANVAP20",
+        "NHBLACKVAP20",
+        "NHNHPIVAP20",
+        "NHAMINVAP20",
+        "NHWHITEASIANVAP20",
+        "NHWHITEAMINVAP20",
+        "NHWHITEBLACKVAP20",
+        "NHBLACKAMINVAP20",
     ]
 
     # Create "remainder" column.
     for universe in [block, bg]:
         universe["NHVAP20"] = universe["VAP20"] - universe["HVAP20"]
-        universe["OTHVAP20"] = universe["NHVAP20"] - \
-            universe[vapcolumns].sum(axis=1)
+        universe["OTHVAP20"] = universe["NHVAP20"] - universe[vapcolumns].sum(axis=1)
 
     # Get the block group ID for blocks.
     block["BLOCKGROUP20"] = block["GEOID20"].astype(str).str[:-3]
@@ -92,7 +98,9 @@ def estimatecvap2020(state) -> pd.DataFrame:
         # block using the VAP ratio outright rather than the column-specific
         # VAP ratio.
         ni = block[block[colpct].isna()].index
-        block.loc[ni, cvapcolumn] = (block.loc[ni, "VAP20"] / block.loc[ni, "BGVAP20"]) * block.loc[ni, "tmp"]
+        block.loc[ni, cvapcolumn] = (
+            block.loc[ni, "VAP20"] / block.loc[ni, "BGVAP20"]
+        ) * block.loc[ni, "tmp"]
 
         # Assert that our summed disaggregated numbers and totals are close!
         assert np.isclose(bg[cvapcolumn].sum() - block[cvapcolumn].sum(), 0)
@@ -227,8 +235,7 @@ def estimatecvap2010(
        `base` geometries with 2019 CVAP-weighted 2020 CVAP estimates attached.
     """
     if geometry10 not in {"block group", "tract"}:
-        print(f"Requested geometry \"{geometry10}\" is not allowed; "
-              "loading tracts.")
+        print(f'Requested geometry "{geometry10}" is not allowed; ' "loading tracts.")
         geometry10 = "tract"
 
     # Grab ACS and CVAP special-tab data, and make sure our triples are correct
@@ -238,16 +245,17 @@ def estimatecvap2010(
 
     # Validate the columns passed, issuing user warnings when it's inadvisable
     # to estimate CVAP given the passed columns.
-    for (cvap10, vap10, vap20) in groups:
+    for cvap10, vap10, vap20 in groups:
         # If any of the CVAP columns passed correspond to columns which
         # tabulate people of multiple races, notify the user that there
         # isn't an appropriate 2019 VAP column to match them against.
-        if any(substring in cvap10 for substring in
-               {"AIW", "AW", "BW", "AIB"}):
-            print(f"Warning: Estimating CVAP among {cvap10} is not advisable, "
-                  "since there isn't a reasonable VAP column from which to "
-                  "construct _CVAP / _VAP rates (because you seem to be "
-                  "combining two racial groups).")
+        if any(substring in cvap10 for substring in {"AIW", "AW", "BW", "AIB"}):
+            print(
+                f"Warning: Estimating CVAP among {cvap10} is not advisable, "
+                "since there isn't a reasonable VAP column from which to "
+                "construct _CVAP / _VAP rates (because you seem to be "
+                "combining two racial groups)."
+            )
 
         # If the CVAP or ACS5 columns passed aren't present in the
         # set of possible columns, raise an error.
@@ -256,7 +264,7 @@ def estimatecvap2010(
             raise ValueError(
                 f"Your CVAP column '{cvap10}' must be contained in either "
                 f"the ACS or Special Tab columns: {possible_columns}"
-                            )
+            )
 
         if vap10 not in acs_source:
             raise ValueError(
@@ -281,9 +289,9 @@ def estimatecvap2010(
     # geometries to the units with CVAP data. Apparently dropping bad
     # columns by using slicing incudes a SettingWithCopy warning, so
     # we're just dropping using .drop() instead.
-    correct = ["geometry"] + [col for col in list(base)
-                              if any(sub in col for sub in ["POP",
-                                                            "VAP", "GEOID"])]
+    correct = ["geometry"] + [
+        col for col in list(base) if any(sub in col for sub in ["POP", "VAP", "GEOID"])
+    ]
     bads = list(set(base) - set(correct))
 
     # Warn the user of column removal:
@@ -293,7 +301,7 @@ def estimatecvap2010(
     pared = mapbase(pared, state, geometry10)
 
     # Compute weights.
-    for (cvap10, vap10, _) in groups:
+    for cvap10, vap10, _ in groups:
         source[cvap10 + "%"] = source[cvap10] / source[vap10]
 
     # Fill in values according to the following rules:
@@ -306,7 +314,8 @@ def estimatecvap2010(
     #       the weight to 1.
     statewide = {
         cvap + "%": source[cvap].sum() / source[vap].sum()
-        if source[vap].sum() != 0 else 0
+        if source[vap].sum() != 0
+        else 0
         for (cvap, vap, _) in groups
     }
 
@@ -336,14 +345,15 @@ def estimatecvap2010(
 
             # Check whether the ratio of the above is less than the ceiling.
             if not np.isfinite(ratio):
-                print(county,
-                      f"Encountered an invalid ratio: there are "
-                      f"{cvap19total} {cvap19} persons and {vap19total} "
-                      f"{vap19} persons, for a ratio of {cvap19total}/"
-                      f"{vap19total}. @e have substituted it for the "
-                      f"statewide {cvap19}-to-{vap19} share of "
-                      f"{statewide[cvap19 + '%']}."
-                      )
+                print(
+                    county,
+                    f"Encountered an invalid ratio: there are "
+                    f"{cvap19total} {cvap19} persons and {vap19total} "
+                    f"{vap19} persons, for a ratio of {cvap19total}/"
+                    f"{vap19total}. @e have substituted it for the "
+                    f"statewide {cvap19}-to-{vap19} share of "
+                    f"{statewide[cvap19 + '%']}.",
+                )
                 ratio = statewide[cvap19 + "%"]
 
             # Set the county-average ratio.
@@ -360,25 +370,20 @@ def estimatecvap2010(
 
         source[pct] = source[pct].replace(np.inf, np.nan)
         nanindices = source[source[pct].isna()].index
-        source.loc[nanindices, pct] = source.loc[nanindices, "_county"]. \
-            map(countywidepcts)
+        source.loc[nanindices, pct] = source.loc[nanindices, "_county"].map(
+            countywidepcts
+        )
 
         # Fill zeroes with the `zfill` value, and cap all the percentages.
-        source[pct] = source[pct] \
-            .replace(0, zfill) \
-            .apply(lambda c: 1 if c > ceiling else c)
+        source[pct] = (
+            source[pct].replace(0, zfill).apply(lambda c: 1 if c > ceiling else c)
+        )
 
     # Assert we don't have any percentages over percentage_cap.
-    assert all(
-        np.all(source[p + "%"] <= ceiling)
-        for (p, _, __) in groups
-    )
+    assert all(np.all(source[p + "%"] <= ceiling) for (p, _, __) in groups)
 
     # Assert we don't have any zeros.
-    assert all(
-        np.all(source[p + "%"] > 0)
-        for (p, _, __) in groups
-    )
+    assert all(np.all(source[p + "%"] > 0) for (p, _, __) in groups)
 
     # Set indices and create a mapping from IDs to weights.
     source = source.set_index(cvap_geoid)
@@ -395,7 +400,7 @@ def estimatecvap2010(
     # corresponding to a single tract), and for each of the CVAP groups,
     # apply the appropriate weight to the blocks' 2020 VAP populations.
     for ix, group in groupedtogeometry:
-        for (cvap10, vap10, vap20) in groups:
+        for cvap10, vap10, vap20 in groups:
             weight = cvap10 + "%"
             cvap20 = cvap10.replace(yearsuffix, "20_EST")
             group[weight] = weights[ix][weight]

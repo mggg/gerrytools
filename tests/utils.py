@@ -1,7 +1,7 @@
+import json
+import tempfile
 
 import requests
-import tempfile
-import json
 from gerrychain import Graph
 
 

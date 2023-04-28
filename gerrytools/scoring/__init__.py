@@ -1,21 +1,41 @@
-
 """
 Basic functionality for evaluating districting plans.
 """
 
-from .scores import (
-    splits, pieces, competitive_contests, swing_districts, party_districts,
-    opp_party_districts, party_wins_by_district, seats, aggregate_seats,
-    responsive_proportionality, stable_proportionality, efficiency_gap,
-    simplified_efficiency_gap, mean_median, partisan_bias, partisan_gini,
-    summarize, summarize_many, demographic_shares, demographic_tallies,
-    gingles_districts, max_deviation, eguia, reock, polsby_popper,
-    schwartzberg, convex_hull, pop_polygon, cut_edges,
-    
-)
-from .population import deviations, unassigned_population
-from .contiguity import unassigned_units, contiguous
+from .contiguity import contiguous, unassigned_units
 from .demographics import demographic_updaters
+from .population import deviations, unassigned_population
+from .scores import (
+    aggregate_seats,
+    competitive_contests,
+    convex_hull,
+    cut_edges,
+    demographic_shares,
+    demographic_tallies,
+    efficiency_gap,
+    eguia,
+    gingles_districts,
+    max_deviation,
+    mean_median,
+    opp_party_districts,
+    partisan_bias,
+    partisan_gini,
+    party_districts,
+    party_wins_by_district,
+    pieces,
+    polsby_popper,
+    pop_polygon,
+    reock,
+    responsive_proportionality,
+    schwartzberg,
+    seats,
+    simplified_efficiency_gap,
+    splits,
+    stable_proportionality,
+    summarize,
+    summarize_many,
+    swing_districts,
+)
 
 __all__ = [
     "splits",

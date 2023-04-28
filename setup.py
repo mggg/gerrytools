@@ -1,11 +1,24 @@
-
-from setuptools import setup, find_packages
 from pathlib import Path
 
+from setuptools import find_packages, setup
+
 requirements = [
-    "pandas", "scipy", "networkx", "geopandas", "shapely", "matplotlib",
-    "gerrychain", "sortedcontainers", "jsonlines", "opencv-python-headless",
-    "imageio", "us", "pydantic", "censusdata", "seaborn", "maup"
+    "pandas",
+    "scipy",
+    "networkx",
+    "geopandas",
+    "shapely",
+    "matplotlib",
+    "gerrychain",
+    "sortedcontainers",
+    "jsonlines",
+    "opencv-python-headless",
+    "imageio",
+    "us",
+    "pydantic",
+    "censusdata",
+    "seaborn",
+    "maup",
 ]
 
 # Set the version --- ensure that the latest tag matches this value.
@@ -27,13 +40,5 @@ setup(
     packages=find_packages(exclude=["tests", "tutorials"]),
     install_requires=requirements,
     include_package_data=True,
-    extras_require={
-        "dev": [
-            "pdoc3",
-            "flake8",
-            "pytest",
-            "autopep8",
-            "pytest-cov"
-        ]
-    }
+    extras_require={"dev": ["pdoc3", "flake8", "pytest", "autopep8", "pytest-cov"]},
 )

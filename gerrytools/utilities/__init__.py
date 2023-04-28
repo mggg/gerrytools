@@ -1,13 +1,8 @@
-
 """
 Oft-used utilities for working with geometric data.
 """
 
+from .JSON import JSONtoObject, jsonify
 from .rename import rename
-from .JSON import jsonify, JSONtoObject
 
-__all__ = [
-    "jsonify",
-    "JSONtoObject",
-    "rename"
-]
+__all__ = ["jsonify", "JSONtoObject", "rename"]

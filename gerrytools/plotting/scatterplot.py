@@ -1,9 +1,12 @@
-from matplotlib.axes import Axes
 import numpy as np
+from matplotlib.axes import Axes
+
 from .colors import districtr
 
 
-def scatterplot(ax, x, y, labels=None, limits=set(), bins=None, axis_range=None) -> Axes:
+def scatterplot(
+    ax, x, y, labels=None, limits=set(), bins=None, axis_range=None
+) -> Axes:
     r"""
     Plot a scatterplot comparing two scores, with the proposed plans'
     scores as points.
@@ -32,7 +35,7 @@ def scatterplot(ax, x, y, labels=None, limits=set(), bins=None, axis_range=None)
                 y + 0.5,
                 color=f"{districtr(i).pop()}",
                 s=150,
-                edgecolor='black',
+                edgecolor="black",
             )
     ax.legend()
 
@@ -48,8 +51,8 @@ def scatterplot(ax, x, y, labels=None, limits=set(), bins=None, axis_range=None)
     x_max = max([max(x_point) for x_point in x])
     y_min = min([min(y_point) for y_point in y])
     y_max = max([max(y_point) for y_point in y])
-    xedges = np.arange(x_min, x_max+1, 1)
-    yedges = np.arange(y_min, y_max+1, 1)
+    xedges = np.arange(x_min, x_max + 1, 1)
+    yedges = np.arange(y_min, y_max + 1, 1)
     # TODO: This only works for bins of width 1 — need to fix for general bid width.
     ax.set_xticks([x + 0.5 for x in xedges])
     ax.set_xticklabels(xedges)

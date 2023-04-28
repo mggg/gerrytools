@@ -1,18 +1,20 @@
-
 """
 Provides ease-of-use functionality for geographic and geometric operations.
 """
 
+from .dataframe import dataframe
 from .dissolve import dissolve
 from .dualgraph import dualgraph
-from .unitmap import unitmap, invert
-from .dataframe import dataframe
-
 from .optimize import (
-    minimize_dispersion, minimize_dispersion_with_parity, minimize_parity,
-    calculate_dispersion, populationoverlap, arealoverlap, optimalrelabeling
+    arealoverlap,
+    calculate_dispersion,
+    minimize_dispersion,
+    minimize_dispersion_with_parity,
+    minimize_parity,
+    optimalrelabeling,
+    populationoverlap,
 )
-
+from .unitmap import invert, unitmap
 from .updater import dispersion_updater_closure
 
 __all__ = [
@@ -28,5 +30,5 @@ __all__ = [
     "dataframe",
     "populationoverlap",
     "optimalrelabeling",
-    "arealoverlap"
+    "arealoverlap",
 ]

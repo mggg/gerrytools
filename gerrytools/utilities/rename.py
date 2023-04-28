@@ -1,4 +1,3 @@
-
 import os
 from os import path
 
@@ -27,7 +26,7 @@ def rename(old, new):
     for file in os.listdir(old):
         # Check whether the file has an extension.
         if "." in file:
-            extension = file[file.index("."):]
+            extension = file[file.index(".") :]
             os.rename(path.join(old, file), path.join(old, new + extension))
 
     # Rename the root directory.
