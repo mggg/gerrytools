@@ -20,6 +20,7 @@ jobs:
           name: tests
           command: |
             pip install pytest pytest-cov coverage
+            pip install gurobipy
             python setup.py install
             echo "backend: Agg" > "matplotlibrc"
 
