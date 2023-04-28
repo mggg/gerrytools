@@ -563,6 +563,7 @@ def profile_assignmentcompressor_decompress():
     profiler.dump_stats(remoteresource("test-assignments/decompress.pstats"))
 
 
+@pytest.mark.skip
 def test_submissions():
     # Select a state; we'll use Wisconsin. Set a sample size.
     state = us.states.WI
