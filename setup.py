@@ -7,7 +7,7 @@ requirements = [
     "scipy",
     "networkx",
     "geopandas",
-    "shapely",
+    "Shapely<2.0.0,>=1.7.1",
     "matplotlib",
     "gerrychain",
     "sortedcontainers",
