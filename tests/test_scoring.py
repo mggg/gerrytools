@@ -6,7 +6,7 @@ from gerrychain import Graph, Partition
 import geopandas as gpd
 from gerrychain.grid import Grid
 from shapely.geometry import box
-from math import pi
+from math import pi, sqrt
 from pathlib import Path
 import pytest
 
@@ -185,14 +185,6 @@ def test_schwartzberg__iowa_counties(ia_enacted, ia_dataframe):
     # for a single district, Schwartzberg = 1/sqrt(Polsby-Popper).
     assert abs(avg_schwartzberg - 1.811256) < 1e-4
     
-    
-def test_schwartzberg__iowa_counties(ia_enacted, ia_dataframe):
-    scores = summarize(ia_enacted, [convex_hull()], gdf=ia_dataframe, join_on="GEOID20")
-    avg_convex_hull = sum(scores["convex_hull"].values()) / len(scores["convex_hull"])
-    # Ground truth computed from known-good Polsby-Popper scores; recall that
-    # for a single district, convex_hull = 1/sqrt(Polsby-Popper).
-    assert abs(avg_convex_hull - 1.811256) < 1e-4
-    
 
 def test_convex_hull__iowa_counties(ia_enacted, ia_dataframe):
     scores = summarize(ia_enacted, [convex_hull()], gdf=ia_dataframe, join_on = "GEOID20")
@@ -204,33 +196,33 @@ def test_convex_hull__iowa_counties(ia_enacted, ia_dataframe):
 
 def test_polsby_popper__squares():
     grid = Grid((10, 10))
-    gdf = gpd.GeodataFrame([
+    gdf = gpd.GeoDataFrame([
         {'node': (x, y), 'geometry': box(x, y, x+1, y+1)}
         for (x, y) in grid.graph
     ]).set_index('node')
 
-    gdf.set_crs(epsg=4269)
+    gdf.crs = 26918  # UTM zone 18N
 
     expected_dist_score = pi/4
 
-    scored = polsby_popper(gdf, gdf.crs).apply(grid)
-    for dist_score in scored.vales():
+    scored = polsby_popper().apply(gdf)
+    for dist_score in scored.values():
         assert abs(dist_score - expected_dist_score) < 1e-4
 
 
 def test_schwartzberg__squares():
     grid = Grid((10, 10))
-    gdf = gpd.GeodataFrame([
+    gdf = gpd.GeoDataFrame([
         {'node': (x, y), 'geometry': box(x, y, x+1, y+1)}
         for (x, y) in grid.graph
     ]).set_index('node')
 
-    gdf.set_crs(epsg=4269)
+    gdf.crs = 26918 # UTM zone 18N
 
-    expected_dist_score = 4/pi
+    expected_dist_score = sqrt(4/pi)
 
-    scored = polsby_popper(gdf, gdf.crs).apply(grid)
-    for dist_score in scored.vales():
+    scored = schwartzberg().apply(gdf)
+    for dist_score in scored.values():
         assert abs(dist_score - expected_dist_score) < 1e-4
 
 def test_reock__iowa_counties(ia_enacted, ia_dataframe):

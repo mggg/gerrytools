@@ -277,9 +277,9 @@ def test_census10_bgs():
     bgs = 3438
 
     # Get the data for each table and verify that the values are correct.
-    for table, cases in CENSUSTESTDATA.items():
-        data = census20(AL, table=table, geometry="block group")
-        columns = set(variables(table).values()) | {"GEOID20"}
+    for table, cases in CENSUS10TESTDATA.items():
+        data = census10(AL, table=table, geometry="block group")
+        columns = set(variables(table).values()) | {"BLOCKGROUP10"}
 
         # Assert we have the correct number of values and the correct columns.
         assert len(data) == bgs
@@ -314,9 +314,9 @@ def test_census10_blocks():
     blocks = 252266
 
     # Get the data for each table and verify that the values are correct.
-    for table, cases in CENSUSTESTDATA.items():
-        data = census20(AL, table=table, geometry="block")
-        columns = set(variables(table).values()) | {"GEOID20"}
+    for table, cases in CENSUS10TESTDATA.items():
+        data = census10(AL, table=table, geometry="block")
+        columns = set(variables(table).values()) | {"BLOCK10"}
 
         # Assert we have the correct number of values and the correct columns.
         assert len(data) == blocks

@@ -39,8 +39,8 @@ def boxplot(
         `Axes` object on which the violins are plotted.
     """
     # Get all the scores into one list; pick a face color.
-    ensemble = scores["ensemble"] if scores["ensemble"] else scores["citizen"]
-    facecolor = defaultGray if scores["ensemble"] else citizenBlue
+    ensemble = scores["ensemble"] if "ensemble" in scores else scores["citizen"]
+    facecolor = defaultGray if "ensemble" in scores else citizenBlue
 
     # Specify the boxplots' style.
     boxstyle = {
@@ -69,14 +69,14 @@ def boxplot(
     # Plot each proposed plan individually, adjusting its detail points by
     # a value drawn from the uniform distribution of specified width centered on
     # the index of the violin.
-    if scores["proposed"]:
+    if "proposed" in scores:
         for boxplot in range(len(scores["proposed"])):
             for plan, score in enumerate(scores["proposed"][boxplot]):
                 # Horizontally jitter proposed scores if there are multiple scores
                 # at the same height.
                 jitter_val = random.uniform(-jitter, jitter) if scores["proposed"][boxplot].count(score) > 1 else 0
                 color_val = ""
-                if scores["proposed"]["colors"]:
+                if "colors" in scores["proposed"]:
                     color_val = scores["proposed"]["colors"][boxplot]
                 else:
                     color_val = districtr(plan + 1).pop()
