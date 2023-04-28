@@ -31,14 +31,15 @@ class Submission(BaseModel):
     """Not sure."""
 
 
-def tabularized(state, submissions) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def tabularized(state, submissions) -> Tuple[pd.DataFrame,
+                                             pd.DataFrame, pd.DataFrame]:
     """
     Returns districtr submission information in a tabular format.
 
     Args:
         state (State): `us.State` object (e.g. `us.states.WI`).
-        submissions (list): List of `Submission` objects returned from a call to
-            `submissions`.
+        submissions (list): List of `Submission` objects returned from a
+            call to `submissions`.
 
     Returns:
         Three dataframes corresponding to plan-based submissions, COI-based
@@ -104,8 +105,8 @@ def tabularized(state, submissions) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Data
     else:
         cois = pd.DataFrame()
 
-    # Drop bad columns and rename. Not sure why we have to `inplace` things here,
-    # but... fine.
+    # Drop bad columns and rename. Not sure why we have to `inplace`
+    # things here, but... fine.
     for df in [plans, cois]:
         if not df.empty:
             # Remove columns we don't necessarily care about.
@@ -114,7 +115,8 @@ def tabularized(state, submissions) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Data
                     df.drop(col, axis=1, inplace=True)
 
             # Rename the columns we do care about.
-            df.rename({"type_y": "type", "link_y": "link"}, axis=1, inplace=True)
+            df.rename({"type_y": "type", "link_y": "link"}, axis=1,
+                      inplace=True)
 
     return plans, cois, writtens
 
@@ -131,17 +133,17 @@ def submissions(state, sample=None) -> List[Submission]:
     Returns:
         A list of `Submissions`, either to be interpreted raw or tabularized.
     """
-    # Get the appropriate URL and send the request. Made some basic ASCII art with
-    # the second three variable names... it's like the request is loading letter
-    # by letter.
+    # Get the appropriate URL and send the request. Made some basic ASCII
+    # art with the second three variable names... it's like the request
+    # is loading letter by letter.
     url = ids(state)
     __w = requests.get(url).text
     _aw = json.loads(__w)["ids"]
     raw = _aw[:sample] if sample else _aw
 
-    # Create `Submission` objects for each of the retrieved objects. Getting the
-    # individual plans is the bottleneck here, and unfortunately we can't retrieve
-    # them in bulk (... or can we?).
+    # Create `Submission` objects for each of the retrieved objects.
+    # Getting the individual plans is the bottleneck here, and
+    # unfortunately we can't retrieve them in bulk (... or can we?).
     submissions = []
     for entity in raw:
         # Retrieve the required data points.
@@ -205,7 +207,8 @@ def parse_id(link, df=True) -> Union[str, pd.Series]:
     Given a districtr link, parse out the districtr identifier.
 
     Args:
-        l (str): districtr url containing the districtr ID of the provided plan.
+        l (str): districtr url containing the districtr ID of the provided
+            plan.
         df (bool, optional): If `l` is a dataframe, then we use pandas string
             operations rather than built-in ones.
 

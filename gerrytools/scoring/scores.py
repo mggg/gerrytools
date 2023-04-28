@@ -1,4 +1,12 @@
 from .splits import _splits, _pieces
+from gerrytools.geometry.compactness import (
+    _reock,
+    _convex_hull,
+    _polsby_popper,
+    _schwartzberg,
+    _cut_edges,
+    _pop_polygon
+)
 from .demographics import (
     _pop_shares,
     _tally_pop,
@@ -22,22 +30,38 @@ from .partisan import (
     _stable_proportionality,
     _responsive_proportionality,
 )
+from geopandas import GeoDataFrame
 from functools import partial
 from gerrychain import Partition, Graph
-from typing import Iterable, List, Mapping, Dict, Union
+from typing import Iterable, List, Mapping, Dict, Optional, Union
 from tqdm import tqdm
 import gzip
 import json
 from .types import Score, ScoreValue, Callable
 
 
-def summarize(part: Partition, scores: Iterable[Score]) -> Dict[str, ScoreValue]:
+def summarize(
+    part: Partition,
+    scores: Iterable[Score],
+    gdf: Optional[GeoDataFrame] = None,
+    join_on: Optional[str] = None,
+) -> Dict[str, ScoreValue]:
     """
     Summarize the given partition by the passed scores.
 
     Args:
         part (Partition): The plan to summarize.
         scores (Iterable[Score]): Which scores to include in the summary.
+        gdf (GeoDataFrame): Geometries of nodes in the dual graph used by `part`.
+            Only necessary when using scoring functions that rely on dissolved
+            district geometries (most geometric scoring functions).
+        join_on (str): Field used to join `part.graph` to `gdf`. 
+            If not specified, geometries are joined by matching the index of `gdf`
+            to the node keys of `part.graph`.
+            
+    Raises:
+        ValueError: If `gdf` is not specified and at least one score in `scores`
+            is dissolved.
 
     Returns:
         A dictionary that maps score names to the corresponding ScoreValues of the score functions
@@ -46,14 +70,40 @@ def summarize(part: Partition, scores: Iterable[Score]) -> Dict[str, ScoreValue]
         ie.
         `{"cut_edges": 4050, "num_party_seats": 3, ... }`
     """
+    if any(score.dissolved for score in scores):
+        if gdf is None:
+            raise ValueError("Geometries must be provided for dissolved scores.")
+
+        if join_on is None:
+            assignment = dict(part.assignment)
+            gdf = gdf.copy(deep=False)
+        else:
+            assignment = {
+                part.graph.nodes[node][join_on]: label
+                for node, label in part.assignment.items()
+            }
+            gdf = gdf.set_index(join_on)
+            
+        gdf["assignment"] = assignment
+        dissolved_gdf = gdf.dissolve(by="assignment")
+    else:
+        dissolved_gdf = None
+    
     summary = {}
     for score in scores:
-        summary[score.name] = score.apply(part)
+        if score.dissolved:
+            summary[score.name] = score.apply(dissolved_gdf)
+        else:
+            summary[score.name] = score.apply(part)
     return summary
 
 
 def summarize_many(
-    parts: Iterable[Partition], scores: Iterable[Score], plan_names: List[str] = [],
+    parts: Iterable[Partition],
+    scores: Iterable[Score],  
+    gdf: Optional[GeoDataFrame] = None,
+    join_on: Optional[str] = None,
+    plan_names: List[str] = None,
     output_file: str = None, compress: bool = False, verbose: bool = False
 ) -> Union[List[Dict[str, ScoreValue]], None]:
     """
@@ -62,9 +112,15 @@ def summarize_many(
     Args:
         parts (Iterable[Partition]): The plans to summarize.
         scores (Iterable[Score]): Which scores to include in the summaries.
+        gdf (GeoDataFrame): Geometries of nodes in the dual graph used by each partition
+            in `parts`. Only necessary when using scoring functions that rely on
+            dissolved district geometries (most geometric scoring functions).
+        join_on (str): Field used to join the graph associated with the partitions
+            in `parts` to `gdf`.  If not specified, geometries are joined by matching
+            the index of `gdf` to the node keys of the graph.
         plan_names (Iterable[str], optional): Plan identifiers, corresponding to
             plan by index. If no plan name exists for a given plan's index, the
-            plan's index is used as the identifier. Default is `[]`, plans
+            plan's index is used as the identifier. Default is `None`, plans
             identified by index.
         output_file (str, optional): Name of file to save the results jsonl
             encoding of the scores. If None, returns a list of the dictionary
@@ -78,18 +134,21 @@ def summarize_many(
         If an output file IS specified, the plan summaries are written to file
         and the function is void.
     """
+    if plan_names is None:
+        plan_names = []
+        
     if output_file is None:
         if verbose:
             result = []
             for part in tqdm(parts):
-                result.append(summarize(part, scores=scores))
+                result.append(summarize(part, scores=scores, gdf=gdf, join_on=join_on))
             return result
         return [summarize(part, scores=scores) for part in parts]
     else:
         with gzip.open(f"{output_file}.gz", "wt") if compress else open(output_file, "w") as fout:
             iterator = tqdm(enumerate(parts)) if verbose else enumerate(parts)
             for i, part in iterator:
-                plan_details = summarize(part, scores=scores)
+                plan_details = summarize(part, scores=scores, gdf=gdf, join_on=join_on)
                 try:
                     plan_details["id"] = plan_names[i]
                 except BaseException:
@@ -594,6 +653,57 @@ def gingles_districts(population_cols: Mapping[str, Iterable[str]], threshold: f
         ])
     return scores
 
+def reock() -> Score:
+    """
+    Returns the reock score for each district in a plan.
+    Returns:
+        A dictionary with districts as keys and reock scores as values.
+    """
+    return Score("reock", _reock, dissolved=True)
+
+def polsby_popper() -> Score:
+    """
+    Returns the polsby-popper score for each district in a plan.
+    
+    Returns:
+        A dictionary with districts as keys and polsby-popper scores as values.
+    """
+
+    return Score("polsby_popper", _polsby_popper, dissolved=True)
+
+def schwartzberg() -> Score:
+    """
+    Returns the schwartzberg score for each district in a plan.
+    Returns:
+        A dictionary with districts as keys and schwartzberg scores as values.
+    """
+    return Score("schwartzberg", _schwartzberg, dissolved=True)
+
+def convex_hull()  -> Score:
+    """
+    Returns the convex-hull score for each district in a plan.
+    
+    Returns:
+        A dictionary with districts as keys and convex-hull scores as values.
+    """
+    return Score("convex_hull", _convex_hull, dissolved=True)
+
+def pop_polygon(block_gdf: GeoDataFrame, pop_col: str = "TOTPOP20") -> Score:
+    """
+    Returns the population polygon compactness metric for each district in a plan.
+    Args:
+        block_gdf (GeoDataFrame): Block level shapefile for the state.
+        pop_col (str): Population column reflected in block_gdf and gdf.
+    Returns:
+        A dictionary with districts as keys and population polygon scores as values.
+    """
+    return Score("pop_polygon", partial(_pop_polygon, block_gdf=block_gdf, pop_col=pop_col), dissolved=True)
+
+def cut_edges() -> Score:
+    """
+    Returns the number of cut edges in a plan.
+    """
+    return Score("cut_edges", partial(_cut_edges))
 
 def max_deviation(totpop_col: str, pct: bool = False) -> Score:
     """

@@ -56,8 +56,8 @@ def test_boxplot():
         "names": [f"Plan {i+1}" for i in range(num_proposed)],
     }
 
-    fig, ax = plt.subplots(figsize=(12,6))
-    ax = boxplot(ax, scores, labels, proposed_info=proposed_info, percentiles=(25,75))
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax = boxplot(ax, scores, labels, proposed_info=proposed_info, percentiles=(25, 75))
     plt.close()
 
 

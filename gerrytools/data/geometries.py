@@ -32,12 +32,14 @@ def geometries20(state, filepath, geometry="tract"):
 
     # Check that the passed geometry is allowable.
     if geometry not in set(geometrymap.keys()):
-        print(f"Requested geometry \"{geometry}\" is not allowed; loading tracts.")
+        print(f"Requested geometry \"{geometry}\" is not allowed; "
+              "loading tracts.")
         geometry = "tract"
 
     # Specify the base url.
     base = "https://s3.us-east-2.amazonaws.com/data.mggg.org/census-2020/"
-    suffix = f"{state.abbr.lower()}/{state.abbr.lower()}_{geometrymap[geometry]}.zip"
+    suffix = f"{state.abbr.lower()}/{state.abbr.lower()}_" \
+        f"{geometrymap[geometry]}.zip"
 
     # Send the request!
     request = requests.get(base + suffix)

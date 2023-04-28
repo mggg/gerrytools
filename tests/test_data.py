@@ -1,12 +1,10 @@
 
-import us
 import jsonlines
-from pathlib import Path
 import os
 import pandas as pd
 import json
 from gerrytools.data import (
-    cvap, acs5, census20, variables, submissions, tabularized, AssignmentCompressor,
+    cvap, acs5, census20, census10, variables, submissions, tabularized, AssignmentCompressor,
     remap, estimatecvap2010, estimatecvap2020
 )
 import us
@@ -39,6 +37,7 @@ def test_estimate_cvap2020():
 
         # Check that they're close.
         assert math.isclose(est, reported, abs_tol=1e-6)
+
 
 @pytest.mark.skip(reason="Times out too often; virtually equivalent test to the previous one.")
 def test_estimate_cvap2010():
@@ -90,7 +89,7 @@ def test_cvap_tracts():
         "NHWHITEBLACKCVAP19", "NHBLACKAMINCVAP19", "NHOTHCVAP19", "HCVAP19",
         "POCCVAP19", "CVAP19e", "NHCVAP19e", "NHAMINCVAP19e", "NHASIANCVAP19e",
         "NHBLACKCVAP19e", "NHNHPICVAP19e", "NHWHITECVAP19e", "NHWHITEAMINCVAP19e",
-        "NHWHITEASIANCVAP19e", "NHWHITEBLACKCVAP19e", "NHBLACKAMINCVAP19e", "NHOTHCVAP19e", 
+        "NHWHITEASIANCVAP19e", "NHWHITEBLACKCVAP19e", "NHBLACKAMINCVAP19e", "NHOTHCVAP19e",
         "HCVAP19e",
     }
     tracts = 1181
@@ -103,7 +102,7 @@ def test_cvap_tracts():
 def test_cvap_bgs():
     al = us.states.AL
     data = cvap(al, geometry="block group", year=2019)
-    
+
     # Set some testing variables.
     columns = {
         "BLOCKGROUP10", "CVAP19", "NHCVAP19", "NHAMINCVAP19", "NHASIANCVAP19", "NHBLACKCVAP19",
@@ -111,8 +110,8 @@ def test_cvap_bgs():
         "NHWHITEBLACKCVAP19", "NHBLACKAMINCVAP19", "NHOTHCVAP19", "HCVAP19",
         "POCCVAP19", "CVAP19e", "NHCVAP19e", "NHAMINCVAP19e", "NHASIANCVAP19e",
         "NHBLACKCVAP19e", "NHNHPICVAP19e", "NHWHITECVAP19e", "NHWHITEAMINCVAP19e",
-        "NHWHITEASIANCVAP19e", "NHWHITEBLACKCVAP19e", "NHBLACKAMINCVAP19e", "NHOTHCVAP19e", 
-        "HCVAP19e",
+        "NHWHITEASIANCVAP19e", "NHWHITEBLACKCVAP19e", "NHBLACKAMINCVAP19e", "NHOTHCVAP19e",
+        "HCVAP19e"
     }
     bgs = 3438
 
@@ -195,6 +194,25 @@ CENSUSTESTDATA = {
     ]
 }
 
+CENSUS10TESTDATA = {
+    "P8": [
+        ("TOTPOP10", 4779736),
+        ("WHITEBLACKPOP10", 19666)
+    ],
+    "P9": [
+        ("NHBLACKAMINASIANPOP10", 72),
+        ("HPOP10", 185602)
+    ],
+    "P10": [
+        ("VAP10", 3647277),
+        ("WHITEBLACKVAP10", 4567)
+    ],
+    "P11": [
+        ("NHBLACKAMINASIANVAP10", 47),
+        ("HVAP10", 118336)
+    ]
+}
+
 
 def test_census_tracts():
     # Get a test set of data on Alabama.
@@ -205,13 +223,33 @@ def test_census_tracts():
     for table, cases in CENSUSTESTDATA.items():
         data = census20(AL, table=table, geometry="tract")
         columns = set(variables(table).values()) | {"GEOID20"}
-        
+
         # Assert we have the correct number of values and the correct columns.
         assert len(data) == tracts
         assert set(list(data)) == columns
 
         # For each test case, confirm that we have the correct sum.
-        for column, correct in cases: assert data[column].sum() == correct
+        for column, correct in cases:
+            assert data[column].sum() == correct
+
+
+def test_census10_tracts():
+    # Get a test set of data on Alabama.
+    AL = us.states.AL
+    tracts = 1181
+
+    # Get the data for each table and verify that the values are correct.
+    for table, cases in CENSUS10TESTDATA.items():
+        data = census10(AL, table=table, geometry="tract")
+        columns = set(variables(table).values()) | {"TRACT10"}
+
+        # Assert we have the correct number of values and the correct columns.
+        assert len(data) == tracts
+        assert set(list(data)) == columns
+
+        # For each test case, confirm that we have the correct sum.
+        for column, correct in cases:
+            assert data[column].sum() == correct
 
 
 def test_census_bgs():
@@ -223,13 +261,33 @@ def test_census_bgs():
     for table, cases in CENSUSTESTDATA.items():
         data = census20(AL, table=table, geometry="block group")
         columns = set(variables(table).values()) | {"GEOID20"}
-        
+
         # Assert we have the correct number of values and the correct columns.
         assert len(data) == bgs
         assert set(list(data)) == columns
 
         # For each test case, confirm that we have the correct sum.
-        for column, correct in cases: assert data[column].sum() == correct
+        for column, correct in cases:
+            assert data[column].sum() == correct
+
+
+def test_census10_bgs():
+    # Get a test set of data on Alabama.
+    AL = us.states.AL
+    bgs = 3438
+
+    # Get the data for each table and verify that the values are correct.
+    for table, cases in CENSUS10TESTDATA.items():
+        data = census10(AL, table=table, geometry="block group")
+        columns = set(variables(table).values()) | {"BLOCKGROUP10"}
+
+        # Assert we have the correct number of values and the correct columns.
+        assert len(data) == bgs
+        assert set(list(data)) == columns
+
+        # For each test case, confirm that we have the correct sum.
+        for column, correct in cases:
+            assert data[column].sum() == correct
 
 
 @pytest.mark.skip(reason="Times out too often; virtually equivalent test to the previous one.")
@@ -241,13 +299,32 @@ def test_census_blocks():
     for table, cases in CENSUSTESTDATA.items():
         data = census20(AL, table=table, geometry="block")
         columns = set(variables(table).values()) | {"GEOID20"}
-        
+
         # Assert we have the correct number of values and the correct columns.
         assert len(data) == blocks
         assert set(list(data)) == columns
 
         # For each test case, confirm that we have the correct sum.
-        for column, correct in cases: assert data[column].sum() == correct
+        for column, correct in cases:
+            assert data[column].sum() == correct
+
+
+def test_census10_blocks():
+    AL = us.states.AL
+    blocks = 252266
+
+    # Get the data for each table and verify that the values are correct.
+    for table, cases in CENSUS10TESTDATA.items():
+        data = census10(AL, table=table, geometry="block")
+        columns = set(variables(table).values()) | {"BLOCK10"}
+
+        # Assert we have the correct number of values and the correct columns.
+        assert len(data) == blocks
+        assert set(list(data)) == columns
+
+        # For each test case, confirm that we have the correct sum.
+        for column, correct in cases:
+            assert data[column].sum() == correct
 
 
 @pytest.mark.skip(reason="Temporarily skipped; moved resources.")
@@ -258,7 +335,8 @@ def test_assignmentcompressor_compress():
 
     # Delete the existing file.
     location = remoteresource("test-assignments/compressed.ac")
-    if location.exists(): os.remove(location)
+    if location.exists():
+        os.remove(location)
 
     # Create an AssignmentCompressor.
     ac = AssignmentCompressor(geoids, window=10, location=remoteresource("test-assignments/compressed.ac"))
@@ -266,8 +344,9 @@ def test_assignmentcompressor_compress():
     with ac as compressor:
         with jsonlines.open(remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")) as reader:
             for submission in reader:
-                assignment = { str(k): str(v) for k, v in submission["assignment"].items() }
+                assignment = {str(k): str(v) for k, v in submission["assignment"].items()}
                 compressor.compress(assignment)
+
 
 @pytest.mark.skip(reason="Temporarily skipped; moved resources.")
 def test_assignmentcompressor_decompress():
@@ -283,7 +362,7 @@ def test_assignmentcompressor_decompress():
     originals = []
     with jsonlines.open(remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")) as reader:
         for submission in reader:
-            assignment = { str(k): str(v) for k, v in submission["assignment"].items() }
+            assignment = {str(k): str(v) for k, v in submission["assignment"].items()}
             originals.append(assignment)
 
     # First, assert that we have the same number of assignments.
@@ -293,13 +372,14 @@ def test_assignmentcompressor_decompress():
     for decompressed, original in zip(decompresseds, originals):
         assert decompressed == ac.match(original)
 
+
 @pytest.mark.skip(reason="Temporarily skipped; moved resources.")
 def test_match():
     # Create a fake assignment (with improperly ordered keys) and set a desired
     # one.
     fake_identifiers = ["001", "011", "012", "002"]
-    fake_assignment = { "002": "12.0", "012": "A", "001": "3" }
-    desired_assignment = { "001": "3", "002": "12.0", "011": "-1", "012": "A"}
+    fake_assignment = {"002": "12.0", "012": "A", "001": "3"}
+    desired_assignment = {"001": "3", "002": "12.0", "011": "-1", "012": "A"}
 
     # Create an AssignmentCompressor object and test whether our fake and desired
     # assignments match!
@@ -315,6 +395,7 @@ def test_match():
         assert fval == dval
         assert type(fval) == type(dval)
 
+
 @pytest.mark.skip(reason="Temporarily skipped; moved resources.")
 def test_assignmentcompressor_compress_all():
     # Get the GEOIDs from the blocks.
@@ -323,7 +404,8 @@ def test_assignmentcompressor_compress_all():
 
     # Delete the existing file.
     location = remoteresource("test-assignments/compressed.ac")
-    if location.exists(): os.remove(location)
+    if location.exists():
+        os.remove(location)
 
     # Create an AssignmentCompressor.
     ac = AssignmentCompressor(geoids, location=remoteresource("test-assignments/compressed.ac"))
@@ -332,11 +414,12 @@ def test_assignmentcompressor_compress_all():
     assignments = []
     with jsonlines.open(remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")) as reader:
         for submission in reader:
-            assignment = { str(k): str(v) for k, v in submission["assignment"].items() }
+            assignment = {str(k): str(v) for k, v in submission["assignment"].items()}
             assignments.append(assignment)
 
     # Compress.
     ac.compress_all(assignments)
+
 
 @pytest.mark.skip(reason="Temporarily skipped; moved resources.")
 def profile_assignmentcompressor_compress():
@@ -346,7 +429,8 @@ def profile_assignmentcompressor_compress():
 
     # Delete the existing file.
     location = remoteresource("test-assignments/compressed.ac")
-    if location.exists(): os.remove(location)
+    if location.exists():
+        os.remove(location)
 
     # Create an AssignmentCompressor.
     ac = AssignmentCompressor(geoids, location=remoteresource("test-assignments/compressed.ac"))
@@ -355,15 +439,17 @@ def profile_assignmentcompressor_compress():
     assignments = []
     with jsonlines.open(remoteresource("test-assignments/test-multiple-assignments.jsonl", mode="r")) as reader:
         for submission in reader:
-            assignment = { str(k): str(v) for k, v in submission["assignment"].items() }
+            assignment = {str(k): str(v) for k, v in submission["assignment"].items()}
             assignments.append(assignment)
 
     # Profile compression.
     with cProfile.Profile() as profiler:
         with ac as compressor:
-            for assignment in assignments: compressor.compress(assignment)
+            for assignment in assignments:
+                compressor.compress(assignment)
 
     profiler.dump_stats(remoteresource("test-assignments/compress.pstats"))
+
 
 @pytest.mark.skip(reason="Temporarily skipped; moved resources.")
 def profile_assignmentcompressor_decompress():
@@ -374,7 +460,8 @@ def profile_assignmentcompressor_decompress():
 
     # Profile decompression.
     with cProfile.Profile() as profiler:
-        for _ in ac.decompress(): pass
+        for _ in ac.decompress():
+            pass
 
     profiler.dump_stats(remoteresource("test-assignments/decompress.pstats"))
 
@@ -397,6 +484,7 @@ def test_submissions():
     assert not plans["plan"].isna().all()
     assert not cois["plan"].isna().all()
 
+
 @pytest.mark.skip(reason="Temporarily skipped; moved resources.")
 def test_remap():
     # Read from file.
@@ -405,15 +493,17 @@ def test_remap():
     # Get the population mapping.
 
     # Read the unit mappings in.
-    with open(remoteresource("test-vtds-to-blocks.json")) as f: vtds_to_blocks = json.load(f)
-    with open(remoteresource("test-blocks-to-vtds.json")) as f: blocks_to_vtds = json.load(f)
+    with open(remoteresource("test-vtds-to-blocks.json")) as f:
+        vtds_to_blocks = json.load(f)
+    # with open(remoteresource("test-blocks-to-vtds.json")) as f:
+    #    blocks_to_vtds = json.load(f)
     with open(remoteresource("test-precincts-to-blocks.json")) as f: precincts_to_blocks = json.load(f)
-    with open(remoteresource("test-blocks-to-vtds.json")) as f: blocks_to_vtds = json.load(f)
+    # with open(remoteresource("test-blocks-to-vtds.json")) as f: blocks_to_vtds = json.load(f)
 
     # Create the mapping of mappings!
     unitmaps = {
         "2020 VTDs": vtds_to_blocks,
-        # "Precincts": precincts_to_blocks
+        "Precincts": precincts_to_blocks
     }
 
     # Remap things. Appears to work fine for now!
