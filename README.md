@@ -1,6 +1,7 @@
 
 # gerrytools
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/mggg/gerrytools/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/mggg/gerrytools/tree/main) [![codecov](https://codecov.io/gh/mggg/gerrytools/branch/main/graph/badge.svg?token=O09GYF7C9X)](https://codecov.io/gh/mggg/gerrytools) [![PyPI version](https://badge.fury.io/py/gerrytools.svg)](https://badge.fury.io/py/gerrytools) [![docs](https://img.shields.io/badge/%E2%93%98-Documentation-%230099cd)](https://mggg.github.io/gerrytools/) [![website](https://img.shields.io/badge/%F0%9F%8C%90%20-MGGG%20Redistricting%20Lab-%230099cd)](https://mggg.org)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/mggg/gerrytools/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/mggg/gerrytools/tree/main) [![codecov](https://codecov.io/gh/mggg/gerrytools/branch/main/graph/badge.svg?token=O09GYF7C9X)](https://codecov.io/gh/mggg/gerrytools) [![PyPI version](https://badge.fury.io/py/gerrytools.svg)](https://badge.fury.io/py/gerrytools) [![docs](https://img.shields.io/badge/%E2%93%98-Documentation-%230099cd)](https://mggg.github.io/gerrytools/) [![website](https://img.shields.io/badge/%F0%9F%8C%90%20-MGGG%20Redistricting%20Lab-%230099cd)](https://mggg.org) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 
 A companion to [GerryChain](https://github.com/mggg/GerryChain), GerryTools is
 a robust suite of geometric and algorithmic tools to analyze districting plans
