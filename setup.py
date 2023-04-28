@@ -3,7 +3,7 @@ from pathlib import Path
 from setuptools import find_packages, setup
 
 requirements = [
-    "pandas",
+    "pandas<2.0.0,>=1.2.4",
     "scipy",
     "networkx",
     "geopandas",
