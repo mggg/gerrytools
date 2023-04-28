@@ -322,6 +322,7 @@ def minimize_parity(
         units: The units to optimize on. E.g. Census blocks.
         enacted_col: The column in the GeoDataFrame with the enacted districts.
         proposed_col: The column in the GeoDataFrame with the proposed districts.
+        pop_col: The column in the GeoDataFrame with population counts.
         verbose: If true, do not suppress solver output. Otherwise, stay quiet.
 
     Returns:
@@ -376,6 +377,7 @@ def minimize_dispersion_with_parity(
         units: The units to optimize on. E.g. Census blocks.
         enacted_col: The column in the GeoDataFrame with the enacted districts.
         proposed_col: The column in the GeoDataFrame with the proposed districts.
+        pop_col: The column in the GeoDataFrame with population counts.
         extra_constraints: Optional; A function that can add extra constraints
             to the model, such as parity (in the case of WI).
 
@@ -406,6 +408,7 @@ def calculate_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col
         units: The units to optimize on. E.g. Census blocks.
         enacted_col: The column in the GeoDataFrame with the enacted districts.
         proposed_col: The column in the GeoDataFrame with the proposed districts.
+        pop_col: The column in the GeoDataFrame with population counts.
 
     Returns:
         An integer of the absolute number of people who changed districts.
@@ -414,3 +417,31 @@ def calculate_dispersion(units: gpd.GeoDataFrame, enacted_col: str, proposed_col
         raise TypeError("Your enacted and proposed columns must have the same type!")
 
     return units[units[enacted_col] != units[proposed_col]][pop_col].sum()
+
+
+def calculate_dispersion_per_district(units: gpd.GeoDataFrame, enacted_col: str,
+                                      proposed_col: str, pop_col: str) -> \
+                                      Dict[int, int]:
+    """
+    Calculates dispersion per district in a state given a column with enacted districts
+    and a column with proposed districts. Used in GA.
+
+    Args:
+        units: The units to optimize on. E.g. census blocks.
+        enacted_col: The column in the GeoDataFrame with the enacted districts.
+        proposed_col: The column in the GeoDataFrame with the proposed districts.
+        pop_col: The column in the GeoDataFrame with population counts.
+
+    Returns:
+        A dictionary with keys as districts, and values as the number of
+        people displaced from the enacted plan to the proposed plan.
+    """
+    if units[enacted_col].dtype != units[proposed_col].dtype:
+        units[enacted_col] = units[enacted_col].astype(float).astype(int)
+        units[proposed_col] = units[proposed_col].astype(float).astype(int)
+
+    dispersion_dict = {district: sum(units[pop_col][(units[enacted_col] == district)
+                                     & (units[proposed_col] != district)])
+                       for district in sorted(units[enacted_col].unique())}
+
+    return dispersion_dict

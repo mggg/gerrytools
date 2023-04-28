@@ -10,14 +10,10 @@ from gerrychain import (
 )
 from gerrychain.proposals import recom
 from functools import partial
-import geopandas as gpd
-import requests
 from gerrytools.geometry import (
     dissolve, dualgraph, unitmap, invert, dispersion_updater_closure, dataframe
 )
 import geopandas as gpd
-from pathlib import Path
-import os
 import pytest
 
 from .utils import remotegraphresource, remoteresource
@@ -30,7 +26,7 @@ def test_dispersion_calc():
     graph = Graph.from_json("./test-resources/IN-vtds.json")
 
     my_updaters = {
-        "population": updaters.Tally("TOTPOP", alias="population"), 
+        "population": updaters.Tally("TOTPOP", alias="population"),
         "dispersion": dispersion_updater_closure(gdf, "CONGRESS", "TOTPOP")
     }
 
@@ -65,6 +61,7 @@ def test_dispersion_calc():
 
     assert total_dispersion_over_run
 
+
 def test_dissolve():
     # Read in geometric data.
     districts = gpd.read_file(remoteresource("test-vtds.geojson"))
@@ -84,6 +81,7 @@ def test_dissolve():
     # Assert that the sum of the kept column is the same as the sum of the original.
     assert dissolved["G20PREDBID"].sum() == districts["G20PREDBID"].sum()
 
+
 def test_dualgraph():
     # Read in geometric data and get centroids.
     districts = gpd.read_file(remoteresource("test-districts.geojson"))
@@ -96,23 +94,24 @@ def test_dualgraph():
 
     # Create an adjusted dual graph.
     adjusted = dualgraph(
-        districts, index="DISTRICT", edges_to_add=[(1,1)], edges_to_cut=[(0, 1)]
+        districts, index="DISTRICT", edges_to_add=[(1, 1)], edges_to_cut=[(0, 1)]
     )
 
     # Create another adjusted dual graph, this time with more things mucked up.
     nameadjusted = dualgraph(
-        districts, index="NAME", colmap={ "G20PREDBID": "BIDEN" }
+        districts, index="NAME", colmap={"G20PREDBID": "BIDEN"}
     )
 
     # Check that there are different edges in `default` and `adjusted`, and that
     # edges were added and cut.
     assert set(default.edges()) != set(adjusted.edges())
-    assert (1,1) in set(adjusted.edges())
-    assert (0,1) not in set(adjusted.edges())
+    assert (1, 1) in set(adjusted.edges())
+    assert (0, 1) not in set(adjusted.edges())
 
     # Assert that reindexing and renaming happened.
     assert set(default.nodes()) != set(nameadjusted.nodes())
-    for _, data in nameadjusted.nodes(data=True): assert data.get("BIDEN", False)
+    for _, data in nameadjusted.nodes(data=True):
+        assert data.get("BIDEN", False)
 
 
 def test_unitmap():
@@ -137,8 +136,8 @@ def test_unitmap():
 
 def test_dataframe():
     G = remotegraphresource("test-graph.json")
-    
-    P = Partition(graph=G, assignment={v:d["COUNTYFP20"] for v, d in G.nodes(data=True)})
+
+    P = Partition(graph=G, assignment={v: d["COUNTYFP20"] for v, d in G.nodes(data=True)})
     df = dataframe(P, assignment="COUNTYFP20")
     df = df.rename({"id": "GEOID20"}, axis=1)
 

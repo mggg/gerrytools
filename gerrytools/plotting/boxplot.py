@@ -44,7 +44,7 @@ def boxplot(
 
     # Specify the boxplots' style.
     boxstyle = {
-        "lw": 2,
+        "lw": 1/2,
         "color": facecolor,
     }
 
@@ -75,17 +75,22 @@ def boxplot(
                 # Horizontally jitter proposed scores if there are multiple scores
                 # at the same height.
                 jitter_val = random.uniform(-jitter, jitter) if scores["proposed"][boxplot].count(score) > 1 else 0
+                color_val = ""
+                if scores["proposed"]["colors"]:
+                    color_val = scores["proposed"]["colors"][boxplot]
+                else:
+                    color_val = districtr(plan + 1).pop()
                 ax.scatter(
                     boxplot + 1 + jitter_val,
                     score,
-                    color=districtr(plan + 1).pop(),
+                    color=color_val,
                     edgecolor='black',
                     s=100,
                     alpha=0.9,
                     label=proposed_info["names"][plan] if boxplot == 0 else None,
                 )
         ax.legend()
-        ax.grid(axis='x')
+        
 
     if labels:
         ax.set_xlabel(labels[0], fontsize=24)

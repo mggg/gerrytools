@@ -4,7 +4,7 @@ from pathlib import Path
 
 requirements = [
     "pandas", "scipy", "networkx", "geopandas", "shapely", "matplotlib",
-    "gerrychain", "sortedcontainers", "gurobipy", "jsonlines", "opencv-python-headless",
+    "gerrychain", "sortedcontainers", "jsonlines", "opencv-python-headless",
     "imageio", "us", "pydantic", "censusdata", "seaborn", "maup"
 ]
 

@@ -7,17 +7,18 @@ from typing import List
 class AssignmentCompressor:
     """
     A class for compressing and decompressing lots of assignments very, very
-    quickly. Intended for use with ``jsonlines``-like libraries (where assignments
-    are read in line-by-line) or for network requests (where assignments are
-    retrieved one-by-one). When decompressing, yields ``dict``s where keys are
-    in sorted order.
+    quickly. Intended for use with ``jsonlines``-like libraries (where
+    assignments are read in line-by-line) or for network requests (where
+    assignments are retrieved one-by-one). When decompressing, yields ``dict``s
+    where keys are in sorted order.
 
     The compression schema considers the set of unique identifiers, imposes an
-    ordering (lexicographic order) on the identifiers, and matches the assignment
-    to that ordering. We assign all unassigned units to ``"-1"`` and, once the
-    default cache size is hit (or assignments are no longer being read in),
-    compress all assignments in the cache. Assignments are read in and out in
-    the same order, and the keys for each assignment are in the same order.
+    ordering (lexicographic order) on the identifiers, and matches the
+    assignment to that ordering. We assign all unassigned units to ``"-1"``
+    and, once the default cache size is hit (or assignments are no longer being
+    read in), compress all assignments in the cache. Assignments are read in
+    and out in the same order, and the keys for each assignment are in the
+    same order.
 
     Example:
         To compress assignments, we need a set of unique identifiers such that
@@ -26,7 +27,8 @@ class AssignmentCompressor:
             ...
 
             geoids = blocks["GEOID20"].astype(str)
-            ac = AssignmentCompressor(geoids, location="compressed-assignments.ac")
+            ac = AssignmentCompressor(
+                 geoids, location="compressed-assignments.ac")
 
             with ac as compressor:
                 for assignment in assignments:
