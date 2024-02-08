@@ -2,6 +2,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
+import warnings
 
 from ..geometry import unitmap
 from .acs import acs5, cvap
@@ -389,6 +390,13 @@ def estimatecvap2010(
     source = source.set_index(cvap_geoid)
     source = source[cvappcts]
     weights = source.to_dict(orient="index")
+   
+    # If the first character of the first key is "0", then we need to pad
+    # the keys since ix gets interpreted as a float later. 
+    if [*weights.keys()][0][0] == "0":
+        pad = "0"
+    else:
+        pad = ""
 
     # Group by the CVAP GEOID.
     groupedtogeometry = list(pared.groupby(cvap_geoid))
@@ -403,7 +411,7 @@ def estimatecvap2010(
         for cvap10, vap10, vap20 in groups:
             weight = cvap10 + "%"
             cvap20 = cvap10.replace(yearsuffix, "20_EST")
-            group[weight] = weights[ix][weight]
+            group[weight] = weights[pad+str(int(ix))][weight]
             group[cvap20] = group[weight] * group[vap20]
 
     # Re-create a dataframe and strip out % columns, leaving only the estimate

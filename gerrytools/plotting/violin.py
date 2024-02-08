@@ -96,7 +96,7 @@ def violin(
                     violin + 1 + jitter_val,
                     score,
                     color=scores["proposed"]["colors"][violin]
-                    if scores["proposed"]["colors"]
+                    if not isinstance(scores["proposed"], list) and scores["proposed"]["colors"]
                     else districtr(plan + 1).pop(),
                     edgecolor="black",
                     s=100,

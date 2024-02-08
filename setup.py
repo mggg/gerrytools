@@ -3,11 +3,11 @@ from pathlib import Path
 from setuptools import find_packages, setup
 
 requirements = [
-    "pandas<2.0.0,>=1.2.4",
+    "pandas>=2.0.0",
     "scipy",
     "networkx",
     "geopandas",
-    "Shapely<2.0.0,>=1.7.1",
+    "Shapely>=2.0.0",
     "matplotlib",
     "gerrychain",
     "sortedcontainers",

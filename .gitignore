@@ -8,3 +8,6 @@ __pycache__/
 tests/test-reports/*
 */**/*.svg
 tests/*.ipynb
+
+# Python virtual environment files.
+.venv
