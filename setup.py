@@ -3,7 +3,7 @@ from pathlib import Path
 from setuptools import find_packages, setup
 
 requirements = [
-    "pandas>=2.0.0",
+    "pandas<2.0.0,>=1.5.0",
     "scipy",
     "networkx",
     "geopandas",
@@ -18,7 +18,7 @@ requirements = [
     "pydantic",
     "censusdata",
     "seaborn",
-    "maup",
+    "maup<=1.1.0",
 ]
 
 # Set the version --- ensure that the latest tag matches this value.
