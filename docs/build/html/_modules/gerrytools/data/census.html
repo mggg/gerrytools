@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gerrytools.data.census &mdash; gerrytools 1.1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=58fbf978"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #0099cd" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            gerrytools
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../full_ref.html">Full Package Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #0099cd" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">gerrytools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">gerrytools.data.census</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for gerrytools.data.census</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">reduce</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">combinations</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterable</span>
+
+<span class="kn">import</span> <span class="nn">censusdata</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+
+
+<span class="k">def</span> <span class="nf">_rjoin</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">columns</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterable</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Private method for elementwise concatenating string dataframe columns.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df (pd.DataFrame): DataFrame to which the columns belong.</span>
+<span class="sd">        columns (list): List of column names to be concatenated in</span>
+<span class="sd">            left-to-right order.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        An iterable representing the column of concatenated column entries.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">stringified</span> <span class="o">=</span> <span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">:</span> <span class="n">left</span> <span class="o">+</span> <span class="n">right</span><span class="p">,</span> <span class="n">stringified</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">stringified</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+
+<div class="viewcode-block" id="census10">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.data.census10">[docs]</a>
+<span class="k">def</span> <span class="nf">census10</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="s2">&quot;P8&quot;</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">{},</span> <span class="n">geometry</span><span class="o">=</span><span class="s2">&quot;block&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieves `geometry`-level 2010 Summary File 1 data via the Census API.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        state (State): `us.State` object (e.g. `us.states.WI`).</span>
+<span class="sd">        table (string, optional): Table from which we retrieve data.</span>
+<span class="sd">           Defaults to the P8 table, which contains population by race</span>
+<span class="sd">           regardless of ethnicity.</span>
+<span class="sd">        columns (dict, optional): Dictionary which maps Census column names</span>
+<span class="sd">            (from the correct table) to human-readable names. We require this</span>
+<span class="sd">            to be a dictionary, _not_ a list, as specifying human-readable</span>
+<span class="sd">            names will implicitly protect against incorrect column names</span>
+<span class="sd">            and excessive API calls.</span>
+<span class="sd">        geometry (string, optional): Geometry level at which we retrieve data.</span>
+<span class="sd">            Defaults to `&quot;block&quot;` to retrieve block-level data for the state</span>
+<span class="sd">            provided. Accepted values are `&quot;block&quot;`, `&quot;block group`&quot;, and</span>
+<span class="sd">            `&quot;tract&quot;`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A DataFrame with columns renamed according to their Census description</span>
+<span class="sd">        designation and a unique identifier column for joining to geometries.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Check whether the geometry is right. If not, warn the user and set it</span>
+    <span class="c1"># properly.</span>
+    <span class="k">if</span> <span class="n">geometry</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;block&quot;</span><span class="p">,</span> <span class="s2">&quot;tract&quot;</span><span class="p">,</span> <span class="s2">&quot;block group&quot;</span><span class="p">}:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Geometry &quot;</span><span class="si">{</span><span class="n">geometry</span><span class="si">}</span><span class="s1">&quot; not accepted.&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Check whether we&#39;re providing an appropriate table name.</span>
+    <span class="k">if</span> <span class="n">table</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;P8&quot;</span><span class="p">,</span> <span class="s2">&quot;P9&quot;</span><span class="p">,</span> <span class="s2">&quot;P10&quot;</span><span class="p">,</span> <span class="s2">&quot;P11&quot;</span><span class="p">}:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Unknown table &quot;</span><span class="si">{</span><span class="n">table</span><span class="si">}</span><span class="s1">&quot;.&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Create the right geometry identifiers.</span>
+    <span class="n">geometries</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;state&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">fips</span><span class="p">)),</span> <span class="p">(</span><span class="s2">&quot;county&quot;</span><span class="p">,</span> <span class="s2">&quot;*&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;tract&quot;</span><span class="p">,</span> <span class="s2">&quot;*&quot;</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">geometry</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;block group&quot;</span><span class="p">,</span> <span class="s2">&quot;block&quot;</span><span class="p">}:</span>
+        <span class="n">geometries</span> <span class="o">+=</span> <span class="p">[(</span><span class="n">geometry</span><span class="p">,</span> <span class="s2">&quot;*&quot;</span><span class="p">)]</span>
+
+    <span class="c1"># Create an identifier column.</span>
+    <span class="n">identifier</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;10&quot;</span>
+
+    <span class="n">varmap</span> <span class="o">=</span> <span class="n">columns</span> <span class="k">if</span> <span class="n">columns</span> <span class="k">else</span> <span class="n">variables</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+    <span class="nb">vars</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">varmap</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="c1"># Download data.</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">censusdata</span><span class="o">.</span><span class="n">download</span><span class="p">(</span>
+        <span class="s2">&quot;sf1&quot;</span><span class="p">,</span>
+        <span class="mi">2010</span><span class="p">,</span>
+        <span class="n">censusdata</span><span class="o">.</span><span class="n">censusgeo</span><span class="p">(</span><span class="n">geometries</span><span class="p">),</span>
+        <span class="p">[</span><span class="s2">&quot;GEO_ID&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="nb">vars</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Rename columns and send back to the caller!</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s2">&quot;GEO_ID&quot;</span><span class="p">:</span> <span class="n">identifier</span><span class="p">,</span> <span class="o">**</span><span class="n">columns</span><span class="p">},</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">raw</span><span class="p">[</span><span class="n">identifier</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw</span><span class="p">[</span><span class="n">identifier</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="p">[</span><span class="mi">9</span><span class="p">:]</span>
+    <span class="n">clean</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">clean</span> <span class="o">=</span> <span class="n">clean</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">varmap</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">clean</span></div>
+
+
+
+<div class="viewcode-block" id="census20">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.data.census20">[docs]</a>
+<span class="k">def</span> <span class="nf">census20</span><span class="p">(</span>
+    <span class="n">state</span><span class="p">,</span>
+    <span class="n">table</span><span class="o">=</span><span class="s2">&quot;P1&quot;</span><span class="p">,</span>
+    <span class="n">columns</span><span class="o">=</span><span class="p">{},</span>
+    <span class="n">geometry</span><span class="o">=</span><span class="s2">&quot;block&quot;</span><span class="p">,</span>
+    <span class="n">key</span><span class="o">=</span><span class="s2">&quot;75c0c07e6f0ab7b0a9a1c14c3d8af9d9f13b3d65&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieves `geometry`-level 2020 Decennial Census PL94-171 data via the</span>
+<span class="sd">    Census API.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        state (State): `us.State` object (e.g. `us.states.WI`).</span>
+<span class="sd">        table (string, optional): Table from which we retrieve data.</span>
+<span class="sd">            Defaults to the P1 table, which gets populations by race</span>
+<span class="sd">            regardless of ethnicity.</span>
+<span class="sd">        columns (dict, optional): Dictionary which maps Census column names</span>
+<span class="sd">            (from the correct table) to human-readable names. We require this</span>
+<span class="sd">            to be a dictionary, _not_ a list, as specifying human-readable</span>
+<span class="sd">            names will implicitly protect against incorrect column names and</span>
+<span class="sd">            excessive API calls.</span>
+<span class="sd">        geometry (string, optional): Geometry level at which we retrieve data.</span>
+<span class="sd">            Defaults to `&quot;block&quot;` to retrieve block-level data for the state</span>
+<span class="sd">            provided. Accepted values are `&quot;block&quot;`, `&quot;block group`&quot;,</span>
+<span class="sd">            and `&quot;tract&quot;`.</span>
+<span class="sd">        key (string, optional): Census API key.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A DataFrame with columns renamed according to their Census description</span>
+<span class="sd">        designation and a `GEOID20` column for joining to geometries.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Check whether the geometry is right. If not, warn the user and set it</span>
+    <span class="c1"># properly.</span>
+    <span class="k">if</span> <span class="n">geometry</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;block&quot;</span><span class="p">,</span> <span class="s2">&quot;tract&quot;</span><span class="p">,</span> <span class="s2">&quot;block group&quot;</span><span class="p">}:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Geometry &quot;</span><span class="si">{</span><span class="n">geometry</span><span class="si">}</span><span class="s1">&quot; not accepted; defaulting&#39;</span> <span class="s1">&#39;to &quot;block&quot;.&#39;</span><span class="p">)</span>
+        <span class="n">geometry</span> <span class="o">=</span> <span class="s2">&quot;block&quot;</span>
+
+    <span class="c1"># Check whether we&#39;re providing an appropriate table name.</span>
+    <span class="k">if</span> <span class="n">table</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;P1&quot;</span><span class="p">,</span> <span class="s2">&quot;P2&quot;</span><span class="p">,</span> <span class="s2">&quot;P3&quot;</span><span class="p">,</span> <span class="s2">&quot;P4&quot;</span><span class="p">}:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Table &quot;</span><span class="si">{</span><span class="n">table</span><span class="si">}</span><span class="s1">&quot; not accepted; defaulting to &quot;P1.&quot;&#39;</span><span class="p">)</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="s2">&quot;P1&quot;</span>
+
+    <span class="c1"># Set the base Census API URL and get the keys for the provided table.</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="s2">&quot;https://api.census.gov/data/2020/dec/pl&quot;</span>
+    <span class="n">varmap</span> <span class="o">=</span> <span class="n">columns</span> <span class="k">if</span> <span class="n">columns</span> <span class="k">else</span> <span class="n">variables</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+    <span class="nb">vars</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">varmap</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="c1"># Create the end part of the query string.</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;key&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;for&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">geometry</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span><span class="w"> </span><span class="sa">r</span><span class="s1">&#39;%20&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">:*&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;in&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;state:</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">fips</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;in&quot;</span><span class="p">,</span> <span class="s2">&quot;county:*&quot;</span><span class="p">),</span>
+    <span class="p">]</span>
+
+    <span class="c1"># Based on the geometry type, add an additional entry; this is required to</span>
+    <span class="c1"># match the Census geographic hierarchy.</span>
+    <span class="k">if</span> <span class="n">geometry</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;block&quot;</span><span class="p">,</span> <span class="s2">&quot;block group&quot;</span><span class="p">}:</span>
+        <span class="n">q</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;in&quot;</span><span class="p">,</span> <span class="s2">&quot;tract:*&quot;</span><span class="p">))</span>
+
+    <span class="c1"># Now, since the Census doesn&#39;t allow us to request more than 50 variables</span>
+    <span class="c1"># at once, we request things in two parts and then merge them together.</span>
+    <span class="n">mergeable</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Split up start and stop positions based on the number of variables.</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">vars</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">45</span><span class="p">:</span>
+        <span class="n">positions</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nb">vars</span><span class="p">))]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">positions</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">45</span><span class="p">),</span> <span class="p">(</span><span class="mi">45</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nb">vars</span><span class="p">))]</span>
+
+    <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span> <span class="ow">in</span> <span class="n">positions</span><span class="p">:</span>
+        <span class="c1"># Get the chunk of variables and create a tail of columns (geographic</span>
+        <span class="c1"># identifiers).</span>
+        <span class="n">varchunk</span> <span class="o">=</span> <span class="nb">vars</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span>
+        <span class="n">last</span> <span class="o">=</span> <span class="p">[</span><span class="n">geometry</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;block group&quot;</span><span class="p">,</span> <span class="s2">&quot;block&quot;</span><span class="p">}</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="n">tail</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;state&quot;</span><span class="p">,</span> <span class="s2">&quot;county&quot;</span><span class="p">,</span> <span class="s2">&quot;tract&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">last</span>
+
+        <span class="c1"># Create an unescaped query string.</span>
+        <span class="n">unescaped</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">unescaped</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;get&quot;</span><span class="p">,</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">varchunk</span><span class="p">)))</span>
+
+        <span class="c1"># Create an escaped query string from the previous.</span>
+        <span class="n">escaped</span> <span class="o">=</span> <span class="s2">&quot;?&quot;</span> <span class="o">+</span> <span class="s2">&quot;&amp;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">param</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">param</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">unescaped</span><span class="p">)</span>
+
+        <span class="c1"># Send the request and create a dataframe.</span>
+        <span class="n">req</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">base</span> <span class="o">+</span> <span class="n">escaped</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="n">header</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">req</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">req</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="n">chunk</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">header</span><span class="p">)</span>
+
+        <span class="c1"># Get a GEOID column and drop old columns.</span>
+        <span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;GEOID20&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_rjoin</span><span class="p">(</span><span class="n">chunk</span><span class="p">[</span><span class="n">tail</span><span class="p">],</span> <span class="n">tail</span><span class="p">)</span>
+        <span class="n">chunk</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">tail</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">mergeable</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+
+    <span class="c1"># Merge the dataframes, rename everything, make the columns</span>
+    <span class="c1"># ints, and return.</span>
+    <span class="n">merged</span> <span class="o">=</span> <span class="n">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s2">&quot;GEOID20&quot;</span><span class="p">),</span> <span class="n">mergeable</span><span class="p">)</span>
+    <span class="n">merged</span> <span class="o">=</span> <span class="n">merged</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">varmap</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">merged</span> <span class="o">=</span> <span class="n">merged</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="n">var</span><span class="p">:</span> <span class="nb">int</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">varmap</span><span class="o">.</span><span class="n">values</span><span class="p">()})</span>
+
+    <span class="c1"># Make the GEOID20 column the first column.</span>
+    <span class="n">merged</span> <span class="o">=</span> <span class="n">merged</span><span class="p">[[</span><span class="s2">&quot;GEOID20&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">varmap</span><span class="o">.</span><span class="n">values</span><span class="p">())]</span>
+
+    <span class="k">return</span> <span class="n">merged</span></div>
+
+
+
+<div class="viewcode-block" id="variables">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.data.variables">[docs]</a>
+<span class="k">def</span> <span class="nf">variables</span><span class="p">(</span><span class="n">table</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Produces variable names for the 2020 Census PL94-171 tables. Variables are</span>
+<span class="sd">    determined from patterns apparent in PL94 variable</span>
+<span class="sd">    [lists for tables P1 through P4](https://tinyurl.com/2s3btptn).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        table (string): The table for which we&#39;re generating variables.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A dictionary mapping Census variable codes to human-readable ones.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># List the categories of Census variables and find the combinations in the</span>
+    <span class="c1"># correct order. This *should* be the original order in which they&#39;re</span>
+    <span class="c1"># listed, but these have been spot-checked to verify their correctness.</span>
+    <span class="c1"># These names are also modified based on the table passed; for example,</span>
+    <span class="c1"># if the table passed is P2 or P4, we prepend an &quot;NH&quot; to the beginning,</span>
+    <span class="c1"># as these columns are explicitly non-hispanic people. If the table</span>
+    <span class="c1"># passed is P3 or P4, we append a &quot;VAP&quot; to the end to signify these</span>
+    <span class="c1"># are people of voting age; otherwise, we add &quot;POP.&quot;</span>
+    <span class="n">categories</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;WHITE&quot;</span><span class="p">,</span> <span class="s2">&quot;BLACK&quot;</span><span class="p">,</span> <span class="s2">&quot;AMIN&quot;</span><span class="p">,</span> <span class="s2">&quot;ASIAN&quot;</span><span class="p">,</span> <span class="s2">&quot;NHPI&quot;</span><span class="p">,</span> <span class="s2">&quot;OTH&quot;</span><span class="p">]</span>
+    <span class="n">prefix</span> <span class="o">=</span> <span class="s2">&quot;NH&quot;</span> <span class="k">if</span> <span class="n">table</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;P2&quot;</span><span class="p">,</span> <span class="s2">&quot;P4&quot;</span><span class="p">,</span> <span class="s2">&quot;P9&quot;</span><span class="p">,</span> <span class="s2">&quot;P11&quot;</span><span class="p">}</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">suffix</span> <span class="o">=</span> <span class="s2">&quot;VAP&quot;</span> <span class="k">if</span> <span class="n">table</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;P3&quot;</span><span class="p">,</span> <span class="s2">&quot;P4&quot;</span><span class="p">,</span> <span class="s2">&quot;P10&quot;</span><span class="p">,</span> <span class="s2">&quot;P11&quot;</span><span class="p">}</span> <span class="k">else</span> <span class="s2">&quot;POP&quot;</span>
+    <span class="n">year_suff</span> <span class="o">=</span> <span class="s2">&quot;20&quot;</span> <span class="k">if</span> <span class="n">table</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;P1&quot;</span><span class="p">,</span> <span class="s2">&quot;P2&quot;</span><span class="p">,</span> <span class="s2">&quot;P3&quot;</span><span class="p">,</span> <span class="s2">&quot;P4&quot;</span><span class="p">}</span> <span class="k">else</span> <span class="s2">&quot;10&quot;</span>
+    <span class="n">combos</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">common</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">prefix</span> <span class="o">+</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">combo</span><span class="p">))</span> <span class="o">+</span> <span class="n">suffix</span> <span class="o">+</span> <span class="n">year_suff</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">categories</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">combo</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">combinations</span><span class="p">(</span><span class="n">categories</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Now, for each of the combinations, we map the appropriate variable</span>
+    <span class="c1"># name to the descriptor. Each of these tranches should have a width</span>
+    <span class="c1"># of 6 choose i, where i is the number of categories in the</span>
+    <span class="c1"># combination. For example, the second tranch (from 13 to 27) has</span>
+    <span class="c1"># width 15, as 6C2=15.</span>
+    <span class="k">if</span> <span class="n">table</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;P1&quot;</span><span class="p">,</span> <span class="s2">&quot;P3&quot;</span><span class="p">,</span> <span class="s2">&quot;P8&quot;</span><span class="p">,</span> <span class="s2">&quot;P10&quot;</span><span class="p">}:</span>
+        <span class="n">tranches</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span> <span class="p">(</span><span class="mi">11</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span> <span class="p">(</span><span class="mi">27</span><span class="p">,</span> <span class="mi">46</span><span class="p">),</span> <span class="p">(</span><span class="mi">48</span><span class="p">,</span> <span class="mi">62</span><span class="p">),</span> <span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">69</span><span class="p">),</span> <span class="p">(</span><span class="mi">71</span><span class="p">,</span> <span class="mi">71</span><span class="p">)]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">tranches</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">27</span><span class="p">),</span> <span class="p">(</span><span class="mi">29</span><span class="p">,</span> <span class="mi">48</span><span class="p">),</span> <span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="mi">64</span><span class="p">),</span> <span class="p">(</span><span class="mi">66</span><span class="p">,</span> <span class="mi">71</span><span class="p">),</span> <span class="p">(</span><span class="mi">73</span><span class="p">,</span> <span class="mi">73</span><span class="p">)]</span>
+
+    <span class="c1"># Create variable numbers.</span>
+    <span class="n">numbers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">common</span><span class="o">.</span><span class="n">flatten</span><span class="p">([</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">tranches</span><span class="p">]))</span>
+
+    <span class="c1"># Edit these for specific tables. For example, in tables P2 and P3, we want</span>
+    <span class="c1"># to get the total Hispanic population and the total population.</span>
+    <span class="k">if</span> <span class="n">table</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;P2&quot;</span><span class="p">,</span> <span class="s2">&quot;P4&quot;</span><span class="p">,</span> <span class="s2">&quot;P9&quot;</span><span class="p">,</span> <span class="s2">&quot;P11&quot;</span><span class="p">}:</span>
+        <span class="n">numbers</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">numbers</span>
+        <span class="k">if</span> <span class="n">table</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;P4&quot;</span><span class="p">,</span> <span class="s2">&quot;P11&quot;</span><span class="p">}:</span>
+            <span class="n">hcol</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;HVAP</span><span class="si">{</span><span class="n">year_suff</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">tcol</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;VAP</span><span class="si">{</span><span class="n">year_suff</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">hcol</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;HPOP</span><span class="si">{</span><span class="n">year_suff</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">tcol</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;TOTPOP</span><span class="si">{</span><span class="n">year_suff</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">combos</span> <span class="o">=</span> <span class="p">[</span><span class="n">tcol</span><span class="p">,</span> <span class="n">hcol</span><span class="p">]</span> <span class="o">+</span> <span class="n">combos</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">numbers</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">numbers</span>
+        <span class="k">if</span> <span class="n">table</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;P3&quot;</span><span class="p">,</span> <span class="s2">&quot;P4&quot;</span><span class="p">,</span> <span class="s2">&quot;P10&quot;</span><span class="p">,</span> <span class="s2">&quot;P11&quot;</span><span class="p">}:</span>
+            <span class="n">tcol</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;VAP</span><span class="si">{</span><span class="n">year_suff</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tcol</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;TOTPOP</span><span class="si">{</span><span class="n">year_suff</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">combos</span> <span class="o">=</span> <span class="p">[</span><span class="n">tcol</span><span class="p">]</span> <span class="o">+</span> <span class="n">combos</span>
+
+    <span class="c1"># Create the variable names and zip the names together</span>
+    <span class="c1"># with the combinations.</span>
+    <span class="k">if</span> <span class="n">year_suff</span> <span class="o">==</span> <span class="s2">&quot;20&quot;</span><span class="p">:</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">table</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2">N&quot;</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">numbers</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="sa">f</span><span class="s2">&quot;P</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;P&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="si">}{</span><span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">numbers</span>
+        <span class="p">]</span>
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">combos</span><span class="p">))</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, MGGG.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gerrytools.plotting.colors &mdash; gerrytools 1.1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=58fbf978"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #0099cd" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            gerrytools
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../full_ref.html">Full Package Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #0099cd" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">gerrytools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">gerrytools.plotting.colors</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for gerrytools.plotting.colors</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">pkgutil</span>
+<span class="kn">from</span> <span class="nn">random</span> <span class="kn">import</span> <span class="n">choice</span>
+<span class="kn">from</span> <span class="nn">string</span> <span class="kn">import</span> <span class="n">hexdigits</span> <span class="k">as</span> <span class="nb">hex</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+
+<span class="n">defaultGray</span> <span class="o">=</span> <span class="s2">&quot;#5c676f&quot;</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Default gray plotting color; used in histograms, violin plots, and arrows.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">citizenBlue</span> <span class="o">=</span> <span class="s2">&quot;#4693b3&quot;</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Citizen ensemble blue color; used in histograms, violin plots, and arrows. (Aka</span>
+<span class="sd">Citizen Kane).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">overlays</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;gainsboro&quot;</span><span class="p">,</span> <span class="s2">&quot;silver&quot;</span><span class="p">,</span> <span class="s2">&quot;darkgray&quot;</span><span class="p">,</span> <span class="s2">&quot;gray&quot;</span><span class="p">,</span> <span class="s2">&quot;dimgrey&quot;</span><span class="p">]</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Overlay colors for choropleth maps.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">latex</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">pkgutil</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="vm">__name__</span><span class="p">,</span> <span class="s2">&quot;latexcolors.json&quot;</span><span class="p">))</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">A dictionary of nice LaTeX colors, [borrowed from here.](http://latexcolor.com/)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">hexshift</span><span class="p">(</span><span class="n">color</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Randomly modifies the provided hexadecimal color.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        color (str): A hexadecimal color string; e.g. `&quot;#FFFF00&quot;`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A hexadecimal color string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Choose a hexidecimal digit, first paring down the digits we&#39;ll use.</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="nb">hex</span><span class="o">.</span><span class="n">upper</span><span class="p">()[:</span><span class="o">-</span><span class="mi">6</span><span class="p">]</span>
+    <span class="n">sub</span> <span class="o">=</span> <span class="n">choice</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+    <span class="n">char</span> <span class="o">=</span> <span class="n">choice</span><span class="p">(</span><span class="n">color</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+
+    <span class="c1"># Find the character we&#39;re going to replace that&#39;s *not* the same character</span>
+    <span class="c1"># as the one we got from the hexadecimal string.</span>
+    <span class="k">while</span> <span class="n">sub</span> <span class="o">==</span> <span class="n">char</span><span class="p">:</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">choice</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+
+    <span class="c1"># Return the subbed string.</span>
+    <span class="k">return</span> <span class="n">color</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">char</span><span class="p">,</span> <span class="n">sub</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="districtr">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.plotting.districtr">[docs]</a>
+<span class="k">def</span> <span class="nf">districtr</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;#0099cd&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#ffca5d&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#00cd99&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#99cd00&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#cd0099&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#9900cd&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#8dd3c7&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#bebada&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#fb8072&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#80b1d3&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#fdb462&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#b3de69&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#fccde5&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#bc80bd&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#ccebc5&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#ffed6f&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#ffffb3&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#a6cee3&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#1f78b4&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#b2df8a&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#33a02c&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#fb9a99&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#e31a1c&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#fdbf6f&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#ff7f00&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#cab2d6&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#6a3d9a&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#b15928&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#64ffda&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#00B8D4&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#A1887F&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#76FF03&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#DCE775&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#B388FF&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#FF80AB&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#D81B60&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#26A69A&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#FFEA00&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;#6200EA&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="n">repeats</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">N</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">))</span>
+    <span class="n">tail</span> <span class="o">=</span> <span class="p">[</span><span class="n">hexshift</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">colors</span> <span class="o">*</span> <span class="p">(</span><span class="n">repeats</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">colors</span> <span class="o">+</span> <span class="p">(</span><span class="n">tail</span> <span class="k">if</span> <span class="n">tail</span> <span class="k">else</span> <span class="p">[]))[:</span><span class="n">N</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="redbluecmap">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.plotting.redbluecmap">[docs]</a>
+<span class="k">def</span> <span class="nf">redbluecmap</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generates a red/white/blue color palette in `n` colors with white at the</span>
+<span class="sd">    `mid` th index.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        n (int): The number of colors to generate.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List of RGB tuples.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">midpoint</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">n</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># To get the appropriately-toned blues and reds, we create a list of colors,</span>
+    <span class="c1"># then select the first section of each color.</span>
+    <span class="n">blues</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">(</span><span class="s2">&quot;coolwarm&quot;</span><span class="p">,</span> <span class="n">as_cmap</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_colors</span><span class="o">=</span><span class="n">n</span> <span class="o">+</span> <span class="mi">2</span><span class="p">))[</span>
+        <span class="p">:</span><span class="n">midpoint</span>
+    <span class="p">]</span>
+    <span class="n">reds</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">(</span><span class="s2">&quot;coolwarm&quot;</span><span class="p">,</span> <span class="n">as_cmap</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_colors</span><span class="o">=</span><span class="n">n</span> <span class="o">+</span> <span class="mi">2</span><span class="p">))[</span>
+        <span class="o">-</span><span class="n">midpoint</span><span class="p">:</span>
+    <span class="p">]</span>
+
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">reds</span><span class="p">))</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">blues</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="flare">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.plotting.flare">[docs]</a>
+<span class="k">def</span> <span class="nf">flare</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a list of colors based on the `flare` Matplotlib/seaborn colormap.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        n (int): Number of colors to generate.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List of RGB triples.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">(</span><span class="s2">&quot;flare&quot;</span><span class="p">,</span> <span class="n">as_cmap</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_colors</span><span class="o">=</span><span class="n">n</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="purples">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.plotting.purples">[docs]</a>
+<span class="k">def</span> <span class="nf">purples</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a list of colors based on the `Purples` Matplotlib/seaborn colormap.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        n (int): Number of colors to generate.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List of RGB triples.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">(</span><span class="s2">&quot;Purples&quot;</span><span class="p">,</span> <span class="n">as_cmap</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_colors</span><span class="o">=</span><span class="n">n</span><span class="p">))</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">greens</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a list of colors based on the `Greens` Matplotlib/seaborn colormap.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        n (int): Number of colors to generate.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List of RGB triples.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">(</span><span class="s2">&quot;Greens&quot;</span><span class="p">,</span> <span class="n">as_cmap</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_colors</span><span class="o">=</span><span class="n">n</span><span class="p">))</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, MGGG.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

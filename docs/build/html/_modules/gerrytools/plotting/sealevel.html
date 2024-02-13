@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gerrytools.plotting.sealevel &mdash; gerrytools 1.1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=58fbf978"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #0099cd" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            gerrytools
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../full_ref.html">Full Package Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #0099cd" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">gerrytools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">gerrytools.plotting.sealevel</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for gerrytools.plotting.sealevel</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">random</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">matplotlib.axes</span> <span class="kn">import</span> <span class="n">Axes</span>
+
+<span class="kn">from</span> <span class="nn">.colors</span> <span class="kn">import</span> <span class="n">defaultGray</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">sort_elections</span>
+
+
+<div class="viewcode-block" id="sealevel">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.plotting.sealevel">[docs]</a>
+<span class="k">def</span> <span class="nf">sealevel</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">num_districts</span><span class="p">,</span> <span class="n">proposed_info</span><span class="p">,</span> <span class="n">ticksize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Axes</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot a sea level plot: Each plan is a line across our elections on the</span>
+<span class="sd">    x-axis, with Democratic vote share on the y-axis. The statewide Dem. vote</span>
+<span class="sd">    share (proportionality) is plotted as a thick blue line.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ax (Axes): `Axes` object on which the sea level plot is plotted.</span>
+<span class="sd">        scores (dict): Dictionary with keys of each plan plus a `statewide` key</span>
+<span class="sd">            for proportionality. Each value is another dictionary, with keys for</span>
+<span class="sd">            each election, values are the # seats.</span>
+<span class="sd">        proposed_info (dict, optional): Dictionary with keys of `colors`, `names`;</span>
+<span class="sd">            the \(i\)th color in `color` corresponds to the \(i\)th name in `names`.</span>
+<span class="sd">        ticksize (float, optional): Font size for tick labels.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="s2">&quot;statewide&quot;</span> <span class="ow">in</span> <span class="n">scores</span>
+    <span class="n">elections</span> <span class="o">=</span> <span class="n">sort_elections</span><span class="p">(</span><span class="n">scores</span><span class="p">[</span><span class="s2">&quot;statewide&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">shares_by_plan</span> <span class="o">=</span> <span class="p">{</span><span class="n">plan</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">plan</span> <span class="ow">in</span> <span class="n">scores</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">plan</span> <span class="ow">in</span> <span class="n">scores</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">election</span> <span class="ow">in</span> <span class="n">elections</span><span class="p">:</span>
+            <span class="n">shares_by_plan</span><span class="p">[</span><span class="n">plan</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">scores</span><span class="p">[</span><span class="n">plan</span><span class="p">][</span><span class="n">election</span><span class="p">])</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+        <span class="n">shares_by_plan</span><span class="p">[</span><span class="s2">&quot;statewide&quot;</span><span class="p">],</span>
+        <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;o&quot;</span><span class="p">,</span>
+        <span class="n">markersize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">lw</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Proportionality&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">plan</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">proposed_info</span><span class="p">[</span><span class="s2">&quot;names&quot;</span><span class="p">]):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shares_by_plan</span><span class="p">[</span><span class="n">plan</span><span class="p">])):</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="n">shares_by_plan</span><span class="p">[</span><span class="n">plan</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">plan</span> <span class="ow">in</span> <span class="n">shares_by_plan</span><span class="o">.</span><span class="n">keys</span><span class="p">()]))</span>
+                <span class="o">&gt;</span> <span class="mi">1</span>
+            <span class="p">):</span>
+                <span class="n">jitter</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="mi">0</span>
+
+            <span class="n">shares_by_plan</span><span class="p">[</span><span class="n">plan</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">shares_by_plan</span><span class="p">[</span><span class="n">plan</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="n">jitter</span>
+
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="n">shares_by_plan</span><span class="p">[</span><span class="n">plan</span><span class="p">],</span>
+            <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;o&quot;</span><span class="p">,</span>
+            <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
+            <span class="n">color</span><span class="o">=</span><span class="n">proposed_info</span><span class="p">[</span><span class="s2">&quot;colors&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">],</span>
+            <span class="n">label</span><span class="o">=</span><span class="n">plan</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">num_districts</span> <span class="o">&lt;=</span> <span class="mi">20</span><span class="p">:</span>
+        <span class="n">yticks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">num_districts</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">num_districts</span><span class="p">)</span>
+        <span class="n">yticklabels</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">num_districts</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_districts</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">(</span><span class="n">yticks</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">(</span><span class="n">yticklabels</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">defaultGray</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;50%&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">elections</span><span class="p">)))</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">elections</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="n">ticksize</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="o">-</span><span class="mf">0.02</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ax</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, MGGG.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

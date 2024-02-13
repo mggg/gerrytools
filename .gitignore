@@ -15,5 +15,5 @@ tests/*.ipynb
 
 # Ignore the build directory and the dist directory
 # created by the build process.
-build
+/build
 dist

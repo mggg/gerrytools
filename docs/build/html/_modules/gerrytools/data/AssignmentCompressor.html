@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gerrytools.data.AssignmentCompressor &mdash; gerrytools 1.1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=58fbf978"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #0099cd" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            gerrytools
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../full_ref.html">Full Package Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #0099cd" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">gerrytools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">gerrytools.data.AssignmentCompressor</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for gerrytools.data.AssignmentCompressor</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">zlib</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+
+<span class="kn">from</span> <span class="nn">sortedcontainers</span> <span class="kn">import</span> <span class="n">SortedDict</span><span class="p">,</span> <span class="n">SortedList</span>
+
+
+<div class="viewcode-block" id="AssignmentCompressor">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.data.AssignmentCompressor">[docs]</a>
+<span class="k">class</span> <span class="nc">AssignmentCompressor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class for compressing and decompressing lots of assignments very, very</span>
+<span class="sd">    quickly. Intended for use with ``jsonlines``-like libraries (where</span>
+<span class="sd">    assignments are read in line-by-line) or for network requests (where</span>
+<span class="sd">    assignments are retrieved one-by-one). When decompressing, yields ``dict`` s</span>
+<span class="sd">    where keys are in sorted order.</span>
+
+<span class="sd">    The compression schema considers the set of unique identifiers, imposes an</span>
+<span class="sd">    ordering (lexicographic order) on the identifiers, and matches the</span>
+<span class="sd">    assignment to that ordering. We assign all unassigned units to ``&quot;-1&quot;``</span>
+<span class="sd">    and, once the default cache size is hit (or assignments are no longer being</span>
+<span class="sd">    read in), compress all assignments in the cache. Assignments are read in</span>
+<span class="sd">    and out in the same order, and the keys for each assignment are in the</span>
+<span class="sd">    same order.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">        To compress assignments, we need a set of unique identifiers such that</span>
+<span class="sd">        each identifier maps one geometric unit to one district.</span>
+
+
+<span class="sd">            ...</span>
+
+<span class="sd">            geoids = blocks[&quot;GEOID20&quot;].astype(str)</span>
+<span class="sd">            ac = AssignmentCompressor(geoids, location=&quot;compressed-assignments.ac&quot;)</span>
+
+<span class="sd">            with ac as compressor:</span>
+<span class="sd">                for assignment in assignments:</span>
+<span class="sd">                    # Here, ensure that all assignments have string keys and</span>
+<span class="sd">                    # string values; also ensure that an assignment&#39;s keys are</span>
+<span class="sd">                    # a subset of geoids (or whatever IDs you&#39;re passing).</span>
+<span class="sd">                    compressor.compress(assignment)</span>
+
+<span class="sd">            ...</span>
+
+<span class="sd">        To decompress assignments, we again must have a set of unique geometric</span>
+<span class="sd">        identifiers which match the assignments. We can then iterate over the</span>
+<span class="sd">        decompressed assignments as they&#39;re read out of the file.</span>
+
+<span class="sd">            ...</span>
+
+<span class="sd">            geoids = blocks[&quot;GEOID20&quot;].astype(str)</span>
+<span class="sd">            ac = AssignmentCompressor(geoids, location=&quot;compressed-assignments.ac&quot;)</span>
+
+<span class="sd">            for assignment in ac.decompress():</span>
+<span class="sd">                &lt;do whatever!&gt;</span>
+
+<span class="sd">            ...</span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        DISTRICT_DELIMITER (bytes): A bytestring which separates district</span>
+<span class="sd">            identifiers in an assignment.</span>
+<span class="sd">        ASSIGNMENT_DELIMITER (bytes): A bytestring which separates assignments from</span>
+<span class="sd">            each other.</span>
+<span class="sd">        CHUNK_DELIMITER (bytes): A bytestring which separates assignment chunks</span>
+<span class="sd">            from each other.</span>
+<span class="sd">        CHUNK_SIZE (int): Default number of bytes read in from the IO stream at each</span>
+<span class="sd">            step.</span>
+<span class="sd">        ENCODING (str): Default string encoding style.</span>
+<span class="sd">        identifiers: A sortable, iterable collection of unique items corresponding</span>
+<span class="sd">            to geographic identifiers.</span>
+<span class="sd">        compressed: A pandas `Index` containing the identifiers; this is used</span>
+<span class="sd">            to quickly perform vectorized identifier matchings, rather than using</span>
+<span class="sd">            traditional iterative methods.</span>
+<span class="sd">        cache: Collection of assignments to be compressed. Assignments are loaded</span>
+<span class="sd">            into the cache every time the ``.compress()`` method is called, and</span>
+<span class="sd">            is cleared whenever the length of the cache exceeds the window width.</span>
+<span class="sd">        window: Maximum cache length before the cache is compressed, written to</span>
+<span class="sd">            file, and emptied.</span>
+<span class="sd">        default: The default assignment which is updated each time an assignment</span>
+<span class="sd">            is passed to the compressor.</span>
+<span class="sd">        location: The place to which compressed data is written or read.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identifiers</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="s2">&quot;compressed.ac&quot;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates `AssignmentCompressor` instance.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            identifiers (list): An iterable collection of string identifiers; any</span>
+<span class="sd">                assignment&#39;s keys must be a subset of `identifiers`.</span>
+<span class="sd">            window (int, optional): A positive integer representing the cache</span>
+<span class="sd">                window size. Defaults to cache.</span>
+<span class="sd">            location (str, optional): The path to the compressed resource (read</span>
+<span class="sd">                or write). Defaults to `compressed.ac`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">identifiers</span> <span class="o">=</span> <span class="n">SortedList</span><span class="p">(</span><span class="n">identifiers</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">default</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">identifiers</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;-1&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">identifiers</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">location</span> <span class="o">=</span> <span class="n">location</span>
+
+        <span class="c1"># Error to users if the window is nonexistent.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">window</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cache window width must be a positive integer.&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">window</span> <span class="o">=</span> <span class="n">window</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">DISTRICT_DELIMITER</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;,&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ASSIGNMENT_DELIMITER</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;&lt;&lt;&lt;*&gt;&gt;&gt;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">CHUNK_DELIMITER</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;(((*)))&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">CHUNK_SIZE</span> <span class="o">=</span> <span class="mi">16384</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ENCODING</span> <span class="o">=</span> <span class="s2">&quot;raw_unicode_escape&quot;</span>
+
+<div class="viewcode-block" id="AssignmentCompressor.match">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.data.AssignmentCompressor.match">[docs]</a>
+    <span class="k">def</span> <span class="nf">match</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">assignment</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SortedDict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Matches an assignment to an index (the set of geometric identifiers)</span>
+<span class="sd">        and returns a `SortedDict`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            assignment (dict): Dictionary which matches geometric identifiers to</span>
+<span class="sd">                districts. All keys and values in this dictionary must be strings.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A `SortedDict` with identifiers matched ti district assignments.s</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Create a dictionary which maps identifiers to `-1`, and update our</span>
+        <span class="c1"># dictionary with assignment values.</span>
+        <span class="n">indexer</span> <span class="o">=</span> <span class="n">SortedDict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">default</span><span class="p">)</span>
+        <span class="n">indexer</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">assignment</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">indexer</span></div>
+
+
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A simple context-management method. Allows the user to use `with`</span>
+<span class="sd">        statements when compressing stuff so we don&#39;t have to worry about the</span>
+<span class="sd">        user specifying the last item they&#39;ll be compressing.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">,</span> <span class="n">exc_value</span><span class="p">,</span> <span class="n">exc_tb</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Teardown. Once we&#39;ve exited the `with` statement (i.e. the user&#39;s all done</span>
+<span class="sd">        feeding items to the compressor) we can force the remaining items to be</span>
+<span class="sd">        compressed and written to file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compress</span><span class="p">(</span><span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AssignmentCompressor.compress_all">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.data.AssignmentCompressor.compress_all">[docs]</a>
+    <span class="k">def</span> <span class="nf">compress_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">assignments</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compresses all assignments in `assignments`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            assignments (list): List of dictionaries which match geometric identifiers</span>
+<span class="sd">                to districts. All keys and values in these dictionaries must be</span>
+<span class="sd">                strings.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">assignments</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span> <span class="k">as</span> <span class="n">ac</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">assignment</span> <span class="ow">in</span> <span class="n">assignments</span><span class="p">:</span>
+                <span class="n">ac</span><span class="o">.</span><span class="n">compress</span><span class="p">(</span><span class="n">assignment</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AssignmentCompressor.compress">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.data.AssignmentCompressor.compress">[docs]</a>
+    <span class="k">def</span> <span class="nf">compress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">assignment</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compresses the assignment `assignment` using `zlib`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            assignment (dict): Dictionary which matches geometric identifiers to districts.</span>
+<span class="sd">                All keys and values in this dictionary must be strings.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># If the user provides an empty assignment or the assignment&#39;s keys aren&#39;t</span>
+        <span class="c1"># a subset of `identifiers`, warn the user and skip the assignment.</span>
+        <span class="n">skip</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">assignment</span><span class="p">:</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;`assignment` is empty; skipping.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">set</span><span class="p">(</span><span class="n">assignment</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">identifiers</span><span class="p">):</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="s2">&quot;`assignment`&#39;s keys are not a subset of `identifiers`; skipping. &quot;</span>
+                <span class="o">+</span> <span class="s2">&quot;Please ensure that all keys and values in `assignment` are strings.&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Join the things on the district separator, encode the whole thing, and</span>
+        <span class="c1"># encode according to the default encoding.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">skip</span><span class="p">:</span>
+            <span class="n">indexed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">assignment</span><span class="p">)</span>
+            <span class="n">sep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">DISTRICT_DELIMITER</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+            <span class="n">encoded</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">indexed</span><span class="o">.</span><span class="n">values</span><span class="p">())</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ENCODING</span><span class="p">))</span>
+
+            <span class="c1"># Compress.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cache</span> <span class="o">+=</span> <span class="p">[</span><span class="n">encoded</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compress</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_compress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Private method which actually does the compression.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            force: If truthy, then the length of the cache is ignored, the data</span>
+<span class="sd">                in the cache are compressed, and the compressed data is written</span>
+<span class="sd">                to file. ``force`` is truthy when teardown logic is entered</span>
+<span class="sd">                (i.e. after ``__exit()__`` is called).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check to see if the cache is full. If so, compress the data, write to</span>
+        <span class="c1"># file, and reset the cache.</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">window</span> <span class="ow">or</span> <span class="n">force</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">location</span><span class="p">,</span> <span class="s2">&quot;ab&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
+                <span class="c1"># Write compressed data to file.</span>
+                <span class="n">compressed</span> <span class="o">=</span> <span class="n">zlib</span><span class="o">.</span><span class="n">compress</span><span class="p">(</span>
+                    <span class="nb">bytes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ASSIGNMENT_DELIMITER</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">))</span>
+                <span class="p">)</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">compressed</span><span class="p">)</span>
+
+                <span class="c1"># We only forcibly write the chunk separator to file if we&#39;ve</span>
+                <span class="c1"># entered teardown logic and the cache *is not empty*. If the</span>
+                <span class="c1"># cache is empty when we&#39;re entering teardown logic, that means</span>
+                <span class="c1"># (number of assignments compressed) == (window width), in which</span>
+                <span class="c1"># case we&#39;ve reached the end of compression and should not write</span>
+                <span class="c1"># a separator; doing so will produce an empty bytestring (which,</span>
+                <span class="c1"># in turn, produces a dictionary with one key, corresponding to</span>
+                <span class="c1"># a null assignment).</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">force</span><span class="p">:</span>
+                    <span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">CHUNK_DELIMITER</span><span class="p">)</span>
+
+            <span class="c1"># Reset the cache.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cache</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="AssignmentCompressor.decompress">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.data.AssignmentCompressor.decompress">[docs]</a>
+    <span class="k">def</span> <span class="nf">decompress</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Decompresses the data at ``location``. A generator which ``yield`` s</span>
+<span class="sd">        assignments.</span>
+
+<span class="sd">        Yields:</span>
+<span class="sd">            Decompressed assignment dictionaries.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Open the compressed file. Then we read it in chunks, loading until</span>
+        <span class="c1"># we hit our separator or until the end of the file.</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">location</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">_compressed_fin</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chunk</span><span class="p">(</span><span class="n">_compressed_fin</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">chunk</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="k">for</span> <span class="n">assignment</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decompress</span><span class="p">(</span><span class="n">chunk</span><span class="p">):</span>
+                    <span class="k">yield</span> <span class="n">assignment</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_chunk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stream</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Private method for reading chunks from file without holding the entire</span>
+<span class="sd">        file in memory. A generator for decompressed assignments.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            stream: A ``BytesIO`` instance from which data is read.</span>
+
+<span class="sd">        Yields:</span>
+<span class="sd">            Buffered, compressed bytes to be fed into the decompressor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Create a buffer.</span>
+        <span class="n">_buffer</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Read until we hit the end of the file `yield`ing each chunk as we go.</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="c1"># Read in a chunk of data.</span>
+            <span class="n">chunk</span> <span class="o">=</span> <span class="n">stream</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">CHUNK_SIZE</span><span class="p">)</span>
+            <span class="n">_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+
+            <span class="c1"># Check if the chunk has our delimiter in it. If it contains our</span>
+            <span class="c1"># delimiter, then the buffer *up to the delimiter* contains compressed</span>
+            <span class="c1"># assignments; this should be `yield`ed and decompressed. We only</span>
+            <span class="c1"># want to get the part before the delimiter for decompression, but</span>
+            <span class="c1"># retain the rest.</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">CHUNK_DELIMITER</span> <span class="ow">in</span> <span class="n">chunk</span><span class="p">:</span>
+                <span class="n">_buffered_bytes</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_buffer</span><span class="p">)</span>
+                <span class="n">part</span><span class="p">,</span> <span class="n">_buffer_first</span> <span class="o">=</span> <span class="n">_buffered_bytes</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">CHUNK_DELIMITER</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">_buffer</span> <span class="o">=</span> <span class="p">[</span><span class="n">_buffer_first</span><span class="p">]</span>
+                <span class="k">yield</span> <span class="n">part</span>
+
+            <span class="c1"># If the chunk&#39;s empty, `yield` the remaining buffer and return.</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">chunk</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_buffer</span><span class="p">)</span>
+                <span class="k">break</span>
+
+    <span class="k">def</span> <span class="nf">_decompress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chunk</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Private method which decompresses assignments.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            chunk: Compressed, byte-encoded data representing ``window``</span>
+<span class="sd">                assignments.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of decompressed assignment objects.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Decompress the chunk and split it on our delimiter.</span>
+        <span class="n">decompressed</span> <span class="o">=</span> <span class="n">zlib</span><span class="o">.</span><span class="n">decompress</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+        <span class="n">decompressed_parts</span> <span class="o">=</span> <span class="n">decompressed</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ASSIGNMENT_DELIMITER</span><span class="p">)</span>
+
+        <span class="c1"># For each of the parts, decode the bytes, make them into lists, and</span>
+        <span class="c1"># match them to GEOIDs.</span>
+        <span class="n">decoded_parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">part</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">decompressed_parts</span><span class="p">]</span>
+        <span class="n">split_parts</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">part</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DISTRICT_DELIMITER</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">decoded_parts</span>
+        <span class="p">]</span>
+        <span class="n">indexed_parts</span> <span class="o">=</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">identifiers</span><span class="p">,</span> <span class="n">part</span><span class="p">))</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">split_parts</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">indexed_parts</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, MGGG.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

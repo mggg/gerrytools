@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gerrytools.data.estimatecvap &mdash; gerrytools 1.1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=58fbf978"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #0099cd" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            gerrytools
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../full_ref.html">Full Package Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #0099cd" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">gerrytools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">gerrytools.data.estimatecvap</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for gerrytools.data.estimatecvap</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">geopandas</span> <span class="k">as</span> <span class="nn">gpd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">..geometry</span> <span class="kn">import</span> <span class="n">unitmap</span>
+<span class="kn">from</span> <span class="nn">.acs</span> <span class="kn">import</span> <span class="n">acs5</span><span class="p">,</span> <span class="n">cvap</span>
+<span class="kn">from</span> <span class="nn">.census</span> <span class="kn">import</span> <span class="n">census20</span>
+
+
+<div class="viewcode-block" id="estimatecvap2020">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.data.estimatecvap2020">[docs]</a>
+<span class="k">def</span> <span class="nf">estimatecvap2020</span><span class="p">(</span><span class="n">state</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Estimates 2020 CVAP on 2020 blocks using 2020 PL94 data. **This method</span>
+<span class="sd">    serves a different purpose than `gerrytools.data.estimatecvap.</span>
+<span class="sd">    estimatecvap2010()`:** rather than using geometric procedures to</span>
+<span class="sd">    put CVAP data on old geometries, this method takes advantage of the</span>
+<span class="sd">    Census&#39;s geographic hierarchy, and associates finer-grained 2020 CVAP</span>
+<span class="sd">    data with 2020 blocks. *No geometric data or procedures are used here*.</span>
+<span class="sd">    The resulting data can then be adjoined to 2020 block geometries (or</span>
+<span class="sd">    assigned to VTDs, assigned to districts, etc.) and be used to build</span>
+<span class="sd">    other units of varying size.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        state (State): The `us.State` for which CVAP will be estimated.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A `DataFrame` of combined Census and ACS data at the Census</span>
+<span class="sd">        block level.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># First, get the Census data for blocks and block groups.</span>
+    <span class="n">bg</span> <span class="o">=</span> <span class="n">census20</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="s2">&quot;P4&quot;</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="s2">&quot;block group&quot;</span><span class="p">)</span>
+    <span class="n">block</span> <span class="o">=</span> <span class="n">census20</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="s2">&quot;P4&quot;</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="s2">&quot;block&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Now, get 2020 Census data at the block group level and merging it</span>
+    <span class="c1"># with the block group-level Census data.</span>
+    <span class="n">cvap20</span> <span class="o">=</span> <span class="n">cvap</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="s2">&quot;block group&quot;</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="mi">2020</span><span class="p">)</span>
+    <span class="n">bg</span> <span class="o">=</span> <span class="n">bg</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">cvap20</span><span class="p">,</span> <span class="n">left_on</span><span class="o">=</span><span class="s2">&quot;GEOID20&quot;</span><span class="p">,</span> <span class="n">right_on</span><span class="o">=</span><span class="s2">&quot;BLOCKGROUP20&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Name the VAP columns.</span>
+    <span class="n">vapcolumns</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;NHWHITEVAP20&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;NHASIANVAP20&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;NHBLACKVAP20&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;NHNHPIVAP20&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;NHAMINVAP20&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;NHWHITEASIANVAP20&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;NHWHITEAMINVAP20&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;NHWHITEBLACKVAP20&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;NHBLACKAMINVAP20&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="c1"># Create &quot;remainder&quot; column.</span>
+    <span class="k">for</span> <span class="n">universe</span> <span class="ow">in</span> <span class="p">[</span><span class="n">block</span><span class="p">,</span> <span class="n">bg</span><span class="p">]:</span>
+        <span class="n">universe</span><span class="p">[</span><span class="s2">&quot;NHVAP20&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">universe</span><span class="p">[</span><span class="s2">&quot;VAP20&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">universe</span><span class="p">[</span><span class="s2">&quot;HVAP20&quot;</span><span class="p">]</span>
+        <span class="n">universe</span><span class="p">[</span><span class="s2">&quot;OTHVAP20&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">universe</span><span class="p">[</span><span class="s2">&quot;NHVAP20&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">universe</span><span class="p">[</span><span class="n">vapcolumns</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Get the block group ID for blocks.</span>
+    <span class="n">block</span><span class="p">[</span><span class="s2">&quot;BLOCKGROUP20&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">block</span><span class="p">[</span><span class="s2">&quot;GEOID20&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="p">[:</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+
+    <span class="c1"># Mapping from block group IDs to block group total populations.</span>
+    <span class="n">bgtotalvapmap</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">bg</span><span class="p">[</span><span class="s2">&quot;BLOCKGROUP20&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">),</span> <span class="n">bg</span><span class="p">[</span><span class="s2">&quot;VAP20&quot;</span><span class="p">]))</span>
+
+    <span class="c1"># Add all columns.</span>
+    <span class="n">allvapcols</span> <span class="o">=</span> <span class="n">vapcolumns</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;VAP20&quot;</span><span class="p">,</span> <span class="s2">&quot;NHVAP20&quot;</span><span class="p">,</span> <span class="s2">&quot;HVAP20&quot;</span><span class="p">,</span> <span class="s2">&quot;NHOTHVAP20&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Estimate CVAP data for all VAP columns.</span>
+    <span class="k">for</span> <span class="n">vapcolumn</span> <span class="ow">in</span> <span class="n">allvapcols</span><span class="p">:</span>
+        <span class="c1"># Crete a mapping from block group names to totals for the VAP column.</span>
+        <span class="n">popmap</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">bg</span><span class="p">[</span><span class="s2">&quot;GEOID20&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">),</span> <span class="n">bg</span><span class="p">[</span><span class="n">vapcolumn</span><span class="p">]))</span>
+
+        <span class="c1"># Create column names.</span>
+        <span class="n">colpct</span> <span class="o">=</span> <span class="n">vapcolumn</span> <span class="o">+</span> <span class="s2">&quot;%&quot;</span>
+        <span class="n">cvapcolumn</span> <span class="o">=</span> <span class="n">vapcolumn</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;VAP&quot;</span><span class="p">,</span> <span class="s2">&quot;CVAP&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Calculate ratios.</span>
+        <span class="n">block</span><span class="p">[</span><span class="n">colpct</span><span class="p">]</span> <span class="o">=</span> <span class="n">block</span><span class="p">[</span><span class="s2">&quot;BLOCKGROUP20&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">popmap</span><span class="p">)</span>
+        <span class="n">block</span><span class="p">[</span><span class="n">colpct</span><span class="p">]</span> <span class="o">=</span> <span class="n">block</span><span class="p">[</span><span class="n">vapcolumn</span><span class="p">]</span> <span class="o">/</span> <span class="n">block</span><span class="p">[</span><span class="n">colpct</span><span class="p">]</span>
+
+        <span class="c1"># Create a mapping from block group IDs to CVAP groups.</span>
+        <span class="n">cvapcolumn</span> <span class="o">=</span> <span class="n">vapcolumn</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;VAP&quot;</span><span class="p">,</span> <span class="s2">&quot;CVAP&quot;</span><span class="p">)</span>
+        <span class="n">cvapmap</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">bg</span><span class="p">[</span><span class="s2">&quot;BLOCKGROUP20&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">),</span> <span class="n">bg</span><span class="p">[</span><span class="n">cvapcolumn</span><span class="p">]))</span>
+
+        <span class="c1"># Create two temporary columns: the first sets the block&#39;s CVAP to the</span>
+        <span class="c1"># total CVAP for its block group; the second sets the block&#39;s VAP</span>
+        <span class="c1"># to the total VAP for its block group. (Note: each of these C/VAP</span>
+        <span class="c1"># columns are with respect to the current VAP column.)</span>
+        <span class="n">block</span><span class="p">[</span><span class="s2">&quot;tmp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">block</span><span class="p">[</span><span class="s2">&quot;BLOCKGROUP20&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">cvapmap</span><span class="p">)</span>
+        <span class="n">block</span><span class="p">[</span><span class="s2">&quot;BGVAP20&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">block</span><span class="p">[</span><span class="s2">&quot;BLOCKGROUP20&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">bgtotalvapmap</span><span class="p">)</span>
+
+        <span class="c1"># Next, compute the estimated CVAP by multiplying the VAP column</span>
+        <span class="c1"># percent for the block group by the total CVAP population of the</span>
+        <span class="c1"># block group.</span>
+        <span class="n">block</span><span class="p">[</span><span class="n">cvapcolumn</span><span class="p">]</span> <span class="o">=</span> <span class="n">block</span><span class="p">[</span><span class="n">colpct</span><span class="p">]</span> <span class="o">*</span> <span class="n">block</span><span class="p">[</span><span class="s2">&quot;tmp&quot;</span><span class="p">]</span>
+
+        <span class="c1"># If the above doesn&#39;t work — which is the case if the VAP column</span>
+        <span class="c1"># percent is NaN (0/0) or inf (k/0), we estimate the CVAP of the</span>
+        <span class="c1"># block using the VAP ratio outright rather than the column-specific</span>
+        <span class="c1"># VAP ratio.</span>
+        <span class="n">ni</span> <span class="o">=</span> <span class="n">block</span><span class="p">[</span><span class="n">block</span><span class="p">[</span><span class="n">colpct</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">()]</span><span class="o">.</span><span class="n">index</span>
+        <span class="n">block</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">ni</span><span class="p">,</span> <span class="n">cvapcolumn</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">block</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">ni</span><span class="p">,</span> <span class="s2">&quot;VAP20&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">block</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">ni</span><span class="p">,</span> <span class="s2">&quot;BGVAP20&quot;</span><span class="p">]</span>
+        <span class="p">)</span> <span class="o">*</span> <span class="n">block</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">ni</span><span class="p">,</span> <span class="s2">&quot;tmp&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Assert that our summed disaggregated numbers and totals are close!</span>
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">bg</span><span class="p">[</span><span class="n">cvapcolumn</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">-</span> <span class="n">block</span><span class="p">[</span><span class="n">cvapcolumn</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># Fill NaNs with 0 and drop unnecessary columns.</span>
+    <span class="n">block</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">block</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s2">&quot;tmp&quot;</span><span class="p">,</span> <span class="s2">&quot;BGVAP20&quot;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Return!</span>
+    <span class="k">return</span> <span class="n">block</span></div>
+
+
+
+<div class="viewcode-block" id="fetchgeometries">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.data.fetchgeometries">[docs]</a>
+<span class="k">def</span> <span class="nf">fetchgeometries</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">geometry</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fetches the 2010 Census geometries on which ACS data are reported.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        state (State): The `us.State` for which CVAP will be estimated.</span>
+<span class="sd">        geometry10 (str): Level of geometry we&#39;re fetching. Accepted values are</span>
+<span class="sd">            `&quot;tract&quot;` and `&quot;block group&quot;`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A `GeoDataFrame` of 2010 geometries.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get a Census locator for the provided State by replacing spaces in its</span>
+    <span class="c1"># name with underscores (should they exist).</span>
+    <span class="n">clocator</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Validate geometry level indicators.</span>
+    <span class="k">if</span> <span class="n">geometry</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;block group&quot;</span><span class="p">,</span> <span class="s2">&quot;tract&quot;</span><span class="p">,</span> <span class="s2">&quot;block&quot;</span><span class="p">}:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Geometry level </span><span class="si">{</span><span class="n">geometry</span><span class="si">}</span><span class="s2"> not supported; aborting.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">geometry</span> <span class="o">==</span> <span class="s2">&quot;block group&quot;</span><span class="p">:</span>
+        <span class="n">geometry</span> <span class="o">=</span> <span class="s2">&quot;bg&quot;</span>
+    <span class="k">if</span> <span class="n">geometry</span> <span class="o">==</span> <span class="s2">&quot;block&quot;</span><span class="p">:</span>
+        <span class="n">geometry</span> <span class="o">=</span> <span class="s2">&quot;tabblock&quot;</span>
+
+    <span class="c1"># Construct the Census URL.</span>
+    <span class="n">fips</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">fips</span>
+    <span class="n">head</span> <span class="o">=</span> <span class="s2">&quot;https://www2.census.gov/geo/pvs/tiger2010st/&quot;</span>
+    <span class="n">tail</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">fips</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">clocator</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">fips</span><span class="si">}</span><span class="s2">/tl_2010_</span><span class="si">{</span><span class="n">fips</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">geometry</span><span class="si">}</span><span class="s2">10.zip&quot;</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">head</span> <span class="o">+</span> <span class="n">tail</span>
+
+    <span class="c1"># Download, extract, and return the geometries from the URL.</span>
+    <span class="k">return</span> <span class="n">gpd</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">url</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">mapbase</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">geometry</span><span class="p">,</span> <span class="n">baseindex</span><span class="o">=</span><span class="s2">&quot;GEOID20&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Maps the provided geometries in `base` to the 2010 Census geometries</span>
+<span class="sd">    specified by `geometry`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        base (GeoDataFrame): GeoDataFrame with the desired units for cvap to be</span>
+<span class="sd">            estimated on.</span>
+<span class="sd">        state (State): The `us.State` for which CVAP will be estimated.</span>
+<span class="sd">        geometry (str): Level of geometry we&#39;re fetching. Accepted values are</span>
+<span class="sd">            `&quot;tract&quot;` and `&quot;block group&quot;`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">       `base` with 2010 geometry assignments adjoined.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get the 2010 geometries from the Census.</span>
+    <span class="n">geometry10</span> <span class="o">=</span> <span class="n">fetchgeometries</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">geometry</span><span class="p">)</span>
+
+    <span class="c1"># Get the right name and rename the 2010 geometry index this way.</span>
+    <span class="n">geometry10id</span> <span class="o">=</span> <span class="s2">&quot;TRACT10&quot;</span> <span class="k">if</span> <span class="n">geometry</span> <span class="o">==</span> <span class="s2">&quot;tract&quot;</span> <span class="k">else</span> <span class="s2">&quot;BLOCKGROUP10&quot;</span>
+    <span class="n">geometry10</span> <span class="o">=</span> <span class="n">geometry10</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s2">&quot;GEOID10&quot;</span><span class="p">:</span> <span class="n">geometry10id</span><span class="p">},</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Create a unit mapping from the provided base units to those retrieved</span>
+    <span class="c1"># from the Census. If the `base` passed has been sliced or could possibly</span>
+    <span class="c1"># be a copy, *this will throw a SettingWithCopy warning*.</span>
+    <span class="n">mapping</span> <span class="o">=</span> <span class="n">unitmap</span><span class="p">((</span><span class="n">base</span><span class="p">,</span> <span class="n">baseindex</span><span class="p">),</span> <span class="p">(</span><span class="n">geometry10</span><span class="p">,</span> <span class="n">geometry10id</span><span class="p">))</span>
+    <span class="n">base</span><span class="p">[</span><span class="n">geometry10id</span><span class="p">]</span> <span class="o">=</span> <span class="n">base</span><span class="p">[</span><span class="n">baseindex</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">base</span>
+
+
+<div class="viewcode-block" id="estimatecvap2010">
+<a class="viewcode-back" href="../../../full_ref.html#gerrytools.data.estimatecvap2010">[docs]</a>
+<span class="k">def</span> <span class="nf">estimatecvap2010</span><span class="p">(</span>
+    <span class="n">base</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">groups</span><span class="p">,</span> <span class="n">ceiling</span><span class="p">,</span> <span class="n">zfill</span><span class="p">,</span> <span class="n">geometry10</span><span class="o">=</span><span class="s2">&quot;tract&quot;</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="mi">2019</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function for turning old (2019) CVAP data on 2010 geometries into</span>
+<span class="sd">    estimates for current CVAP data on 2020 geometries. **This method</span>
+<span class="sd">    serves a different purpose than `gerrytools.data.estimatecvap.</span>
+<span class="sd">    estimatecvap2020()`:** this method is intended to put 2010-era CVAP</span>
+<span class="sd">    data on 2020-era geometries, and uses geometric properties to do so.</span>
+
+<span class="sd">    Users must supply a base `GeoDataFrame`</span>
+<span class="sd">    representing their chosen U.S. state. Additionally, users must specify the</span>
+<span class="sd">    demographic groups whose CVAP statistics are to be estimated. For each</span>
+<span class="sd">    group, users specify a triple \((X, Y, Z)\) where \(X\) is the old CVAP</span>
+<span class="sd">    column for that group, \(Y\) is the old VAP column for that group, and</span>
+<span class="sd">    \(Z\) is the new VAP column for that group, which must be an existing</span>
+<span class="sd">    column on `base`. Then, the estimated new CVAP for that group will be</span>
+<span class="sd">    constructed by multiplying \((X / Y) \cdot Z\) for each new geometry.</span>
+
+<span class="sd">    &lt;div style=&quot;text-align: center;&quot;&gt;</span>
+<span class="sd">    &lt;/br&gt;</span>
+<span class="sd">    &lt;img width=&quot;75%&quot; src=&quot;../images/cvap-estimation.png&quot;/&gt;</span>
+<span class="sd">    &lt;/div&gt;</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        base (GeoDataFrame): A `GeoDataFrame` with the appropriate columns for</span>
+<span class="sd">            estimating CVAP.</span>
+<span class="sd">        state (State): The `us.State` object for which CVAP data is retrieved.</span>
+<span class="sd">        groups (list): `(X, Y, Z)` triples for each desired CVAP group to be</span>
+<span class="sd">            estimated, where each of the parameters are column names: `X` is</span>
+<span class="sd">            the column on the 2010 geometries which contains the relevant CVAP</span>
+<span class="sd">            data; `Y` is the column on the 2010 geometries which contains the</span>
+<span class="sd">            relevant VAP data; `Z` is the column on the 2020 geometries to be</span>
+<span class="sd">            weighted by the ratio of the per-unit ratios in `X` and `Y`. For</span>
+<span class="sd">            example, if we wish to estimate Black CVAP, this triple would be</span>
+<span class="sd">            `(NHBCVAP19, BVAP19, BVAP20)`, which takes the ratios of the</span>
+<span class="sd">            `NHBCVAP19` and `BVAP19` columns on the 2010 geometries, and</span>
+<span class="sd">            multplies the 2020 geometries&#39; respective `BVAP20` values</span>
+<span class="sd">            by these ratios.</span>
+<span class="sd">        ceiling (float): Number representing where to cap the weighting</span>
+<span class="sd">            ratio of CVAP to VAP20. After this percentage ceiling is</span>
+<span class="sd">            passed, the percentage will be set to 1. We recommend</span>
+<span class="sd">            setting this to 1.</span>
+<span class="sd">        zfill (float): Fill in ratio for CVAP to VAP20 when there is 0 CVAP</span>
+<span class="sd">            in the area. We recommend setting this parameter to `0.1`.</span>
+<span class="sd">        geometry10 (str, optional): The 2010 geometry on which cvap will</span>
+<span class="sd">            be pulled. Acceptable values are `&quot;tract&quot;` or `&quot;block group&quot;`.</span>
+<span class="sd">            As tracts are less susceptible to change across Census vintages,</span>
+<span class="sd">            setting this parameter to `&quot;tract&quot;` is recommended, as it is</span>
+<span class="sd">            more likely that the 2020 Census blocks fit neatly into the</span>
+<span class="sd">            2010 Census tracts.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">       `base` geometries with 2019 CVAP-weighted 2020 CVAP estimates attached.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">geometry10</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;block group&quot;</span><span class="p">,</span> <span class="s2">&quot;tract&quot;</span><span class="p">}:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Requested geometry &quot;</span><span class="si">{</span><span class="n">geometry10</span><span class="si">}</span><span class="s1">&quot; is not allowed; &#39;</span> <span class="s2">&quot;loading tracts.&quot;</span><span class="p">)</span>
+        <span class="n">geometry10</span> <span class="o">=</span> <span class="s2">&quot;tract&quot;</span>
+
+    <span class="c1"># Grab ACS and CVAP special-tab data, and make sure our triples are correct</span>
+    <span class="n">cvap_geoid</span> <span class="o">=</span> <span class="s2">&quot;TRACT10&quot;</span> <span class="k">if</span> <span class="n">geometry10</span> <span class="o">==</span> <span class="s2">&quot;tract&quot;</span> <span class="k">else</span> <span class="s2">&quot;BLOCKGROUP10&quot;</span>
+    <span class="n">acs_source</span> <span class="o">=</span> <span class="n">acs5</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">geometry10</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="n">year</span><span class="p">)</span>
+    <span class="n">cvap_source</span> <span class="o">=</span> <span class="n">cvap</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">geometry10</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="n">year</span><span class="p">)</span>
+
+    <span class="c1"># Validate the columns passed, issuing user warnings when it&#39;s inadvisable</span>
+    <span class="c1"># to estimate CVAP given the passed columns.</span>
+    <span class="k">for</span> <span class="n">cvap10</span><span class="p">,</span> <span class="n">vap10</span><span class="p">,</span> <span class="n">vap20</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+        <span class="c1"># If any of the CVAP columns passed correspond to columns which</span>
+        <span class="c1"># tabulate people of multiple races, notify the user that there</span>
+        <span class="c1"># isn&#39;t an appropriate 2019 VAP column to match them against.</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">substring</span> <span class="ow">in</span> <span class="n">cvap10</span> <span class="k">for</span> <span class="n">substring</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;AIW&quot;</span><span class="p">,</span> <span class="s2">&quot;AW&quot;</span><span class="p">,</span> <span class="s2">&quot;BW&quot;</span><span class="p">,</span> <span class="s2">&quot;AIB&quot;</span><span class="p">}):</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Warning: Estimating CVAP among </span><span class="si">{</span><span class="n">cvap10</span><span class="si">}</span><span class="s2"> is not advisable, &quot;</span>
+                <span class="s2">&quot;since there isn&#39;t a reasonable VAP column from which to &quot;</span>
+                <span class="s2">&quot;construct _CVAP / _VAP rates (because you seem to be &quot;</span>
+                <span class="s2">&quot;combining two racial groups).&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># If the CVAP or ACS5 columns passed aren&#39;t present in the</span>
+        <span class="c1"># set of possible columns, raise an error.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">cvap10</span> <span class="ow">in</span> <span class="n">acs_source</span> <span class="ow">or</span> <span class="n">cvap10</span> <span class="ow">in</span> <span class="n">cvap_source</span><span class="p">):</span>
+            <span class="n">possible_columns</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">acs_source</span><span class="p">)</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">cvap_source</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Your CVAP column &#39;</span><span class="si">{</span><span class="n">cvap10</span><span class="si">}</span><span class="s2">&#39; must be contained in either &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;the ACS or Special Tab columns: </span><span class="si">{</span><span class="n">possible_columns</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">vap10</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">acs_source</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Your old VAP column &#39;</span><span class="si">{</span><span class="n">vap10</span><span class="si">}</span><span class="s2">&#39; must be contained in the ACS &quot;</span>
+                <span class="s2">&quot;columns: {set(acs_source)}&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># If the VAP20 column passed doesn&#39;t exist on the user-provided</span>
+        <span class="c1"># geometries, raise an error.</span>
+        <span class="k">if</span> <span class="n">vap20</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">base</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Your new VAP column &#39;</span><span class="si">{</span><span class="n">vap20</span><span class="si">}</span><span class="s2">&#39; must be contained in your &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;base dataframe: </span><span class="si">{</span><span class="nb">set</span><span class="p">(</span><span class="n">base</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Remove ACS 5 columns that overlap with special-tab ones.</span>
+    <span class="n">non_overlaps</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">acs_source</span><span class="p">)</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">cvap_source</span><span class="p">)))</span>
+    <span class="n">acs_source</span> <span class="o">=</span> <span class="n">acs_source</span><span class="p">[[</span><span class="n">cvap_geoid</span><span class="p">]</span> <span class="o">+</span> <span class="n">non_overlaps</span><span class="p">]</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="n">cvap_source</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">acs_source</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="n">cvap_geoid</span><span class="p">)</span>
+
+    <span class="c1"># Get the right columns from the base geometry, and map the base</span>
+    <span class="c1"># geometries to the units with CVAP data. Apparently dropping bad</span>
+    <span class="c1"># columns by using slicing incudes a SettingWithCopy warning, so</span>
+    <span class="c1"># we&#39;re just dropping using .drop() instead.</span>
+    <span class="n">correct</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span>
+        <span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">base</span><span class="p">)</span> <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">sub</span> <span class="ow">in</span> <span class="n">col</span> <span class="k">for</span> <span class="n">sub</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;POP&quot;</span><span class="p">,</span> <span class="s2">&quot;VAP&quot;</span><span class="p">,</span> <span class="s2">&quot;GEOID&quot;</span><span class="p">])</span>
+    <span class="p">]</span>
+    <span class="n">bads</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">base</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">correct</span><span class="p">))</span>
+
+    <span class="c1"># Warn the user of column removal:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Removing the following columns: &quot;</span> <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">bads</span><span class="p">))</span>
+
+    <span class="n">pared</span> <span class="o">=</span> <span class="n">base</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">bads</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">pared</span> <span class="o">=</span> <span class="n">mapbase</span><span class="p">(</span><span class="n">pared</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">geometry10</span><span class="p">)</span>
+
+    <span class="c1"># Compute weights.</span>
+    <span class="k">for</span> <span class="n">cvap10</span><span class="p">,</span> <span class="n">vap10</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+        <span class="n">source</span><span class="p">[</span><span class="n">cvap10</span> <span class="o">+</span> <span class="s2">&quot;%&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="n">cvap10</span><span class="p">]</span> <span class="o">/</span> <span class="n">source</span><span class="p">[</span><span class="n">vap10</span><span class="p">]</span>
+
+    <span class="c1"># Fill in values according to the following rules:</span>
+    <span class="c1">#</span>
+    <span class="c1">#   1.  if there are 0 *CVAP reported and 0 *VAP reported, we set the</span>
+    <span class="c1">#        weight to the average *CVAP/*VAP ratio within the county;</span>
+    <span class="c1">#   2.  if there are 0 *CVAP reported and *VAP &gt; 0, we set the weight to</span>
+    <span class="c1">#        zero_fill;</span>
+    <span class="c1">#   3.  if *CVAP &gt; 0 but *VAP = 0 or *CVAP/*VAP &gt; percentage_cap, we set</span>
+    <span class="c1">#       the weight to 1.</span>
+    <span class="n">statewide</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">cvap</span>
+        <span class="o">+</span> <span class="s2">&quot;%&quot;</span><span class="p">:</span> <span class="n">source</span><span class="p">[</span><span class="n">cvap</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="n">source</span><span class="p">[</span><span class="n">vap</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="k">if</span> <span class="n">source</span><span class="p">[</span><span class="n">vap</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">cvap</span><span class="p">,</span> <span class="n">vap</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">groups</span>
+    <span class="p">}</span>
+
+    <span class="c1"># Rename colunms with percentages.</span>
+    <span class="n">cvappcts</span> <span class="o">=</span> <span class="p">[</span><span class="n">cvap</span> <span class="o">+</span> <span class="s2">&quot;%&quot;</span> <span class="k">for</span> <span class="p">(</span><span class="n">cvap</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">]</span>
+
+    <span class="c1"># Get the county names and compute population-weighted CVAP averages. This</span>
+    <span class="c1"># serves as a replacement for the statewide average.</span>
+    <span class="n">source</span><span class="p">[</span><span class="s2">&quot;_county&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="n">cvap_geoid</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span>
+    <span class="n">counties</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;_county&quot;</span><span class="p">]))</span>
+    <span class="n">countyaverages</span> <span class="o">=</span> <span class="p">{</span><span class="n">pct</span><span class="p">:</span> <span class="p">{}</span> <span class="k">for</span> <span class="n">pct</span> <span class="ow">in</span> <span class="n">cvappcts</span><span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">county</span> <span class="ow">in</span> <span class="n">counties</span><span class="p">:</span>
+        <span class="n">chunk</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;_county&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">county</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">cvap19</span><span class="p">,</span> <span class="n">vap19</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+            <span class="c1"># Calculate the CVAP19-to-VAP19 ratio. Set numpy to ignore</span>
+            <span class="c1"># runtimewarnings, but warn the user if one is encountered.</span>
+            <span class="c1"># We do this so that the user doesn&#39;t get spooked by a numpy</span>
+            <span class="c1"># warning, but we&#39;re still noisy about the weird value</span>
+            <span class="c1"># encountered.</span>
+            <span class="n">cvap19total</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">[</span><span class="n">cvap19</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">vap19total</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">[</span><span class="n">vap19</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+            <span class="n">np</span><span class="o">.</span><span class="n">seterr</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
+            <span class="n">ratio</span> <span class="o">=</span> <span class="n">cvap19total</span> <span class="o">/</span> <span class="n">vap19total</span>
+
+            <span class="c1"># Check whether the ratio of the above is less than the ceiling.</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">ratio</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="n">county</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s2">&quot;Encountered an invalid ratio: there are &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">cvap19total</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">cvap19</span><span class="si">}</span><span class="s2"> persons and </span><span class="si">{</span><span class="n">vap19total</span><span class="si">}</span><span class="s2"> &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">vap19</span><span class="si">}</span><span class="s2"> persons, for a ratio of </span><span class="si">{</span><span class="n">cvap19total</span><span class="si">}</span><span class="s2">/&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">vap19total</span><span class="si">}</span><span class="s2">. @e have substituted it for the &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;statewide </span><span class="si">{</span><span class="n">cvap19</span><span class="si">}</span><span class="s2">-to-</span><span class="si">{</span><span class="n">vap19</span><span class="si">}</span><span class="s2"> share of &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">statewide</span><span class="p">[</span><span class="n">cvap19</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">ratio</span> <span class="o">=</span> <span class="n">statewide</span><span class="p">[</span><span class="n">cvap19</span> <span class="o">+</span> <span class="s2">&quot;%&quot;</span><span class="p">]</span>
+
+            <span class="c1"># Set the county-average ratio.</span>
+            <span class="n">countyaverages</span><span class="p">[</span><span class="n">cvap19</span> <span class="o">+</span> <span class="s2">&quot;%&quot;</span><span class="p">][</span><span class="n">county</span><span class="p">]</span> <span class="o">=</span> <span class="n">ratio</span>
+
+    <span class="c1"># Reset the numpy error catching thing.</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">seterr</span><span class="p">(</span><span class="nb">all</span><span class="o">=</span><span class="s2">&quot;warn&quot;</span><span class="p">)</span>
+
+    <span class="c1"># For each of the percentage columns, we want to apply the rules specified</span>
+    <span class="c1"># by the user.</span>
+    <span class="k">for</span> <span class="n">pct</span> <span class="ow">in</span> <span class="n">cvappcts</span><span class="p">:</span>
+        <span class="c1"># Fill NaNs with the *county-wide* average.</span>
+        <span class="n">countywidepcts</span> <span class="o">=</span> <span class="n">countyaverages</span><span class="p">[</span><span class="n">pct</span><span class="p">]</span>
+
+        <span class="n">source</span><span class="p">[</span><span class="n">pct</span><span class="p">]</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="n">pct</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        <span class="n">nanindices</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="n">source</span><span class="p">[</span><span class="n">pct</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">()]</span><span class="o">.</span><span class="n">index</span>
+        <span class="n">source</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nanindices</span><span class="p">,</span> <span class="n">pct</span><span class="p">]</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nanindices</span><span class="p">,</span> <span class="s2">&quot;_county&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span>
+            <span class="n">countywidepcts</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Fill zeroes with the `zfill` value, and cap all the percentages.</span>
+        <span class="n">source</span><span class="p">[</span><span class="n">pct</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">source</span><span class="p">[</span><span class="n">pct</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">zfill</span><span class="p">)</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">c</span> <span class="o">&gt;</span> <span class="n">ceiling</span> <span class="k">else</span> <span class="n">c</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Assert we don&#39;t have any percentages over percentage_cap.</span>
+    <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="n">p</span> <span class="o">+</span> <span class="s2">&quot;%&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">ceiling</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">__</span><span class="p">)</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">)</span>
+
+    <span class="c1"># Assert we don&#39;t have any zeros.</span>
+    <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="n">p</span> <span class="o">+</span> <span class="s2">&quot;%&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">__</span><span class="p">)</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">)</span>
+
+    <span class="c1"># Set indices and create a mapping from IDs to weights.</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="n">cvap_geoid</span><span class="p">)</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="n">cvappcts</span><span class="p">]</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">orient</span><span class="o">=</span><span class="s2">&quot;index&quot;</span><span class="p">)</span>
+
+    <span class="c1"># If the first character of the first key is &quot;0&quot;, then we need to pad</span>
+    <span class="c1"># the keys since ix gets interpreted as a float later.</span>
+    <span class="k">if</span> <span class="p">[</span><span class="o">*</span><span class="n">weights</span><span class="o">.</span><span class="n">keys</span><span class="p">()][</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;0&quot;</span><span class="p">:</span>
+        <span class="n">pad</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">pad</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="c1"># Group by the CVAP GEOID.</span>
+    <span class="n">groupedtogeometry</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pared</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">cvap_geoid</span><span class="p">))</span>
+
+    <span class="c1"># Get the year suffix so we can replace columns.</span>
+    <span class="n">yearsuffix</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">year</span><span class="p">)[</span><span class="mi">2</span><span class="p">:]</span>
+
+    <span class="c1"># For each of the geometry groups (e.g. a set of rows of blocks</span>
+    <span class="c1"># corresponding to a single tract), and for each of the CVAP groups,</span>
+    <span class="c1"># apply the appropriate weight to the blocks&#39; 2020 VAP populations.</span>
+    <span class="k">for</span> <span class="n">ix</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">groupedtogeometry</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">cvap10</span><span class="p">,</span> <span class="n">vap10</span><span class="p">,</span> <span class="n">vap20</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+            <span class="n">weight</span> <span class="o">=</span> <span class="n">cvap10</span> <span class="o">+</span> <span class="s2">&quot;%&quot;</span>
+            <span class="n">cvap20</span> <span class="o">=</span> <span class="n">cvap10</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">yearsuffix</span><span class="p">,</span> <span class="s2">&quot;20_EST&quot;</span><span class="p">)</span>
+            <span class="n">group</span><span class="p">[</span><span class="n">weight</span><span class="p">]</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="n">pad</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">ix</span><span class="p">))][</span><span class="n">weight</span><span class="p">]</span>
+            <span class="n">group</span><span class="p">[</span><span class="n">cvap20</span><span class="p">]</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="n">weight</span><span class="p">]</span> <span class="o">*</span> <span class="n">group</span><span class="p">[</span><span class="n">vap20</span><span class="p">]</span>
+
+    <span class="c1"># Re-create a dataframe and strip out % columns, leaving only the estimate</span>
+    <span class="c1"># columns.</span>
+    <span class="n">weightedbase</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">frame</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">groupedtogeometry</span><span class="p">)</span>
+    <span class="n">weightedbase</span> <span class="o">=</span> <span class="n">weightedbase</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">p</span> <span class="o">+</span> <span class="s2">&quot;%&quot;</span> <span class="k">for</span> <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">weightedbase</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, MGGG.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
