@@ -104,7 +104,7 @@ def districtr(N):
 def redbluecmap(n) -> List[Tuple]:
     """
     Generates a red/white/blue color palette in `n` colors with white at the
-    `mid`th index.
+    `mid` th index.
 
     Args:
         n (int): The number of colors to generate.

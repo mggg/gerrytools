@@ -29,7 +29,7 @@ def violin(
         scores (dict): Dictionary with keys of `ensemble`, `citizen`, `proposed`
             which map to lists of numerical scores.
         proposed_info (dict, optional): Dictionary with keys of `colors`, `names`;
-            the \(i\)th color in `color` corresponds to the \(i\)th name in `names.
+            the \(i\)th color in `color` corresponds to the \(i\)th name in `names`.
         percentiles (tuple, optional): Observations outside this range of
             percentiles are ignored. Defaults to `(1, 99)`, such that observations
             between the 1st and 99th percentiles (inclusive) are included, and
@@ -95,9 +95,12 @@ def violin(
                 ax.scatter(
                     violin + 1 + jitter_val,
                     score,
-                    color=scores["proposed"]["colors"][violin]
-                    if not isinstance(scores["proposed"], list) and scores["proposed"]["colors"]
-                    else districtr(plan + 1).pop(),
+                    color=(
+                        scores["proposed"]["colors"][violin]
+                        if not isinstance(scores["proposed"], list)
+                        and scores["proposed"]["colors"]
+                        else districtr(plan + 1).pop()
+                    ),
                     edgecolor="black",
                     s=100,
                     alpha=0.9,

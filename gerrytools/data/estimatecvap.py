@@ -16,7 +16,7 @@ def estimatecvap2020(state) -> pd.DataFrame:
     estimatecvap2010()`:** rather than using geometric procedures to
     put CVAP data on old geometries, this method takes advantage of the
     Census's geographic hierarchy, and associates finer-grained 2020 CVAP
-    data with 2020 blocks. _No geometric data or procedures are used here_.
+    data with 2020 blocks. *No geometric data or procedures are used here*.
     The resulting data can then be adjoined to 2020 block geometries (or
     assigned to VTDs, assigned to districts, etc.) and be used to build
     other units of varying size.
@@ -200,8 +200,8 @@ def estimatecvap2010(
     constructed by multiplying \((X / Y) \cdot Z\) for each new geometry.
 
     <div style="text-align: center;">
-        </br>
-        <img width="75%" src="../images/cvap-estimation.png"/>
+    </br>
+    <img width="75%" src="../images/cvap-estimation.png"/>
     </div>
 
     Args:
@@ -314,9 +314,8 @@ def estimatecvap2010(
     #   3.  if *CVAP > 0 but *VAP = 0 or *CVAP/*VAP > percentage_cap, we set
     #       the weight to 1.
     statewide = {
-        cvap + "%": source[cvap].sum() / source[vap].sum()
-        if source[vap].sum() != 0
-        else 0
+        cvap
+        + "%": source[cvap].sum() / source[vap].sum() if source[vap].sum() != 0 else 0
         for (cvap, vap, _) in groups
     }
 
@@ -390,9 +389,9 @@ def estimatecvap2010(
     source = source.set_index(cvap_geoid)
     source = source[cvappcts]
     weights = source.to_dict(orient="index")
-   
+
     # If the first character of the first key is "0", then we need to pad
-    # the keys since ix gets interpreted as a float later. 
+    # the keys since ix gets interpreted as a float later.
     if [*weights.keys()][0][0] == "0":
         pad = "0"
     else:
@@ -411,7 +410,7 @@ def estimatecvap2010(
         for cvap10, vap10, vap20 in groups:
             weight = cvap10 + "%"
             cvap20 = cvap10.replace(yearsuffix, "20_EST")
-            group[weight] = weights[pad+str(int(ix))][weight]
+            group[weight] = weights[pad + str(int(ix))][weight]
             group[cvap20] = group[weight] * group[vap20]
 
     # Re-create a dataframe and strip out % columns, leaving only the estimate

@@ -194,8 +194,8 @@ def optimalrelabeling(
     we construct the [bipartite graph](https://bit.ly/39rDldy) \(K_{n,m}\):
 
     <div style="text-align: center;">
-        </br>
-        <img width="40%" src="../images/bipartite-matching.png"/>
+    </br>
+    <img width="40%" src="../images/bipartite-matching.png"/>
     </div>
 
     We then assign each edge a weight according to some function
@@ -215,7 +215,6 @@ def optimalrelabeling(
     implemented by scipy), we can find the row and column indices of these entries,
     and retrieve the district label pairs corresponding to each. The algorithm
     achieves \(\textbf{O}(N^3)\) worst-case running time, where \(N = \max(n, m)\).
-
     """
     # Our cost function should compute the weights between left and right. First,
     # we want to identify the indices of the preimage (row index) and column

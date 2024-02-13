@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 
 class JSONtoObject(BaseModel):
@@ -35,7 +35,7 @@ class JSONtoObject(BaseModel):
     The "type" of plan; could denote a party affiliation, a chamber, whatever.
     """
 
-    @validator("column")
+    @field_validator("column")
     def _validate_column(cls, column):
         """
         Validates the specified column name. For most of our purposes, we cannot

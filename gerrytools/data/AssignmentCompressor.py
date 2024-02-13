@@ -9,7 +9,7 @@ class AssignmentCompressor:
     A class for compressing and decompressing lots of assignments very, very
     quickly. Intended for use with ``jsonlines``-like libraries (where
     assignments are read in line-by-line) or for network requests (where
-    assignments are retrieved one-by-one). When decompressing, yields ``dict``s
+    assignments are retrieved one-by-one). When decompressing, yields ``dict`` s
     where keys are in sorted order.
 
     The compression schema considers the set of unique identifiers, imposes an
@@ -21,14 +21,15 @@ class AssignmentCompressor:
     same order.
 
     Example:
+
         To compress assignments, we need a set of unique identifiers such that
         each identifier maps one geometric unit to one district.
+
 
             ...
 
             geoids = blocks["GEOID20"].astype(str)
-            ac = AssignmentCompressor(
-                 geoids, location="compressed-assignments.ac")
+            ac = AssignmentCompressor(geoids, location="compressed-assignments.ac")
 
             with ac as compressor:
                 for assignment in assignments:
@@ -52,7 +53,6 @@ class AssignmentCompressor:
                 <do whatever!>
 
             ...
-
     Attributes:
         DISTRICT_DELIMITER (bytes): A bytestring which separates district
             identifiers in an assignment.
@@ -229,7 +229,7 @@ class AssignmentCompressor:
 
     def decompress(self):
         """
-        Decompresses the data at ``location``. A generator which ``yield``s
+        Decompresses the data at ``location``. A generator which ``yield`` s
         assignments.
 
         Yields:

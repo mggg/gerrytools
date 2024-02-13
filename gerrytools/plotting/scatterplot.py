@@ -6,12 +6,12 @@ from .colors import districtr
 
 def scatterplot(
     ax,
-	x,
-	y,
-	labels=None,
-	limits=set(),
-	bins=None,
-	axis_range=None,
+    x,
+    y,
+    labels=None,
+    limits=set(),
+    bins=None,
+    axis_range=None,
     show_legend=True,
 ) -> Axes:
     r"""
@@ -48,7 +48,7 @@ def scatterplot(
                 edgecolor="black",
                 label=f"{i+1}",
             )
-    if show_legend:        
+    if show_legend:
         ax.legend()
 
     if labels:

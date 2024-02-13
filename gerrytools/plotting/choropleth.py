@@ -91,7 +91,9 @@ def choropleth(
 
     # Plot geometries!
     if assignment is not None:
-        geometries = geometries.dissolve(by=assignment, aggfunc={demographic_share_col: 'sum'})
+        geometries = geometries.dissolve(
+            by=assignment, aggfunc={demographic_share_col: "sum"}
+        )
 
     geometries.plot(
         column=demographic_share_col,
