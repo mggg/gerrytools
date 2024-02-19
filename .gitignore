@@ -11,7 +11,7 @@ tests/*.ipynb
 
 # Python virtual environment files.
 .venv
-
+.docs_venv
 
 # Ignore the build directory and the dist directory
 # created by the build process.
