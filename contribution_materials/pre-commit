@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo "**************"
+echo "* linting... *"
+echo "**************"
+
+flake8
+
+
+echo "*************"
+echo "* complete! *"
+echo "*************"
