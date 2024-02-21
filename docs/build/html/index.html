@@ -24,7 +24,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Full Package Reference" href="full_ref.html" /> 
+    <link rel="next" title="Data" href="user/data.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -46,7 +46,15 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <ul>
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="user/data.html">Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user/geometry.html">Geometry</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user/scoring.html">Scoring</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Index</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="full_ref.html">Full Package Reference</a></li>
 </ul>
 
@@ -76,171 +84,153 @@
              
   <section id="welcome-to-gerrytools-s-documentation">
 <h1>Welcome to gerrytools’s documentation!<a class="headerlink" href="#welcome-to-gerrytools-s-documentation" title="Link to this heading"></a></h1>
-<div class="toctree-wrapper compound">
+<section id="gerrytools">
+<h2>gerrytools<a class="headerlink" href="#gerrytools" title="Link to this heading"></a></h2>
+<p><a class="reference external" href="https://dl.circleci.com/status-badge/redirect/gh/mggg/gerrytools/tree/main"><img alt="CircleCI" src="https://dl.circleci.com/status-badge/img/gh/mggg/gerrytools/tree/main.svg?style=svg" /></a>
+<a class="reference external" href="https://codecov.io/gh/mggg/gerrytools"><img alt="codecov" src="https://codecov.io/gh/mggg/gerrytools/branch/main/graph/badge.svg?token=O09GYF7C9X" /></a>
+<a class="reference external" href="https://badge.fury.io/py/gerrytools"><img alt="PyPI version" src="https://badge.fury.io/py/gerrytools.svg" /></a>
+<a class="reference external" href="https://mggg.github.io/gerrytools/"><img alt="docs" src="https://img.shields.io/badge/%E2%93%98-Documentation-%230099cd" /></a>
+<a class="reference external" href="https://mggg.org"><img alt="website" src="https://img.shields.io/badge/%F0%9F%8C%90%20-MGGG%20Redistricting%20Lab-%230099cd" /></a>
+<a class="reference external" href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a>
+<a class="reference external" href="https://pycqa.github.io/isort/"><img alt="Imports: isort" src="https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&amp;labelColor=ef8336" /></a></p>
+<p>A companion to <a class="reference external" href="https://github.com/mggg/GerryChain">GerryChain</a>, GerryTools is
+a robust suite of geometric and algorithmic tools to analyze districting plans
+and related data. GerryTools is actively developed and used by the
+<a class="reference external" href="https://mggg.org">MGGG Redistricting Lab</a> and our collaborators to prepare
+accurate, precise, and clean information for our projects. It is distributed
+under a <a class="reference external" href="https://opensource.org/licenses/BSD-3-Clause">3-Clause BSD License</a>.</p>
+<section id="installation">
+<h3>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h3>
+<section id="using-pip-recommended">
+<h4>Using <code class="docutils literal notranslate"><span class="pre">pip</span></code> (recommended)<a class="headerlink" href="#using-pip-recommended" title="Link to this heading"></a></h4>
+<p>To install GerryTools from <a class="reference external" href="https://pypi.org/project/gerrytools/">PyPi</a>, run</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">pip install gerrytools</span>
+</pre></div>
 </div>
+<p>from the command line.</p>
 </section>
-<section id="api-reference">
-<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h1>
+</section>
+<section id="usage">
+<h3>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h3>
+<p>GerryTools is split up into multiple sub-packages, each designed to simplify and
+standardize redistricting workflows.</p>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">gerrytools.data</span></code></strong> deals with the retrieval and processing of data. Here, you can
+find tools for grabbing decennial Census (‘10 and ‘20), ACS 5-year (‘12-‘20), ACS CVAP
+Special Tab (‘12-‘20), districtr portal, and 2020 decennial Census geometric data. You
+can also find tools for moving CVAP data to other levels of geometry (e.g. prorating
+2019 CVAP on 2019 Census tracts to 2020 blocks).</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">gerrytools.geometry</span></code></strong> provides facilities for dealing with geometric and related
+data. There are tools for translating and evaluating GerryChain
+<a class="reference external" href="https://mggg.github.io/GerryChain/api.html#module-gerrychain.partition"><code class="docutils literal notranslate"><span class="pre">Partition</span></code></a>s,
+performing fast geometric dissolutions, creating unit maps (e.g. 2020 blocks to
+2020 VTDs), creating
+<a class="reference external" href="https://mggg.github.io/GerryChain/api.html#adjacency-graphs">dual graphs for GerryChain</a>,
+and optimization algorithms for renaming districts.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">gerrytools.plotting</span></code></strong> contains methods for generating extremely
+high-quality Lab-standard data visualizations.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">gerrytools.scoring</span></code></strong> provides a vast array of redistricting plan scores.
+These can be used standalone <em>or</em> as GerryChain
+<a class="reference external" href="https://mggg.github.io/GerryChain/api.html#module-gerrychain.updaters">updaters</a>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">gerrychain.utilities</span></code></strong> has ease-of-use methods for renaming
+directories containing shapefiles (which comes in handy more often than you’d
+think) and making JSON objects out of Python objects (useful when trying to
+organize information for many districting plans in a standard format).</p></li>
+</ul>
+<!-- ### Example
+
+GerryTools is easy to use and is designed to simplify data- and redistricting-related
+workflows. For example, let's say we want to analyze Alabama's citizen voting-age
+population data on 2020 Census tracts. First, we can download the geometric data
+for the state using `gerrytools.data.geometry20()`:
+
+```python
+from gerrytools.data import geometry20
+from us import states
+
+# Retrieves Lab-processed and -cleaned geometry data, and writes it to file.
+geometry20(states.AL, "~/project/AL-tracts.zip", geometry="tract")
+```
+Next, we can download cleaned citizen voting-age population (CVAP) data from the 2020 ACS special tabulation release:
+
+```python
+from gerrytools.data import cvap
+from us import states
+
+# A pandas DataFrame of 2020 CVAP data for the state of Alabama at the 2020 Census
+# tract level.
+data = cvap(states.AL, geometry="tract", year=2020)
+data.to_csv("~/project/AL-cvap.csv")
+```
+
+Finally, we can merge the two datasets, attaching the CVAP demographic data to
+the geometric data:
+
+```python
+import geopandas as gpd
+import pandas as pd
+
+# Import geometric and demographic data.
+geometric = gpd.read_file("~/project/AL-tracts.zip")
+demographic = pd.read_csv("~/project/AL-cvap.csv")
+
+# Merge. Note that the DataFrames have different unique identifier columns --- this
+# is intentional, and serves to differentiate datasets of varying geometric levels.
+merged = geometric.merge(demographic, left_on="GEOID20", right_on="TRACT20")
+```
+
+And there we are — what once took hours of setup and parsing now takes less than a
+minute. -->
+</section>
+<section id="contributing">
+<h3>Contributing<a class="headerlink" href="#contributing" title="Link to this heading"></a></h3>
+<p>GerryTools is an active project, and has multiple contributors. If you’d like to
+contribute, here are a few house rules:</p>
+<ol class="arabic simple">
+<li><p>After cloning this repository, run <code class="docutils literal notranslate"><span class="pre">sh</span> <span class="pre">setup.sh</span></code> to download and install
+necessary git hooks and linting configurations.</p></li>
+<li><p><strong>Follow the <a class="reference external" href="https://peps.python.org/pep-0008/">PEP8 style guide</a></strong>. After
+installing the above git hooks, linting is performed before every push. PEP8 errors can be automatically corrected by running <code class="docutils literal notranslate"><span class="pre">autopep8</span> <span class="pre">--in-place</span> <span class="pre">--aggressive</span> <span class="pre">-r</span> <span class="pre">gerrytools</span></code> on the command line from the root directory.</p></li>
+<li><p><strong>Write tests.</strong> All changes, major or minor, <strong>must</strong> be accompanied by testing
+code. Code and tests will be immediately reviewed by Lab maintainers.</p></li>
+<li><p>Test coverage must stay <strong>at least</strong> the same; this can be checked by running
+<code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">--cov=evaltools</span></code> after the tests are added to <code class="docutils literal notranslate"><span class="pre">tests/</span></code>.</p></li>
+<li><p><strong>Write documentation.</strong> All changes should be documented via docstrings,
+and code should be repletely commented. It’s much easier to decipher commented
+code! Docstring documentation is compiled on every commit via git hooks.</p></li>
+</ol>
+<p>We look forward to your contributions!</p>
+</section>
+</section>
 <div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="user/data.html">Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user/geometry.html">Geometry</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user/scoring.html">Scoring</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Index</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="full_ref.html">Full Package Reference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="full_ref.html#module-gerrytools.data">Data</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.DISTRICT_DELIMITER"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.DISTRICT_DELIMITER</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.ASSIGNMENT_DELIMITER"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.ASSIGNMENT_DELIMITER</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.CHUNK_DELIMITER"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.CHUNK_DELIMITER</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.CHUNK_SIZE"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.CHUNK_SIZE</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.ENCODING"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.ENCODING</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.identifiers"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.identifiers</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.compressed"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.compressed</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.cache"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.cache</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.window"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.window</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.default"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.default</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.location"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.location</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.compress"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.compress()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.compress_all"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.compress_all()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.decompress"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.decompress()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.AssignmentCompressor.match"><code class="docutils literal notranslate"><span class="pre">AssignmentCompressor.match()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.Submission"><code class="docutils literal notranslate"><span class="pre">Submission</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.Submission.id"><code class="docutils literal notranslate"><span class="pre">Submission.id</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.Submission.link"><code class="docutils literal notranslate"><span class="pre">Submission.link</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.Submission.model_computed_fields"><code class="docutils literal notranslate"><span class="pre">Submission.model_computed_fields</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.Submission.model_config"><code class="docutils literal notranslate"><span class="pre">Submission.model_config</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.Submission.model_fields"><code class="docutils literal notranslate"><span class="pre">Submission.model_fields</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.Submission.plan"><code class="docutils literal notranslate"><span class="pre">Submission.plan</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.Submission.tileset"><code class="docutils literal notranslate"><span class="pre">Submission.tileset</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.Submission.type"><code class="docutils literal notranslate"><span class="pre">Submission.type</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.Submission.units"><code class="docutils literal notranslate"><span class="pre">Submission.units</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.data.Submission.unitsType"><code class="docutils literal notranslate"><span class="pre">Submission.unitsType</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.acs5"><code class="docutils literal notranslate"><span class="pre">acs5()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.census10"><code class="docutils literal notranslate"><span class="pre">census10()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.census20"><code class="docutils literal notranslate"><span class="pre">census20()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.csvs"><code class="docutils literal notranslate"><span class="pre">csvs()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.cvap"><code class="docutils literal notranslate"><span class="pre">cvap()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.estimatecvap2010"><code class="docutils literal notranslate"><span class="pre">estimatecvap2010()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.estimatecvap2020"><code class="docutils literal notranslate"><span class="pre">estimatecvap2020()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.fetchgeometries"><code class="docutils literal notranslate"><span class="pre">fetchgeometries()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.geometries20"><code class="docutils literal notranslate"><span class="pre">geometries20()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.ids"><code class="docutils literal notranslate"><span class="pre">ids()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.one"><code class="docutils literal notranslate"><span class="pre">one()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.remap"><code class="docutils literal notranslate"><span class="pre">remap()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.submissions"><code class="docutils literal notranslate"><span class="pre">submissions()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.tabularized"><code class="docutils literal notranslate"><span class="pre">tabularized()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.data.variables"><code class="docutils literal notranslate"><span class="pre">variables()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="full_ref.html#module-gerrytools.geometry">Geometry</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.geometry.arealoverlap"><code class="docutils literal notranslate"><span class="pre">arealoverlap()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.geometry.calculate_dispersion"><code class="docutils literal notranslate"><span class="pre">calculate_dispersion()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.geometry.dataframe"><code class="docutils literal notranslate"><span class="pre">dataframe()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.geometry.dispersion_updater_closure"><code class="docutils literal notranslate"><span class="pre">dispersion_updater_closure()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.geometry.dissolve"><code class="docutils literal notranslate"><span class="pre">dissolve()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.geometry.dualgraph"><code class="docutils literal notranslate"><span class="pre">dualgraph()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.geometry.invert"><code class="docutils literal notranslate"><span class="pre">invert()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.geometry.minimize_dispersion"><code class="docutils literal notranslate"><span class="pre">minimize_dispersion()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.geometry.minimize_dispersion_with_parity"><code class="docutils literal notranslate"><span class="pre">minimize_dispersion_with_parity()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.geometry.minimize_parity"><code class="docutils literal notranslate"><span class="pre">minimize_parity()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.geometry.optimalrelabeling"><code class="docutils literal notranslate"><span class="pre">optimalrelabeling()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.geometry.populationoverlap"><code class="docutils literal notranslate"><span class="pre">populationoverlap()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.geometry.unitmap"><code class="docutils literal notranslate"><span class="pre">unitmap()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="full_ref.html#module-gerrytools.plotting">Plotting</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.arrow"><code class="docutils literal notranslate"><span class="pre">arrow()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.bins"><code class="docutils literal notranslate"><span class="pre">bins()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.boxplot"><code class="docutils literal notranslate"><span class="pre">boxplot()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.choropleth"><code class="docutils literal notranslate"><span class="pre">choropleth()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.districtnumbers"><code class="docutils literal notranslate"><span class="pre">districtnumbers()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.districtr"><code class="docutils literal notranslate"><span class="pre">districtr()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.drawgraph"><code class="docutils literal notranslate"><span class="pre">drawgraph()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.drawplan"><code class="docutils literal notranslate"><span class="pre">drawplan()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.flare"><code class="docutils literal notranslate"><span class="pre">flare()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.gif_multidimensional"><code class="docutils literal notranslate"><span class="pre">gif_multidimensional()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.histogram"><code class="docutils literal notranslate"><span class="pre">histogram()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.ideal"><code class="docutils literal notranslate"><span class="pre">ideal()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.multidimensional"><code class="docutils literal notranslate"><span class="pre">multidimensional()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.purples"><code class="docutils literal notranslate"><span class="pre">purples()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.redbluecmap"><code class="docutils literal notranslate"><span class="pre">redbluecmap()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.scatterplot"><code class="docutils literal notranslate"><span class="pre">scatterplot()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.sealevel"><code class="docutils literal notranslate"><span class="pre">sealevel()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.plotting.violin"><code class="docutils literal notranslate"><span class="pre">violin()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="full_ref.html#module-gerrytools.scoring">Scoring</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.aggregate_seats"><code class="docutils literal notranslate"><span class="pre">aggregate_seats()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.competitive_contests"><code class="docutils literal notranslate"><span class="pre">competitive_contests()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.contiguous"><code class="docutils literal notranslate"><span class="pre">contiguous()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.convex_hull"><code class="docutils literal notranslate"><span class="pre">convex_hull()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.cut_edges"><code class="docutils literal notranslate"><span class="pre">cut_edges()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.demographic_shares"><code class="docutils literal notranslate"><span class="pre">demographic_shares()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.demographic_tallies"><code class="docutils literal notranslate"><span class="pre">demographic_tallies()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.demographic_updaters"><code class="docutils literal notranslate"><span class="pre">demographic_updaters()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.deviations"><code class="docutils literal notranslate"><span class="pre">deviations()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.efficiency_gap"><code class="docutils literal notranslate"><span class="pre">efficiency_gap()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.eguia"><code class="docutils literal notranslate"><span class="pre">eguia()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.gingles_districts"><code class="docutils literal notranslate"><span class="pre">gingles_districts()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.max_deviation"><code class="docutils literal notranslate"><span class="pre">max_deviation()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.mean_median"><code class="docutils literal notranslate"><span class="pre">mean_median()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.opp_party_districts"><code class="docutils literal notranslate"><span class="pre">opp_party_districts()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.partisan_bias"><code class="docutils literal notranslate"><span class="pre">partisan_bias()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.partisan_gini"><code class="docutils literal notranslate"><span class="pre">partisan_gini()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.party_districts"><code class="docutils literal notranslate"><span class="pre">party_districts()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.party_wins_by_district"><code class="docutils literal notranslate"><span class="pre">party_wins_by_district()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.pieces"><code class="docutils literal notranslate"><span class="pre">pieces()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.polsby_popper"><code class="docutils literal notranslate"><span class="pre">polsby_popper()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.pop_polygon"><code class="docutils literal notranslate"><span class="pre">pop_polygon()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.reock"><code class="docutils literal notranslate"><span class="pre">reock()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.responsive_proportionality"><code class="docutils literal notranslate"><span class="pre">responsive_proportionality()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.schwartzberg"><code class="docutils literal notranslate"><span class="pre">schwartzberg()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.seats"><code class="docutils literal notranslate"><span class="pre">seats()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.simplified_efficiency_gap"><code class="docutils literal notranslate"><span class="pre">simplified_efficiency_gap()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.splits"><code class="docutils literal notranslate"><span class="pre">splits()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.stable_proportionality"><code class="docutils literal notranslate"><span class="pre">stable_proportionality()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.summarize"><code class="docutils literal notranslate"><span class="pre">summarize()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.summarize_many"><code class="docutils literal notranslate"><span class="pre">summarize_many()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.swing_districts"><code class="docutils literal notranslate"><span class="pre">swing_districts()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.unassigned_population"><code class="docutils literal notranslate"><span class="pre">unassigned_population()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.scoring.unassigned_units"><code class="docutils literal notranslate"><span class="pre">unassigned_units()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="full_ref.html#module-gerrytools.utilities">Utilities</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.utilities.JSONtoObject"><code class="docutils literal notranslate"><span class="pre">JSONtoObject</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.utilities.JSONtoObject.column"><code class="docutils literal notranslate"><span class="pre">JSONtoObject.column</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.utilities.JSONtoObject.locator"><code class="docutils literal notranslate"><span class="pre">JSONtoObject.locator</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.utilities.JSONtoObject.model_computed_fields"><code class="docutils literal notranslate"><span class="pre">JSONtoObject.model_computed_fields</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.utilities.JSONtoObject.model_config"><code class="docutils literal notranslate"><span class="pre">JSONtoObject.model_config</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.utilities.JSONtoObject.model_fields"><code class="docutils literal notranslate"><span class="pre">JSONtoObject.model_fields</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.utilities.JSONtoObject.title"><code class="docutils literal notranslate"><span class="pre">JSONtoObject.title</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="full_ref.html#gerrytools.utilities.JSONtoObject.type"><code class="docutils literal notranslate"><span class="pre">JSONtoObject.type</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.utilities.jsonify"><code class="docutils literal notranslate"><span class="pre">jsonify()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="full_ref.html#gerrytools.utilities.rename"><code class="docutils literal notranslate"><span class="pre">rename()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="full_ref.html#module-gerrytools.data">Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="full_ref.html#module-gerrytools.geometry">Geometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="full_ref.html#module-gerrytools.plotting">Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="full_ref.html#module-gerrytools.scoring">Scoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="full_ref.html#module-gerrytools.utilities">Utilities</a></li>
 </ul>
 </li>
 </ul>
 </div>
-</section>
-<section id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading"></a></h1>
-<ul class="simple">
-<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
-<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
-<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
-</ul>
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="full_ref.html" class="btn btn-neutral float-right" title="Full Package Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="user/data.html" class="btn btn-neutral float-right" title="Data" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

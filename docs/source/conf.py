@@ -31,7 +31,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'sphinx_copybutton',
-    'recommonmark'
+    'myst_parser'
 ]
 
 templates_path = ['_templates']

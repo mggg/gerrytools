@@ -1,6 +1,13 @@
 
 # gerrytools
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/mggg/gerrytools/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/mggg/gerrytools/tree/main) [![codecov](https://codecov.io/gh/mggg/gerrytools/branch/main/graph/badge.svg?token=O09GYF7C9X)](https://codecov.io/gh/mggg/gerrytools) [![PyPI version](https://badge.fury.io/py/gerrytools.svg)](https://badge.fury.io/py/gerrytools) [![docs](https://img.shields.io/badge/%E2%93%98-Documentation-%230099cd)](https://mggg.github.io/gerrytools/) [![website](https://img.shields.io/badge/%F0%9F%8C%90%20-MGGG%20Redistricting%20Lab-%230099cd)](https://mggg.org) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
+
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/mggg/gerrytools/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/mggg/gerrytools/tree/main) 
+[![codecov](https://codecov.io/gh/mggg/gerrytools/branch/main/graph/badge.svg?token=O09GYF7C9X)](https://codecov.io/gh/mggg/gerrytools) 
+[![PyPI version](https://badge.fury.io/py/gerrytools.svg)](https://badge.fury.io/py/gerrytools) 
+[![docs](https://img.shields.io/badge/%E2%93%98-Documentation-%230099cd)](https://mggg.github.io/gerrytools/) 
+[![website](https://img.shields.io/badge/%F0%9F%8C%90%20-MGGG%20Redistricting%20Lab-%230099cd)](https://mggg.org) 
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) 
+[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 
 
 A companion to [GerryChain](https://github.com/mggg/GerryChain), GerryTools is
@@ -12,39 +19,50 @@ under a [3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause).
 
 
 ## Installation
+
 ### Using `pip` (recommended)
+
 To install GerryTools from [PyPi](https://pypi.org/project/gerrytools/), run
 
-```
-$ pip install gerrytools
+```console
+pip install gerrytools
 ```
 
 from the command line.
 
 ## Usage
-### Contents
+
 GerryTools is split up into multiple sub-packages, each designed to simplify and
 standardize redistricting workflows.
 
-* **`gerrytools.data`** deals with the retrieval and processing of data. Here, you
-can find tools for grabbing decennial Census ('10 and '20), ACS 5-year ('12-'20),
-ACS CVAP Special Tab ('12-'20), districtr portal, and 2020 decennial Census geometric
-data. You can also find tools for moving CVAP data to other levels of geometry (e.g. prorating 2019 CVAP on 2019 Census tracts to 2020 blocks).
-* **`gerrytools.geometry`** provides facilities for dealing with geometric and
-related data. There are tools for translating and evaluating GerryChain
-[`Partition`](https://mggg.github.io/GerryChain/api.html#module-gerrychain.partition)s, performing fast geometric dissolutions, creating unit maps (e.g. 2020 blocks to 2020 VTDs), creating
-[dual graphs for GerryChain](https://mggg.github.io/GerryChain/api.html#adjacency-graphs), and optimization algorithms for renaming districts.
-* **`gerrytools.plotting`** contains methods for generating extremely high-quality 
-Lab-standard data visualizations.
-* **`gerrytools.scoring`** provides a vast array of redistricting plan scores. These
-can be used standalone _or_ as GerryChain
-[updaters](https://mggg.github.io/GerryChain/api.html#module-gerrychain.updaters).
-* **`gerrychain.utilities`** has ease-of-use methods for renaming directories
-containing shapefiles (which comes in handy more often than you'd think) and making
-JSON objects out of Python objects (useful when trying to organize information
-for many districting plans in a standard format).
+* **`gerrytools.data`** deals with the retrieval and processing of data. Here, you can
+    find tools for grabbing decennial Census ('10 and '20), ACS 5-year ('12-'20), ACS CVAP
+    Special Tab ('12-'20), districtr portal, and 2020 decennial Census geometric data. You
+    can also find tools for moving CVAP data to other levels of geometry (e.g. prorating
+    2019 CVAP on 2019 Census tracts to 2020 blocks).
 
-### Example
+* **`gerrytools.geometry`** provides facilities for dealing with geometric and related
+    data. There are tools for translating and evaluating GerryChain
+    [`Partition`](https://mggg.github.io/GerryChain/api.html#module-gerrychain.partition)s, 
+    performing fast geometric dissolutions, creating unit maps (e.g. 2020 blocks to
+    2020 VTDs), creating 
+    [dual graphs for GerryChain](https://mggg.github.io/GerryChain/api.html#adjacency-graphs),
+    and optimization algorithms for renaming districts.
+
+* **`gerrytools.plotting`** contains methods for generating extremely
+    high-quality Lab-standard data visualizations.
+
+* **`gerrytools.scoring`** provides a vast array of redistricting plan scores.
+    These can be used standalone _or_ as GerryChain 
+    [updaters](https://mggg.github.io/GerryChain/api.html#module-gerrychain.updaters).
+
+* **`gerrychain.utilities`** has ease-of-use methods for renaming
+    directories containing shapefiles (which comes in handy more often than you'd
+    think) and making JSON objects out of Python objects (useful when trying to
+    organize information for many districting plans in a standard format).
+
+<!-- ### Example
+
 GerryTools is easy to use and is designed to simplify data- and redistricting-related
 workflows. For example, let's say we want to analyze Alabama's citizen voting-age
 population data on 2020 Census tracts. First, we can download the geometric data
@@ -86,20 +104,25 @@ merged = geometric.merge(demographic, left_on="GEOID20", right_on="TRACT20")
 ```
 
 And there we are — what once took hours of setup and parsing now takes less than a
-minute.
+minute. -->
 
 ## Contributing
+
 GerryTools is an active project, and has multiple contributors. If you'd like to
 contribute, here are a few house rules:
 
 1. After cloning this repository, run `sh setup.sh` to download and install
 necessary git hooks and linting configurations.
+
 2. **Follow the [PEP8 style guide](https://peps.python.org/pep-0008/)**. After
 installing the above git hooks, linting is performed before every push. PEP8 errors can be automatically corrected by running `autopep8 --in-place --aggressive -r gerrytools` on the command line from the root directory.
+
 3. **Write tests.** All changes, major or minor, **must** be accompanied by testing
 code. Code and tests will be immediately reviewed by Lab maintainers.
+
 4. Test coverage must stay **at least** the same; this can be checked by running
 `pytest --cov=evaltools` after the tests are added to `tests/`.
+
 5. **Write documentation.** All changes should be documented via docstrings,
 and code should be repletely commented. It's much easier to decipher commented
 code! Docstring documentation is compiled on every commit via git hooks.

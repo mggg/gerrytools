@@ -6,22 +6,24 @@
 Welcome to gerrytools's documentation!
 ======================================
 
+.. include:: ../../README.md
+   :parser: markdown
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: User Guide
 
-API Reference
-=============
+   user/data
+   user/geometry
+   user/plotting
+   user/scoring
+
+
 
 .. toctree::
-   :maxdepth: 4
-   
+   :maxdepth: 2
+   :caption: Index   
+
    full_ref
 
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
