@@ -217,7 +217,7 @@ Estimating CVAP
 
     <div class="center-container">
         <a href="https://github.com/peterrrock2/gerrytools-dev/blob/main/docs/source/_static/al_bg.zip", class="download-badge", download>
-        Alabama Block Group Shapefile
+        AL Block Group Shapefile
         </a>
     </div>
     <br style="line-height: 5px;">
