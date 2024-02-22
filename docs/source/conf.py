@@ -46,10 +46,15 @@ html_theme = 'sphinx_rtd_theme'
 html_theme_options = {"style_nav_header_background": "#0099cd"}
 html_static_path = ['_static']
 
+# The name of the Pygments (syntax highlighting) style to use.
+pygments_style = "sphinx"
+
+html_css_files = [
+    "css/custom.css"
+]
 
 # -- Extension configuration -------------------------------------------------
 
 # Prepend the module name of classes.
 add_module_names = True
 autodoc_inherit_docstrings = False
-

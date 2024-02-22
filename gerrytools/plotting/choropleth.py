@@ -8,6 +8,7 @@ from .colors import overlays as overlaycolors
 from .districtnumbers import districtnumbers
 
 
+# TODO: Update the docstring to include the new parameters.
 def choropleth(
     geometries,
     districts=None,
@@ -19,6 +20,7 @@ def choropleth(
     numbers=False,
     base_lw=1 / 8,
     base_linecolor="lightgray",
+    district_linecolor="black",
     overlay_lw=1 / 4,
     district_lw=3 / 2,
     fontsize=15,
@@ -26,6 +28,7 @@ def choropleth(
     max=1,
     interval=1 / 10,
     colorbar=True,
+    figsize=(10, 10),
 ) -> Axes:
     r"""
     Visualization of population shares or totals in a state's map.
@@ -66,7 +69,7 @@ def choropleth(
         overlays.
     """
     # Get the figure and base axis sizes.
-    fig, base = plt.subplots(1, 1, figsize=(10, 10))
+    fig, base = plt.subplots(1, 1, figsize=figsize)
 
     # Get the title for the colorbar.
     if cbartitle is None:
@@ -130,7 +133,9 @@ def choropleth(
     if districts is not None:
         # if assignment is not None:
         #     districts = districts.dissolve(by=assignment).reset_index()
-        districts.plot(edgecolor="black", linewidth=district_lw, ax=base, color="None")
+        districts.plot(
+            edgecolor=district_linecolor, linewidth=district_lw, ax=base, color="None"
+        )
 
     # If district numbers are to be plotted, plot those too!
     if numbers and assignment:

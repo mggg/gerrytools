@@ -17,3 +17,5 @@ tests/*.ipynb
 # created by the build process.
 /build
 dist
+docs/build
+docs/build/**
