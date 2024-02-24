@@ -41,6 +41,15 @@ setup(
     install_requires=requirements,
     include_package_data=True,
     extras_require={
-        "dev": ["pdoc3", "flake8", "pytest", "autopep8", "pytest-cov", "black", "isort"]
+        "dev": [
+            "pdoc3",
+            "flake8",
+            "pytest",
+            "autopep8",
+            "pytest-cov",
+            "black",
+            "isort",
+        ],
+        "mgrp": ["docker>=7.0.0"],
     },
 )
