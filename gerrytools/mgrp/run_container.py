@@ -271,3 +271,126 @@ class RunContainer:
             elif stderr:
                 yield (None, stderr.decode("utf-8"))
 
+    # Need the strings here to avoid the circular import
+    def mcmc_run_with_updaters(self, run_info: "Union[RecomRunInfo, ForestRunInfo]"):
+        """
+        Calls the run method of the provided runner variant with
+        with the given arguments and then applies the updater functions
+        specified in the run_info object and yields them as output.
+
+        This method only works with the Markov Chain Monte Carlo type runners.
+
+        Args:
+            run_info (Union[RecomRunInfo, ForestRunInfo]): Information about the run
+
+        Yields:
+            Tuple[Dict, str]: Dictionary of the sample number and updater values and the
+            error message (if any)
+        """
+        if not hasattr(self.config, "run_command"):
+            raise NotImplementedError(
+                f"The runner of type {type(self.config)} does not have "
+                f"an implemented run_command method."
+            )
+
+        # This is a bit janky, but we want the canonical output
+        # to be the default for the run_info
+        if hasattr(run_info, "writer"):
+            run_info.writer = "canonical"
+            run_info.force_print = True
+        else:
+            run_info.standard_jsonl = True
+            run_info.ben = False
+
+        cmd = self.config.run_command(run_info)
+
+        log_file = self.config.log_file(run_info)
+        exec_id = self.client.api.exec_create(
+            self.container.id,
+            cmd=cmd,
+            tty=False,
+            stdout=True,
+            stderr=True,
+            stdin=False,
+        )
+
+        output_generator = self.client.api.exec_start(
+            exec_id,
+            stream=True,
+            detach=False,
+            demux=True,
+        )
+
+        self.graph = Graph.from_json(
+            os.path.join(self.config.json_dir, self.config.json_name)
+        )
+
+        updater_values = {}
+
+        stdout_buffer = ""
+        for stdout, stderr in output_generator:
+            if stdout:
+                stdout_buffer += stdout.decode("utf-8")
+                # Process any complete JSON objects in the buffer
+                while "\n" in stdout_buffer and "}" in stdout_buffer:
+                    newline_index = stdout_buffer.find("\n")
+                    possible_json = stdout_buffer[:newline_index]
+
+                    if "}" in possible_json:
+                        try:
+                            json_obj = json.loads(possible_json)
+                            yield from (
+                                self._process_output(
+                                    json_obj,
+                                    run_info.updaters,
+                                    updater_values,
+                                    stderr.decode("utf-8") if stderr else None,
+                                )
+                            )
+                        except json.JSONDecodeError:
+                            print(f"Error parsing JSON: {possible_json}")
+                            exit(1)
+
+                        stdout_buffer = stdout_buffer[newline_index + 1 :]
+                    else:
+                        # If no complete JSON object, wait for more data
+                        break
+
+            elif stderr:
+                yield (None, stderr.decode("utf-8"))
+
+    def _process_output(
+        self,
+        canon_json_line: str,
+        updater_dict: dict[str, callable],
+        updater_values: dict[str, float],
+        error=None,
+    ):
+        """
+        Processes the output of the run and applies the updater functions
+
+        Args:
+            canon_json_line (Dict): JSON object from the output of the run. This is expected
+            updater_dict (Dict): Dictionary of updater functions to apply
+                to be in the standart `{'assignment': List[int], 'sample': int}` format
+            updater_values (Dict): Dictionary of the updater values to return
+            error (str, optional): Error message if there is one. Defaults to None.
+
+        Yields:
+            Tuple[Dict, str]: Dictionary of the sample number and updater values and the
+            error message (if any)
+        """
+        partition = Partition(
+            self.graph, dict(enumerate(canon_json_line["assignment"]))
+        )
+
+        for func_name, func in updater_dict.items():
+            updater_values[func_name] = func(partition)
+
+        yield (
+            {
+                "sample": canon_json_line["sample"],
+                "updaters": updater_values,
+            },
+            error,
+        )
