@@ -1,20 +1,16 @@
-from .runners.recom import RecomRunner, RecomRunInfo
-from .runners.forest import ForestRunner, ForestRunInfo
-from .runners.smc import SMCRunner, SMCMapInfo, SMCRedistInfo
+from .run_container import RunContainer, RunnerConfig
+from .runners.recom import RecomRunnerConfig, RecomRunInfo
+from .runners.forest import ForestRunnerConfig, ForestRunInfo
+from .runners.smc import SMCRunnerConfig, SMCMapInfo, SMCRedistInfo
 
-from .data_processing.data_recom import RecomDataRunner, RecomDataRunInfo
-
-from .replicator import Replicator
 
 __all__ = [
-    "RecomRunner",
+    "RecomRunnerConfig",
     "RecomRunInfo",
-    "ForestRunner",
+    "ForestRunnerConfig",
     "ForestRunInfo",
-    "SMCRunner",
+    "SMCRunnerConfig",
     "SMCMapInfo",
     "SMCRedistInfo",
-    "RecomDataRunner",
-    "RecomDataRunInfo",
-    "Replicator",
+    "RunContainer",
 ]

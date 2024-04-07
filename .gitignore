@@ -19,3 +19,5 @@ tests/*.ipynb
 dist
 docs/build
 docs/build/**
+dev
+tutorials/test_*
