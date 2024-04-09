@@ -138,7 +138,7 @@ arguments that can be passed to the main cli used in ``frcw``.
       file using the format ``{"assignment": <assignment-vector>, "sample": <sample-number>}``.
       This is the standard format used across all of the methods in the ``mgrp`` module.
     - ``ben`` This writes the output assignment vectors using the BEN compression algorithm.
-      To learn more, please see the :ref:`ben module of this package <binary-ensamble>`.
+      To learn more, please see the :ref:`ben module of this package <ben>`.
     - ``json`` This will write the output of the chain to a json file. The assignment vectors
       are not recorded in this mode, but statistical information about the chain such as which
       districts were merged, the number of self loops, and the tallies of relevant statistics
@@ -282,7 +282,7 @@ information on the cli we use here, please see
   the rest of the outputs in the ``mgrp`` module, this is set to True by default.
 - ``ben``: A boolean that determines whether or not the output of the chain should be written
   using the BEN compression algorithm. For more information on this, please see the 
-  :ref:`ben module of this package <binary-ensamble>`.
+  :ref:`ben module of this package <ben>`.
 - ``force_print``: This is a boolean that determines whether or not the output of the chain
   should be printed to the console. This can be useful for debugging purposes
 - ``updaters``: This a dictionary of updaters that can be used in conjunction with the
@@ -450,7 +450,7 @@ that is used in the R code.
   ``{"assignment": <assignment-vector>, "sample": <sample-number>}``.
 - ``ben``: A boolean that determines whether or not the output of the chain should be written
   using the BEN compression algorithm. For more information on this, please see the
-  :ref:`ben module of this package <binary-ensamble>`. Defaults to False.
+  :ref:`ben module of this package <ben>`. Defaults to False.
 
 
 

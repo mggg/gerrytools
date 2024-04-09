@@ -13,6 +13,7 @@ Welcome to gerrytools's documentation!
    :maxdepth: 2
    :caption: User Guide
 
+   user/ben
    user/data
    user/geometry
    user/plotting

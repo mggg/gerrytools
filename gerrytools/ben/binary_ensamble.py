@@ -105,13 +105,13 @@ def ben(
             "x-encode",
             "decode",
             "x-decode",
-            "xz-encode",
-            "xz-decode",
+            "xz-compress",
+            "xz-decompress",
         ]:
             print(
                 f"Invalid mode: {mode}. "
-                "Mode must be one of 'encode', 'x-encode', 'decode', 'x-decode', 'xz-encode', "
-                "'xz-decode'"
+                "Mode must be one of 'encode', 'x-encode', 'decode', 'x-decode', 'xz-compress', "
+                "'xz-decompress'"
             )
             return
 

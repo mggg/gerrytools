@@ -5,6 +5,13 @@ Full Package Reference
     :no-index:
     
 
+Ben
+---
+
+.. automodule:: gerrytools.ben
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 
 Data
