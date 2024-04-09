@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import os
 import json
+from pathlib import Path
 from typing import Optional
 from .. import RunnerConfig
 from typing import Callable, Dict
@@ -53,8 +54,7 @@ class ForestRunnerConfig(RunnerConfig):
 
     def __init__(
         self,
-        json_dir: str,
-        json_name: str,
+        json_file_path: str,
         output_folder: str = "./output",
         log_folder: str = "./logs",
     ):
@@ -62,17 +62,16 @@ class ForestRunnerConfig(RunnerConfig):
         Initializes the ForestRunnerConfig object.
 
         Args:
-            json_dir (str): The directory that contains the dual graph JSON files.
-            json_name (str): The name of the dual graph JSON file that should be
+            json_file_path (str): The path to the dual graph JSON file that should be
                 used in the MSMS algorithm.
             output_folder (str): The directory where the output files should be
                 written to. Defaults to "./output".
             log_folder (str): The directory where the log files should be written
                     to. Defaults to "./logs".
         """
-        self.json_dir = json_dir
-        self.json_name = json_name
-        json_name_without_extension = os.path.splitext(json_name)[0]
+        self.json_dir = Path(json_file_path).parent
+        self.json_name = Path(json_file_path).name
+        json_name_without_extension = os.path.splitext(self.json_name)[0]
         self.output_folder = os.path.join(output_folder, json_name_without_extension)
         self.log_folder = os.path.abspath(log_folder)
 

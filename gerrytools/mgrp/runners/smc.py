@@ -50,10 +50,10 @@ class SMCRedistInfo:
     seq_alpha: float = 0.5
     """The amount to adjust the weights by at each resampling step. Must be in the range [0, 1]."""
     pop_temper: float = 0.0
-    """Teh strength ofthe automatic population tempering. If the algorithm gets stuck, then it
+    """The strength of the automatic population tempering. If the algorithm gets stuck, then it
         is recommended that you start with values between 0.01-0.05."""
     final_infl: float = 1.0
-    """A multiplier for eh population constraint on the final iteration. Used to loosen the
+    """A multiplier for the population constraint on the final iteration. Used to loosen the
         constraint when the sampler is getting suck on the final split."""
     est_label_mult: float = 1.0
     """A multiplier for the number of importance samples to use in estimating the number of 
@@ -115,7 +115,7 @@ class SMCRunnerConfig(RunnerConfig):
                 "mode": "rw",
             },
             os.path.abspath(self.output_folder): {
-                "bind": f"/home/smc/output",
+                "bind": f"/home/smc/output/{self.shapefile_name}",
                 "mode": "rw",
             },
         }
@@ -138,7 +138,7 @@ class SMCRunnerConfig(RunnerConfig):
         Returns:
             List[str]: The command that will be used to run the SMC algorithm in the docker container.
         """
-        r_cmd = "/usr/bin/time -v Rscript /home/smc/cli/smc_cli.R"
+        r_cmd = f"/usr/bin/time -v Rscript /home/smc/cli/smc_cli.R"
 
         # Process the base IO information
         r_cmd += f" --shapefile /home/smc/shapefiles/{self.shapefile_name}"

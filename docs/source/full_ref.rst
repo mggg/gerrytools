@@ -24,6 +24,20 @@ Geometry
     :show-inheritance:
 
 
+MGRP
+----
+
+.. automodule:: gerrytools.mgrp
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :exclude-members: dataclass
+
+
+
+
+
+
 Plotting
 --------
 

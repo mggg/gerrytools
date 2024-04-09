@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import os
 import json
+from pathlib import Path
 from .. import RunnerConfig
 from typing import Callable, Dict
 
@@ -62,20 +63,30 @@ class RecomRunInfo:
 # Should probably change the default log folder to /dev/null/
 class RecomRunnerConfig(RunnerConfig):
     """
-    Represents hte configuration for a RecomReplicator which is used to run the
+    Represents the configuration for a RunContainer which is used to run the
     frcw code on a given dual graph within the docker container.
     """
 
     def __init__(
         self,
-        json_dir: str,
-        json_name: str,
+        json_file_path: str,
         output_folder: str = "./output",
         log_folder: str = "./logs",
     ):
-        self.json_dir = json_dir
-        self.json_name = json_name
-        json_name_without_extension = os.path.splitext(json_name)[0]
+        """
+        Initializes the RecomRunnerConfig object.
+
+        Args:
+            json_file_path (str): The path to the dual graph JSON file that should be
+                used in frcw.
+            output_folder (str): The directory where the output files should be
+                written to. Defaults to "./output".
+            log_folder (str): The directory where the log files should be written
+                    to. Defaults to "./logs".
+        """
+        self.json_dir = Path(json_file_path).parent
+        self.json_name = Path(json_file_path).name
+        json_name_without_extension = os.path.splitext(self.json_name)[0]
         self.output_folder = os.path.join(output_folder, json_name_without_extension)
         self.log_folder = os.path.abspath(log_folder)
 

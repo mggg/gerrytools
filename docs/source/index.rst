@@ -16,8 +16,14 @@ Welcome to gerrytools's documentation!
    user/data
    user/geometry
    user/plotting
+   user/mgrp
    user/scoring
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Topics
+
+   topics/docker
 
 
 .. toctree::

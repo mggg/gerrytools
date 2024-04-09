@@ -54,7 +54,7 @@ class RunContainer:
     def __init__(
         self,
         configuration: RunnerConfig,
-        docker_image_name="mgggdev/replicate:latest",
+        docker_image_name="mgggdev/replicate:v0.2",
         docker_client_args: dict = None,
     ):
         """
@@ -100,7 +100,7 @@ class RunContainer:
         config_args = vols_and_name | {
             "image": self.image_name,
             "detach": True,
-            "auto_remove": False,  # DONT FORGET TO CHANGE THIS BACK TO TRUE
+            "auto_remove": True,
             "tty": True,
             "stdin_open": True,
         }
@@ -297,10 +297,11 @@ class RunContainer:
         # to be the default for the run_info
         if hasattr(run_info, "writer"):
             run_info.writer = "canonical"
-            run_info.force_print = True
         else:
             run_info.standard_jsonl = True
             run_info.ben = False
+
+        run_info.force_print = True
 
         cmd = self.config.run_command(run_info)
 
