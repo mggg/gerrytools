@@ -11,6 +11,7 @@ cligj>=0.7.2,<1.0
 contourpy>=1.2.0,<2.0
 cycler>=0.12.1,<1.0
 docutils>=0.20.1,<1.0
+docker==7.0.0,<8.0
 fiona>=1.9.5,<2.0
 fonttools>=4.49.0,<5.0
 geopandas>=0.12.2,<1.0
