@@ -1,4 +1,4 @@
-from .binary_ensamble import ben
+from .binary_ensemble import ben
 from .reben import (
     canonicalize_ben_file,
     relabel_json_file_by_key,

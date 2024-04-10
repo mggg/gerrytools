@@ -10,14 +10,13 @@ logger = logging.getLogger("ben")
 
 def canonicalize_ben_file(
     input_file_path: str,
-    output_file_name: Optional[str] = None,
-    verbose: bool = True,
     output_file_path: Optional[str] = None,
+    verbose: bool = True,
     docker_image_name: str = "mgggdev/replicate:v0.2",
     docker_client_args: Optional[dict] = None,
 ):
     """
-    Runs the REBEN cli tool from the
+    Runs the REBEN CLI tool from the
     `binary-ensamble <https://crates.io/crates/binary-ensemble>`_
     crate in a Docker container. This function is specifically designed to just
     run the canonialization method of the REBEN tool. This canonicalizes the
@@ -36,7 +35,7 @@ def canonicalize_ben_file(
     Args:
         input_file_path (str): The path to the input file to read from. This is expected
             to be a BEN file.
-        output_file_name (str, optional): The name of the output file to write to.
+        output_file_path (str, optional): The path of the output file to write to.
             When not given, the output name will be derived from the input name
             according to a set of heuristics (usually adding or deleting "ben"
             in the file extension). Defaults to None.
@@ -141,7 +140,7 @@ def relabel_json_file_by_key(
     docker_client_args: Optional[dict] = None,
 ):
     """
-    Runs the REBEN cli tool from the
+    Runs the REBEN CLI tool from the
     `binary-ensamble <https://crates.io/crates/binary-ensemble>`_
     crate in a Docker container. This function is specifically designed to run the
     REBEN tool in its relabeling mode.
@@ -261,7 +260,7 @@ def relabel_ben_file_by_key(
     docker_client_args: Optional[dict] = None,
 ):
     """
-    Runs the REBEN cli tool from the
+    Runs the REBEN CLI tool from the
     `binary-ensamble <https://crates.io/crates/binary-ensemble>`_
     crate in a Docker container. This function is specifically designed to run the
     REBEN tool in its relabeling mode.
@@ -445,7 +444,7 @@ def relabel_ben_file_with_map(
     docker_client_args: Optional[dict] = None,
 ):
     """
-    Runs the REBEN cli tool from the
+    Runs the REBEN CLI tool from the
     `binary-ensamble <https://crates.io/crates/binary-ensemble>`_
     crate in a Docker container. This function is specifically designed to run the
     REBEN tool in its map-file mode.

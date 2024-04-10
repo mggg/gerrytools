@@ -28,12 +28,28 @@ To install GerryTools from [PyPi](https://pypi.org/project/gerrytools/), run
 pip install gerrytools
 ```
 
-from the command line.
+from the command line. if you would like to use the `mgrp` and `ben` modules as well,
+you can invoke 
+
+```console
+pip install gerrytools[mgrp]
+```
+
+you will need to make sure that [Docker Desktop](https://www.docker.com/get-started/)
+is installed on your machine an updated to version >= 4.28.0. For more information on
+getting this set up, please see 
+[our documentation page](https://gerrytools.readthedocs.io/en/latest/topics/docker/)
 
 ## Usage
 
 GerryTools is split up into multiple sub-packages, each designed to simplify and
 standardize redistricting workflows.
+
+* **`gerrytools.ben`** BEN (binary-ensemble) is our general purpose compression
+    algorithm for working with ensembles of plans. In general, the ben algorithm can
+    improve the storage of an ensemble of plans by an order of magnitude. When combined
+    with the special XBEN (eXtreme BEN) portion of the algorithm, many ensembles of
+    plans can be compressed small enough to fit into an email (~25Mb).
 
 * **`gerrytools.data`** deals with the retrieval and processing of data. Here, you can
     find tools for grabbing decennial Census ('10 and '20), ACS 5-year ('12-'20), ACS CVAP
@@ -48,6 +64,13 @@ standardize redistricting workflows.
     2020 VTDs), creating 
     [dual graphs for GerryChain](https://mggg.github.io/GerryChain/api.html#adjacency-graphs),
     and optimization algorithms for renaming districts.
+
+* **`gerrytools.mgrp`** this module uses a Docker container to allow users to access several
+    ensemble methods for generating districting plans on a state. In particular our Rust
+    implementation of our `gerrychain` library, `frcw`, the Julia implementation of 
+    [Forest Recom](https://arxiv.org/pdf/2008.08054.pdf), and the R/C++ implementation of
+    [Sequential Monte Carlo (SMC)](https://github.com/alarm-redist/redist) are available
+    through this module. 
 
 * **`gerrytools.plotting`** contains methods for generating extremely
     high-quality Lab-standard data visualizations.

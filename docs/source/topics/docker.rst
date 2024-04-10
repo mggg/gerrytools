@@ -40,3 +40,8 @@ repository.
     If you plan on having ``gerrytools`` as a major part of your workflow for the
     foreseeable future, you may want to consider setting up Docker to start on
     boot so that you don't have to worry about the engine being up.
+
+
+When you have finished installing docker it would be a good idea to make sure that you also
+have the ``docker`` python package installed. This can be done with a simple invocation of
+``pip install docker``.

@@ -20,7 +20,7 @@ def msms_parse(
     docker_client_args: Optional[dict] = None,
 ):
     """
-    Runs the ``msms_parser`` cli tool from the
+    Runs the ``msms_parser`` CLI tool from the
     `msms_parser <httpss://github.com/peterrrock2/msms_parser>`_
     git repo in a Docker container.
 
@@ -217,7 +217,7 @@ def smc_parse(
     docker_client_args: Optional[dict] = None,
 ):
     """
-    Runs the ``smc_parser`` cli tool from the
+    Runs the ``smc_parser`` CLI tool from the
     `smc_parser <httpss://github.com/peterrrock2/smc_parser>`_
     git repo in a Docker container.
 

@@ -50,7 +50,7 @@ All of these methods will make use of the ``RunContainer`` class which handles a
 interaction with the Docker container. Here are the basic attributes of the ``RunContainer``
 class:
 
-- ``configuration``: This specifies the configuration that should be used to run the chain.
+- ``configuration``: This specifies the configuration that should be used to run the chain
   and is set by either the ``RecomRunnerConfig``, ``ForestRunnerConfig``, or ``SMCRunnerConfig``
   classes.
 - ``docker_image_name``: The name of the docker image that you would like to use to run the chain.
@@ -82,7 +82,7 @@ which will be talking to the Docker container that is running the ``frcw`` code.
 
 ``RecomRunInfo``: This class contains all of the information that is needed to
 run a chan using the ``frcw`` code. The structure of this class reflects the
-arguments that can be passed to the main cli used in ``frcw``. 
+arguments that can be passed to the main CLI used in ``frcw``. 
 
 - ``pop_col``: The name of the column in the graph that contains the population
   data.
@@ -114,12 +114,12 @@ arguments that can be passed to the main cli used in ``frcw``.
     - ``AW`` This is the cut-edges region aware method. This method is similar to the
       cut-edges method, but it also allows the user to specify certain regions that they
       would like to try and keep together. Edges between different regions are then given
-      a higher weight according to the surcharges that may be specified in the `region weights`
+      a higher weight according to the surcharges that may be specified in the ``region weights``
       parameter, and the minimal spanning tree is constructed using Kruskal's algorithm.
     - ``BW`` This is the district-pairs region aware method. This method is similar to the
       district-pairs method, but it also allows the user to specify certain regions that they
       would like to try and keep together. Edges between different regions are then given
-      a higher weight according to the surcharges that may be specified in the `region weights`
+      a higher weight according to the surcharges that may be specified in the ``region weights``
       parameter, and the minimal spanning tree is constructed using Kruskal's algorithm.
 - ``balance_ub``: The upper bound on the number of balance edges to be used in the ``R`` variant.
 - ``n_steps``: The number of steps that the chain should run for. Note: with the way that the
@@ -155,20 +155,22 @@ arguments that can be passed to the main cli used in ``frcw``.
       become [1,1,2,2,3,3,4,4].
 - ``rng_seed``: The seed that should be used to initialize the random number generator.
 - ``region_weights``: This is a dictionary that contains the region weights that should be used
-  in the ``AW`` and ``BW`` variants. The keys of the dictionary should be the region names, and
-  the values should be the surcharge that should be applied to the edges between the regions.
+  in the ``AW`` and ``BW`` variants. The keys of the dictionary should be the region names in the
+  JSON dual graph file, and the values should be the surcharge that should be applied to the
+  edges between the regions.
 - ``force_print``: This is a boolean that determines whether or not the output of the chain
-  should be printed to the console. This can be useful for debugging purposes
+  should be printed to the console. This can be useful for debugging purposes.
 - ``updaters``: This a dictionary of updaters that can be used in conjunction with the
   ``mcmc_run_with_updaters`` method of the ``RunContainer`` class.
 
 An Example of Running a Chain Using the ``Recom`` Mode
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. FIX THIS COMMAND
 .. raw:: html 
 
     <div class="center-container">
-        <a href="https://github.com/peterrrock2/gerrytools-dev/blob/main/tutorials/data/50x50.json", class="download-badge", download>
+        <a href="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/50x50.json", class="download-badge", download>
         50x50 Dual Graph
         </a>
     </div>
@@ -205,7 +207,7 @@ and now we set up the ``RunContainer`` class so that it can run the chain:
         c.run(run_info)
 
 
-of course, we might want to use some custom updaters in our chain, so we can do that as well:
+Of course, we might want to use some custom updaters in our chain, so we can do that as well:
 
 .. code:: python
 
@@ -256,16 +258,16 @@ which will be talking to the Docker container that is running the MSMS code.
 
 
 ``ForestRunInfo``: This class contains all of the information that is needed to
-run a chan using the MSMS code. The structure of this class reflects the
-arguments that can be passed to the main cli that we have defined for the MSMS code.
-This cli fundamentally calls the ``run_metropolis_hastings`` under the hood. For more
-information on the cli we use here, please see 
-`this link <https://github.com/peterrrock2/mgggdev-replicate-docker-info/tree/main/home/forest/cli>`_
+run a chain using the MSMS code. The structure of this class reflects the
+arguments that can be passed to the main CLI that we have defined for the MSMS code.
+This CLI fundamentally calls the ``run_metropolis_hastings`` under the hood. For more
+information on the CLI we use here, please see 
+`this link <https://github.com/peterrrock2/mgggdev-replicate-docker-info/tree/main/home/forest/cli>`_.
 
-- ``region_name``: The name of the greater region that we would like to use to help us split into
-  districts.
-- ``subgregion_name``: The name of the subregion that we would like to use to help us split into
-  districts.
+- ``region_name``: The column name in the dual-graph file of the greater region that we would like
+  to use to help us split into districts.
+- ``subregion_name``: The column name in the dual-graph file of the subregion that we would like
+  to use to help us split into districts.
 - ``pop_col``: The name of the column in the graph that contains the population information.
 - ``num_dists``: The number of districts that we would like to split the graph into.
 - ``pop_dev``: The allowable population deviation from ideal when drawing districts.
@@ -284,7 +286,7 @@ information on the cli we use here, please see
   using the BEN compression algorithm. For more information on this, please see the 
   :ref:`ben module of this package <ben>`.
 - ``force_print``: This is a boolean that determines whether or not the output of the chain
-  should be printed to the console. This can be useful for debugging purposes
+  should be printed to the console. This can be useful for debugging purposes.
 - ``updaters``: This a dictionary of updaters that can be used in conjunction with the
   ``mcmc_run_with_updaters`` method of the ``RunContainer`` class.
 
@@ -307,7 +309,7 @@ An Example of Running a Chain Using the ``Forest`` Mode
 .. raw:: html 
 
     <div class="center-container">
-        <a href="https://github.com/peterrrock2/gerrytools-dev/blob/main/tutorials/data/50x50.json", class="download-badge", download>
+        <a href="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/NC_pct21.json", class="download-badge", download>
         NC Dual Graph
         </a>
     </div>
@@ -339,7 +341,7 @@ Then we can set up the configuration and run info classes:
         rng_seed=123456,
     )
 
-and now we set up the ``RunContainer`` class so that it can run the chain:
+And now we set up the ``RunContainer`` class so that it can run the chain:
 
 .. code:: python
 
@@ -382,7 +384,7 @@ using the ``mcmc_run_with_updaters`` method:
 
 .. code:: python
 
-    with RunContainer(recom_config) as c:
+    with RunContainer(forest_config) as c:
         for output, error in c.mcmc_run_with_updaters(run_info):
             if output is not None:
                 print(output)
@@ -397,7 +399,7 @@ in order to run the ensemble. The number of toggles on these classes are quite s
 as well, but the user can consult the `main documentation <https://alarm-redist.org/redist/>`_
 for more information on the toggles that are available. 
 
-``SMCRunnerConfig``: This class is used to help configure the ``RunContainer`` class
+``SMCRunnerConfig``: This class is used to help configure the ``RunContainer`` class.
 
 - ``shapefile_dir``: The directory that contains the shapefile.
 - ``shapefile_name``: The name of the shapefile that should be used in the SMC algorithm.
@@ -406,7 +408,7 @@ for more information on the toggles that are available.
 
 
 ``SMCMapInfo``: This class contains all of the information needed to construct the 
-`redist_map() <https://alarm-redist.org/redist/reference/redist_map.html>` object
+`redist_map() <https://alarm-redist.org/redist/reference/redist_map.html>`_ object
 that is used in the R code.
 
 - ``pop_col``: The name of the column in the shapefile that contains the population data.
@@ -417,16 +419,18 @@ that is used in the R code.
 
 
 ``SMCRedistInfo``: This class contains all of the information needed to construct the 
-  `redist_smc() <https://alarm-redist.org/redist/reference/redist_smc.html>` object that is used
-  in the R code. We have chosen to preserve the default values for these parameters that
-  were set by the ALARM team.
+`redist_smc() <https://alarm-redist.org/redist/reference/redist_smc.html>`_ object that is used
+in the R code. We have chosen to preserve the default values for these parameters that
+were set by the ALARM team.
 
-- ``n_sims``: Teh number of samples that should be drawn to form the ensemble.
+- ``n_sims``: The number of samples that should be drawn to form the ensemble.
 - ``rng_seed``: The seed that should be used to initialize the random number generator.
   Defaults to 42.
 - ``compactness``: Controls the compactness of the generated districts. Defaults to 1.0.
-- ``resample``: A boolean that determines whether to perform a final resampling step so that the generated plans can be used immediately. Defaults to False.
-- ``adapt_k_thresh``: The threshold value used in the heuristic to select a value of :math:`k_i` for each splitting iteration. Must be in the range [0, 1]. Defaults to 0.985
+- ``resample``: A boolean that determines whether to perform a final resampling step so 
+  that the generated plans can be used immediately. Defaults to False.
+- ``adapt_k_thresh``: The threshold value used in the heuristic to select a value of :math:`k_i`
+  for each splitting iteration. Must be in the range [0, 1]. Defaults to 0.985.
 - ``seq_alpha``: Determines the amount to adjust the weights by at each resampling step. 
   Must be in the range [0, 1]. Defaults to 0.5.
 - ``pop_temper``: Controls the strength of the automatic population tempering. Defaults to
@@ -444,7 +448,7 @@ that is used in the R code.
 - ``tally_columns``: A list of columns to be tallied into the output file. This is only 
   generated if the ``standard_jsonl`` and ``ben`` flags are set to False.
 - ``output_file_name``: The desired name of the output file. If not set, then the file name 
-  will be determied according to a set of heuristics. Not set by default.
+  will be determined according to a set of heuristics. Not set by default.
 - ``standard_jsonl``: A boolean that determines whether or not the output of the chain should
   be written in the standard JSONL format 
   ``{"assignment": <assignment-vector>, "sample": <sample-number>}``.
@@ -461,13 +465,14 @@ An Example of Running an Ensemble Using the ``SMC`` Mode
 .. raw:: html 
 
     <div class="center-container">
-        <a href="https://github.com/peterrrock2/gerrytools-dev/blob/main/tutorials/data/4x4.zip", class="download-badge", download>
+        <a href="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/4x4_grid.zip", class="download-badge", download>
         4x4 Shapefile
         </a>
     </div>
     <br style="line-height: 5px;"> 
 
-We know the drill by now, we import the necessary modules, set up the information
+We know the drill by now, we import the necessary modules, set up the information (remember
+to unzip the shapefile first)
 
 .. code:: python
 

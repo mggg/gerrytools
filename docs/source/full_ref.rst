@@ -1,9 +1,6 @@
 Full Package Reference
 ======================
 
-.. automodule:: gerrytools
-    :no-index:
-    
 
 Ben
 ---
