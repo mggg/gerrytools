@@ -17,7 +17,7 @@ def canonicalize_ben_file(
 ):
     """
     Runs the REBEN CLI tool from the
-    `binary-ensamble <https://crates.io/crates/binary-ensemble>`_
+    `binary-ensemble <https://crates.io/crates/binary-ensemble>`_
     crate in a Docker container. This function is specifically designed to just
     run the canonialization method of the REBEN tool. This canonicalizes the
     assignment vectors in the input file so that they are ordered starting at 1, so
@@ -141,14 +141,14 @@ def relabel_json_file_by_key(
 ):
     """
     Runs the REBEN CLI tool from the
-    `binary-ensamble <https://crates.io/crates/binary-ensemble>`_
+    `binary-ensemble <https://crates.io/crates/binary-ensemble>`_
     crate in a Docker container. This function is specifically designed to run the
     REBEN tool in its relabeling mode.
 
     This function will relabel the input dual-graph according to the key value
     provided and output a new dual-graph file together with a map file in the event that
     the user would like to recover the original file from the relabeled file. This is
-    best done before any ensambles are run on the dual-graph file.
+    best done before any ensembles are run on the dual-graph file.
 
     Args:
         key (str): The key to relabel the dual-graph with. This should appear as an
@@ -261,7 +261,7 @@ def relabel_ben_file_by_key(
 ):
     """
     Runs the REBEN CLI tool from the
-    `binary-ensamble <https://crates.io/crates/binary-ensemble>`_
+    `binary-ensemble <https://crates.io/crates/binary-ensemble>`_
     crate in a Docker container. This function is specifically designed to run the
     REBEN tool in its relabeling mode.
 
@@ -445,7 +445,7 @@ def relabel_ben_file_with_map(
 ):
     """
     Runs the REBEN CLI tool from the
-    `binary-ensamble <https://crates.io/crates/binary-ensemble>`_
+    `binary-ensemble <https://crates.io/crates/binary-ensemble>`_
     crate in a Docker container. This function is specifically designed to run the
     REBEN tool in its map-file mode.
 

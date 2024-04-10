@@ -1,6 +1,6 @@
 .. _ben:
 
-BEN (Binary-Ensamble)
+BEN (Binary-Ensemble)
 =====================
 
 The ``ben`` module is a simple Docker wrapper that allows the user to run 
@@ -15,7 +15,7 @@ using CLI tools, then it is generally recommended that they
 use the CLI tools directly. However, for anyone that is not comfortable
 using the terminal, cannot install cargo, or would like a single workflow
 file for running various items in ``gerrytools``, we have provided this
-convenience module.
+module for your convenience.
 
 
 .. admonition:: Make Your Docker Desktop Client is Current!

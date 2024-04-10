@@ -17,7 +17,7 @@ def ben(
     docker_client_args: Optional[dict] = None,
 ):
     """
-    Runs the BEN CLI tool from the `binary-ensamble <https://crates.io/crates/binary-ensemble>`_
+    Runs the BEN CLI tool from the `binary-ensemble <https://crates.io/crates/binary-ensemble>`_
     crate in a Docker container. By convention, the output file will be written to the same
     directory as the input file and any duplicates will be overwritten.
 

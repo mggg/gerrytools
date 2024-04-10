@@ -4,7 +4,7 @@ Plotting
 
 
 The ``plotting`` module of ``gerrychain`` is designed to provide several convenience
-functions for visualizing the results of from a generated ensamble, and to help
+functions for visualizing the results of from a generated ensemble, and to help
 us to visualize the findings in terms of the geometry of the state in question.
 
 For this tutorial, we will be working with the following shapefile of the state of
@@ -224,8 +224,8 @@ Statistical Plots
 .. raw:: html 
 
     <div class="center-container">
-        <a href="https://github.com/peterrrock2/gerrytools-dev/main/glob/docs/source/_static/ensamble_example.json" class="download-badge" download>
-            Ensamble Example
+        <a href="https://github.com/peterrrock2/gerrytools-dev/main/glob/docs/source/_static/ensemble_example.json" class="download-badge" download>
+            Ensemble Example
         </a>
     </div>
     <br style="line-height: 5px;">
@@ -258,7 +258,7 @@ Let's begin by loading in some samlpe data from a
 
     import json
 
-    with open("data/ensamble_example.json") as f:
+    with open("data/ensemble_example.json") as f:
         scores = json.load(f)
 
     scores
