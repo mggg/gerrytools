@@ -1,4 +1,4 @@
-from .binary_ensemble import ben
+from .binary_ensemble import ben, ben_replay
 from .reben import (
     canonicalize_ben_file,
     relabel_json_file_by_key,
@@ -14,11 +14,12 @@ warnings.filterwarnings(action="ignore", message="unclosed", category=ResourceWa
 
 logger = logging.getLogger("ben")
 
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
+# logger.setLevel(logging.DEBUG) # Uncomment this line to see debug messages
 
 handler = logging.StreamHandler()
-# handler.setLevel(logging.DEBUG) # Uncomment this line to see debug messages
 handler.setLevel(logging.INFO)
+# handler.setLevel(logging.DEBUG) # Uncomment this line to see debug messages
 
 
 logger.addHandler(handler)
@@ -26,6 +27,7 @@ logger.addHandler(handler)
 
 __all__ = [
     "ben",
+    "ben_replay",
     "msms_parse",
     "smc_parse",
     "canonicalize_ben_file",

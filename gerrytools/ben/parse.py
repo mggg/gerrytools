@@ -25,15 +25,22 @@ def msms_parse(
     git repo in a Docker container.
 
     Args:
-        mode (str): The mode to run the program in. Must be one of 'ben', 'json'.
-        region (str): The main region used in the MSMS algorithm.
-        subregion (str): The subregion used in the MSMS algorithm.
+        mode (str): The mode to run the program in. Must be one of 'ben', 'standard_jsonl'.
+        region (str): The main region used in the MSMS algorithm (First position in
+            the "levels in graph" tuple in the MSMS JSONL output).
+        subregion (str): The subregion used in the MSMS algorithm. (Second position in
+            the "levels in graph" tuple in the MSMS JSONL output).
         dual_graph_path (str): The path to the dual graph file JSON file used in
             the MSMS algorithm.
         input_file_path (str): The path to the input file to read from containing the
-            MSMS output.
+            MSMS output. This file will be an "Atlas" for the MSMS algorithm, and can
+            be identified by the string "This is an Atlas for Redistricting Maps" at
+            the top of the file.
         output_file_path (str): The path to the output file to write to. By convention,
-            if this file already exists, then it will be overwritten.
+            if this file already exists, then it will be overwritten. If using the
+            "ben" mode, it is recommended that you use the ".jsonl.ben" extension, and
+            when using the "standard_jsonl" mode, it is recommended that you use the
+            ".jsonl" extension.
         verbose (bool, optional): Whether to run the program in verbose mode. Defaults to True.
         docker_image_name (str, optional): The name of the Docker image to run the program in.
             Defaults to "mgggdev/replicate:v0.2".
@@ -168,14 +175,15 @@ def msms_parse(
         docker_output_path = "/home/ben/output"
         docker_dual_graph_path = "/home/ben/dual_graph"
 
+    # Build the command to run in the container
+    if mode not in [
+        "ben",
+        "standard_jsonl",
+    ]:
+        print(f"Invalid mode: {mode}. " "Mode must be one of 'ben', 'standard_jsonl'")
+        return
+
     with managed_docker_container(client, config_args) as container:
-        # Build the command to run in the container
-        if mode not in [
-            "ben",
-            "json",
-        ]:
-            print(f"Invalid mode: {mode}. " "Mode must be one of 'ben', 'json'")
-            return
 
         msms_cmd = (
             f"msms_parser -w -g {docker_dual_graph_path}/{dual_graph_name}"
@@ -222,11 +230,13 @@ def smc_parse(
     git repo in a Docker container.
 
     Args:
-        mode (str): The mode to run the program in. Must be one of 'ben', 'json'.
+        mode (str): The mode to run the program in. Must be one of 'ben', 'standard_jsonl'.
         input_file_path (str): The path to the input file to read from containing the
             SMC assignments output.
         output_file_path (str): The path to the output file to write to. By convention,
-            if this file already exists, then it will be overwritten.
+            if this file already exists, then it will be overwritten. If using the
+            "ben" mode, it is recommended that you use the ".jsonl.ben" extension, and
+            when using the "jsonl" mode, it is recommended that you use the ".jsonl" extension.
         verbose (bool, optional): Whether to run the program in verbose mode. Defaults to True.
         docker_image_name (str, optional): The name of the Docker image to run the program in.
             Defaults to "mgggdev/replicate:v0.2".
@@ -300,12 +310,13 @@ def smc_parse(
         # Build the command to run in the container
         if mode not in [
             "ben",
-            "json",
+            "standard_jsonl",
         ]:
-            print(f"Invalid mode: {mode}. " "Mode must be one of 'ben', 'json'")
+            print(f"Invalid mode: {mode}. Mode must be one of 'ben', 'standard_jsonl'")
             return
 
         smc_cmd = f"smc_parser -w -i {docker_input_path}/{input_file_name}"
+
         if mode == "ben":
             smc_cmd += " -b"
         else:

@@ -99,7 +99,7 @@ class SMCRunnerConfig(RunnerConfig):
         """
         self.shapefile_dir = shapefile_dir
         self.shapefile_name = shapefile_name
-        self.output_folder = os.path.abspath(output_folder)
+        self.output_folder = os.path.abspath(f"{output_folder}/{shapefile_name}")
         self.log_folder = os.path.abspath(log_folder)
 
     def configure_vols_and_name(self):
