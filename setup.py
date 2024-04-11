@@ -22,7 +22,7 @@ requirements = [
 ]
 
 # Set the version --- ensure that the latest tag matches this value.
-VERSION = "1.1.1"
+VERSION = "1.2.0"
 
 # Description.
 here = Path(__file__).parent

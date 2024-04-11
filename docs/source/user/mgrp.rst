@@ -272,6 +272,9 @@ This CLI fundamentally calls the ``run_metropolis_hastings`` under the hood. For
 information on the CLI we use here, please see 
 `this link <https://github.com/peterrrock2/mgggdev-replicate-docker-info/tree/main/home/forest/cli>`_.
 
+**Note:** The Forest Recom code will require that you name both a region and a subregion
+in order to run.
+
 - ``region_name``: The column name in the dual-graph file of the greater region that we would like
   to use to help us split into districts.
 - ``subregion_name``: The column name in the dual-graph file of the subregion that we would like

@@ -22,7 +22,7 @@ desktop (if you are on Linux, just use your package manager to install Docker de
 Once you have Docker installed, you should then be able to open the desktop
 client to see something like this:
 
-.. image:: ../_static/images/docker-desktop-hero-v2.svg
+.. image:: ../_static/images/docker-desktop-hero-v2.png
     :alt: Docker Desktop Application Screenshot
 
 You may be prompted to set up a Docker account, and while this is generally
@@ -44,3 +44,37 @@ repository.
 When you have finished installing docker it would be a good idea to make sure that you also
 have the ``docker`` python package installed. This can be done with a simple invocation of
 ``pip install docker``.
+
+MacOS Installation Instructions
+-------------------------------
+
+Installation on MacOS is pretty simple. Just make sure to install the Docker desktop
+client and then double-check the settings to make sure that VirtioFS is enabled:
+
+.. image::
+    ../_static/images/Docker_VirtioFS.png
+    :alt: MacOS Docker Settings
+
+Note that you should have Docker Desktop v4.28.0 or later on your machine in order for
+the application to run properly.
+
+
+Windows Installation Instructions
+---------------------------------
+
+Installation on Windows is a bit more complicated than on MacOS. If you are working
+on a computer that came with Windows 11 pre-installed, you should be able to just
+install Docker Desktop and run it without any issues. If you are working on a computer
+that upgraded from Windows 10 to Windows 11, you will likely need to enable Virtualization
+in the BIOS settings of your computer. 
+
+For anyone w-o has not done this before, this can be a bit intimidating, but in this case,
+it is really not that bad. We just need to find one setting and switch the value from
+``Disabled`` to ``Enabled``. Depending on the manufacturer of your motherboard, the exact steps
+to do this will vary, but in general, you will need to restart your computer and press either
+the "Del" or "F2" key to enter the BIOS settings. Once you are in the BIOS settings, you will
+look for a setting either called "SVM" or "Intel (VMX) Virtualization Technology" in your
+CPU settings and set them to "Enabled." `Here is a link to an excellent visual tutorial on
+how to do this on ASUS motherboards. <https://support.salad.com/article/277-enable-virtualization-on-asus-pcs>`_
+
+Once you have enabled virtualization, you should be able to use Docker Desktop without any issues.
