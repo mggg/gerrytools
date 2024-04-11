@@ -36,7 +36,7 @@ module for your convenience.
     If you are running MacOS or Windows without WSL2 (Windows Subsystem for Linux),
     then you will need to make sure that you have VirtioFS enabled in the Docker
     Desktop Client. This can be found in the settings wheel under the "General"
-    tab. (The other opeions are gRPC Fuze and osxfs and are **not** recommended for
+    tab. (The other options are gRPC Fuze and osxfs and are **not** recommended for
     use since they significantly hamper file i/o). If you do not see this option
     and are on > 4.28.0, then you do not need to worry.
 
@@ -233,7 +233,15 @@ following assignment vectors:
 
 We, as humans, can see that these are describing the same partition of the districts,
 but our computer lacks the relevant context to make this connection, so we need to
-help it along a little bit:
+help it along a little bit. The easiest and most consistent way to relabel an assignment
+vector is to assign the first node to district 1 and them map all nodes with the old 
+number to 1. Then the next new district that we encounter is assigned to 2, and so on.
+So an assignment vector like 
+``[3,3,1,3,2,4,4,5,5,5,5,2,3,1,2,2,4,4,1,1]`` will encode to
+``[1,1,2,1,3,4,4,5,5,5,5,3,1,2,3,3,4,4,2,2]``. In the case of the above two assignment
+vectors, they would both be canonicalized to ``[1,1,2,2,3,3,4,4]``.
+
+For our CO chain, we can canonicalize the assignment vectors by running the following command:
 
 .. code:: python
 
@@ -241,12 +249,16 @@ help it along a little bit:
         input_file_path="100k_CO_chain.jsonl.ben"
     )
 
+**Note:** This will take some time (probably around 20 minutes, so maybe break for lunch?).
+There are at least 1.4e10 operations to do here (140k nodes across 100k assignments plus a
+little overhead), and as much as we may wish for it to go faster, there is not a whole lot
+that can be done when there are that many things going on. Just printing that many numbers
+in Rust takes close to an hour!
 
-This will produce the file ``100k_CO_chain_canonicalized_assignments.jsonl.ben`` which
-will (counterintuitively) be a little larger than the original file by a small margin.
-However, if you were to compress this file using XBEN, you would find the new
+This will produce the file ``100k_CO_chain_canonicalized_assignments.jsonl.ben``.
+If you then compress this file using XBEN, you should find that the new
 ``100k_CO_chain_canonicalized_assignments.jsonl.xben`` file to be around 1/3 the 
-size of our starting file (DON'T actually do this since it will take over an hour).
+size of our starting XBEN file (DON'T actually do this since it will take over an hour).
 
 The next thing that we would like to do is to decide on a good labeling order to use for
 the nodes in the graph. In general, there will not be a *best* ordering to use, but
@@ -322,13 +334,143 @@ Parsing Forest Recom and SMC Output
     </div>
     <br style="line-height: 5px;"> 
 
+As always, you will want to make sure to unzip these files into your current
+working directory.
 
 In some situations it may be desirable to turn an alternative output of the
 Forest Recom or Sequential Monte Carlo (SMC) algorithms into a JSONL or a 
 BEN file. This will be less common given the default settings in ``mgrp``,
 but it is still good to know how to do this.
 
-Let us start with the Forest Recom output. The native julia output of the Forest
-Recom code tends to be exceedlingly (for example, a 1M chain on PA [9255 nodes] 
-will be over 200Gb). So, it is sometimes necessary to convert this output to something
-more manageable.
+Forest Recom
+^^^^^^^^^^^^
+
+Let us start with the Forest Recom. The native Julia output of the Forest
+Recom code tends to be exceedingly large (for example, a 1M step chain on PA [9255 nodes] 
+will be ~220Gb). So, it is sometimes necessary to convert this output to something
+a bit more manageable. We will be working with a small example here to get used to
+the API. 
+
+The first thing that we need to know to use the API, is what the region and subregion
+labels were for the original file. This is simple enough to determine using the following
+code:
+
+.. code:: python
+
+    import json
+
+    with open("./NC_pct21/42_atlas_gamma0.0_10.jsonl") as f:
+        for i, line in enumerate(f):
+            if i == 2:
+                print(json.loads(line)["levels in graph"])
+                break
+
+This should output:
+
+.. code::
+
+    ["county", "prec_id"]
+
+Great! We can now use this information to parse the output of the Forest Recom
+(make sure to check your directory structure for these files):
+
+.. code:: python
+
+    msms_parse(
+        mode="standard_jsonl",
+        region="county",
+        subregion="prec_id",
+        dual_graph_path="./NC_pct21.json",
+        input_file_path="./NC_pct21/42_atlas_gamma0.0_10.jsonl",
+        output_file_path="./NC_pct21/42_atlas_gamma0.0_10_standardized.jsonl"
+    )
+
+You should now see the file "42_atlas_gamma0.0_10_standardized.jsonl" in your
+"./NC_pct21" directory along with an accompanying 
+"42_atlas_gamma0.0_10_standardized.jsonl.msms_settings" file that contains the
+settings that were used when running the original Forest Recom and which appeared
+at the top of the original "42_atlas_gamma0.0_10.jsonl" file.
+
+
+SMC
+^^^
+
+Next is the SMC output. The SMC output is a little bit easier to parse since
+```mgrp`` outputs an "\*assignments.csv" file that contains the relevant
+assignment vectors already, so we just need to tell the parser the mode,
+input file, and the output file:
+
+.. code:: python
+
+    smc_parse(
+        mode="standard_jsonl",
+        input_file_path="./4x4_grid/SMC_42_29_assignments.csv",
+        output_file_path="./4x4_grid/SMC_42_29.jsonl"
+    )
+
+
+Replaying a Chain
+-----------------
+
+We saw in the `mrp <mgrp_run>`_ module that it was possible to add some custom updaters
+to Recom and Forest Recom runs, but what happens if we forgot to add them when we ran
+the chain, or if we would like to collect new statistics? This is where the 
+``ben_replay`` function comes in. This function will take a BEN file and yield out
+an assignment dictionary compatible with the ``Partition`` class of ``gerrychain``
+so that we can make use of the native tooling in ``gerrychain`` to collect more information.
+Of course, this operation is not free, and it will take some time to replay the chain,
+but it is generally better than re-running the chain from scratch.
+
+Let us just do a simple population tally on our districts in the CO chain that we have
+been using up to this point. First, let's load the gerrychain tools that we will need
+and set up our graph and updater function:
+
+.. code:: python
+
+    from gerrychain import Graph, Partition
+    from gerrychain.updaters import Tally
+
+    graph = Graph.from_json("CO_small.json")
+    def pop_tally(graph, new_assignment):
+        partition = Partition(
+            graph=graph,
+            assignment=new_assignment,
+            updaters={
+                "population": Tally("TOTPOP20", alias="population"),
+            }
+        )
+        return partition["population"] 
+
+**Note:** This technically would not work as an updater in a real ``gerrychain`` run
+since it does not expect a ``Partition`` as its input.
+
+And now we can just iterate through the chain and print the results:
+
+.. code:: python
+
+    for i, assignment in enumerate(ben_replay("100k_CO_chain.jsonl.ben")):
+        print(pop_tally(graph, assignment))
+        if i > 9:
+            break
+
+This will print out the population of each district in the first 10 assignments which
+should look like this:
+
+.. code::
+    
+    Running container ben_runner
+    Pulling Docker image mgggdev/replicate:v0.2
+    {8: 721664, 5: 721714, 4: 721794, 3: 721730, 2: 721720, 6: 721681, 1: 721714, 7: 721697}
+    {8: 721664, 5: 721714, 4: 721794, 3: 721730, 2: 721720, 6: 721681, 1: 721714, 7: 721697}
+    {1: 715120, 5: 721714, 4: 721794, 3: 721730, 2: 721720, 8: 728258, 6: 721681, 7: 721697}
+    {1: 715120, 5: 721714, 4: 721794, 3: 721730, 2: 721720, 8: 728258, 6: 721681, 7: 721697}
+    {1: 715120, 5: 721714, 8: 722299, 3: 721730, 2: 721720, 4: 727753, 6: 721681, 7: 721697}
+    {1: 715120, 5: 721714, 8: 722299, 3: 721730, 2: 721720, 4: 727753, 6: 721681, 7: 721697}
+    {1: 715120, 5: 721714, 8: 722299, 3: 721730, 2: 721720, 4: 727753, 6: 721681, 7: 721697}
+    {1: 715120, 5: 721714, 8: 722299, 2: 737959, 3: 705491, 4: 727753, 6: 721681, 7: 721697}
+    {1: 715120, 5: 721714, 8: 722299, 2: 737959, 3: 705491, 4: 727753, 6: 721681, 7: 721697}
+    {1: 715120, 5: 721714, 8: 722299, 2: 737959, 3: 705491, 4: 727753, 6: 721681, 7: 721697}
+    {1: 715120, 5: 721714, 8: 722299, 2: 737959, 3: 705491, 4: 727753, 6: 721681, 7: 721697}
+
+As an additional note, this might take a little bit more time than expected to run since
+the replay function has to both open and close the docker container.
