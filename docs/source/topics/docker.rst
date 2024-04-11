@@ -22,8 +22,7 @@ desktop (if you are on Linux, just use your package manager to install Docker de
 Once you have Docker installed, you should then be able to open the desktop
 client to see something like this:
 
-.. image::
-    ../_static/images/docker-desktop-hero-v2.svg
+.. image:: ../_static/images/docker-desktop-hero-v2.svg
     :alt: Docker Desktop Application Screenshot
 
 You may be prompted to set up a Docker account, and while this is generally

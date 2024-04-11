@@ -1,3 +1,9 @@
+.. _mgrp:
+
+.. raw:: html
+
+    <script src="../_static/scripts/downloadHelper.js"></script>
+
 MGRP (Metric Geometry Replication)
 ==================================
 
@@ -163,18 +169,20 @@ arguments that can be passed to the main CLI used in ``frcw``.
 - ``updaters``: This a dictionary of updaters that can be used in conjunction with the
   ``mcmc_run_with_updaters`` method of the ``RunContainer`` class.
 
+
+.. _mgrp_run:
+
 An Example of Running a Chain Using the ``Recom`` Mode
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. FIX THIS COMMAND
-.. raw:: html 
+.. raw:: html
 
     <div class="center-container">
-        <a href="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/50x50.json", class="download-badge", download>
-        50x50 Dual Graph
-        </a>
+        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/50x50.json" data-filename="50x50.json">
+            Download 50x50 Dual Graph
+        </button>
     </div>
-    <br style="line-height: 5px;"> 
+    <br style="line-height: 5px;">
 
 
 As always, the first thing that we need to do is import the necessary modules:
@@ -237,7 +245,7 @@ using the ``mcmc_run_with_updaters`` method:
 
 .. code:: python
 
-    with RunContainer(recom_config) as c:
+    with RunContainer(forest_config) as c:
         for output, error in c.mcmc_run_with_updaters(run_info):
             if output is not None:
                 print(output)
@@ -309,9 +317,9 @@ An Example of Running a Chain Using the ``Forest`` Mode
 .. raw:: html 
 
     <div class="center-container">
-        <a href="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/NC_pct21.json", class="download-badge", download>
-        NC Dual Graph
-        </a>
+        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/NC_pct21.json" data-filename="NC_pct21.json">
+            NC Dual Graph
+        </button>
     </div>
     <br style="line-height: 5px;"> 
 
@@ -465,9 +473,9 @@ An Example of Running an Ensemble Using the ``SMC`` Mode
 .. raw:: html 
 
     <div class="center-container">
-        <a href="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/4x4_grid.zip", class="download-badge", download>
-        4x4 Shapefile
-        </a>
+        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/4x4_grid.zip" data-filename="4x4.zip">
+            4x4 Shapefile
+        </button>
     </div>
     <br style="line-height: 5px;"> 
 

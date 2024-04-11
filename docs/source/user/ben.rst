@@ -1,5 +1,9 @@
 .. _ben:
 
+.. raw:: html
+
+    <script src="../_static/scripts/downloadHelper.js"></script>
+
 BEN (Binary-Ensemble)
 =====================
 
@@ -61,9 +65,9 @@ cli tool directly, please refer to the above link.
 .. raw:: html 
 
     <div class="center-container">
-        <a href="https://raw.githubusercontent.com/peterrrock2/binary-ensemble/main/example/small_example.jsonl", class="download-badge", download>
-        small_example.jsonl
-        </a>
+        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/binary-ensemble/main/example/small_example.jsonl" data-filename="small_example.jsonl">
+            Download Small Example
+        </button>
     </div>
     <br style="line-height: 5px;"> 
 
@@ -150,7 +154,7 @@ have the ``ben`` module imported:
         output_file_path="./decompressed_small_example.jsonl",
     )
 
-Improving Compression Via Relabeling
+Improving Compression via Relabeling
 ------------------------------------
 
 Underneath the hood, the BEN algorithm uses some simple run-length encoding (RLE)
@@ -177,7 +181,7 @@ which is then bit-packed to the following
     10000000
 
 It is not important exactly how this is all done at the moment, but the interested
-reader by refer to the documentation of the 
+reader may refer to the documentation of the 
 `binary-ensemble <https://github.com/peterrrock2/binary-ensemble>`_
 CLI tool for more information.
 
@@ -185,19 +189,19 @@ This turns a list that previously took ~48 bytes to store (if we exclude the com
 brackets) into something that takes ~4 bytes. So, in order to make the compression better,
 we would prefer the nodes in the assignment vector to be ordered in such a way that
 adjacent nodes are more likely to be assigned to the same district since this will
-shorten the run-length encoding (observe that if we resort the above assignment vector,
-we can get an rle of ``[(1,4),(2,4),(3,4)]`` which fits into 2 bytes). 
+shorten the run-length encoding (observe that if we re-sort the above assignment vector,
+we can get an RLE of ``[(1,4),(2,4),(3,4)]`` which fits into 2 bytes). 
 
 
 .. raw:: html 
 
     <div class="center-container">
-        <a href="https://raw.githubusercontent.com/peterrrock2/binary-ensemble/main/example/CO_small.json", class="download-badge", download>
-        CO Dual Graph
-        </a>
-        <a href="https://raw.githubusercontent.com/peterrrock2/binary-ensemble/main/example/100k_CO_chain.jsonl", class="download-badge", download>
-        CO Ensemble
-        </a>
+        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/binary-ensemble/main/example/CO_small.json" data-filename="CO_small.json">
+            Download CO Dual Graph
+        </button>
+        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/binary-ensemble/main/example/100k_CO_chain.jsonl.xben" data-filename="100k_CO_chain.jsonl.xben">
+            Download CO Ensemble
+        </button>
     </div>
     <br style="line-height: 5px;"> 
 
@@ -211,7 +215,7 @@ but make sure that you don't extract it to a JSONL file since the JSONL file wil
 
     ben(
         mode="decode",
-        input_file_path="100k_CO_chain.xben"
+        input_file_path="100k_CO_chain.jsonl.xben"
     )
 
 
@@ -303,18 +307,18 @@ in an email.
             # verbose=False
         )
 
-Parsing MSMS and SMC Output
----------------------------
+Parsing Forest Recom and SMC Output
+-----------------------------------
 
 .. raw:: html 
 
     <div class="center-container">
-        <a href="https://raw.githubusercontent.com/peterrrock2/binary-ensemble/main/example/msms_out.zip", class="download-badge", download>
-        Forest Output
-        </a>
-        <a href="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/smc_out.zip", class="download-badge", download>
-        SMC Output
-        </a>
+        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/binary-ensemble/main/example/msms_out.zip" data-filename="msms_output.zip">
+            Download Forest Output
+        </button>
+        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/smc_out.zip" data-filename="smc_output.zip">
+            Download SMC Output
+        </button>
     </div>
     <br style="line-height: 5px;"> 
 
