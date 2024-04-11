@@ -177,7 +177,7 @@ An Example of Running a Chain Using the ``Recom`` Mode
     <div class="center-container">
         <a class="download-badge" href="https://github.com/peterrrock2/gerrytools-dev/blob/main/tutorials/data/50x50.json">
             Download 50x50 Dual Graph
-        </>
+        </a>
     </div>
     <br style="line-height: 5px;">
 
