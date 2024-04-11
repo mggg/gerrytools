@@ -9,7 +9,7 @@ import geopandas
 geopandas.options.use_pygeos = False
 
 
-__version__ = "1.1.1"
+__version__ = "1.2.0"
 
 
 try:
