@@ -2,26 +2,33 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
+import geopandas as gpd
 
 from .colors import overlays as overlaycolors
 from .districtnumbers import districtnumbers
 
 
+# TODO: Update the docstring to include the new parameters.
 def choropleth(
     geometries,
     districts=None,
     assignment=None,
-    demographic="BVAP",
+    demographic_share_col=None,
     overlays=[],
     cmap="Purples",
     cbartitle=None,
-    numbers=True,
-    lw=1 / 8,
+    numbers=False,
+    base_lw=1 / 8,
+    base_linecolor="lightgray",
+    district_linecolor="black",
+    overlay_lw=1 / 4,
+    district_lw=3 / 2,
     fontsize=15,
     min=0,
     max=1,
     interval=1 / 10,
     colorbar=True,
+    figsize=(10, 10),
 ) -> Axes:
     r"""
     Visualization of population shares or totals in a state's map.
@@ -34,7 +41,7 @@ def choropleth(
             Assumes one geometry per district.
         assignment (str, optional): Required argument when `districts` are
             provided. Column of `districts` which defines the districing plan.
-        demographic (str, optional): The string representing the demographic to
+        demographic_share_col (str, optional): The string representing the demographic to
             be shown on the map. The string should specify a column in `geometries`.
             *This column must contain values in \\([0,1]\\).*
         overlays (list, optional): A list of GeoDataFrames desired to be overlaid on
@@ -62,11 +69,11 @@ def choropleth(
         overlays.
     """
     # Get the figure and base axis sizes.
-    fig, base = plt.subplots(1, 1, figsize=(10, 10))
+    fig, base = plt.subplots(1, 1, figsize=figsize)
 
     # Get the title for the colorbar.
     if cbartitle is None:
-        cbartitle = demographic
+        cbartitle = demographic_share_col
 
     # Set minimum and maximum values.
     boundaries = np.arange(min, max + interval, interval)
@@ -86,11 +93,16 @@ def choropleth(
     norm = mpl.colors.BoundaryNorm(boundaries, colorbarmap.N)
 
     # Plot geometries!
+    if assignment is not None:
+        geometries = geometries.dissolve(
+            by=assignment, aggfunc={demographic_share_col: "sum"}
+        )
+
     geometries.plot(
-        column=demographic,
+        column=demographic_share_col,
         cmap=cmap,
-        edgecolor="lightgray",
-        linewidth=lw,
+        edgecolor=base_linecolor,
+        linewidth=base_lw,
         vmin=min,
         vmax=max,
         ax=base,
@@ -119,10 +131,14 @@ def choropleth(
 
     # If district geometries are provided, plot them as well.
     if districts is not None:
-        districts.plot(edgecolor="black", linewidth=3 / 2, ax=base, color="None")
+        # if assignment is not None:
+        #     districts = districts.dissolve(by=assignment).reset_index()
+        districts.plot(
+            edgecolor=district_linecolor, linewidth=district_lw, ax=base, color="None"
+        )
 
     # If district numbers are to be plotted, plot those too!
-    if numbers:
+    if numbers and assignment:
         base = districtnumbers(
             base, districts, assignment=assignment, fontsize=fontsize
         )

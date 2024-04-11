@@ -1,6 +1,7 @@
 import random
 
 from matplotlib.axes import Axes
+import numpy as np
 
 from .bins import bins
 from .colors import citizenBlue, defaultGray, districtr
@@ -100,3 +101,58 @@ def histogram(
     if limits:
         ax.set_xlim(limits)
     return ax
+
+
+# def histogram(
+#     ax,
+#     scores,
+#     label=None,
+#     limits=(),
+# 	proposed_info={},
+# 	ticksize=12,
+# 	fontsize=24,
+# 	jitter=False,
+#     bin_width=None
+# ):
+#     """Refactored histogram plotting function."""
+
+#     def calculate_bins(scores, bin_width=None):
+#         """Calculate histogram bins, tick positions, and labels."""
+#         score_values = np.array(list(scores))
+#         if bin_width is None:
+#             bin_width = np.ptp(score_values) / 30  # Default heuristic
+#         bins = np.arange(score_values.min(), score_values.max() + bin_width, bin_width)
+#         tick_bins = bins[:-1] + bin_width / 2
+#         tick_labels = [f"{tick:.2f}" for tick in tick_bins]
+#         return bins, tick_bins, tick_labels, bin_width
+
+#     all_scores = np.concatenate([scores[k] for k in ['ensemble', 'citizen', 'proposed']])
+#     hist_bins, tick_bins, tick_labels, bin_width = calculate_bins(all_scores, bin_width)
+
+#     # Set ticks
+#     ax.set_xticks(tick_bins)
+#     ax.set_xticklabels(tick_labels, fontsize=ticksize)
+
+#     # Visual adjustments
+#     unique_scores = len(set(all_scores))
+#     rwidth = 0.8 if unique_scores < 20 else 1
+#     edgecolor = "black" if unique_scores < 20 else "white"
+#     alpha = 0.7 if scores.get("ensemble") and scores.get("citizen") else 1
+
+#     # Plot histograms for ensemble and citizen
+#     for kind, color in [("ensemble", "gray"), ("citizen", "#377eb8")]:
+#         if scores.get(kind):
+#             ax.hist(scores[kind], bins=hist_bins, color=color, rwidth=rwidth, edgecolor=edgecolor, alpha=alpha, density=True)
+
+#     # Plot proposed scores
+#     if scores.get("proposed"):
+#         for i, s in enumerate(scores["proposed"]):
+#             jitter_val = random.uniform(-bin_width / 4, bin_width / 4) if jitter and scores["proposed"].count(s) > 1 else 0
+#             ax.axvline(s + jitter_val, color=proposed_info['colors'][i], lw=2, label=f"{proposed_info['names'][i]}: {round(s, 2)}")
+
+#     ax.legend() if scores.get("proposed") else None
+#     ax.set_xlabel(label, fontsize=fontsize) if label else None
+#     ax.get_yaxis().set_visible(False)
+#     ax.set_xlim(limits) if limits else None
+
+#     return ax

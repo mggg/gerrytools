@@ -20,10 +20,10 @@ def arealoverlap(
     overlap between each pair of districts. `left` is the districting plan to be
     relabeled (e.g. a proposed districting plan) and `right` is the districting
     plan with district labels we're trying to match (e.g. an enacted districting
-    plan). If `left` (denoted \(L\)) has \(n\) districts and `right` (denoted \(R\)) has
-    \(m\) districts, an \(n \times m\) matrix \(C\) is computed, where the entry
-    \(M_{ij}\) represents the area of the intersection of the districts \(L_i\) and
-    \(R_j\). \(C\) is represented as a pandas DataFrame, where the row indices are
+    plan). If `left` (denoted :math:`L`) has :math:`n` districts and `right` (denoted :math:`R`) has
+    :math:`m` districts, an :math:`n \times m` matrix :math:`C` is computed, where the entry
+    :math:`M_{ij}` represents the area of the intersection of the districts :math:`L_i` and
+    :math:`R_j`. :math:`C` is represented as a pandas DataFrame, where the row indices are
     the labels in `left`, and are the preimage of the label mapping; column indices
     are the labels in `right`, and are the image of the label mapping.
 
@@ -36,7 +36,7 @@ def arealoverlap(
             identifier.
 
     Returns:
-        Cost matrix \(C\), represented as a DataFrame.
+        Cost matrix :math:`C`, represented as a DataFrame.
     """
     # Force the two things to be the same CRS (or the provided CRS)
     if crs:
@@ -76,16 +76,16 @@ def populationoverlap(
     population: str = "TOTPOP20",
     assignment: str = "DISTRICT",
 ) -> pd.DataFrame:
-    r"""
+    """
     Given two unit-level DataFrames — i.e. two dataframes where each row represents
     an atomic unit like Census blocks or VTDs, and each row contains a district
     assignment — computes the amount of population shared by each pair of districts.
     `left` is the districting plan to be relabeled (e.g. a proposed districting
     plan) and `right` is the districting plan with district labels we're trying
-    to match (e.g. an enacted districting plan). If `left` (denoted \(L\)) has
-    \(n\) districts and `right` (denoted \(R\)) has \(m\) districts, an
-    \(n \times m\) matrix \(C\) is computed, where the entry \(M_{ij}\) represents
-    the population shared by the districts \(L_i\) and \(R_j\). \(C\) is
+    to match (e.g. an enacted districting plan). If `left` (denoted :math:`L`) has
+    :math:`n` districts and `right` (denoted :math:`R`) has :math:`m` districts, an
+    :math:`n \times m` matrix :math:`C` is computed, where the entry :math:`M_{ij}` represents
+    the population shared by the districts :math:`L_i` and :math:`R_j`. :math:`C` is
     represented as a pandas DataFrame, where the row indices are the labels in
     `left`, and are the preimage of the label mapping; column indices are the labels
     in `right`, and are the image of the label mapping.
@@ -145,7 +145,7 @@ def optimalrelabeling(
     maximize: bool = True,
     costmatrix: Callable = populationoverlap,
 ) -> dict:
-    r"""
+    """
     Finds the optimal relabeling for two districting plans.
 
     Args:
@@ -182,40 +182,33 @@ def optimalrelabeling(
         A dictionary which maps district labels in `left` to district labels in
         `right`, according to the weighting scheme applied in `costmatrix`.
 
-    </br>
-
-    This is an [assignment problem](https://bit.ly/3wnyS4F)
-    and is equivalently a [(min/max)imal bipartite matching problem](http://bit.ly/2OfwUeh).
-    Consider two districting plans \(L\) and \(R\), with \(n\) and \(m\) districts
-    respectively. Set \(V_L\) and \(V_R\) to be sets of vertices such that
-    a vertex \(l_i\) in \(V_L\) corresponds to the district \(L_i\) in \(L\), and
-    similarly for vertices \(r_j\) in \(V_R\); draw edges \((l_i, r_j)\) for each
-    \(i\) from \(1\) to \(n,\) and each \(j\) from \(1\) to \(m.\) In doing so,
-    we construct the [bipartite graph](https://bit.ly/39rDldy) \(K_{n,m}\):
-
-    <div style="text-align: center;">
-        </br>
-        <img width="40%" src="../images/bipartite-matching.png"/>
-    </div>
+    This is an `assignment problem <https://bit.ly/3wnyS4F>`_
+    and is equivalently a `(min/max)imal bipartite matching problem <http://bit.ly/2OfwUeh>`_.
+    Consider two districting plans :math:`L` and :math:`R`, with :math:`n` and :math:`m` districts
+    respectively. Set :math:`V_L` and :math:`V_R` to be sets of vertices such that
+    a vertex :math:`l_i` in :math:`V_L` corresponds to the district :math:`L_i` in :math:`L`, and
+    similarly for vertices :math:`r_j` in :math:`V_R`; draw edges :math:`(l_i, r_j)` for each
+    :math:`i` from :math:`1` to :math:`n,` and each :math:`j` from :math:`1` to :math:`m.`
+    In doing so, we construct the `bipartite graph <https://bit.ly/39rDldy>` :math:`K_{n,m}`:
 
     We then assign each edge a weight according to some function
-    \(f: L\times R\ \to \mathbb{R}\), which consumes a pair of districts and returns
+    :math:`f: L\times R \to \\mathbb{R}`, which consumes a pair of districts and returns
     a number. For example, this function could be the amount of area shared by
-    the districts \(L_i\) and \(R_j\), like in `gerrytools.geometry.optimize.arealoverlap()`,
+    the districts :math:`L_i` and :math:`R_j`, like in
+    :func:`gerrytools.geometry.optimize.arealoverlap()`,
     or the amount of population the districts share, like in
-    `gerrytools.geometry.optimize.populationoverlap()`.
+    :func:`gerrytools.geometry.optimize.populationoverlap()`.
 
-    We then seek to find the set of weighted edges \(M\) such that all vertices
-    \(l_i\) and \(r_j\) appear at most once in \(M\), and that the sum of \(M\)'s
+    We then seek to find the set of weighted edges :math:`M` such that all vertices
+    :math:`l_i` and :math:`r_j` appear at most once in :math:`M`, and that the sum of :math:`M`'s
     weights is as small (or as large) as possible. To do so, we take the adjacency
-    matrix \(A\) of our graph \(K_{n,m}\), where the \(i, j\)th entry records
-    the weight of the edge \((l_i, r_j\)). Then, we want to select at most one entry
+    matrix :math:`A` of our graph :math:`K_{n,m}`, where the :math:`i, j`th entry records
+    the weight of the edge :math:`(l_i, r_j`). Then, we want to select at most one entry
     in each row and column, and ensure those entries have the smallest (or greatest)
-    possible sum. Using the [Jonker-Volgenant algorithm](DOI:10.1109/TAES.2016.140952) (as
+    possible sum. Using the `Jonker-Volgenant algorithm <DOI:10.1109/TAES.2016.140952>`_ (as
     implemented by scipy), we can find the row and column indices of these entries,
     and retrieve the district label pairs corresponding to each. The algorithm
-    achieves \(\textbf{O}(N^3)\) worst-case running time, where \(N = \max(n, m)\).
-
+    achieves :math:`\textbf{O}(N^3)` worst-case running time, where :math:`N = \\max(n, m)`.
     """
     # Our cost function should compute the weights between left and right. First,
     # we want to identify the indices of the preimage (row index) and column

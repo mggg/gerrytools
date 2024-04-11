@@ -3,11 +3,11 @@ from pathlib import Path
 from setuptools import find_packages, setup
 
 requirements = [
-    "pandas<2.0.0,>=1.2.4",
+    "pandas<2.0.0,>=1.5.0",
     "scipy",
     "networkx",
     "geopandas",
-    "Shapely<2.0.0,>=1.7.1",
+    "Shapely>=2.0.0",
     "matplotlib",
     "gerrychain",
     "sortedcontainers",
@@ -18,11 +18,11 @@ requirements = [
     "pydantic",
     "censusdata",
     "seaborn",
-    "maup",
+    "maup<=1.1.0",
 ]
 
 # Set the version --- ensure that the latest tag matches this value.
-VERSION = "1.1.1"
+VERSION = "1.2.0"
 
 # Description.
 here = Path(__file__).parent
@@ -41,6 +41,15 @@ setup(
     install_requires=requirements,
     include_package_data=True,
     extras_require={
-        "dev": ["pdoc3", "flake8", "pytest", "autopep8", "pytest-cov", "black", "isort"]
+        "dev": [
+            "pdoc3",
+            "flake8",
+            "pytest",
+            "autopep8",
+            "pytest-cov",
+            "black",
+            "isort",
+        ],
+        "mgrp": ["docker>=7.0.0"],
     },
 )
