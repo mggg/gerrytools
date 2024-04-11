@@ -1,34 +1,5 @@
 .. _mgrp:
 
-.. raw:: html
-
-  <script>
-      document.addEventListener('DOMContentLoaded', function() { 
-      document.querySelectorAll('.download-badge').forEach(button => {
-          button.addEventListener('click', function() {
-              const url = this.getAttribute('data-url');
-              const filename = this.getAttribute('data-filename');
-              initiateFileDownload(url, filename);
-          });
-      });
-  });
-
-  function initiateFileDownload(url, filename) {
-      fetch(url)
-          .then(response => response.blob())
-          .then(blob => {
-              const blobUrl = window.URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = blobUrl;
-              a.download = filename;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              window.URL.revokeObjectURL(blobUrl);
-          })
-          .catch(console.error); // Handle any errors
-  }
-  </script>
 
 MGRP (Metric Geometry Replication)
 ==================================
@@ -204,9 +175,9 @@ An Example of Running a Chain Using the ``Recom`` Mode
 .. raw:: html
 
     <div class="center-container">
-        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/50x50.json" data-filename="50x50.json">
+        <a class="download-badge" href="https://github.com/peterrrock2/gerrytools-dev/blob/main/tutorials/data/50x50.json">
             Download 50x50 Dual Graph
-        </button>
+        </>
     </div>
     <br style="line-height: 5px;">
 
@@ -346,9 +317,9 @@ An Example of Running a Chain Using the ``Forest`` Mode
 .. raw:: html 
 
     <div class="center-container">
-        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/NC_pct21.json" data-filename="NC_pct21.json">
+        <a class="download-badge" href="https://github.com/peterrrock2/gerrytools-dev/blob/main/tutorials/data/NC_pct21.json">
             NC Dual Graph
-        </button>
+        </a>
     </div>
     <br style="line-height: 5px;"> 
 
@@ -502,9 +473,9 @@ An Example of Running an Ensemble Using the ``SMC`` Mode
 .. raw:: html 
 
     <div class="center-container">
-        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/4x4_grid.zip" data-filename="4x4.zip">
+        <a class="download-badge" href="https://github.com/peterrrock2/gerrytools-dev/blob/main/tutorials/data/4x4_grid.zip">
             4x4 Shapefile
-        </button>
+        </a>
     </div>
     <br style="line-height: 5px;"> 
 

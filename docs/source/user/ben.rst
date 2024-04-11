@@ -1,9 +1,5 @@
 .. _ben:
 
-.. raw:: html
-
-    <script src="../_static/scripts/downloadHelper.js"></script>
-
 BEN (Binary-Ensemble)
 =====================
 
@@ -65,9 +61,9 @@ cli tool directly, please refer to the above link.
 .. raw:: html 
 
     <div class="center-container">
-        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/binary-ensemble/main/example/small_example.jsonl" data-filename="small_example.jsonl">
+        <a class="download-badge" href="https://github.com/peterrrock2/binary-ensemble/blob/main/example/small_example.jsonl">
             Download Small Example
-        </button>
+        </a>
     </div>
     <br style="line-height: 5px;"> 
 
@@ -196,12 +192,12 @@ we can get an RLE of ``[(1,4),(2,4),(3,4)]`` which fits into 2 bytes).
 .. raw:: html 
 
     <div class="center-container">
-        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/binary-ensemble/main/example/CO_small.json" data-filename="CO_small.json">
+        <a class="download-badge" href="https://github.com/peterrrock2/binary-ensemble/blob/main/example/CO_small.json">
             Download CO Dual Graph
-        </button>
-        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/binary-ensemble/main/example/100k_CO_chain.jsonl.xben" data-filename="100k_CO_chain.jsonl.xben">
+        </a>
+        <a class="download-badge" href="https://github.com/peterrrock2/binary-ensemble/blob/main/example/100k_CO_chain.jsonl.xben">
             Download CO Ensemble
-        </button>
+        </a>
     </div>
     <br style="line-height: 5px;"> 
 
@@ -325,12 +321,12 @@ Parsing Forest Recom and SMC Output
 .. raw:: html 
 
     <div class="center-container">
-        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/binary-ensemble/main/example/msms_out.zip" data-filename="msms_output.zip">
+        <a class="download-badge" href="https://github.com/peterrrock2/binary-ensemble/blob/main/example/msms_out.zip">
             Download Forest Output
-        </button>
-        <button class="download-badge" data-url="https://raw.githubusercontent.com/peterrrock2/gerrytools-dev/main/tutorials/data/smc_out.zip" data-filename="smc_output.zip">
+        </a>
+        <a class="download-badge" href="https://github.com/peterrrock2/gerrytools-dev/blob/main/tutorials/data/smc_out.zip">
             Download SMC Output
-        </button>
+        </a>
     </div>
     <br style="line-height: 5px;"> 
 
