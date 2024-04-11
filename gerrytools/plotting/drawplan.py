@@ -36,13 +36,12 @@ def drawplan(
     """
     # Sort districts by their assignment and add a column specifying the color
     # index.
+    districts = districts.dissolve(by=assignment).reset_index()
     N = len(districts)
     districts = districts.to_crs("epsg:3857")
     districts[assignment] = districts[assignment].astype(int)
     districts = districts.sort_values(by=assignment)
     if colors is None:
-        districts["colorindex"] = list(range(N))
-
         # Assign colors.
         districts["color"] = districtr(N)
 

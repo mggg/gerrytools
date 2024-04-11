@@ -145,8 +145,8 @@ def summarize_many(
             return result
         return [summarize(part, scores=scores) for part in parts]
     else:
-        with gzip.open(f"{output_file}.gz", "wt") if compress else open(
-            output_file, "w"
+        with (
+            gzip.open(f"{output_file}.gz", "wt") if compress else open(output_file, "w")
         ) as fout:
             iterator = tqdm(enumerate(parts)) if verbose else enumerate(parts)
             for i, part in iterator:
@@ -212,8 +212,8 @@ def pieces(
     and another once. Then, there are 3 + 2 = 5 "pieces," disregarding the
     counties kept whole.
 
-    Bear in mind that this calculates the number of _unit splits_, not the number
-    of _units split_: for example, if a district divides a county into three
+    Bear in mind that this calculates the number of *unit splits*, not the number
+    of *units split*: for example, if a district divides a county into three
     pieces, the former reports two splits (as a unit divided into three pieces is
     cut twice), while the latter would report one split (as there is one county
     being split).
@@ -452,7 +452,7 @@ def efficiency_gap(election_cols: Iterable[str], mean: bool = False) -> Score:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
         mean (bool): Whether to return the mean of the score over all elections, or a dictionary
-                     of the score for each election.
+            of the score for each election.
 
     Returns:
         A score object with name `"efficiency_gap"`  and associated function that takes a partition
@@ -473,12 +473,14 @@ def simplified_efficiency_gap(
     The original formulation of efficiency gap quantifies the difference in "wasted" votes for the two
     parties across the state, as a share of votes cast. This is sensitive to turnout effects. The
     simplified score is equal to standard efficiency gap when the districts have equal turnout.
+
     Args:
         election_cols (Iterable[str]): The names of the election updaters over which to compute
             results for.
         party (str): The "point of view" political party.
         mean (bool): Whether to return the mean of the score over all elections, or a dictionary
-                     of the score for each election.
+            of the score for each election.
+
     Returns:
         A score object with name `"efficiency_gap"`  and associated function that takes a partition
         and returns a PlanWideScoreValue for efficiency gap metric.
