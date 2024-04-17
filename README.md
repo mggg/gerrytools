@@ -20,6 +20,17 @@ under a [3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause).
 
 ## Installation
 
+> :warning: WARNING: The latest release of this package requires that the user
+> have Rust installed on their computer. This is due to a bug in one of the
+> dependencies of GerryTools and only appears for users running Python version
+> 3.12. If you are on Linux or MacOS, then please run the command
+> ```
+> curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+> ```
+> from your terminal. If you are on Windows, download and run the exe file
+> at [this link](https://rust-lang.org/tools/install) This Warning will
+> be removed when the bug is patched.
+
 ### Using `pip` (recommended)
 
 To install GerryTools from [PyPi](https://pypi.org/project/gerrytools/), run
