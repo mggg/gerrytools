@@ -75,12 +75,50 @@ class TestAddSeatVotesData:
         sv.add_election([0.5, 0.6])
         assert sv._sv_data_list[0].marker_style.markerfacecolor == sv.standard_marker_color
 
+    def test_omitted_markeredgecolor_keeps_default_zero_width(self):
+        sv = SeatsVotesPlot()
+        sv.add_election([0.5, 0.6])
+
+        assert sv._sv_data_list[0].marker_style.markeredgewidth == 0.0
+
+    def test_selected_markeredgecolor_gets_default_visible_width(self):
+        sv = SeatsVotesPlot()
+        sv.add_election([0.5, 0.6], markeredgecolor="black")
+
+        assert sv._sv_data_list[0].marker_style.markeredgewidth == 0.8
+
     def test_custom_linecolor(self):
         sv = SeatsVotesPlot()
         sv.add_election([0.5, 0.6], linecolor="red")
         # Kwargs now merge through SeatsVotesLineOptions, which normalizes colors to hex,
         # matching the line_options code path.
         assert sv._sv_data_list[0].line_style.linecolor == "#ff0000"
+
+    def test_explicit_none_colors_remove_curve_and_marker(self):
+        sv = SeatsVotesPlot()
+        sv.add_election(
+            [0.5, 0.6],
+            linecolor=None,
+            markerfacecolor=None,
+            markeredgecolor=None,
+        )
+
+        election = sv._sv_data_list[0]
+        assert election.line_style.linecolor == "none"
+        assert election.marker_style.markerfacecolor == "none"
+        assert election.marker_style.markeredgecolor == "none"
+        assert election.marker_style.markeredgewidth == 0.0
+
+    def test_none_standard_colors_remove_default_curve_and_marker(self):
+        sv = SeatsVotesPlot()
+        sv.standard_election_color = None
+        sv.standard_marker_color = None
+        sv.add_election([0.5, 0.6])
+
+        election = sv._sv_data_list[0]
+        assert election.line_style.linecolor == "none"
+        assert election.marker_style.markerfacecolor == "none"
+        _ = sv.ax
 
     def test_add_multiple_datasets(self):
         sv = SeatsVotesPlot()

@@ -63,9 +63,28 @@ FontFamily = Union[GenericFontFamily, str, Sequence[str]]
 
 @dataclass(frozen=True, slots=True)
 class LabelFontOptions:
-    """Font options for text labels."""
+    """Font options for text labels.
 
-    fontcolor: Color = "white"
+    Attributes:
+        fontcolor (Color | None): Text color. None removes the color. Defaults to ``"white"``.
+        fontalpha (float | None): Optional text-opacity override. Defaults to 1.0.
+        fontsize (float): Font size in points. Defaults to 6.0.
+        fontweight (FontWeight): Font weight. Defaults to ``"bold"``.
+        fontstyle (FontStyle): Font slant. Defaults to ``"normal"``.
+        fontvariant (FontVariant): Font variant. Defaults to ``"normal"``.
+        fontstretch (FontStretch | None): Font width, or None for the Matplotlib default. Defaults
+            to None.
+        fontfamily (FontFamily | None): Font family, or None for the Matplotlib default. Defaults
+            to None.
+        outlinecolor (Color | None): Text-outline color. None removes the outline. Defaults to
+            ``"black"``.
+        outlinewidth (float): Text-outline width in points. Defaults to 0.75.
+
+    Raises:
+        ValueError: If a font, color, alpha, or outline-width value is invalid.
+    """
+
+    fontcolor: Color | None = "white"
     fontalpha: float | None = 1.0
     fontsize: float = 6.0
 
@@ -75,7 +94,7 @@ class LabelFontOptions:
     fontstretch: FontStretch | None = None
     fontfamily: FontFamily | None = None
 
-    outlinecolor: Color = "black"
+    outlinecolor: Color | None = "black"
     outlinewidth: float = 0.75
 
     def __post_init__(self) -> None:
@@ -91,7 +110,11 @@ class LabelFontOptions:
         )
 
     def to_mpl_text_kwargs(self) -> dict:
-        """Return kwargs to pass into ``Axes.text`` for font styling."""
+        """Return keyword arguments for ``Axes.text`` font styling.
+
+        Returns:
+            dict: Matplotlib text keyword arguments.
+        """
         font_color, font_alpha = resolve_color_and_alpha(self.fontcolor, self.fontalpha)
         kw: dict = {
             "color": to_hex((font_color, font_alpha), keep_alpha=True),
@@ -109,19 +132,35 @@ class LabelFontOptions:
 
 @dataclass(frozen=True, slots=True)
 class LabelBoxOptions:
-    """Background box options for text labels drawn via ``Axes.text(..., bbox=...)``."""
+    """Background box options for text labels drawn via ``Axes.text(..., bbox=...)``.
+
+    Attributes:
+        enabled (bool): Whether to draw the box. Defaults to True.
+        boxstyle (Literal["square", "round", "round4", "circle", "ellipse"]): Matplotlib box
+            shape. Defaults to ``"round4"``.
+        pad (float): Padding around the text. Defaults to 0.25.
+        facecolor (Color | None): Fill color. None removes the fill. Defaults to ``"black"``.
+        facealpha (float | None): Optional fill-opacity override. Defaults to 0.6.
+        edgecolor (Color | None): Border color. None removes the border. Defaults to ``"none"``.
+        edgealpha (float | None): Optional border-opacity override. Defaults to 0.0.
+        edgewidth (float): Border width in points. Defaults to 0.8.
+    """
 
     enabled: bool = True
     boxstyle: Literal["square", "round", "round4", "circle", "ellipse"] = "round4"
     pad: float = 0.25
-    facecolor: Color = "black"
+    facecolor: Color | None = "black"
     facealpha: float | None = 0.6
-    edgecolor: Color = "none"
+    edgecolor: Color | None = "none"
     edgealpha: float | None = 0.0
     edgewidth: float = 0.8
 
     def to_mpl_bbox(self) -> dict | None:
-        """Return a dict suitable for passing as ``bbox`` to ``Axes.text``."""
+        """Return a dictionary suitable for passing as ``bbox`` to ``Axes.text``.
+
+        Returns:
+            dict | None: Matplotlib bounding-box arguments, or None when the box is disabled.
+        """
         if not self.enabled:
             return None
 
@@ -141,7 +180,8 @@ class LabelStyle:
     """A named bundle of label font and box styling for map labels.
 
     Attributes:
-        font (LabelFontOptions): Font options applied to every label.
+        font (LabelFontOptions): Font options applied to every label. Defaults to
+            ``LabelFontOptions()``.
         box (LabelBoxOptions | None): Background box options, or None for no box.
         equalize_circle_pad (bool): When True and ``box`` uses the "circle" boxstyle, shorter labels
             get extra pad so one- and two-character labels render as circles of the same diameter.
@@ -264,26 +304,26 @@ LABEL_STYLES: dict[str, LabelStyle] = {
         ),
     ),
 }
-"""Named label styles accepted wherever a ``style=`` argument takes a string."""
+"""Named label styles accepted wherever a ``label_style=`` argument takes a string."""
 
 
-def resolve_label_style(style: LabelStyle | str) -> LabelStyle:
+def resolve_label_style(label_style: LabelStyle | str) -> LabelStyle:
     """Resolve a style name or ``LabelStyle`` instance to a ``LabelStyle``.
 
     Args:
-        style (LabelStyle | str): A ``LabelStyle`` or the name of a registered style.
+        label_style (LabelStyle | str): A ``LabelStyle`` or the name of a registered style.
 
     Returns:
         LabelStyle: The resolved style.
 
     Raises:
-        ValueError: If ``style`` is a string that names no registered style.
+        ValueError: If ``label_style`` is a string that names no registered style.
     """
-    if isinstance(style, LabelStyle):
-        return style
+    if isinstance(label_style, LabelStyle):
+        return label_style
     try:
-        return LABEL_STYLES[style]
+        return LABEL_STYLES[label_style]
     except KeyError:
         raise ValueError(
-            f"Unknown label style {style!r}; available styles: {sorted(LABEL_STYLES)}."
+            f"Unknown label style {label_style!r}; available styles: {sorted(LABEL_STYLES)}."
         ) from None

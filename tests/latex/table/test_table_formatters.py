@@ -90,12 +90,15 @@ class TestTexTableFormatters:
         table = TexTable(df)
 
         table.include_index()
+        table.set_tabular_format("|l||cc|")
         table.set_header_groups({"G1": ["a"], "G2": ["b"]})
         table.set_group_tabular_format("lr")
 
         assert table._options.group_preamble is not None
         assert table._options.group_index is not None
         assert table._options.group_index.alignment == "c"
+        assert table._options.group_index.left == table._options.index_column.left
+        assert table._options.group_index.right == table._options.index_column.right
         assert table._options.group_preamble.alignments == ("l", "r")
         assert len(table._options.group_preamble.boundaries) == 3
 
@@ -108,6 +111,26 @@ class TestTexTableFormatters:
         assert table._options.group_preamble is not None
         assert table._options.group_preamble.alignments == ("r",)
         assert "Empty" not in table._multicolumn_format()
+
+    def test_omitted_group_index_does_not_duplicate_shared_boundary(self):
+        table = TexTable(pd.DataFrame({"a": [1], "b": [2]}), use_defaults=False)
+        table.include_index()
+        table.set_tabular_format("c|cc")
+        table.set_header_groups({"G1": ["a"], "G2": ["b"]})
+
+        table.set_group_tabular_format("|cc")
+
+        assert r"\multicolumn{1}{c|}{}" in table.document.body_string
+        assert r"\multicolumn{1}{c||}{}" not in table.document.body_string
+
+    def test_omitted_group_index_preserves_first_group_opening_modifier(self):
+        table = TexTable(pd.DataFrame({"a": [1], "b": [2]}), use_defaults=False)
+        table.include_index()
+        table.set_header_groups({"G1": ["a"], "G2": ["b"]})
+
+        table.set_group_tabular_format(r">{\itshape}cc")
+
+        assert r"\multicolumn{1}{>{\itshape}c}{\textbf{G1}}" in table.document.body_string
 
     def test_set_number_formatter_one_arg_and_used(self):
         df = pd.DataFrame({"a": [2]})

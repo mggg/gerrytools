@@ -5,6 +5,7 @@ from gerrytools.plotting.data._gerryplot_dataclasses import (
     ArrowTextStyle,
     LabelArrowOptions,
     LabelArrowStyle,
+    TextArrowOptions,
     TextArrowStyle,
 )
 from gerrytools.plotting.data.barplot import BarPlot
@@ -49,6 +50,7 @@ __all__ = [
     "SeatsVotesPlot",
     "SeatsVotesLineOptions",
     "SeatsVotesMarkerOptions",
+    "TextArrowOptions",
     "TextArrowStyle",
     "UNSET",
     "Unset",

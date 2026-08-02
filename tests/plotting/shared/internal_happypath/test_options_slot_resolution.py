@@ -107,6 +107,13 @@ class TestBandOptionsSlot:
 
 
 class TestHistogramOptionsSlot:
+    def test_default_uses_black_edges(self):
+        plot = Histogram()
+        plot.add_dataset([1.0, 2.0, 3.0])
+        hist = plot._hist_data_dict["overlay"][0]
+        assert hist.style.edgecolor == "#000000"
+        assert hist.style.edgewidth == 0.8
+
     def test_options_alone_propagates(self):
         plot = Histogram()
         plot.add_dataset(
@@ -117,6 +124,15 @@ class TestHistogramOptionsSlot:
         assert hist.style.facecolor == "#ff0000"
         assert hist.style.edgecolor == "#0000ff"
         assert hist.style.edgewidth == 1.5
+
+    def test_explicit_zero_edgewidth_in_options_stays_hidden(self):
+        plot = Histogram()
+        plot.add_dataset(
+            [1.0, 2.0, 3.0],
+            options=HistogramOptions(edgecolor="black", edgewidth=0.0),
+        )
+
+        assert plot._hist_data_dict["overlay"][0].style.edgewidth == 0.0
 
     def test_kwarg_overrides_options(self):
         plot = Histogram()
@@ -207,6 +223,16 @@ class TestScatterMarkerOptionsSlot:
         assert sd.marker_options.markerfacecolor == "#ff0000"  # from options
         assert sd.marker_options.markersize == 20.0  # from kwarg
 
+    def test_explicit_zero_edgewidth_in_options_stays_hidden(self):
+        plot = ScatterPlot()
+        plot.add_series(
+            x=[0, 1],
+            y=[0, 1],
+            marker_options=PointMarkerOptions(markeredgecolor="black", markeredgewidth=0.0),
+        )
+
+        assert plot._scatter_data_list[0].marker_options.markeredgewidth == 0.0
+
 
 # ----------------------------------------------------------------------
 # SeatsVotesPlot line_options + marker_options
@@ -246,6 +272,18 @@ class TestSeatsVotesOptionsSlots:
         )
         sv = plot._sv_data_list[0]
         assert sv.marker_style.markerfacecolor == "#ff0000"
+
+    def test_explicit_zero_edgewidth_in_options_stays_hidden(self):
+        plot = SeatsVotesPlot()
+        plot.add_election(
+            np.array([0.4, 0.5, 0.6]),
+            marker_options=SeatsVotesMarkerOptions(
+                markeredgecolor="black",
+                markeredgewidth=0.0,
+            ),
+        )
+
+        assert plot._sv_data_list[0].marker_style.markeredgewidth == 0.0
 
 
 # ----------------------------------------------------------------------

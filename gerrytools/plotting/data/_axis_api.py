@@ -323,7 +323,7 @@ class _TitleApiMixin:
         fontweight: str | None = None,
         fontstyle: Literal["normal", "italic", "oblique"] | None = None,
         fontfamily: str | None = None,
-        fontcolor: Color = "black",
+        fontcolor: Color | None = "black",
         fontalpha: float | None = None,
         loc: Literal["left", "center", "right"] | None = None,
         pad: float | None = None,
@@ -338,7 +338,8 @@ class _TitleApiMixin:
                 Font style (e.g., "normal", "italic"). Defaults to None.
             fontfamily (str | None, optional): Font family (e.g., "sans-serif", "serif").
                 Defaults to None.
-            fontcolor (Color, optional): Color of the title. Defaults to "black".
+            fontcolor (Color | None, optional): Color of the title. Pass ``None`` for
+                transparent text. Defaults to "black".
             fontalpha (float | None, optional): Alpha transparency of the title color.
                 If None, uses alpha from color if specified. Defaults to None.
             loc (Literal["left", "center", "right"] | None, optional): Title location.
@@ -408,7 +409,7 @@ class _AxisApiMixin(_TitleApiMixin):
         fontweight: str | None = None,
         fontstyle: Literal["normal", "italic", "oblique"] | None = None,
         fontfamily: str | None = None,
-        fontcolor: Color = "black",
+        fontcolor: Color | None = "black",
         fontalpha: float | None = None,
         labelpad: float | None = None,
     ) -> None:
@@ -425,7 +426,8 @@ class _AxisApiMixin(_TitleApiMixin):
                 Defaults to None.
             fontfamily (str | None, optional): Font family (e.g., "sans-serif", "serif").
                 Defaults to None.
-            fontcolor (Color, optional): Color of the axis label. Defaults to "black".
+            fontcolor (Color | None, optional): Color of the axis label. Pass ``None``
+                for transparent text. Defaults to "black".
             fontalpha (float | None, optional): Alpha transparency of the axis label color.
                 If None, uses alpha from color if specified. Defaults to None.
             labelpad (float | None, optional): Padding between the axis label and the axis
@@ -679,9 +681,9 @@ class _AxisApiMixin(_TitleApiMixin):
         *,
         size: float | int = 10,
         rotation: float | int = 0,
-        fontcolor: Color = "black",
+        fontcolor: Color | None = "black",
         fontalpha: float | None = None,
-        tickcolor: Color = "black",
+        tickcolor: Color | None = "black",
         tickalpha: float | None = None,
         fontweight: str = "normal",
         fontstyle: Literal["normal", "italic", "oblique"] = "normal",
@@ -695,10 +697,12 @@ class _AxisApiMixin(_TitleApiMixin):
             size (float, optional): Font size of tick labels. Defaults to 10.
             rotation (float | int, optional): Rotation angle of tick labels in degrees.
                 Defaults to 0.
-            fontcolor (str, optional): Color of tick labels. Defaults to "black".
+            fontcolor (Color | None, optional): Color of tick labels. Pass ``None`` for
+                transparent labels. Defaults to "black".
             fontalpha (float, optional): Alpha transparency of tick label color. If None,
                 uses alpha from color if specified or will fall back to 1.0. Defaults to None.
-            tickcolor (str, optional): Color of tick marks. Defaults to "black".
+            tickcolor (Color | None, optional): Color of tick marks. Pass ``None`` for
+                transparent marks. Defaults to "black".
             tickalpha (float, optional): Alpha transparency of tick mark color. If None,
                 uses alpha from color if specified or will fall back to 1.0. Defaults to None.
             fontweight (str, optional): Font weight of tick labels (e.g., 'normal 'bold').

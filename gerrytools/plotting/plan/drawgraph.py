@@ -52,9 +52,11 @@ def draw_graph(
             figure and axes are created.
         pos (Mapping | None, optional): Explicit node-to-``(x, y)`` positions. When given,
             the coordinate attribute keys are ignored. Defaults to None.
-        x (str, optional): Vertex property used as the horizontal (E-W) coordinate.
-        y (str, optional): Vertex property used as the vertical (N-S) coordinate.
-        node_size (float, optional): Specifies the default size of a vertex.
+        x (str, optional): Vertex property used as the horizontal (E-W) coordinate. Defaults to
+            ``"INTPTLON20"``.
+        y (str, optional): Vertex property used as the vertical (N-S) coordinate. Defaults to
+            ``"INTPTLAT20"``.
+        node_size (float, optional): Vertex size passed to NetworkX. Defaults to 1.
         **kwargs (object): Additional keyword arguments passed to ``networkx.draw``.
 
     Returns:
@@ -83,9 +85,11 @@ def draw_graph_components(
         graph (Graph): The dual graph to draw.
         pos (Mapping | None, optional): Explicit node-to-``(x, y)`` positions. When given,
             the coordinate attribute keys are ignored. Defaults to None.
-        x (str, optional): Vertex property used as the horizontal (E-W) coordinate.
-        y (str, optional): Vertex property used as the vertical (N-S) coordinate.
-        node_size (float, optional): Specifies the default size of a vertex.
+        x (str, optional): Vertex property used as the horizontal (E-W) coordinate. Defaults to
+            ``"INTPTLON20"``.
+        y (str, optional): Vertex property used as the vertical (N-S) coordinate. Defaults to
+            ``"INTPTLAT20"``.
+        node_size (float, optional): Vertex size passed to NetworkX. Defaults to 1.
         **kwargs (object): Additional keyword arguments passed to ``networkx.draw``.
 
     Returns:
@@ -94,7 +98,8 @@ def draw_graph_components(
     positions = _resolve_positions(graph, pos=pos, x=x, y=y)
     pairs: list[tuple[Figure, Axes]] = []
     for component in nx.connected_components(graph):
-        fig, component_ax = plt.subplots()
+        fig = Figure()
+        component_ax = fig.subplots()
         # networkx.draw's stub types each forwarded kwarg; this pass-through surface is dynamic.
         nx.draw(
             graph.subgraph(component),

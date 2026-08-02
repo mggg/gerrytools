@@ -5,6 +5,7 @@ from gerrytools.plotting.data._gerryplot_dataclasses import (
     ArrowTextStyle,
     LabelArrowOptions,
     LabelArrowStyle,
+    TextArrowOptions,
     TextArrowStyle,
     _LabelArrowData,
     _TextArrowData,
@@ -102,6 +103,13 @@ class TestTextArrowStyle:
     def test_zero_boxpad_is_valid(self):
         style = TextArrowStyle(boxpad=0.0)
         assert style.boxpad == 0.0
+
+
+class TestTextArrowOptions:
+    def test_defaults(self):
+        options = TextArrowOptions()
+        assert isinstance(options.placement, ArrowPlacement)
+        assert isinstance(options.style, TextArrowStyle)
 
 
 # =====================

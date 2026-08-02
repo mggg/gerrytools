@@ -200,6 +200,28 @@ class TestAcs:
         assert est.loc["55001", "total_vap_acs5_20"] == 2.0
         assert est.loc["55001", "total_cvap_acs5_20"] == 4.0
 
+    def test_tables_align_rows_by_geoid_when_api_order_changes(self, mock_http: MockHTTP):
+        tables: list[ACSTableInfo] = [ACSTotPopTableInfo(), ACSVAPTableInfo()]
+        payload_values: list[dict[str, object]] = [
+            {"55001": 1, "55003": 3},
+            {"55001": 1, "55003": 3},
+            {"55003": 30, "55001": 10},
+            {"55003": 30, "55001": 10},
+        ]
+        responses = iter(payload_values)
+
+        def responder(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json=acs_api_payload(tables, next(responses)))
+
+        mock_http.route(url_contains="/acs/", responder=responder)
+
+        est, _ = acs(us.states.WI, "county", 2023, tables=tables, api_key="k")
+
+        assert est.loc["55001", "total_pop_acs5_23"] == 1.0
+        assert est.loc["55003", "total_pop_acs5_23"] == 3.0
+        assert est.loc["55001", "total_vap_acs5_23"] == 20.0
+        assert est.loc["55003", "total_vap_acs5_23"] == 60.0
+
     def test_hispanic_by_race_uses_gerrydb_semantic_names(self, mock_http: MockHTTP):
         table = ACSHispByRaceTableInfo()
         mock_http.route(url_contains="/acs/", json=acs_api_payload([table], {"55001": 1}))

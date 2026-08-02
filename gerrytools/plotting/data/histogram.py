@@ -15,6 +15,7 @@ from numpy.typing import NDArray
 
 from gerrytools.logging import get_logger
 from gerrytools.plotting._axes_backed import deferred_axis_update
+from gerrytools.plotting._axes_state import _recompute_data_limits
 from gerrytools.plotting.data.gerryplot import GerryPlotBase
 from gerrytools.plotting.data.options import (
     DEFAULT_EDGE_WIDTH,
@@ -27,7 +28,7 @@ from gerrytools.plotting.utils import (
     Unset,
     _coerce_to_1d_finite_float_array,
     _coerce_values_and_weights,
-    _replace_non_none,
+    _replace_with_color_overrides,
 )
 from gerrytools.typing import BinsType, Color, HistType, LegendHandle
 
@@ -93,10 +94,10 @@ class _HistogramData:
     """One histogram layer/series.
 
     Attributes:
-        name: Name of the histogram series.
-        values: 1D array of values to histogram.
-        weights: 1D array of weights for the values.
-        style: Resolved styling for the series.
+        name (str): Name of the histogram series.
+        values (NDArray[np.float64]): 1D array of values to histogram.
+        weights (NDArray[np.float64]): 1D array of weights for the values.
+        style (HistogramOptions): Resolved styling for the series.
     """
 
     name: str
@@ -118,12 +119,20 @@ class _HistogramData:
 class Histogram(GerryPlotBase):
     """Overlayed histogram comparison figure.
 
-    Typical usage:
+    Typical usage::
+
         h = Histogram()
         h.add_dataset(df["ensemble1"], name="Ensemble", facecolor="denim", facealpha=0.35)
-        h.add_dataset(df["ensemble2"], name="Plan", histtype="outline", facecolor="black", facealpha=1.0)
+        h.add_dataset(
+            df["ensemble2"],
+            name="Plan",
+            histtype="outline",
+            facecolor="black",
+            facealpha=1.0,
+        )
         h.add_vertical_lines(plan_value, linecolor="black", name="Plan value")
         h.show()
+
     """
 
     def __init__(
@@ -147,7 +156,7 @@ class Histogram(GerryPlotBase):
             ax (matplotlib.axes.Axes | None, optional): Render onto an existing
                 matplotlib ``Axes`` instead of creating a fresh figure. Defaults to None.
             legend (bool, optional): Whether to include a legend in the plot.
-                Defaults to True.
+                Defaults to False.
             xlabel (str | None, optional): The label for the x-axis. Defaults to None.
             ylabel (str | None, optional): The label for the y-axis. Defaults to None.
             title (str | None, optional): The title of the plot. Defaults to None.
@@ -194,7 +203,7 @@ class Histogram(GerryPlotBase):
         self._as_density_plot = bool(value)
 
     @deferred_axis_update
-    def center_data_on_bin_edges(self) -> None:
+    def center_bars(self) -> None:
         """Center histogram data on bin edges."""
         self._bin_alignment = "center"
 
@@ -222,8 +231,8 @@ class Histogram(GerryPlotBase):
         - ‘sqrt’: Square root (of data size) estimator, used by Excel and other programs for its
             speed and simplicity.
 
-        Clears any bin width previously set via :meth:`set_bins_by_width`,
-        mirroring how :meth:`set_bins_by_width` clears explicit bins.
+        Clears any bin width previously set via :meth:`set_bin_widths`,
+        mirroring how :meth:`set_bin_widths` clears explicit bins.
 
         Args:
             bins (BinsType): Bin specification (array of bin edges, integer number of bins, or
@@ -240,7 +249,7 @@ class Histogram(GerryPlotBase):
         self._binwidth = None
 
     @deferred_axis_update
-    def set_bins_by_width(self, binwidth: float | None) -> None:
+    def set_bin_widths(self, binwidth: float | None) -> None:
         """Set histogram bins by specifying a fixed bin width.
 
         The histogram bins will be computed automatically based on the minimum and maximum
@@ -268,7 +277,11 @@ class Histogram(GerryPlotBase):
             self._hist_data_dict[key].clear()
 
     def display_warnings(self, enabled: bool) -> None:
-        """Set whether warnings about potentially problematic settings are displayed."""
+        """Set whether warnings about potentially problematic settings are displayed.
+
+        Args:
+            enabled (bool): Whether to display warnings.
+        """
         self._show_warnings = enabled
 
     def as_density(self, enabled: bool = True) -> None:
@@ -276,6 +289,9 @@ class Histogram(GerryPlotBase):
 
         ``'stack'`` series normalize jointly (the stacked total integrates to 1); every
         other histtype normalizes each series on its own.
+
+        Args:
+            enabled (bool, optional): Whether to render densities. Defaults to True.
         """
         self.as_density_plot = enabled
 
@@ -334,12 +350,12 @@ class Histogram(GerryPlotBase):
                 Defaults to None.
             options (HistogramOptions | None, optional): Base histogram styling. Explicit
                 keyword arguments override matching fields. Defaults to None.
-            facecolor (Color, optional): The fill color of the histogram bars.
-                Defaults to "default_grey".
+            facecolor (Color | None, optional): The fill color of the histogram bars. Pass
+                ``None`` for no fill. Defaults to "default_grey".
             facealpha (float | None, optional): The alpha transparency of the histogram bars.
                 Defaults to None.
-            edgecolor (Color, optional): The edge color of the histogram bars. Defaults to "none"
-                (no visible edge).
+            edgecolor (Color | None, optional): The edge color of the histogram bars. Pass
+                ``None`` for no edge. Defaults to "black".
             edgealpha (float | None, optional): The alpha transparency of the histogram bar edges.
                 Defaults to None.
             edgewidth (float, optional): The width of the histogram bar edges. Defaults to None
@@ -349,6 +365,9 @@ class Histogram(GerryPlotBase):
             histtype (HistType, optional): The type of histogram to add. Must be one of
                 'overlay', 'stack', 'grouped', 'outline'. Defaults to 'overlay'.
             zorder (int, optional): The z-order of the histogram. Defaults to 2.
+
+        Raises:
+            ValueError: If values, weights, histogram type, or styling options are invalid.
         """
         vals, wts = _coerce_values_and_weights(values, weights=weights, column=column)
 
@@ -364,7 +383,7 @@ class Histogram(GerryPlotBase):
         )
 
         if _needs_default_edge_width(
-            edgewidth_given=edgewidth is not None,
+            edgewidth_given=not style._edgewidth_defaulted,
             resolved_edgewidth=style.edgewidth,
             resolved_edgecolor=style.edgecolor,
         ):
@@ -408,7 +427,8 @@ class Histogram(GerryPlotBase):
             if outline_fixes:
                 style = style.merged(**outline_fixes)
 
-        set_name = name or f"{style.histtype.capitalize()} histogram {len(hist_list) + 1}"
+        histogram_number = sum(len(datasets) for datasets in self._hist_data_dict.values()) + 1
+        set_name = name or f"Histogram {histogram_number}"
         hist_list.append(_HistogramData(name=set_name, values=vals, weights=wts, style=style))
         self._claim_legend_if_named(name)
 
@@ -419,11 +439,11 @@ class Histogram(GerryPlotBase):
         *,
         column: str | None = None,
         marker_options: PointMarkerOptions | None = None,
-        facecolor: Color | None = None,
+        facecolor: Color | None | Unset = UNSET,
         facealpha: float | None = None,
         marker: str | None = None,
         markersize: float | None = None,
-        markeredgecolor: Color | None = None,
+        markeredgecolor: Color | None | Unset = UNSET,
         markeredgealpha: float | None = None,
         markeredgewidth: float | None = None,
         zorder: int | None = None,
@@ -440,13 +460,14 @@ class Histogram(GerryPlotBase):
             name (str | None, optional): The name of the point set. Defaults to None.
             marker_options (PointMarkerOptions | None, optional): Base marker styling. Explicit
                 keyword arguments override matching fields. Defaults to None.
-            facecolor (Color, optional): The face color of the points. Defaults to "black".
+            facecolor (Color | None, optional): The face color of the points. Pass ``None`` for no
+                fill. Defaults to "black".
             facealpha (float | None, optional): The alpha transparency of the points.
                 Defaults to None.
             marker (str, optional): The marker style for the points. Defaults to "o".
             markersize (float, optional): The size of the point markers. Defaults to 7.0.
-            markeredgecolor (Color, optional): The edge color of the point markers.
-                Defaults to "black".
+            markeredgecolor (Color | None, optional): The edge color of the point markers. Pass
+                ``None`` for no edge. Defaults to "black".
             markeredgealpha (float | None, optional): The alpha transparency of the pointset
                 marker edges. Defaults to None.
             markeredgewidth (float, optional): The width of the point marker edges.
@@ -482,8 +503,10 @@ class Histogram(GerryPlotBase):
                 zorder=3,
             )
         )
-        resolved_marker_options = _replace_non_none(
+        resolved_marker_options = _replace_with_color_overrides(
             base,
+            ("markerfacecolor", "markerfacealpha"),
+            ("markeredgecolor", "markeredgealpha"),
             markerfacecolor=facecolor,
             markerfacealpha=facealpha,
             marker=marker,
@@ -562,15 +585,6 @@ class Histogram(GerryPlotBase):
         for histtype, histlist in self._hist_data_dict.items():
             hist_bottoms = np.zeros(len(bin_edges) - 1)
             n_bins_per_bar = 1
-            if histtype in ("grouped", "stack"):
-                for hdata in histlist:
-                    if hdata.style.edgewidth > 0.0 and self._show_warnings:
-                        warn(
-                            f"{histtype.capitalize()} histogram {hdata.name!r} has edgewidth > 0; "
-                            "line edges will overlap in the plot.",
-                            UserWarning,
-                        )
-
             if histtype == "grouped":
                 n_bins_per_bar = len(histlist)
 
@@ -677,7 +691,7 @@ class Histogram(GerryPlotBase):
         # previous build's (since removed) artists. Recompute both before converting
         # point-space clearances through transData, so every build places points from the
         # same realized view.
-        self._ax.relim()
+        _recompute_data_limits(self._ax)
         self._ax.autoscale_view()
 
         display_edges = self._display_edges(bin_edges)

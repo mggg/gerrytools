@@ -43,6 +43,13 @@ def test_generated_partisan_formulas_match_gerrychain() -> None:
         assert formulas.partisan_bias(party, opposition) == pytest.approx(expected_bias)
 
 
+def test_disproportionality_uses_aggregate_vote_share() -> None:
+    party = [90, 1]
+    opposition = [10, 9]
+
+    assert formulas.disproportionality(party, opposition) == pytest.approx(0.5 - 91 / 110)
+
+
 def test_tied_districts_are_not_wins_and_waste_all_votes() -> None:
     party = np.array([60.0, 50.0])
     opposition = np.array([40.0, 50.0])
@@ -217,7 +224,7 @@ def test_competitive_contests_use_an_open_interval() -> None:
     party = np.array([[47, 48, 53]], dtype=np.float64)
     opposition = 100 - party
 
-    assert formulas.competitive_contests(party, opposition, points_within=0.03) == 1
+    assert formulas.competitive_contests(party, opposition, vote_share_margin=0.03) == 1
 
 
 def test_election_scores_accept_leading_plan_batches() -> None:
@@ -251,16 +258,21 @@ def test_population_demographic_and_compactness_derivations() -> None:
     populations = np.array([90.0, 100.0, 110.0])
     np.testing.assert_allclose(formulas.population_deviations(populations), [-0.1, 0.0, 0.1])
     assert formulas.max_absolute_population_deviation(populations) == 10
-    assert formulas.max_absolute_population_deviation(populations, relative=True) == pytest.approx(
-        0.1
-    )
+    assert formulas.max_absolute_population_deviation(
+        populations, relative_to_ideal=True
+    ) == pytest.approx(0.1)
     assert formulas.max_population_deviation(populations) == 20
-    assert formulas.max_population_deviation(populations, relative=True) == pytest.approx(0.2)
+    assert formulas.max_population_deviation(populations, relative_to_ideal=True) == pytest.approx(
+        0.2
+    )
 
     shares = formulas.demographic_shares([45, 60, 0], [90, 100, 0])
     np.testing.assert_allclose(shares, [0.5, 0.6, np.nan])
     assert formulas.districts_above_threshold([45, 60, 0], [90, 100, 0]) == 1
-    np.testing.assert_allclose(formulas.schwartzberg([0.25, 1.0]), [2.0, 1.0])
+    np.testing.assert_allclose(
+        formulas.schwartzberg(polsby_popper_scores=[0.25, 1.0]),
+        [2.0, 1.0],
+    )
 
 
 @pytest.mark.parametrize(
@@ -271,7 +283,7 @@ def test_population_demographic_and_compactness_derivations() -> None:
         (lambda: formulas.seats([-1], [1]), "cannot contain negative"),
         (lambda: formulas.seats([np.nan], [1]), "finite values"),
         (
-            lambda: formulas.competitive_contests([[1]], [[1]], points_within=0.6),
+            lambda: formulas.competitive_contests([[1]], [[1]], vote_share_margin=0.6),
             "between zero and one half",
         ),
         (

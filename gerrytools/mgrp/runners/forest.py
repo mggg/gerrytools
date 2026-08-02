@@ -1,6 +1,5 @@
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
-from pathlib import Path
 from typing import ClassVar, Literal, get_args
 
 from ..constraints import ConstraintsLike, ConstraintSpec, constraint_specs
@@ -11,9 +10,9 @@ from ..run_config import (
     check_boolean,
     check_finite_nonnegative,
     check_finite_number,
-    check_integer,
     check_nonempty_string,
     check_positive_int,
+    check_rng_seed,
     check_string_list,
     dataclass_config,
 )
@@ -25,9 +24,10 @@ ForestWriter = Literal["jsonl", "ben", "raw"]
 
 @dataclass
 class ForestRunInfo(RunInfo):
-    """
-    Represents all of the settings that can be passed to the Multi Scale
-    Map Sampler (MSMS) Julia code.
+    """Settings passed to the Multi-Scale Map Sampler (MSMS) Julia code.
+
+    Raises:
+        ValueError: If a setting or constraint is invalid.
     """
 
     levels: list[str]
@@ -37,32 +37,32 @@ class ForestRunInfo(RunInfo):
     pop_col: str
     """The name of the column in the dual graph JSON file that contains the population data."""
     num_dists: int = 2
-    """The number of districts that the dual graph should be partitioned into."""
+    """The number of districts that the dual graph should be partitioned into. Defaults to 2."""
     pop_dev: float = 0.1
-    """The maximum allowable population deviation between the districts."""
+    """The maximum allowable population deviation between districts. Defaults to 0.1."""
     constraints: ConstraintsLike = field(default=None, metadata=NOT_ENGINE_CONFIG)
     """Constraints for the run, as a Constraints builder (see
         gerrytools.mgrp.Constraints). The forest runner supports pack_nodes,
         max_coarse_node_splits, allowed_excess_dists_in_coarse_nodes, and
-        max_discontinuous_traversal_segments."""
+        max_discontinuous_traversal_segments. Defaults to None."""
     gamma: float = 0.0
-    """The gamma value to be used in the MSMS code."""
+    """The gamma value to be used in the MSMS code. Defaults to 0.0."""
     n_steps: int = 10
-    """The number of steps that the MSMS code should run for."""
+    """The number of steps that the MSMS code should run for. Defaults to 10."""
     rng_seed: int = 42
-    """The random seed to be used in the MSMS code."""
+    """The random seed to be used in the MSMS code. Defaults to 42."""
     output_file_name: str | None = field(default=None, metadata=NOT_ENGINE_CONFIG)
     """The name of the output file that the MSMS code should write to. If None, then the
         output file name will be determined according to a set of heuristics."""
     writer: ForestWriter = field(default="jsonl", metadata=NOT_ENGINE_CONFIG)
     """The output writer: standard ``"jsonl"``, ``"ben"``, or the engine's ``"raw"``
-        atlas output (which skips the parser stage)."""
+        atlas output (which skips the parser stage). Defaults to ``"jsonl"``."""
     force_print: bool = field(default=False, metadata=NOT_ENGINE_CONFIG)
     """Whether or not the output should be printed to the console. This will overwrite the
-        output_file_name attribute."""
+        output_file_name attribute. Defaults to False."""
     updaters: dict[str, Callable] = field(default_factory=dict, metadata=NOT_ENGINE_CONFIG)
     """A dictionary of updaters that should be used when running the chain using the
-        mcmc_run_with_updaters method."""
+        mcmc_run_with_updaters method. Defaults to an empty mapping."""
 
     @property
     def resolved_constraints(self) -> list[ConstraintSpec]:
@@ -73,7 +73,11 @@ class ForestRunInfo(RunInfo):
         self.validate()
 
     def validate(self) -> None:
-        """Validate current settings before construction or config emission."""
+        """Validate current settings before construction or config emission.
+
+        Raises:
+            ValueError: If any Forest setting or constraint is invalid.
+        """
         check_string_list("levels", self.levels)
         if not self.levels:
             raise ValueError(
@@ -90,7 +94,7 @@ class ForestRunInfo(RunInfo):
         check_positive_int("n_steps", self.n_steps)
         check_finite_nonnegative("pop_dev", self.pop_dev)
         check_finite_number("gamma", self.gamma)
-        check_integer("rng_seed", self.rng_seed)
+        check_rng_seed("rng_seed", self.rng_seed, minimum=0, maximum=2**63 - 1)
         check_boolean("force_print", self.force_print)
         self.validate_force_print(self.writer, self.force_print)
         # Eager validation; the property recomputes from the live ``constraints`` on access.
@@ -133,6 +137,12 @@ class ForestRunnerConfig(RunnerConfig[ForestRunInfo]):
         config-as-``$1`` transport); the jsonl and ben writers pipe the engine's raw
         atlas output through the parser stage.
 
+        Args:
+            run_info (ForestRunInfo): Forest run settings.
+
+        Returns:
+            list: Shell command arguments for the container.
+
         Raises:
             TypeError: If ``run_info`` is not exactly a ForestRunInfo.
         """
@@ -149,6 +159,12 @@ class ForestRunnerConfig(RunnerConfig[ForestRunInfo]):
 
     def run_config(self, run_info: ForestRunInfo) -> EngineRunConfig:
         """Return the complete effective configuration for a Forest run.
+
+        Args:
+            run_info (ForestRunInfo): Forest run settings.
+
+        Returns:
+            EngineRunConfig: Independent version-1 engine configuration.
 
         Raises:
             TypeError: If ``run_info`` is not exactly a ForestRunInfo.
@@ -184,7 +200,17 @@ class ForestRunnerConfig(RunnerConfig[ForestRunInfo]):
         )
 
     def canonical_stdout_command(self, run_info: ForestRunInfo) -> list:
-        """The run command with standard JSONL assignment output forced to stdout."""
+        """Return the run command with standard JSONL assignment output forced to stdout.
+
+        Args:
+            run_info (ForestRunInfo): Forest run settings.
+
+        Returns:
+            list: Shell command arguments for the container.
+
+        Raises:
+            TypeError: If ``run_info`` is not exactly a ForestRunInfo.
+        """
         self._check_run_info(run_info)
         return self.run_command(replace(run_info, writer="jsonl", force_print=True))
 
@@ -205,9 +231,15 @@ class ForestRunnerConfig(RunnerConfig[ForestRunInfo]):
         )
 
     def expected_files(self, run_info: ForestRunInfo) -> list[str]:
-        """Include provenance alongside every file output."""
+        """Return every output path, including provenance alongside file output.
+
+        Args:
+            run_info (ForestRunInfo): Forest run settings.
+
+        Returns:
+            list[str]: Primary output and metadata sidecar paths, or an empty list for stdout.
+        """
         expected = super().expected_files(run_info)
         if expected:
-            output = Path(expected[0])
-            expected.append(str(output.with_name(f"{output.stem}_metadata.jsonl")))
+            expected.append(self._sidecar_file(expected[0], "metadata.jsonl"))
         return expected

@@ -1,4 +1,5 @@
 import dataclasses
+import hashlib
 import math
 import tempfile
 import zlib
@@ -19,6 +20,7 @@ from gerrytools.plotting._axes_backed import deferred_axis_update
 from gerrytools.plotting._axes_state import Unit
 from gerrytools.plotting._legend_mixin import _LegendMixin
 from gerrytools.plotting._rng import resolve_numpy_rng
+from gerrytools.plotting.data.options import DEFAULT_EDGE_WIDTH, _needs_default_edge_width
 from gerrytools.plotting.geometry._dot_sampling import _make_random_points
 from gerrytools.plotting.geometry._labels import LabelOptions
 from gerrytools.plotting.geometry._layers._base import _to_target_crs
@@ -26,8 +28,8 @@ from gerrytools.plotting.geometry.geoplotbase import GeoPlotBase
 from gerrytools.plotting.mpl.label_text_options import LabelBoxOptions, LabelFontOptions
 from gerrytools.plotting.mpl.legend_options import LegendOptions
 from gerrytools.plotting.mpl.marker_options import PointMarkerOptions
-from gerrytools.plotting.utils import _replace_non_none, _resolve_alpha_override
-from gerrytools.typing import Color, CRSLike, LegendHandle
+from gerrytools.plotting.utils import _replace_with_color_overrides
+from gerrytools.typing import UNSET, Color, CRSLike, LegendHandle, Unset
 
 logger = get_logger(__name__)
 
@@ -73,6 +75,7 @@ class _DensityLayerRecord:
     insertion_index: int
     n_jobs: int
     n_chunks: int | np.integer
+    source_fingerprint: bytes
 
 
 class DotDensityPlot(_LegendMixin, GeoPlotBase):
@@ -85,7 +88,7 @@ class DotDensityPlot(_LegendMixin, GeoPlotBase):
     Attributes:
         gdf (GeoDataFrame): The base GeoDataFrame for the plot.
         fig (Figure): The Matplotlib Figure object.
-        target_crs: The target CRS for reprojecting geometries.
+        target_crs (CRSLike | None): The target CRS for reprojecting geometries.
         silent (bool): Whether to suppress informational output throughout
             the rendering process.
         show_legend (bool): Whether to show the legend.
@@ -106,7 +109,7 @@ class DotDensityPlot(_LegendMixin, GeoPlotBase):
         show_labels: bool = True,
         label_options: LabelOptions | None = None,
         show_legend: bool = False,
-        edgecolor: Color = "black",
+        edgecolor: Color | None = "black",
         edgealpha: float | None = None,
         edgewidth: float = 0.6,
         rng_seed: int | None = None,
@@ -127,11 +130,12 @@ class DotDensityPlot(_LegendMixin, GeoPlotBase):
             show_labels (bool, optional): Whether to show labels for the outlined areas.
                 Defaults to True.
             label_options (LabelOptions | None, optional): Bundled label styling and
-                placement options (style or font/box options, per-label adjustments and font
-                sizes, and excluded labels). Unset ``font_options`` / ``box_options`` (with no
-                style) fall back to the dot-density defaults: bold sans-serif numbers in wheat
-                circles. Defaults to None.
-            edgecolor (Color, optional): Color of the outline edges. Defaults to 'black'.
+                placement options (label style or font/box options, per-label adjustments and
+                font sizes, and excluded labels). Unset ``font_options`` / ``box_options`` (with
+                no label style) fall back to the dot-density defaults: bold sans-serif numbers in
+                wheat circles. Defaults to None.
+            edgecolor (Color | None, optional): Color of the outline edges. Pass ``None``
+                for no outline. Defaults to 'black'.
             edgealpha (float | None, optional): Alpha transparency for the outline edges.
                 Defaults to None.
             edgewidth (float, optional): Width of the outline edges. Defaults to 0.6.
@@ -170,13 +174,13 @@ class DotDensityPlot(_LegendMixin, GeoPlotBase):
         self._seed_root: int = self._derive_seed_root(resolved_rng)
         self.people_per_dot = people_per_dot
 
-        # Unset font/box pieces (without a style) fall back to the dot-density defaults.
+        # Unset font/box pieces (without a label style) fall back to the dot-density defaults.
         if label_options is None:
             label_options = LabelOptions(
                 font_options=_DEFAULT_DD_LABEL_FONT,
                 box_options=_DEFAULT_DD_LABEL_BOX,
             )
-        elif label_options.style is None:
+        elif label_options.label_style is None:
             label_options = dataclasses.replace(
                 label_options,
                 font_options=label_options.font_options or _DEFAULT_DD_LABEL_FONT,
@@ -291,6 +295,9 @@ class DotDensityPlot(_LegendMixin, GeoPlotBase):
 
         Applies to density layers added after the change; already-added layers keep the
         value captured when they were added.
+
+        Raises:
+            ValueError: When assigned a value that is not positive and finite.
         """
         return self._people_per_dot
 
@@ -314,7 +321,7 @@ class DotDensityPlot(_LegendMixin, GeoPlotBase):
         *,
         marker: str | None = None,
         markersize: float | None = None,
-        markeredgecolor: Color | None = None,
+        markeredgecolor: Color | None | Unset = UNSET,
         markeredgealpha: float | None = None,
         markeredgewidth: float | None = None,
     ) -> None:
@@ -333,11 +340,18 @@ class DotDensityPlot(_LegendMixin, GeoPlotBase):
             marker_options (PointMarkerOptions | None, optional): Pre-built styling.
                 Any styling kwarg passed explicitly overrides the corresponding
                 field on ``marker_options``. Defaults to None.
-            marker (str, optional): The marker style (e.g., 'o' for circle).
-            markersize (float, optional): The size of the markers.
-            markeredgecolor (Color, optional): The color of the marker edges.
-            markeredgealpha (float | None, optional): Alpha transparency of the edges.
-            markeredgewidth (float, optional): The width of the marker edges.
+            marker (str, optional): Marker style. Defaults to None, which uses
+                ``marker_options`` or ``"o"``.
+            markersize (float, optional): Marker size. Defaults to None, which uses
+                ``marker_options`` or 1.0.
+            markeredgecolor (Color | None, optional): The color of the marker edges.
+                Pass ``None`` for no edge. If omitted, uses ``marker_options`` when provided or
+                the edgeless default otherwise.
+            markeredgealpha (float | None, optional): Edge opacity. Defaults to None, which uses
+                the alpha encoded in ``markeredgecolor``.
+            markeredgewidth (float, optional): The width of the marker edges. Selecting a visible
+                edge color while omitting the width uses the package's default visible width.
+                Pass ``0`` explicitly to keep the edge hidden.
         """
         # The dot-density global default: tiny edgeless dot.
         base = (
@@ -350,30 +364,33 @@ class DotDensityPlot(_LegendMixin, GeoPlotBase):
                 markeredgewidth=0.0,
             )
         )
-        merged = _replace_non_none(
+        resolved_options = _replace_with_color_overrides(
             base,
+            ("markeredgecolor", "markeredgealpha"),
             marker=marker,
             markersize=markersize,
             markeredgecolor=markeredgecolor,
+            markeredgealpha=markeredgealpha,
             markeredgewidth=markeredgewidth,
         )
-        # An edge-color override without an alpha must not inherit the fully transparent
-        # alpha resolved from a base color of "none".
-        self._marker_options = dataclasses.replace(
-            merged,
-            markeredgealpha=_resolve_alpha_override(
-                markeredgecolor is not None,
-                markeredgealpha,
-                base.markeredgecolor,
-                base.markeredgealpha,
+        if _needs_default_edge_width(
+            edgewidth_given=markeredgewidth is not None,
+            resolved_edgewidth=resolved_options.markeredgewidth,
+            resolved_edgecolor=(
+                resolved_options.markeredgecolor if not isinstance(markeredgecolor, Unset) else None
             ),
-        )
+        ):
+            resolved_options = dataclasses.replace(
+                resolved_options,
+                markeredgewidth=DEFAULT_EDGE_WIDTH,
+            )
+        self._marker_options = resolved_options
 
     @deferred_axis_update
     def add_density_layer(
         self,
         column: str,
-        color: Color,
+        color: Color | None,
         *,
         refresh_cache: bool = False,
         n_jobs: int = -1,
@@ -392,13 +409,17 @@ class DotDensityPlot(_LegendMixin, GeoPlotBase):
 
         Args:
             column (str): The name of the data column to visualize.
-            color (Color): The color of the dots.
+            color (Color | None): The color of the dots. Pass ``None`` for transparent
+                dots.
             refresh_cache (bool, optional): If True, forces regeneration of cached dots.
                 Defaults to False.
             n_jobs (int, optional): Number of parallel jobs to use for processing when
                 generating dots. Defaults to -1 which will use all available cores minus two.
             n_chunks (int, optional): Number of chunks used to split polygon processing work.
                 Defaults to ``10``.
+
+        Raises:
+            ValueError: If the column is missing, non-numeric, nonfinite, or contains negatives.
         """
         if column not in self.gdf.columns:
             raise ValueError(f"Column '{column}' not found in GeoDataFrame.")
@@ -457,11 +478,23 @@ class DotDensityPlot(_LegendMixin, GeoPlotBase):
             insertion_index=insertion_index,
             n_jobs=n_jobs,
             n_chunks=n_chunks,
+            source_fingerprint=self._density_fingerprint(column),
         )
         self._density_layers[column] = record
 
         if not cache_filepath.exists() or refresh_cache:
             self._generate_layer_dots(record)
+
+    def _density_fingerprint(self, column: str) -> bytes:
+        """Fingerprint the values and projected geometry that determine sampled dots."""
+        sample_gdf = _to_target_crs(self.gdf, self.target_crs)
+        digest = hashlib.blake2b(digest_size=16)
+        for value, geometry in zip(sample_gdf[column], sample_gdf.geometry.to_wkb(), strict=True):
+            for payload in (repr(value).encode(), geometry or b""):
+                digest.update(len(payload).to_bytes(8, "little"))
+                digest.update(payload)
+        digest.update(str(sample_gdf.crs).encode())
+        return digest.digest()
 
     def _generate_layer_dots(self, record: _DensityLayerRecord) -> None:
         """Sample and cache dots for one density layer, in the current target CRS."""
@@ -554,7 +587,12 @@ class DotDensityPlot(_LegendMixin, GeoPlotBase):
         layers_xy_polyid = []
         colors = []
 
-        for record in self._density_layers.values():
+        for column, record in list(self._density_layers.items()):
+            fingerprint = self._density_fingerprint(record.column)
+            if fingerprint != record.source_fingerprint:
+                record = dataclasses.replace(record, source_fingerprint=fingerprint)
+                self._density_layers[column] = record
+                record.cache_path.unlink(missing_ok=True)
             if not record.cache_path.exists():
                 self._generate_layer_dots(record)
             with np.load(record.cache_path) as np_data:

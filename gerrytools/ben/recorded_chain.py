@@ -19,7 +19,7 @@ import warnings
 from collections.abc import Iterable, Iterator, Sequence
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Literal, Protocol, cast, get_args
+from typing import Any, Literal, Protocol, Self, cast, get_args
 
 import networkx as nx
 from binary_ensemble import BendlDecoder, BendlEncoder
@@ -266,10 +266,12 @@ class RecordedRun:
     read back without the chain object.
 
     Handles follow their file: every read opens (or reuses a decoder for) the file at
-    :attr:`path`. When a later authorized rerun publishes over that same file, the handle is
-    invalidated at the moment of replacement and every read method afterwards raises
-    ``RuntimeError`` naming the path; only :attr:`path` stays readable. A rerun whose
-    destination resolves to a different file leaves the handle fully usable.
+    :attr:`path`. Assignment lookup, iteration, sample counts, metadata, integrity verification,
+    and partition reconstruction are available directly on the handle; :attr:`decoder` exposes
+    lower-level BENDL operations. When a later authorized rerun publishes over that same file, the
+    handle is invalidated at the moment of replacement and every read method afterwards raises
+    ``RuntimeError`` naming the path; only :attr:`path` stays readable. A rerun whose destination
+    resolves to a different file leaves the handle fully usable.
     """
 
     __slots__ = (
@@ -305,6 +307,33 @@ class RecordedRun:
         self._decoder_cache: BendlDecoder | None = None
         self._lookup_graph: FrozenGraph | None = None
 
+    @classmethod
+    def from_bendl(
+        cls,
+        path: str | os.PathLike[str],
+        *,
+        partition_type: type[Partition] = Partition,
+        updaters: dict[str, Any] | None = None,
+    ) -> Self:
+        """Create a reader for an existing BENDL recording.
+
+        Opening is lazy: the file is read when a lookup, decoder, or partition method is first
+        used. Assignment vectors can be read from a graphless BENDL file, but reconstructing
+        partitions requires an embedded graph.
+
+        Args:
+            path (str | os.PathLike[str]): Path to the recorded ``.bendl`` file.
+            partition_type (type[Partition], optional): Partition class to reconstruct. Its root
+                constructor must accept ``graph``, ``assignment``, ``updaters``, and
+                ``use_default_updaters``. Defaults to ``Partition``.
+            updaters (dict[str, Any] | None, optional): Updaters attached to reconstructed
+                partitions. Defaults to an empty dictionary.
+
+        Returns:
+            RecordedRun: A lazy reader for the recording.
+        """
+        return cls(Path(path), partition_type, {} if updaters is None else updaters)
+
     @property
     def path(self) -> Path:
         """Resolved absolute path of the published recording."""
@@ -338,7 +367,38 @@ class RecordedRun:
                 self._decoder_cache = self._open_decoder()
             return self._decoder_cache
 
-    def lookup(self, index: int) -> list[int]:
+    def count_samples(self) -> int:
+        """Return the number of recorded assignment samples.
+
+        Returns:
+            int: Number of samples in the assignment stream.
+        """
+        with self._lock:
+            self._guard()
+            return self.decoder.count_samples()
+
+    def __len__(self) -> int:
+        """Return the number of recorded assignment samples."""
+        return self.count_samples()
+
+    def __iter__(self) -> Iterator[list[int]]:
+        """Iterate over all recorded assignment vectors using an independent decoder."""
+        return self._guarded_assignments(self._new_decoder())
+
+    @property
+    def metadata(self) -> Any:
+        """Deep copy of the recording's parsed JSON metadata, or None when absent."""
+        with self._lock:
+            self._guard()
+            return copy.deepcopy(self.decoder.read_metadata())
+
+    def verify(self) -> None:
+        """Verify the recording's asset, stream, and sample-count integrity."""
+        with self._lock:
+            self._guard()
+            self.decoder.verify()
+
+    def assignment_at(self, index: int) -> list[int]:
         """Return the zero-based recorded assignment vector at ``index``.
 
         Args:
@@ -350,6 +410,17 @@ class RecordedRun:
         with self._lock:
             self._guard()
             return self.decoder.lookup(index)
+
+    def lookup(self, index: int) -> list[int]:
+        """Return the assignment at ``index``; alias for :meth:`assignment_at`.
+
+        Args:
+            index (int): Sample index; sample 0 is the initial partition.
+
+        Returns:
+            list[int]: Assignment vector in recorded graph node order.
+        """
+        return self.assignment_at(index)
 
     def partition_at(self, index: int) -> Partition:
         """Reconstruct the recorded partition at ``index``.
@@ -374,8 +445,8 @@ class RecordedRun:
     def partitions(self, assignments: Iterable[list[int]]) -> Iterator[Partition]:
         """Lazily reconstruct partitions from assignment vectors.
 
-        Composes with any vector source: the ``subsample_*`` iterators, ``lookup`` results, or
-        vectors from another decoder for the same graph.
+        Composes with any vector source: this handle's iterator, the ``subsample_*`` iterators,
+        :meth:`assignment_at` results, or vectors from another decoder for the same graph.
 
         Args:
             assignments (Iterable[list[int]]): Assignment vectors in recorded graph node order.
@@ -397,7 +468,7 @@ class RecordedRun:
 
         Args:
             step (int): Stride between samples.
-            offset (int): Zero-based index of the first sample.
+            offset (int, optional): Zero-based index of the first sample. Defaults to 0.
 
         Returns:
             Iterator[list[int]]: Lazily decoded assignment vectors.
@@ -525,9 +596,10 @@ class RecordedChain(MarkovChain):
     initial and final partitions are verified structurally; every step in between gets an
     identity-based check (same graph object and partition class as the initial partition),
     which partitions produced by ``flip`` satisfy automatically. After a
-    successful run, :attr:`recording` exposes a :class:`RecordedRun` whose ``decoder``,
-    ``lookup``, and ``subsample_*`` iterators read the recorded assignment vectors back, and
-    whose ``partition_at``/``partitions`` reconstruct full partitions.
+    successful run, :attr:`recording` exposes a :class:`RecordedRun` whose iterator,
+    :meth:`~RecordedRun.assignment_at`, and ``subsample_*`` methods read the recorded assignment
+    vectors back, and whose :meth:`~RecordedRun.partition_at` and
+    :meth:`~RecordedRun.partitions` reconstruct full partitions.
     """
 
     __slots__ = (
@@ -567,16 +639,18 @@ class RecordedChain(MarkovChain):
             output_path (str | os.PathLike[str]): Destination for the published ``.bendl`` file.
                 The parent directory must exist, and the file itself must not (see
                 ``allow_overwrite``).
-            total_steps (int | None): Number of steps to run, forwarded to ``MarkovChain``.
-            rng (Any): Seed or random generator, forwarded to ``MarkovChain``.
+            total_steps (int | None, optional): Number of steps to run, forwarded to
+                ``MarkovChain``. Defaults to None.
+            rng (Any, optional): Seed or random generator, forwarded to ``MarkovChain``. Defaults
+                to None.
             graph_order (GraphOrder): Node reordering applied before encoding: ``"mlc"`` (the
                 default), ``"rcm"``, ``"key"`` (sort by the ``graph_order_key`` node attribute),
                 or ``None`` to keep the input order. Reordering improves compression; the
                 permutation back to the source order is stored in the file.
             graph_order_key (str | None): Node attribute to sort by; required exactly when
                 ``graph_order="key"``.
-            metadata (dict[str, Any] | list[Any] | None): JSON-serializable metadata embedded in
-                the bundle, e.g. the proposal name, epsilon, seed, and data vintages.
+            metadata (dict[str, Any] | list[Any] | None, optional): JSON-serializable metadata
+                embedded in the bundle. Defaults to None.
             variant (Variant): Assignment-stream encoding: ``"twodelta"`` (the default),
                 ``"mkv_chain"``, or ``"standard"``.
 
@@ -677,6 +751,9 @@ class RecordedChain(MarkovChain):
 
         The replacement is atomic: the new recording is finalized in a temporary location and
         moved over ``output_path`` only on clean completion.
+
+        Returns:
+            RunIterator: Single-use iterator that records the run and may replace the output file.
         """
         return cast(RunIterator, self._record(overwrite=True))
 

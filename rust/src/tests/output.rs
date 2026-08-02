@@ -69,8 +69,36 @@ fn batches(path: &Path) -> Vec<RecordBatch> {
         .collect()
 }
 
+fn run_name(output: &TempPath) -> String {
+    output
+        .path()
+        .file_name()
+        .unwrap()
+        .to_string_lossy()
+        .to_string()
+}
+
+fn flat_table(output: &TempPath, metric: &str) -> PathBuf {
+    output
+        .path()
+        .join(format!("{metric}__{}.parquet", run_name(output)))
+}
+
+fn manifest_path(output: &TempPath) -> PathBuf {
+    output
+        .path()
+        .join(format!("manifest__{}.json", run_name(output)))
+}
+
+fn grouped_table(output: &TempPath, metric: &str, file: &str) -> PathBuf {
+    let name = run_name(output);
+    output
+        .path()
+        .join(format!("{metric}/{file}__{name}.parquet"))
+}
+
 #[test]
-fn writes_version_one_district_and_plan_tables_atomically() {
+fn writes_version_two_district_and_plan_tables_atomically() {
     let output = TempPath::new("run");
     let mut writer = RunWriter::with_options(
         output.path(),
@@ -97,8 +125,8 @@ fn writes_version_one_district_and_plan_tables_atomically() {
         .unwrap();
 
     let manifest: Value =
-        serde_json::from_reader(File::open(output.path().join("manifest.json")).unwrap()).unwrap();
-    assert_eq!(manifest["format_version"], 1);
+        serde_json::from_reader(File::open(manifest_path(&output)).unwrap()).unwrap();
+    assert_eq!(manifest["format_version"], 2);
     assert_eq!(manifest["district_ids"], json!([1, 3]));
     assert_eq!(
         manifest["summary"],
@@ -120,13 +148,15 @@ fn writes_version_one_district_and_plan_tables_atomically() {
     assert_eq!(manifest["metrics"][1]["dtypes"], json!(["float"]));
     assert_eq!(manifest["metrics"][0]["options"]["source"], "graph");
     for metric in manifest["metrics"].as_array().unwrap() {
-        let table = output.path().join(metric["table"].as_str().unwrap());
-        let (size, sha256) = file_integrity(&table).unwrap();
-        assert_eq!(metric["table_size"], size);
-        assert_eq!(metric["table_sha256"], sha256);
+        for table in metric["tables"].as_array().unwrap() {
+            let path = output.path().join(table["path"].as_str().unwrap());
+            let (size, sha256) = file_integrity(&path).unwrap();
+            assert_eq!(table["size"], size);
+            assert_eq!(table["sha256"], sha256);
+        }
     }
 
-    let tally = batches(&output.path().join("population/scores.parquet"));
+    let tally = batches(&grouped_table(&output, "population", "total_tallies"));
     assert_eq!(tally.len(), 2);
     assert_eq!(
         tally[0]
@@ -141,8 +171,6 @@ fn writes_version_one_district_and_plan_tables_atomically() {
             "accepted_index",
             "total__district_1",
             "total__district_3",
-            "vap__district_1",
-            "vap__district_3",
         ]
     );
     assert_eq!(
@@ -156,7 +184,17 @@ fn writes_version_one_district_and_plan_tables_atomically() {
     );
     assert_eq!(
         tally[1]
-            .column(6)
+            .column(4)
+            .as_any()
+            .downcast_ref::<Float64Array>()
+            .unwrap()
+            .value(0),
+        21.0
+    );
+    let vap = batches(&grouped_table(&output, "population", "vap_tallies"));
+    assert_eq!(
+        vap[1]
+            .column(4)
             .as_any()
             .downcast_ref::<Float64Array>()
             .unwrap()
@@ -164,7 +202,7 @@ fn writes_version_one_district_and_plan_tables_atomically() {
         10.0
     );
 
-    let plan = batches(&output.path().join("cut_edges/scores.parquet"));
+    let plan = batches(&flat_table(&output, "cut_edges"));
     assert_eq!(
         plan[0]
             .schema()
@@ -260,10 +298,10 @@ fn zero_row_run_has_stable_empty_schemas() {
         })
         .unwrap();
 
-    let tally = batches(&output.path().join("population/scores.parquet"));
+    let tally = batches(&grouped_table(&output, "population", "total_tallies"));
     assert!(tally.is_empty());
     let tally_schema = ParquetRecordBatchReaderBuilder::try_new(
-        File::open(output.path().join("population/scores.parquet")).unwrap(),
+        File::open(grouped_table(&output, "population", "total_tallies")).unwrap(),
     )
     .unwrap()
     .schema()
@@ -271,7 +309,7 @@ fn zero_row_run_has_stable_empty_schemas() {
     assert_eq!(tally_schema.fields().len(), 3);
 
     let plan_schema = ParquetRecordBatchReaderBuilder::try_new(
-        File::open(output.path().join("cut_edges/scores.parquet")).unwrap(),
+        File::open(flat_table(&output, "cut_edges")).unwrap(),
     )
     .unwrap()
     .schema()
@@ -317,7 +355,7 @@ fn preserves_rows_immediately_around_the_flush_boundary() {
             })
             .unwrap();
 
-        let path = output.path().join("cut_edges/scores.parquet");
+        let path = flat_table(&output, "cut_edges");
         let builder = ParquetRecordBatchReaderBuilder::try_new(File::open(&path).unwrap()).unwrap();
         assert_eq!(
             builder.metadata().num_row_groups(),
@@ -361,6 +399,23 @@ fn validates_paths_metadata_and_summary_before_publication() {
         .unwrap()
         .to_string()
         .contains("safe path component"));
+
+    let collision_output = TempPath::new("collision-run");
+    let collision = RunMetadata::new(
+        None,
+        vec![MetricMetadata::new(
+            "tally",
+            format!("manifest__{}.json", run_name(&collision_output)),
+            TableShape::District,
+            vec!["population".into()],
+        )],
+    );
+    assert!(RunWriter::new(collision_output.path(), collision)
+        .err()
+        .unwrap()
+        .to_string()
+        .contains("conflicts"));
+    assert!(!collision_output.path().exists());
 
     let writer = RunWriter::new(output.path(), metadata()).unwrap();
     assert!(writer
@@ -471,5 +526,5 @@ fn validates_region_axes_before_creating_output() {
             unique_districts: None,
         })
         .unwrap();
-    assert!(output.path().join("counties/scores.parquet").is_file());
+    assert!(grouped_table(&output, "counties", "count_tallies_by_region").is_file());
 }

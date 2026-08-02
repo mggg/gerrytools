@@ -1,6 +1,11 @@
+from pathlib import Path
+
 import matplotlib
 
 matplotlib.use("Agg")
+
+from matplotlib.colors import to_rgba
+from matplotlib.patches import Patch
 
 from gerrytools.plotting.data.scatterplot import ScatterPlot
 
@@ -27,6 +32,16 @@ class TestLegendConfiguration:
         legend = sp.ax.get_legend()
         assert legend is not None
         assert legend.get_title().get_text() == "Series key"
+
+    def test_explicit_none_legend_colors_remove_frame_fill_and_edge(self):
+        sp = ScatterPlot(legend=True)
+        sp.add_series(x=[0.0, 1.0], y=[0.0, 1.0], name="data")
+        sp.set_legend_options(facecolor=None, edgecolor=None)
+
+        legend = sp.ax.get_legend()
+        assert legend is not None
+        assert to_rgba(legend.get_frame().get_facecolor())[3] == 0.0
+        assert to_rgba(legend.get_frame().get_edgecolor())[3] == 0.0
 
 
 # =================================
@@ -119,14 +134,16 @@ class TestUpdateLegendEmptyHandles:
 class TestShowMethod:
     """The non-GUI show path writes an image file."""
 
-    def test_show_builds_and_saves(self, tmp_path, monkeypatch):
+    def test_show_builds_and_saves(self, tmp_path, monkeypatch, capsys):
         from gerrytools.plotting.data.boxplot import BoxPlot
 
         monkeypatch.chdir(tmp_path)
         bp = BoxPlot(legend=False)
         bp.add_dataset({"A": [1.0, 2.0, 3.0]})
         bp.show()
-        assert (tmp_path / "gerrytools_plot.png").exists()
+        saved = Path(capsys.readouterr().out.strip().rsplit("saved to ", 1)[1])
+        assert saved.exists()
+        saved.unlink()
 
 
 # ==================
@@ -135,7 +152,7 @@ class TestShowMethod:
 
 
 class TestNamedBandWithNoEdge:
-    """Bands with `linecolor=None` still produce legend handles."""
+    """Bands with no edge still produce legend handles."""
 
     def test_named_band_no_linecolor_gives_none_edgecolor(self):
         plot = ScatterPlot(legend=True)
@@ -143,3 +160,5 @@ class TestNamedBandWithNoEdge:
         plot.add_vertical_band(0.2, 0.4, name="Shaded Region", linecolor=None)
         handles = plot._get_named_band_legend_handles()
         assert len(handles) >= 1
+        assert isinstance(handles[-1], Patch)
+        assert to_rgba(handles[-1].get_edgecolor())[3] == 0.0

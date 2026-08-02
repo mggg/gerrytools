@@ -430,6 +430,18 @@ class TestTexTableHeaders:
         assert "" not in g2c
 
     @pytest.mark.parametrize("table_cls", [TexTable, TikzTable])
+    def test_header_group_reordering_moves_column_preamble(self, table_cls):
+        table = table_cls(pd.DataFrame({"A": [1], "B": [2], "C": [3]}), use_defaults=False)
+        table.set_tabular_format("lcr")
+        table.add_vrule_right_of(0)
+        table.set_header_groups({"G1": ["C"], "G2": ["A", "B"]})
+
+        layout = table._resolve_layout()
+
+        assert layout.preamble.alignments == ("r", "l", "c")
+        assert [boundary.vrules for boundary in layout.preamble.boundaries] == [0, 1, 0, 0]
+
+    @pytest.mark.parametrize("table_cls", [TexTable, TikzTable])
     def test_set_header_groups_keeps_raw_non_string_column_labels(self, table_cls):
         # Regression: the setter stringified labels, so rendering raised KeyError: '1' and
         # int-keyed column formatters silently unlinked.

@@ -98,14 +98,15 @@ def aligned_geodataframe(
     order happens to match the graph is not enough unless its index also contains the node ids.
 
     Args:
-        node_order: Graph node identifiers in the order expected by the scoring engine.
-        geometries: One geometry row per graph node.
-        node_column: Optional column containing graph node identifiers.
-        crs: Optional projected CRS to which the geometries are transformed. Without this
-            argument, ``geometries`` must already use a projected CRS.
+        node_order (Iterable[Hashable]): Graph node identifiers in the order expected by the scoring
+            engine.
+        geometries (gpd.GeoDataFrame): One geometry row per graph node.
+        node_column (str | None): Optional column containing graph node identifiers.
+        crs (Any | None): Optional projected CRS to which the geometries are transformed. Without
+            this argument, ``geometries`` must already use a projected CRS.
 
     Returns:
-        An aligned copy of ``geometries``.
+        gpd.GeoDataFrame: An aligned copy of ``geometries``.
 
     Raises:
         TypeError: If ``geometries`` is not a GeoDataFrame.

@@ -40,10 +40,12 @@ myst_enable_extensions = [
 ]
 myst_heading_anchors = 3
 
-# Tutorial notebooks are committed without outputs. The docs build executes them into this
-# ignored cache before Sphinx runs, keeping generated images and animations out of Git.
-_default_execution_mode = "auto" if os.environ.get("READTHEDOCS") == "True" else "cache"
-nb_execution_mode = os.environ.get("NB_EXECUTION_MODE", _default_execution_mode)
+# Tutorial notebooks are committed without outputs. Local and RTD build preparation executes them
+# into this ignored cache, keeping generated images and animations out of Git. RTD cannot execute
+# the container-backed MGRP examples, so those pages render their source without outputs.
+_on_readthedocs = os.environ.get("READTHEDOCS") == "True"
+nb_execution_mode = os.environ.get("NB_EXECUTION_MODE", "cache")
+nb_execution_excludepatterns = ["**/mgrp/*.ipynb"] if _on_readthedocs else []
 nb_execution_cache_path = os.path.join(os.path.dirname(__file__), "_build", ".jupyter_cache")
 nb_execution_timeout = 600
 nb_execution_raise_on_error = True
@@ -118,7 +120,7 @@ PALETTES = {
         "light_pygments": "harbor-blush-light",
         "dark_pygments": "harbor-blush-dark",
         "light": _mode("#f4ebe7", "#ecdbd6", "#231412", "#00688a", "#800001", "#00688a", "#00445c"),
-        "dark": _mode("#1d1618", "#2b2024", "#f4ebee", "#3cb4dc", "#ec8383", "#0a6a8c", "#06485f"),
+        "dark": _mode("#1d1618", "#2b2024", "#f4ebee", "#007aa3", "#ec8383", "#0a6a8c", "#06485f"),
     },
 }
 ACTIVE_PALETTE = os.environ.get("DOCS_PALETTE", "blush-blue")

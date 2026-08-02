@@ -161,7 +161,7 @@ def to_latex_xcolor_or_html_spec(color: Color) -> LatexColorSpec:
 TikzColorKind: TypeAlias = Literal["none", "xcolor", "html"]
 
 
-def classify_tikz_color(color: Color) -> tuple[TikzColorKind, str]:
+def classify_tikz_color(color: Color | None) -> tuple[TikzColorKind, str]:
     """Classify a color value for inline TikZ emission.
 
     Shared front half of the TikZ color handling in the latex plot classes: decides whether a color
@@ -170,8 +170,8 @@ def classify_tikz_color(color: Color) -> tuple[TikzColorKind, str]:
     xcolor specification inside option values); no document-level color is registered.
 
     Args:
-        color (Color): Color value represented as an xcolor expression, hex string, parseable named
-            color, or RGB tuple.
+        color (Color | None): Color value represented as an xcolor expression, hex string,
+            parseable named color, or RGB tuple. None is transparent.
 
     Returns:
         tuple[TikzColorKind, str]: ``("none", "none")`` for transparent tokens,

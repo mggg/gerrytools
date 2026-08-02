@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from gerrytools.latex._text import latex_escape
     from gerrytools.latex.document import TexDocument
-    from gerrytools.latex.paintball import UNSET, PaintballPlot, Unset
-    from gerrytools.latex.seatsvotes import SeatsVotesPlot
+    from gerrytools.latex.paintball import UNSET, TikzPaintballPlot, Unset
+    from gerrytools.latex.seatsvotes import TikzSeatsVotesPlot
     from gerrytools.latex.table import TexTable
     from gerrytools.latex.tikz_table import TikzTable
 
@@ -21,8 +21,8 @@ __all__ = [
     "TexDocument",
     "TexTable",
     "TikzTable",
-    "PaintballPlot",
-    "SeatsVotesPlot",
+    "TikzPaintballPlot",
+    "TikzSeatsVotesPlot",
     "UNSET",
     "Unset",
     "latex_escape",
@@ -32,8 +32,8 @@ _LAZY_EXPORTS = {
     "TexDocument": "gerrytools.latex.document",
     "TexTable": "gerrytools.latex.table",
     "TikzTable": "gerrytools.latex.tikz_table",
-    "PaintballPlot": "gerrytools.latex.paintball",
-    "SeatsVotesPlot": "gerrytools.latex.seatsvotes",
+    "TikzPaintballPlot": "gerrytools.latex.paintball",
+    "TikzSeatsVotesPlot": "gerrytools.latex.seatsvotes",
     "UNSET": "gerrytools.latex.paintball",
     "Unset": "gerrytools.latex.paintball",
     "latex_escape": "gerrytools.latex._text",

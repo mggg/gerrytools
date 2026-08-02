@@ -1,6 +1,6 @@
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 
 import matplotlib.colors as mcolors
@@ -20,11 +20,13 @@ class SubwaySignOptions:
 
     Attributes:
         radius (float): Radius of each subway sign circle. Default is 0.3.
-        edgecolor (Color): Edge color of the subway sign circles. Default is "black".
+        edgecolor (Color | None): Edge color of the subway sign circles. None removes
+            the edge. Default is "black".
         linewidth (float): Line width of the subway sign circle edges. Default is 1.5.
         fontsize (float): Font size of the label text. Default is 14.
         fontweight (str): Font weight of the label text. Default is "bold".
-        fontcolor (Color): Font color of the label text. Default is "white".
+        fontcolor (Color | None): Font color of the label text. None makes the text
+            transparent. Default is "white".
         fontoutlinewidth (float): Width of the outline around the label text. Default is 2.
         horizontalgap (float | None): Horizontal gap between subway signs. If None,
             defaults to 0.3 * radius. Default is None.
@@ -37,12 +39,12 @@ class SubwaySignOptions:
     """
 
     radius: float = 0.3
-    edgecolor: Color = "black"
+    edgecolor: Color | None = "black"
     linewidth: float = 1.5
 
     fontsize: float = 14
     fontweight: str = "bold"
-    fontcolor: Color = "white"
+    fontcolor: Color | None = "white"
     fontoutlinewidth: float = 2
 
     horizontalgap: float | None = None
@@ -54,7 +56,7 @@ class SubwaySignOptions:
 
 def _validate_subway_settings(
     *,
-    colors: list[Color],
+    colors: list[Color | None],
     labels: list[str],
     orientation: Literal["vertical", "horizontal"],
     n_bands: int | None,
@@ -64,7 +66,7 @@ def _validate_subway_settings(
     """Validate settings for subway sign plotting.
 
     Args:
-        colors (list[Color]): Sign face colors.
+        colors (list[Color | None]): Sign face colors. None removes a sign's fill.
         labels (list[str]): Sign text labels.
         orientation (Literal["vertical", "horizontal"]): Layout orientation.
         n_bands (int | None): Number of rows/columns, depending on orientation.
@@ -212,7 +214,7 @@ def _band_position(
 
 def _normalize_colors_and_adjust_item_order(
     *,
-    colors: list[Color],
+    colors: list[Color | None],
     labels: list[str],
     reverse_display_order: bool,
 ) -> list[tuple[HexColor, str]]:
@@ -224,7 +226,8 @@ def _normalize_colors_and_adjust_item_order(
     reversing the flat list and re-banding it.
 
     Args:
-        colors (list[Color]): List of colors for each sign.
+        colors (list[Color | None]): List of colors for each sign. None removes a sign's
+            fill.
         labels (list[str]): List of labels for each sign.
         reverse_display_order (bool): Whether to reverse the display order of signs.
     """
@@ -240,7 +243,7 @@ def _draw_sign(
     *,
     axes: Axes,
     index: int,
-    face_color: Color,
+    face_color: Color | None,
     label_text: str,
     sign_options: SubwaySignOptions,
     orientation: Literal["vertical", "horizontal"],
@@ -257,7 +260,7 @@ def _draw_sign(
     Args:
         axes (plt.Axes): The axes to draw on.
         index (int): The linear index of the sign.
-        face_color (Color): The face color of the sign.
+        face_color (Color | None): The face color of the sign. None removes the fill.
         label_text (str): The label text of the sign.
         sign_options (SubwaySignOptions): Options for sign appearance.
         orientation (Literal["vertical", "horizontal"]): The layout orientation.
@@ -270,7 +273,7 @@ def _draw_sign(
         text_outline_effects (Sequence[patheffects.AbstractPathEffect]): Path effects for
             outlining the text.
     """
-    normalized_face_color = mcolors.to_rgba(face_color)
+    normalized_face_color = mcolors.to_rgba(convert_color_to_hexa_or_none(face_color))
 
     horizontal = orientation == "horizontal"
     band_count = row_count if horizontal else column_count
@@ -327,7 +330,7 @@ def _draw_sign(
 
 
 def subway_signs(
-    colors: list[Color],
+    colors: list[Color | None],
     labels: list[str],
     *,
     ax: Axes | None = None,
@@ -341,7 +344,8 @@ def subway_signs(
     """Draw a grid of colored 'subway signs' with labels.
 
     Args:
-        colors (list[Color]): List of colors for each sign.
+        colors (list[Color | None]): List of colors for each sign. None removes a sign's
+            fill.
         labels (list[str]): List of labels for each sign.
         ax (Axes | None, optional): Axes to draw on. Creates a new figure when omitted.
         orientation (Literal["vertical", "horizontal"], optional): Orientation of the layout.
@@ -366,6 +370,11 @@ def subway_signs(
     """
     if sign_options is None:
         sign_options = SubwaySignOptions()
+    sign_options = replace(
+        sign_options,
+        edgecolor=convert_color_to_hexa_or_none(sign_options.edgecolor),
+        fontcolor=convert_color_to_hexa_or_none(sign_options.fontcolor),
+    )
 
     _validate_subway_settings(
         colors=colors,

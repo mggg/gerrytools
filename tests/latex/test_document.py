@@ -194,7 +194,7 @@ class TestTexDocumentColors:
             doc.add_color("badcolor1", "zzzzzz")
 
         with pytest.raises(ValueError, match="Color must be an xcolor expression"):
-            doc.add_color("badcolor2", 2)  # type: ignore[arg-type]
+            doc.add_color("badcolor2", 2)  # type: ignore
 
         with pytest.raises(ValueError, match="Color must be an xcolor expression"):
             doc.add_color("badcolor3", (256, 0, 0))
@@ -223,7 +223,7 @@ class TestTexDocumentSaveOperations:
         doc = TexDocument()
 
         with pytest.raises(TypeError, match="Path must be a string or Path object"):
-            doc.save_pdf(123)  # type: ignore[arg-type]
+            doc.save_pdf(123)  # type: ignore
 
         with pytest.raises(ValueError, match=r"File extension must be '\.pdf'"):
             doc.save_pdf(tmp_path / "out.png")
@@ -235,7 +235,7 @@ class TestTexDocumentSaveOperations:
         doc = TexDocument()
 
         with pytest.raises(TypeError, match="Path must be a string or Path object"):
-            doc.save_png(123)  # type: ignore[arg-type]
+            doc.save_png(123)  # type: ignore
 
         with pytest.raises(ValueError, match=r"File extension must be '\.png'"):
             doc.save_png(tmp_path / "out.pdf")
@@ -569,6 +569,18 @@ class TestMinimalDynamicPreamble:
         document.body_string = "\\toprule"
         document.add_package_with_options("booktabs", [])
         assert document.preamble.count("booktabs") == 1
+
+    def test_optioned_xcolor_precedes_packages_that_require_it(self):
+        from gerrytools.latex import TexDocument
+
+        document = TexDocument()
+        document.body_string = r"\cellcolor{cadmiumgreen} highlighted"
+        document.add_package_with_options("xcolor", ["table"])
+
+        lines = document.preamble.splitlines()
+        assert lines.index(r"\usepackage[table]{xcolor}") < lines.index(
+            r"\usepackage{latexcolors, colortbl}"
+        )
 
     @pytest.mark.parametrize("color", ["yellow-green", "amber(sae/ece)", "olivedrab7"])
     def test_latexcolors_scanner_accepts_full_squashed_key_alphabet(self, color):

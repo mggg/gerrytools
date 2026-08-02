@@ -12,6 +12,7 @@ from __future__ import annotations
 import pytest
 
 from gerrytools.plotting import (
+    UNSET,
     BandOptions,
     BoxPlotOptions,
     HistogramOptions,
@@ -79,7 +80,7 @@ class TestHistogramOptions:
         options = HistogramOptions()
         assert isinstance(options.facecolor, str)
         assert options.facecolor.startswith("#")
-        assert options.edgecolor == "none"  # bar edges hidden by default
+        assert options.edgecolor == "#000000"
         assert options.edgewidth == 0.0
         assert options.histtype == "overlay"
         assert options.zorder == 2
@@ -139,7 +140,7 @@ class TestViolinPlotOptions:
 class TestSeatsVotesLineOptions:
     def test_defaults_construct_cleanly(self):
         options = SeatsVotesLineOptions()
-        assert options.linecolor is None
+        assert options.linecolor is UNSET
         assert options.linealpha is None
         assert options.linewidth is None
         assert options.zorder == 1
@@ -156,7 +157,8 @@ class TestSeatsVotesLineOptions:
 class TestSeatsVotesMarkerOptions:
     def test_defaults_construct_cleanly(self):
         options = SeatsVotesMarkerOptions()
-        assert options.markerfacecolor is None
+        assert options.markerfacecolor is UNSET
+        assert options.markeredgecolor is UNSET
         assert options.marker == "o"
         assert options.markeredgewidth == 0.0
         assert options.marker_zorder == 2

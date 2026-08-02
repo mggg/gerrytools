@@ -24,19 +24,24 @@ class ColorbarOptions:
     """Options for configuring colorbars in GeoPlot.
 
     Attributes:
-        tick_fontsize (float): Font size for colorbar ticks.
-        tick_pad (float): Padding for colorbar ticks.
-        label_fontsize (float | None): Font size for colorbar label.
-        label_rotation (float | None): Rotation angle for colorbar label.
-        label_pad (float | None): Padding for colorbar label.
-        orientation (Literal["vertical", "horizontal"]): Orientation of the colorbar.
-        extend (Literal["neither", "both", "min", "max"]): Extension style for the colorbar.
-        format (str | None): Format string for colorbar tick labels.
-        shrink (float | None): Shrink factor for colorbar.
-        aspect (float | None): Aspect ratio for colorbar.
-        force_ticks (list[float] | None): Explicit tick locations for the colorbar.
-        force_ticklabels (list[str] | None): Explicit tick labels for the colorbar.
-        max_n_ticks (int | None): Maximum number of ticks on the colorbar.
+        tick_fontsize (float): Font size for colorbar ticks. Defaults to 8.0.
+        tick_pad (float): Tick padding in points. Defaults to 2.0.
+        label_fontsize (float | None): Font size for the label. Defaults to None.
+        label_rotation (float | None): Label rotation in degrees. Defaults to None.
+        label_pad (float | None): Label padding in points. Defaults to None.
+        orientation (Literal["vertical", "horizontal"]): Colorbar orientation. Defaults to
+            ``"vertical"``.
+        extend (Literal["neither", "both", "min", "max"]): Extension style. Defaults to
+            ``"neither"``.
+        format (str | None): Tick-label format string. Defaults to None.
+        shrink (float | None): Colorbar shrink factor. Defaults to None.
+        aspect (float | None): Colorbar aspect ratio. Defaults to None.
+        force_ticks (list[float] | None): Explicit tick locations. Defaults to None.
+        force_ticklabels (list[str] | None): Explicit tick labels. Defaults to None.
+        max_n_ticks (int | None): Maximum automatically chosen ticks. Defaults to None.
+
+    Raises:
+        ValueError: If tick options are invalid or inconsistent.
     """
 
     # --- tick appearance (axes.tick_params) ---

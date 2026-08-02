@@ -1,5 +1,7 @@
 """Tests for PaintballPlot edge cases."""
 
+from pathlib import Path
+
 import matplotlib
 
 matplotlib.use("Agg")
@@ -17,17 +19,15 @@ class TestPaintballHullPolygonDegenerate:
     """Degenerate hulls are rendered without polygon errors."""
 
     def test_two_identical_points_create_degenerate_hull(self):
-        """Two data points with same transformed coordinates give a degenerate hull."""
-        # Both points map to same (1 - voteshare, 1 - seatshare) coordinates
+        """Two identical data points give a degenerate horizontal hull."""
         plot = PaintballPlot()
         plot.add_seats_votes_data([0.5, 0.5], [0.5, 0.5])
-        # display_hull(True) makes builds run _draw_horizontal_hull → degenerate path
         plot.display_hull(True)
         ax = plot.ax
         assert ax is not None
 
     def test_single_unique_y_two_x_gives_two_hull_vertices(self):
-        """Points sharing a y-value produce a two-vertex hull."""
+        """Points sharing a seat share produce a two-vertex horizontal hull."""
         plot = PaintballPlot()
         plot.add_seats_votes_data([0.4, 0.6], [0.5, 0.5])
         plot.display_hull(True)
@@ -59,18 +59,22 @@ class TestPaintballLineLegend:
 class TestPaintballShow:
     """The non-GUI show path writes an image file."""
 
-    def test_show_saves_file_in_agg_backend(self, tmp_path, monkeypatch):
+    def test_show_saves_file_in_agg_backend(self, tmp_path, monkeypatch, capsys):
         monkeypatch.chdir(tmp_path)
         plot = simple_paintball()
         plot.show()
-        assert (tmp_path / "gerrytools_plot.png").exists()
+        saved = Path(capsys.readouterr().out.strip().rsplit("saved to ", 1)[1])
+        assert saved.exists()
+        saved.unlink()
 
-    def test_show_with_hull_saves_file(self, tmp_path, monkeypatch):
+    def test_show_with_hull_saves_file(self, tmp_path, monkeypatch, capsys):
         monkeypatch.chdir(tmp_path)
         plot = simple_paintball()
         plot.display_hull(True)
         plot.show()
-        assert (tmp_path / "gerrytools_plot.png").exists()
+        saved = Path(capsys.readouterr().out.strip().rsplit("saved to ", 1)[1])
+        assert saved.exists()
+        saved.unlink()
 
 
 # =================

@@ -20,7 +20,7 @@ from gerrytools.latex._tikz_plot_base import (
     positive_float_option,
     unit_interval_option,
 )
-from gerrytools.typing import Color
+from gerrytools.typing import UNSET, Color, Unset
 
 
 @dataclass(slots=True, frozen=True)
@@ -31,16 +31,16 @@ class _SeatsVotesData:
         pov_party_vote_counts (np.ndarray): Per-district party-of-interest vote totals.
         total_vote_counts (np.ndarray): Per-district total vote totals.
         name (str): Legend label for the seats-votes curve.
-        linecolor (Color): Color for the step curve.
-        markercolor (Color): Color for the election-result marker.
+        linecolor (Color | None): Color for the step curve. None removes the line.
+        markercolor (Color | None): Color for the election-result marker. None removes it.
         marker_label (str): Legend label for the marker.
     """
 
     pov_party_vote_counts: np.ndarray
     total_vote_counts: np.ndarray
     name: str
-    linecolor: Color
-    markercolor: Color
+    linecolor: Color | None
+    markercolor: Color | None
     marker_label: str
 
     def seats_votes_curve_values(self) -> tuple[list[float], list[float]]:
@@ -60,11 +60,27 @@ _SVPlotLine = _GuideLine
 
 @dataclass(slots=True)
 class SeatsVotesOptions(_ValidatedOptions):
-    """Configuration for LaTeX seats-votes rendering."""
+    """Configuration for LaTeX seats-votes rendering.
+
+    Attributes:
+        crosshair_x_width (float): Half-width of the horizontal crosshair gap. Defaults to 0.02.
+        crosshair_y_width (float): Half-width of the vertical crosshair gap. Defaults to 0.02.
+        crosshair_color (Color | None): Crosshair color. None hides it. Defaults to
+            ``"lightgrey"``.
+        crosshair_alpha (float): Crosshair opacity in ``[0, 1]``. Defaults to 1.0.
+        xlim (tuple[float, float]): Ordered vote-share limits. Defaults to ``(0, 1)``.
+        ylim (tuple[float, float]): Ordered seat-share limits. Defaults to ``(0, 1)``.
+        xscale (float): Plot width in TikZ units. Defaults to 10.0.
+        yscale (float): Plot height in TikZ units. Defaults to 10.0.
+        linewidth (float): Curve width in points. Defaults to 1.5.
+        markersize (float): Election marker size in points. Defaults to 8.0.
+        fontsize (float): Axis-label font size in points. Defaults to 16.0.
+        legend_fontsize (float): Legend font size in points. Defaults to 16.0.
+    """
 
     crosshair_x_width: float = 0.02
     crosshair_y_width: float = 0.02
-    crosshair_color: Color = "lightgrey"
+    crosshair_color: Color | None = "lightgrey"
     crosshair_alpha: float = 1.0
     xlim: tuple[float, float] = (0.0, 1.0)
     ylim: tuple[float, float] = (0.0, 1.0)
@@ -91,7 +107,7 @@ class SeatsVotesOptions(_ValidatedOptions):
     }
 
 
-class SeatsVotesPlot(_TikzPlotBase):
+class TikzSeatsVotesPlot(_TikzPlotBase):
     """Generate seats-votes plots as TikZ/LaTeX."""
 
     _options_cls = SeatsVotesOptions
@@ -129,8 +145,8 @@ class SeatsVotesPlot(_TikzPlotBase):
         self._show_crosshairs = True
 
         self._display_election_markers = True
-        self.standard_marker_color: Color = "#daa520"
-        self.standard_election_color: Color = "#006400"
+        self.standard_marker_color: Color | None = "#daa520"
+        self.standard_election_color: Color | None = "#006400"
         self._display_line_legend = True
 
     def clear_options(self) -> None:
@@ -149,15 +165,15 @@ class SeatsVotesPlot(_TikzPlotBase):
         total_votes: Sequence[int | float] | None = None,
         *,
         name: str | None = None,
-        linecolor: Color | None = None,
-        markercolor: Color | None = None,
+        linecolor: Color | None | Unset = UNSET,
+        markercolor: Color | None | Unset = UNSET,
         marker_label: str | None = None,
     ) -> None:
         """Add a seats-votes curve to the plot.
 
         Args:
-            target_party_vote_shares (Sequence[int | float]): Per-district vote totals or vote shares
-                for the party of interest. If ``total_votes`` is None, these are interpreted
+            target_party_vote_shares (Sequence[int | float]): Per-district vote totals or vote
+                shares for the party of interest. If ``total_votes`` is None, these are interpreted
                 as vote shares and must be in [0, 1].
             total_votes (Sequence[int | float] | None, optional): Per-district total vote
                 totals. If None, all totals are treated as 1.0 and
@@ -165,12 +181,16 @@ class SeatsVotesPlot(_TikzPlotBase):
                 Defaults to None.
             name (str | None, optional): Legend label for the seats-votes curve.
                 Defaults to None.
-            linecolor (Color | None, optional): Curve color. Defaults to None, which uses
-                ``self.standard_election_color``.
-            markercolor (Color | None, optional): Election-result marker color. Defaults to None,
-                which uses ``self.standard_marker_color``.
+            linecolor (Color | None | Unset, optional): Curve color. None removes the line;
+                omission uses ``self.standard_election_color``. Defaults to UNSET.
+            markercolor (Color | None | Unset, optional): Election-result marker color. None
+                removes the marker; omission uses ``self.standard_marker_color``. Defaults to
+                UNSET.
             marker_label (str | None, optional): Legend label for election-result markers.
                 Defaults to None.
+
+        Raises:
+            ValueError: If vote arrays are invalid or a share lies outside ``[0, 1]``.
         """
         if total_votes is None:
             if any(v < 0 or v > 1 for v in target_party_vote_shares):
@@ -190,8 +210,12 @@ class SeatsVotesPlot(_TikzPlotBase):
                 pov_party_vote_counts=pov_counts,
                 total_vote_counts=total_counts,
                 name=name if name is not None else "Election Seats-Votes Curve",
-                linecolor=linecolor if linecolor is not None else self.standard_election_color,
-                markercolor=markercolor if markercolor is not None else self.standard_marker_color,
+                linecolor=(
+                    self.standard_election_color if isinstance(linecolor, Unset) else linecolor
+                ),
+                markercolor=(
+                    self.standard_marker_color if isinstance(markercolor, Unset) else markercolor
+                ),
                 marker_label=marker_label if marker_label is not None else "Election Result",
             )
         )
@@ -204,7 +228,7 @@ class SeatsVotesPlot(_TikzPlotBase):
         *,
         x_width: float = 0.02,
         y_width: float = 0.02,
-        color: Color = "lightgrey",
+        color: Color | None = "lightgrey",
         alpha: float = 1.0,
     ) -> None:
         """Configure centered crosshair bands.
@@ -214,7 +238,8 @@ class SeatsVotesPlot(_TikzPlotBase):
                 Defaults to ``0.02``.
             y_width (float, optional): Vertical band width around ``y=0.5``.
                 Defaults to ``0.02``.
-            color (Color, optional): Crosshair fill color. Defaults to ``"lightgrey"``.
+            color (Color | None, optional): Crosshair fill color. Pass None for transparent
+                crosshairs. Defaults to ``"lightgrey"``.
             alpha (float, optional): Crosshair fill opacity in ``[0, 1]``.
                 Defaults to ``1.0``.
 
@@ -232,17 +257,25 @@ class SeatsVotesPlot(_TikzPlotBase):
         self._show_crosshairs = False
 
     def display_election_markers(self, enabled: bool) -> None:
-        """Set whether overall election-result markers are displayed."""
+        """Set whether overall election-result markers are displayed.
+
+        Args:
+            enabled (bool): Whether to display the markers.
+        """
         self._display_election_markers = enabled
 
     def display_additional_lines_in_legend(self, enabled: bool) -> None:
-        """Set whether additional guide lines appear in the legend."""
+        """Set whether additional guide lines appear in the legend.
+
+        Args:
+            enabled (bool): Whether to include guide lines in the legend.
+        """
         self._display_line_legend = enabled
 
     def add_proportionality_line(
         self,
         *,
-        linecolor: Color = "gray",
+        linecolor: Color | None = "gray",
         linestyle: str = "dashed",
         linewidth: float = 1.0,
         name: str | None = None,
@@ -250,7 +283,8 @@ class SeatsVotesPlot(_TikzPlotBase):
         """Add a proportionality line (y=x) to the plot.
 
         Args:
-            linecolor (Color, optional): Line color. Defaults to "gray".
+            linecolor (Color | None, optional): Line color. Pass None for a transparent
+                line. Defaults to "gray".
             linestyle (str, optional): Line style (Matplotlib token or TikZ style).
                 Defaults to "dashed".
             linewidth (float, optional): Line width. Defaults to 1.0.
@@ -269,7 +303,7 @@ class SeatsVotesPlot(_TikzPlotBase):
     def add_efficiency_gap_line(
         self,
         *,
-        linecolor: Color = "gray",
+        linecolor: Color | None = "gray",
         linestyle: str = "solid",
         linewidth: float = 1.0,
         name: str | None = None,
@@ -277,7 +311,8 @@ class SeatsVotesPlot(_TikzPlotBase):
         """Add an efficiency-gap line (y=2x-0.5) to the plot.
 
         Args:
-            linecolor (Color, optional): Line color. Defaults to "gray".
+            linecolor (Color | None, optional): Line color. Pass None for a transparent
+                line. Defaults to "gray".
             linestyle (str, optional): Line style (Matplotlib token or TikZ style).
                 Defaults to "solid".
             linewidth (float, optional): Line width. Defaults to 1.0.
@@ -297,7 +332,7 @@ class SeatsVotesPlot(_TikzPlotBase):
         self,
         slope: float,
         *,
-        linecolor: Color,
+        linecolor: Color | None,
         linestyle: str,
         linewidth: float,
         name: str | None = None,
@@ -306,7 +341,7 @@ class SeatsVotesPlot(_TikzPlotBase):
 
         Args:
             slope (float): Line slope.
-            linecolor (Color): Line color.
+            linecolor (Color | None): Line color. None makes the line transparent.
             linestyle (str): Line style (Matplotlib token or TikZ style).
             linewidth (float): Line width.
             name (str | None, optional): Legend label; unlabeled lines are drawn but do not
@@ -409,35 +444,36 @@ class SeatsVotesPlot(_TikzPlotBase):
 
         return " -- ".join(f"({x:0.4f}, {y:0.4f})" for x, y in path_points)
 
-    def _curve_legend_entries(self) -> list[tuple[Color, str]]:
+    def _curve_legend_entries(self) -> list[tuple[Color | None, str]]:
         """Collect unique seats-votes curve legend entries.
 
         Returns:
-            list[tuple[Color, str]]: Unique ``(linecolor, name)`` pairs in insertion order.
+            list[tuple[Color | None, str]]: Unique ``(linecolor, name)`` pairs in insertion
+                order.
         """
         unique_pairs = dict.fromkeys((sdata.linecolor, sdata.name) for sdata in self._sv_data_list)
         return list(unique_pairs.keys())
 
-    def _marker_legend_entries(self) -> list[tuple[Color, str]]:
+    def _marker_legend_entries(self) -> list[tuple[Color | None, str]]:
         """Collect unique election-marker legend entries.
 
         Returns:
-            list[tuple[Color, str]]: Unique ``(markercolor, marker_label)`` pairs in insertion
-                order.
+            list[tuple[Color | None, str]]: Unique ``(markercolor, marker_label)`` pairs in
+                insertion order.
         """
         unique_pairs = dict.fromkeys(
             (sdata.markercolor, sdata.marker_label) for sdata in self._sv_data_list
         )
         return list(unique_pairs.keys())
 
-    def _line_legend_entries(self) -> list[tuple[Color, str, str]]:
+    def _line_legend_entries(self) -> list[tuple[Color | None, str, str]]:
         """Collect legend entries for additional guide lines.
 
         Returns:
-            list[tuple[Color, str, str]]: ``(linecolor, linestyle, label)`` entries for
+            list[tuple[Color | None, str, str]]: ``(linecolor, linestyle, label)`` entries for
                 lines with non-None labels.
         """
-        entries: list[tuple[Color, str, str]] = []
+        entries: list[tuple[Color | None, str, str]] = []
         for line in self._line_data_list:
             if line.label is None:
                 continue
@@ -494,7 +530,7 @@ class SeatsVotesPlot(_TikzPlotBase):
         if not self.legend:
             return
 
-        legend_rows: list[tuple[Literal["line", "marker"], Color, str, str]] = []
+        legend_rows: list[tuple[Literal["line", "marker"], Color | None, str, str]] = []
         legend_rows.extend(
             ("line", color, "solid", label) for color, label in self._curve_legend_entries()
         )

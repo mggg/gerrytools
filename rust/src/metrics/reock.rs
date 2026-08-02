@@ -86,8 +86,8 @@ impl HullScorer for PreparedReock {
         for &node in nodes {
             points.extend_from_slice(self.unit_hulls.unit_hull_points(node));
         }
-        // Fix the shuffle per district so scratch history and chunking cannot change low bits.
-        *rng = fastrand::Rng::with_seed(REOCK_SHUFFLE_SEED ^ u64::from(district));
+        // Fix the shuffle so scratch history, chunking, and label encoding cannot change low bits.
+        *rng = fastrand::Rng::with_seed(REOCK_SHUFFLE_SEED);
         reock_score(points, area, district, rng)
     }
 }

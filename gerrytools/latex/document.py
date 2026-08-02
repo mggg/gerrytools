@@ -335,12 +335,26 @@ class TexDocument:
         Returns:
             str: LaTeX preamble string including document class, packages, and color
                 definitions.
+
+        Raises:
+            ValueError: If a registered package option or color definition is invalid.
         """
         lines = [r"\documentclass[border=2pt]{standalone}"]
+        # latexcolors and colortbl can load xcolor themselves, so its optioned form must win the
+        # race. Other optioned packages retain their registration order after scanned packages.
+        early_commands = [
+            command
+            for command in self.extra_package_commands
+            if (match := _USEPACKAGE_WITH_OPTIONS_RE.fullmatch(command)) is not None
+            and match.group("name") == "xcolor"
+        ]
+        lines.extend(early_commands)
         packages = self._resolved_package_list()
         if packages:
             lines.append(r"\usepackage{" + ", ".join(packages) + "}")
-        lines.extend(self.extra_package_commands)
+        lines.extend(
+            command for command in self.extra_package_commands if command not in early_commands
+        )
         for color_name, (color_type, color_val) in self.color_dict.items():
             match color_type:
                 case "NAME":
@@ -441,8 +455,15 @@ class TexDocument:
 
         Args:
             filepath (str | Path): The file path to save the PDF to.
+
         Returns:
             None
+
+        Raises:
+            TypeError: If ``filepath`` is not a string or Path.
+            ValueError: If ``filepath`` does not end in ``.pdf``.
+            FileNotFoundError: If the destination directory does not exist.
+            RuntimeError: If LaTeX compilation fails or no TeX engine is available.
         """
         if not isinstance(filepath, (str, Path)):
             raise TypeError("Path must be a string or Path object.")
@@ -464,8 +485,15 @@ class TexDocument:
 
         Args:
             filepath (str | Path): The file path to save the PNG to.
+
         Returns:
             None
+
+        Raises:
+            TypeError: If ``filepath`` is not a string or Path.
+            ValueError: If ``filepath`` does not end in ``.png``.
+            FileNotFoundError: If the destination directory does not exist.
+            RuntimeError: If LaTeX compilation or PDF-to-PNG rendering fails.
         """
         if not isinstance(filepath, (str, Path)):
             raise TypeError("Path must be a string or Path object.")

@@ -211,7 +211,8 @@ class Objective:
 
     Each static method documents one scorer and returns its spec dict. The definitive scoring
     semantics live in the
-    `rustrecom objectives module <https://github.com/mggg/rustrecom/blob/bda38981bbcb4f5992fef2dcd02784c4d579a693/src/objectives/mod.rs>`_;
+    `rustrecom objectives module
+    <https://github.com/mggg/rustrecom/blob/bda3898/src/objectives/mod.rs>`_;
     each builder links to the matching definition.
 
     Note:
@@ -244,17 +245,21 @@ class Objective:
                 chain starts).
             pov_counts_col (str): Node-attribute column with the population-of-interest counts
                 (integer-valued).
-            total_counts_col (str, optional): Node-attribute column with the total counts
-                (integer-valued). Exactly one of this and ``total_count`` must be given.
-            total_count (float, optional): A single positive global denominator applied to every
-                district, in place of a per-district column sum.
+            total_counts_col (str | None, optional): Node-attribute column with the total counts.
+                Exactly one of this and ``total_count`` must be given. Defaults to None.
+            total_count (float | None, optional): Positive global denominator applied to every
+                district instead of a per-district column sum. Defaults to None.
 
         Returns:
             dict: The objective spec.
 
+        Raises:
+            ValueError: If targets, denominator selection, or column names are invalid.
+
         Note:
             Definition:
-            `ByDistrictAbsDeviation <https://github.com/mggg/rustrecom/blob/bda38981bbcb4f5992fef2dcd02784c4d579a693/src/objectives/mod.rs#L147>`_.
+            `ByDistrictAbsDeviation
+            <https://github.com/mggg/rustrecom/blob/bda3898/src/objectives/mod.rs#L147>`_.
             For many districts sharing one target, :meth:`Objective.abs_deviation` is a shorthand
             for the same scorer.
         """
@@ -306,17 +311,22 @@ class Objective:
                 and at most the district count.
             pov_counts_col (str): Node-attribute column with the population-of-interest counts
                 (integer-valued).
-            total_counts_col (str, optional): Node-attribute column with the total counts
-                (integer-valued). Exactly one of this and ``total_count`` must be given.
-            total_count (float, optional): A single positive global denominator applied to every
-                district, in place of a per-district column sum.
+            total_counts_col (str | None, optional): Node-attribute column with the total counts.
+                Exactly one of this and ``total_count`` must be given. Defaults to None.
+            total_count (float | None, optional): Positive global denominator applied to every
+                district instead of a per-district column sum. Defaults to None.
 
         Returns:
             dict: The objective spec.
 
+        Raises:
+            TypeError: If ``n_target_districts`` is not an integer.
+            ValueError: If targets, denominator selection, or column names are invalid.
+
         Note:
             Definition:
-            `ByDistrictAbsDeviation <https://github.com/mggg/rustrecom/blob/bda38981bbcb4f5992fef2dcd02784c4d579a693/src/objectives/mod.rs#L147>`_
+            `ByDistrictAbsDeviation
+            <https://github.com/mggg/rustrecom/blob/bda3898/src/objectives/mod.rs#L147>`_
             (the ``abs_deviation`` alias expands to it).
         """
         _check_share(target, "target")
@@ -368,8 +378,12 @@ class Objective:
         Returns:
             dict: The objective spec.
 
+        Raises:
+            ValueError: If the threshold or column names are invalid.
+
         Note:
-            Definition: `GinglesPartial <https://github.com/mggg/rustrecom/blob/bda38981bbcb4f5992fef2dcd02784c4d579a693/src/objectives/mod.rs#L176>`_.
+            Definition: `GinglesPartial
+            <https://github.com/mggg/rustrecom/blob/bda3898/src/objectives/mod.rs#L176>`_.
         """
         if not 0 < threshold < 1:
             raise ValueError(f"threshold must be strictly between 0 and 1; got {threshold!r}.")
@@ -411,8 +425,12 @@ class Objective:
         Returns:
             dict: The objective spec.
 
+        Raises:
+            ValueError: If the thresholds or column names are invalid.
+
         Note:
-            Definition: `BandedGinglesPartial <https://github.com/mggg/rustrecom/blob/bda38981bbcb4f5992fef2dcd02784c4d579a693/src/objectives/mod.rs#L217>`_.
+            Definition: `BandedGinglesPartial
+            <https://github.com/mggg/rustrecom/blob/bda3898/src/objectives/mod.rs#L217>`_.
         """
         for name, value in (
             ("lower_threshold", lower_threshold),
@@ -453,14 +471,19 @@ class Objective:
             elections (Sequence[dict]): One dict per election, each with ``"votes_a"`` and
                 ``"votes_b"`` naming node-attribute columns of integer vote counts, e.g.
                 ``[{"votes_a": "DEM_GOV_18", "votes_b": "REP_GOV_18"}]``.
-            target (str, optional): ``"a"`` or ``"b"``, selecting which party's wins are counted.
-            aggregation (str, optional): One of ``"mean"``, ``"min"``, or ``"sum"``.
+            target (str, optional): Party whose wins are counted. Defaults to ``"a"``.
+            aggregation (str, optional): Election aggregation. Defaults to ``"mean"``; also
+                accepts ``"min"`` and ``"sum"``.
 
         Returns:
             dict: The objective spec.
 
+        Raises:
+            ValueError: If elections are empty or malformed, or an option is unknown.
+
         Note:
-            Definition: `ElectionWins <https://github.com/mggg/rustrecom/blob/bda38981bbcb4f5992fef2dcd02784c4d579a693/src/objectives/mod.rs#L251>`_.
+            Definition: `ElectionWins
+            <https://github.com/mggg/rustrecom/blob/bda3898/src/objectives/mod.rs#L251>`_.
         """
         if not elections:
             raise ValueError("elections must be a nonempty sequence.")
@@ -512,17 +535,22 @@ class Objective:
             area_col (str): Node-attribute column with precinct areas (float-valued).
             shared_perim_col (str): Edge-attribute column with the shared perimeter between
                 adjacent precincts (float-valued).
-            perim_col (str, optional): Node-attribute column with each precinct's total perimeter,
-                including shared boundaries.
-            boundary_perim_col (str, optional): Node-attribute column with each precinct's
-                outer-hull perimeter contribution.
-            aggregation (str, optional): One of ``"mean"``, ``"min"``, or ``"sum"``.
+            perim_col (str | None, optional): Node-attribute column with each precinct's total
+                perimeter, including shared boundaries. Defaults to None.
+            boundary_perim_col (str | None, optional): Node-attribute column with each precinct's
+                outer-hull perimeter contribution. Defaults to None.
+            aggregation (str, optional): District aggregation. Defaults to ``"mean"``; also accepts
+                ``"min"`` and ``"sum"``.
 
         Returns:
             dict: The objective spec.
 
+        Raises:
+            ValueError: If no perimeter column is supplied or a column or option is invalid.
+
         Note:
-            Definition: `PolsbyPopper <https://github.com/mggg/rustrecom/blob/bda38981bbcb4f5992fef2dcd02784c4d579a693/src/objectives/mod.rs#L291>`_.
+            Definition: `PolsbyPopper
+            <https://github.com/mggg/rustrecom/blob/bda3898/src/objectives/mod.rs#L291>`_.
         """
         if perim_col is None and boundary_perim_col is None:
             raise ValueError("Provide at least one of perim_col or boundary_perim_col.")
@@ -625,7 +653,18 @@ def _elections(spec: dict[str, object]) -> list[ElectionColumns]:
 
 
 def validate_objective_spec(value: object) -> ObjectiveSpec:
-    """Copy and validate a raw objective document before container construction."""
+    """Copy and validate a raw objective document before container construction.
+
+    Args:
+        value (object): Raw objective dictionary.
+
+    Returns:
+        ObjectiveSpec: Copied, validated objective specification.
+
+    Raises:
+        TypeError: If the document or one of its values has the wrong type.
+        ValueError: If its name, fields, or values are invalid.
+    """
     if not isinstance(value, dict):
         raise TypeError(f"objective must be a dictionary; got {type(value).__name__}.")
     spec = cast(dict[str, object], dict(value))

@@ -30,6 +30,7 @@ from gerrytools.scoring import (
     Tally,
     TallyByRegion,
 )
+from gerrytools.scoring import evaluator as evaluator_module
 from gerrytools.scoring import result as result_module
 
 Variant = Literal["standard", "mkv_chain", "twodelta"]
@@ -72,8 +73,8 @@ def scorer() -> PlanEvaluator:
         .add_metric(Reock())
         .add_metric(ConvexHullRatio())
         .add_metric(StateClippedConvexHullRatio(box(0, 0, 2, 2)))
-        .add_metric(PolsbyPopper(source="graph", name="polsby_graph"))
-        .add_metric(PolsbyPopper(source="geometry", name="polsby_geometry"))
+        .add_metric(PolsbyPopper(area_attr="area", result_name="polsby_graph"))
+        .add_metric(PolsbyPopper(result_name="polsby_geometry"))
         .add_metric(CutEdges())
         .add_metric(RegionSplits("COUNTY", "MUNI"))
         .add_metric(RegionPieces("COUNTY", "MUNI"))
@@ -123,14 +124,25 @@ def write_source(path: Path, container: Container, variant: Variant) -> None:
         compress_stream(path)
 
 
-def refresh_table_integrity(output: Path, instance: str) -> None:
+def run_manifest(output: Path) -> Path:
+    return output / f"manifest__{output.name}.json"
+
+
+def metric_table(output: Path, instance: str, index: int = 0) -> Path:
+    manifest = json.loads(run_manifest(output).read_text())
+    metric = next(metric for metric in manifest["metrics"] if metric["instance"] == instance)
+    return output / metric["tables"][index]["path"]
+
+
+def refresh_table_integrity(output: Path, instance: str, index: int = 0) -> None:
     """Update one table's test manifest metadata after deliberate structural corruption."""
-    manifest_path = output / "manifest.json"
+    manifest_path = run_manifest(output)
     manifest = json.loads(manifest_path.read_text())
     metric = next(metric for metric in manifest["metrics"] if metric["instance"] == instance)
-    table = output / metric["table"]
-    metric["table_size"] = table.stat().st_size
-    metric["table_sha256"] = hashlib.sha256(table.read_bytes()).hexdigest()
+    table_description = metric["tables"][index]
+    table = output / table_description["path"]
+    table_description["size"] = table.stat().st_size
+    table_description["sha256"] = hashlib.sha256(table.read_bytes()).hexdigest()
     manifest_path.write_text(json.dumps(manifest))
 
 
@@ -153,9 +165,7 @@ def test_evaluate_stream_supports_every_container_and_variant(
     assert run.summary == EvaluationSummary(
         samples=2, accepted=2, unique_plans=2, unique_districts=4
     )
-    actual = pq.read_table(
-        output / "state_clipped_convex_hull_ratio" / "scores.parquet"
-    ).to_pydict()
+    actual = pq.read_table(output / "state_clipped_convex_hull_ratio__scores.parquet").to_pydict()
     np.testing.assert_allclose(actual["score__district_0"], expected[:, 0, 0])
     np.testing.assert_allclose(actual["score__district_1"], expected[:, 0, 1])
 
@@ -173,7 +183,7 @@ def test_evaluate_stream_round_trips_every_metric_and_manifest_field(tmp_path: P
     assert run.summary == EvaluationSummary(
         samples=2, accepted=2, unique_plans=2, unique_districts=4
     )
-    manifest = json.loads((output / "manifest.json").read_text())
+    manifest = json.loads(run_manifest(output).read_text())
     metric_contracts = [
         ("tally", "population", {}, "district", ["population"]),
         (
@@ -206,9 +216,9 @@ def test_evaluate_stream_round_trips_every_metric_and_manifest_field(tmp_path: P
             "polsby_popper",
             "polsby_graph",
             {
-                "area": "area",
-                "boundary_perimeter": "boundary_perim",
-                "shared_perimeter": "shared_perim",
+                "area_attr": "area",
+                "boundary_perimeter_attr": "boundary_perim",
+                "shared_perimeter_attr": "shared_perim",
                 "source": "graph",
             },
             "district",
@@ -221,7 +231,7 @@ def test_evaluate_stream_round_trips_every_metric_and_manifest_field(tmp_path: P
             "district",
             ["score"],
         ),
-        ("cut_edges", "cut_edges", {"weight": None}, "plan", ["count"]),
+        ("cut_edges", "cut_edges", {"weight_attr": None}, "plan", ["count"]),
         ("region_splits", "region_splits", {}, "plan", ["COUNTY", "MUNI"]),
         (
             "region_pieces",
@@ -235,7 +245,7 @@ def test_evaluate_stream_round_trips_every_metric_and_manifest_field(tmp_path: P
             "tally_by_region",
             "tally_by_region",
             {
-                "region": "COUNTY",
+                "region_attr": "COUNTY",
                 "columns": {"population": "population"},
                 "include_count": True,
             },
@@ -250,7 +260,21 @@ def test_evaluate_stream_round_trips_every_metric_and_manifest_field(tmp_path: P
     ]
     expected_metrics = []
     for kind, instance, options, shape, subkeys in metric_contracts:
-        table_name = f"{instance}/scores.parquet"
+        if kind == "tally":
+            physical_tables = [(f"{instance}/{subkeys[0]}_tallies__scores.parquet", subkeys)]
+        elif kind == "tally_by_region":
+            physical_tables = [
+                (
+                    "tally_by_region/count_tallies_by_region__scores.parquet",
+                    subkeys[:2],
+                ),
+                (
+                    "tally_by_region/population_tallies_by_region__scores.parquet",
+                    subkeys[2:],
+                ),
+            ]
+        else:
+            physical_tables = [(f"{instance}__scores.parquet", subkeys)]
         description: dict[str, object] = {
             "kind": kind,
             "instance": instance,
@@ -265,11 +289,16 @@ def test_evaluate_stream_round_trips_every_metric_and_manifest_field(tmp_path: P
                 if instance in {"cut_edges", "region_splits", "region_pieces", "region_parts"}
                 else ["float"] * len(subkeys)
             ),
-            "table": table_name,
         }
-        table = output / table_name
-        description["table_size"] = table.stat().st_size
-        description["table_sha256"] = hashlib.sha256(table.read_bytes()).hexdigest()
+        description["tables"] = [
+            {
+                "path": table_name,
+                "subkeys": table_subkeys,
+                "size": (output / table_name).stat().st_size,
+                "sha256": hashlib.sha256((output / table_name).read_bytes()).hexdigest(),
+            }
+            for table_name, table_subkeys in physical_tables
+        ]
         if shape == "region":
             description["axes"] = {
                 "metric": ["count", "population"],
@@ -283,7 +312,7 @@ def test_evaluate_stream_round_trips_every_metric_and_manifest_field(tmp_path: P
             }
         expected_metrics.append(description)
     assert manifest == {
-        "format_version": 1,
+        "format_version": 2,
         "source": {"path": str(source)},
         "summary": {
             "samples": 2,
@@ -314,7 +343,7 @@ def test_evaluate_stream_round_trips_every_metric_and_manifest_field(tmp_path: P
         "accepted_index": [0, 1],
     }
     for _, instance, _, shape, subkeys in metric_contracts:
-        actual = pq.read_table(output / instance / "scores.parquet").to_pydict()
+        actual = run.raw(instance).to_dict(orient="list")
         assert {key: actual.pop(key) for key in prefixes} == prefixes
         values = expected.array(instance)
         if shape in {"district", "region"}:
@@ -346,7 +375,7 @@ def test_evaluate_stream_round_trips_every_metric_and_manifest_field(tmp_path: P
     pd.testing.assert_frame_equal(reopened.frames, run.frames)
 
 
-def test_auto_graph_polsby_manifest_records_resolved_columns(tmp_path: Path) -> None:
+def test_inferred_graph_polsby_manifest_records_resolved_columns(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
@@ -355,12 +384,12 @@ def test_auto_graph_polsby_manifest_records_resolved_columns(tmp_path: Path) -> 
 
     evaluator.evaluate_stream(source, output)
 
-    manifest = json.loads((output / "manifest.json").read_text())
+    manifest = json.loads(run_manifest(output).read_text())
     assert manifest["metrics"][0]["options"] == {
         "source": "graph",
-        "area": "area",
-        "boundary_perimeter": "boundary_perim",
-        "shared_perimeter": "shared_perim",
+        "area_attr": "area",
+        "boundary_perimeter_attr": "boundary_perim",
+        "shared_perimeter_attr": "shared_perim",
     }
 
 
@@ -377,7 +406,7 @@ def test_evaluate_stream_preserves_separate_logical_metrics_after_native_tally_m
     evaluator.evaluate_stream(source, output, batch_size=1)
 
     for name in ("population", "area"):
-        actual = pq.read_table(output / name / "scores.parquet").to_pydict()
+        actual = pq.read_table(output / name / f"{name}_tallies__scores.parquet").to_pydict()
         values = expected.array(name)
         np.testing.assert_allclose(actual[f"{name}__district_0"], values[:, 0, 0])
         np.testing.assert_allclose(actual[f"{name}__district_1"], values[:, 0, 1])
@@ -392,12 +421,12 @@ def test_evaluate_stream_tags_mixed_integer_and_string_region_labels_without_col
     graph, _ = grid_resources()
     nx.set_node_attributes(graph, {0: 1, 1: "1", 2: 1, 3: "1"}, "MIXED")
     evaluator = PlanEvaluator(graph).add_metric(
-        TallyByRegion("MIXED", include_count=True, name="mixed_regions"),
+        TallyByRegion("MIXED", include_count=True, result_name="mixed_regions"),
     )
 
     run = evaluator.evaluate_stream(source, output, batch_size=1)
 
-    manifest = json.loads((output / "manifest.json").read_text())
+    manifest = json.loads(run_manifest(output).read_text())
     metric = manifest["metrics"][0]
     assert metric["shape"] == "region"
     assert metric["subkeys"] == ["count__region_0", "count__region_1"]
@@ -411,7 +440,9 @@ def test_evaluate_stream_tags_mixed_integer_and_string_region_labels_without_col
             ],
         },
     }
-    columns = pq.read_schema(output / "mixed_regions" / "scores.parquet").names
+    columns = pq.read_schema(
+        output / "mixed_regions" / "count_tallies_by_region__scores.parquet"
+    ).names
     assert columns == [
         "sample_offset",
         "repetitions",
@@ -509,7 +540,14 @@ def test_evaluation_run_expanded_iterator_splits_one_repetition(tmp_path: Path) 
         for plan in [first, first, first, second, second]:
             stream.write(plan)
     graph, _ = grid_resources()
-    run = PlanEvaluator(graph).add_metric(Tally("population")).evaluate_stream(source, output)
+    run = (
+        PlanEvaluator(graph)
+        .add_metric(Tally("population"))
+        .evaluate_stream(
+            source,
+            output_dir=output,
+        )
+    )
 
     batches = list(run.iter_batches("population", batch_size=2, expand_repetitions=True))
 
@@ -579,7 +617,7 @@ def test_evaluation_run_rejects_invalid_footer_before_parquet_construction(
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
     scorer().evaluate_stream(source, output)
-    table = output / "cut_edges" / "scores.parquet"
+    table = output / "cut_edges__scores.parquet"
     contents = bytearray(table.read_bytes())
     if corruption == "magic":
         contents[-4:] = b"NOPE"
@@ -731,7 +769,7 @@ def test_evaluation_run_estimates_semantic_shapes_and_expansion(tmp_path: Path) 
     } == {
         "cut_edges": 273,
         "population": 393,
-        "tally_by_region": 1_113,
+        "tally_by_region": 1_203,
     }
     assert (
         result_module._estimate_memory(
@@ -936,12 +974,14 @@ def test_evaluation_run_validates_iterator_options_before_file_io(tmp_path: Path
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
     run = scorer().evaluate_stream(source, output)
-    (output / "cut_edges" / "scores.parquet").unlink()
+    (output / "cut_edges__scores.parquet").unlink()
 
     with pytest.raises(ValueError, match="batch_size"):
         next(run.iter_batches("cut_edges", batch_size=0))
     with pytest.raises(TypeError, match="allow_large"):
-        next(run.iter_raw_batches("cut_edges", allow_large=1))  # type: ignore[arg-type]
+        next(
+            run.iter_raw_batches("cut_edges", allow_large=1)  # type: ignore
+        )
 
 
 def test_evaluation_run_rehashes_after_a_successful_read(tmp_path: Path) -> None:
@@ -950,7 +990,7 @@ def test_evaluation_run_rehashes_after_a_successful_read(tmp_path: Path) -> None
     write_source(source, "ben", "standard")
     run = scorer().evaluate_stream(source, output)
     run.read("cut_edges")
-    table = output / "cut_edges" / "scores.parquet"
+    table = output / "cut_edges__scores.parquet"
     contents = bytearray(table.read_bytes())
     contents[-1] ^= 1
     table.write_bytes(contents)
@@ -980,7 +1020,7 @@ def test_evaluation_run_reports_unknown_metrics_and_exposes_raw_table(tmp_path: 
 @pytest.mark.parametrize(
     ("field", "value", "message"),
     [
-        ("format_version", 2, "format version 1"),
+        ("format_version", 3, "format version 1 or 2"),
         ("prefix_columns", [], "prefix columns"),
         ("summary", None, "requires a summary"),
         ("summary", {"samples": True, "accepted": 0}, "nonnegative integer"),
@@ -1000,7 +1040,7 @@ def test_evaluation_run_rejects_invalid_manifest_contracts(
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
     scorer().evaluate_stream(source, output)
-    manifest_path = output / "manifest.json"
+    manifest_path = run_manifest(output)
     manifest = json.loads(manifest_path.read_text())
     manifest[field] = value
     manifest_path.write_text(json.dumps(manifest))
@@ -1014,7 +1054,7 @@ def test_evaluation_run_rejects_non_object_manifest(tmp_path: Path) -> None:
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
     scorer().evaluate_stream(source, output)
-    (output / "manifest.json").write_text("[]")
+    run_manifest(output).write_text("[]")
 
     with pytest.raises(ValueError, match="must be an object"):
         EvaluationRun.open(output)
@@ -1025,7 +1065,7 @@ def test_evaluation_run_rejects_duplicate_metric_names(tmp_path: Path) -> None:
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
     scorer().evaluate_stream(source, output)
-    manifest_path = output / "manifest.json"
+    manifest_path = run_manifest(output)
     manifest = json.loads(manifest_path.read_text())
     manifest["metrics"].append(manifest["metrics"][0])
     manifest_path.write_text(json.dumps(manifest))
@@ -1041,10 +1081,10 @@ def test_evaluation_run_rejects_invalid_metric_metadata_and_missing_tables(
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
     scorer().evaluate_stream(source, output)
-    manifest_path = output / "manifest.json"
+    manifest_path = run_manifest(output)
     manifest = json.loads(manifest_path.read_text())
 
-    manifest["metrics"][0]["table_sha256"] = "bad"
+    manifest["metrics"][0]["tables"][0]["sha256"] = "bad"
     manifest_path.write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match="SHA-256"):
         EvaluationRun.open(output)
@@ -1057,14 +1097,14 @@ def test_evaluation_run_rejects_invalid_metric_metadata_and_missing_tables(
         EvaluationRun.open(output)
 
     manifest["metrics"][0]["dtypes"] = ["float"]
-    manifest["metrics"][0]["table"] = "../scores.parquet"
+    manifest["metrics"][0]["tables"][0]["path"] = "../scores.parquet"
     manifest_path.write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match="table path"):
         EvaluationRun.open(output)
 
-    manifest["metrics"][0]["table"] = "population/scores.parquet"
+    manifest["metrics"][0]["tables"][0]["path"] = "population/population_tallies__scores.parquet"
     manifest_path.write_text(json.dumps(manifest))
-    (output / "population" / "scores.parquet").unlink()
+    (output / "population" / "population_tallies__scores.parquet").unlink()
     with pytest.raises(FileNotFoundError, match="does not exist"):
         EvaluationRun.open(output)
 
@@ -1074,7 +1114,7 @@ def test_evaluation_run_rejects_metric_axes_that_disagree_with_subkeys(tmp_path:
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
     scorer().evaluate_stream(source, output)
-    manifest_path = output / "manifest.json"
+    manifest_path = run_manifest(output)
     manifest = json.loads(manifest_path.read_text())
     metric = next(metric for metric in manifest["metrics"] if metric["instance"] == "region_splits")
     metric["axes"]["metric"] = ["wrong_county", "wrong_muni"]
@@ -1092,6 +1132,7 @@ def test_evaluation_run_rejects_metric_axes_that_disagree_with_subkeys(tmp_path:
         ("region_name", "requires a region-axis name"),
         ("labels", "requires region labels"),
         ("duplicate_labels", "duplicate region labels"),
+        ("empty_metric_axis", "requires metric-axis values"),
         ("subkeys", "subkeys disagree with its axes"),
         ("label_shape", "invalid region label"),
         ("label_value", "invalid region label"),
@@ -1106,7 +1147,7 @@ def test_evaluation_run_rejects_invalid_region_metric_metadata(
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
     scorer().evaluate_stream(source, output)
-    manifest_path = output / "manifest.json"
+    manifest_path = run_manifest(output)
     manifest = json.loads(manifest_path.read_text())
     metric = next(
         metric for metric in manifest["metrics"] if metric["instance"] == "tally_by_region"
@@ -1123,6 +1164,12 @@ def test_evaluation_run_rejects_invalid_region_metric_metadata(
     elif corruption == "duplicate_labels":
         labels = metric["axes"]["region"]["labels"]
         metric["axes"]["region"]["labels"] = [labels[0], labels[0]]
+    elif corruption == "empty_metric_axis":
+        metric["axes"]["metric"] = []
+        metric["subkeys"] = []
+        metric["dtypes"] = []
+        metric["tables"] = [metric["tables"][0]]
+        metric["tables"][0]["subkeys"] = []
     elif corruption == "subkeys":
         metric["subkeys"] = ["wrong"]
     elif corruption == "label_shape":
@@ -1151,7 +1198,7 @@ def test_evaluation_run_rejects_invalid_nonregion_axis_metadata(
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
     scorer().evaluate_stream(source, output)
-    manifest_path = output / "manifest.json"
+    manifest_path = run_manifest(output)
     manifest = json.loads(manifest_path.read_text())
     metric = next(metric for metric in manifest["metrics"] if metric["instance"] == "population")
     if corruption == "axes":
@@ -1181,7 +1228,7 @@ def test_evaluation_run_rejects_corrupt_physical_prefixes(
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
     run = scorer().evaluate_stream(source, output)
-    table_path = output / "cut_edges" / "scores.parquet"
+    table_path = output / "cut_edges__scores.parquet"
     table = pd.read_parquet(table_path)
     if corruption == "columns":
         table = table.rename(columns={"accepted_index": "wrong"})
@@ -1206,7 +1253,7 @@ def test_evaluation_run_rejects_changed_metric_values(tmp_path: Path) -> None:
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
     run = scorer().evaluate_stream(source, output)
-    table_path = output / "cut_edges" / "scores.parquet"
+    table_path = output / "cut_edges__scores.parquet"
     table = pd.read_parquet(table_path)
     table.loc[0, "count"] += 1
     table.to_parquet(table_path)
@@ -1220,7 +1267,7 @@ def test_evaluation_run_rejects_same_size_table_corruption(tmp_path: Path) -> No
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
     run = scorer().evaluate_stream(source, output)
-    table_path = output / "cut_edges" / "scores.parquet"
+    table_path = output / "cut_edges__scores.parquet"
     contents = bytearray(table_path.read_bytes())
     contents[-1] ^= 1
     table_path.write_bytes(contents)
@@ -1251,21 +1298,21 @@ def test_evaluate_stream_scores_an_alternative_population_surface_like_evaluate_
         crs="EPSG:3857",
     )
     evaluator = PlanEvaluator(graph, geometry=geometry).add_metric(
-        PopulationPolygon("population", alternative_pop_gdf=population)
+        PopulationPolygon("population", population_units=population)
     )
     expected = evaluator.evaluate_many(plans).array("population_polygon")
 
     run = evaluator.evaluate_stream(source, output, batch_size=1)
 
     assert run.summary == EvaluationSummary(samples=2, accepted=2)
-    manifest = json.loads((output / "manifest.json").read_text())
+    manifest = json.loads(run_manifest(output).read_text())
     assert manifest["metrics"][0]["options"] == {
         "model": "full_weight_intersection",
         "population_col": "population",
-        "surface": "alternative_pop_gdf",
+        "surface": "population_units",
         "observations": 6,
     }
-    actual = pq.read_table(output / "population_polygon" / "scores.parquet").to_pydict()
+    actual = pq.read_table(output / "population_polygon__scores.parquet").to_pydict()
     for district in range(2):
         np.testing.assert_allclose(
             actual[f"score__district_{district}"],
@@ -1285,6 +1332,26 @@ def test_evaluate_stream_accepts_a_matching_embedded_bendl_graph(tmp_path: Path)
     run = PlanEvaluator(graph).add_metric(Tally("population")).evaluate_stream(source, output)
 
     assert run.summary == EvaluationSummary(samples=1, accepted=1)
+
+
+def test_evaluate_stream_verifies_every_bendl_asset_before_scoring(tmp_path: Path) -> None:
+    source = tmp_path / "plans.bendl"
+    output = tmp_path / "scores"
+    graph, _ = grid_resources()
+    encoder = BendlEncoder(source)
+    encoder.add_graph(graph)
+    encoder.add_asset("sentinel.txt", b"integrity-sentinel", "text")
+    with encoder.ben_stream(variant="standard") as stream:
+        stream.write([0, 0, 1, 1])
+    data = bytearray(source.read_bytes())
+    offset = data.index(b"integrity-sentinel")
+    data[offset] ^= 1
+    source.write_bytes(data)
+
+    with pytest.raises(ValueError, match="checksum"):
+        PlanEvaluator(graph).add_metric(Tally("population")).evaluate_stream(source, output)
+
+    assert not output.exists()
 
 
 def test_evaluate_stream_rejects_mismatched_bendl_graph_order_before_output(tmp_path: Path) -> None:
@@ -1385,10 +1452,12 @@ def test_evaluate_stream_supports_an_empty_region_axis(tmp_path: Path) -> None:
 
     evaluator.evaluate_stream(source, output)
 
-    manifest = json.loads((output / "manifest.json").read_text())
+    manifest = json.loads(run_manifest(output).read_text())
     assert manifest["metrics"][0]["subkeys"] == []
     assert manifest["metrics"][0]["axes"]["region"]["labels"] == []
-    assert pq.read_schema(output / "tally_by_region" / "scores.parquet").names == [
+    assert pq.read_schema(
+        output / "tally_by_region" / "count_tallies_by_region__scores.parquet"
+    ).names == [
         "sample_offset",
         "repetitions",
         "accepted_index",
@@ -1405,7 +1474,17 @@ def test_evaluate_stream_validates_public_options_before_opening_files(tmp_path:
     with pytest.raises(ValueError, match="batch_size"):
         plan_evaluator.evaluate_stream(source, output, batch_size=0)
     with pytest.raises(TypeError, match="track_uniqueness"):
-        plan_evaluator.evaluate_stream(source, output, track_uniqueness=1)  # type: ignore[arg-type]
+        plan_evaluator.evaluate_stream(
+            source,
+            output,
+            track_uniqueness=1,  # type: ignore
+        )
+    with pytest.raises(TypeError, match="update"):
+        plan_evaluator.evaluate_stream(
+            source,
+            output,
+            update=1,  # type: ignore
+        )
     with pytest.raises(FileNotFoundError):
         plan_evaluator.evaluate_stream(source, output)
     graph, _ = grid_resources()
@@ -1429,7 +1508,7 @@ def test_evaluate_stream_accepts_numpy_integer_options(tmp_path: Path) -> None:
     assert run.summary == EvaluationSummary(samples=0, accepted=0)
 
 
-def test_evaluate_stream_preserves_existing_output(tmp_path: Path) -> None:
+def test_evaluate_stream_rejects_an_unrecognized_existing_directory(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
@@ -1437,10 +1516,184 @@ def test_evaluate_stream_preserves_existing_output(tmp_path: Path) -> None:
     marker = output / "keep.txt"
     marker.write_text("keep")
 
-    with pytest.raises(FileExistsError):
+    with pytest.raises(FileNotFoundError):
         scorer().evaluate_stream(source, output)
 
     assert marker.read_text() == "keep"
+
+
+def test_evaluate_stream_adds_new_scores_to_an_existing_run(tmp_path: Path) -> None:
+    source = tmp_path / "plans.ben"
+    output = tmp_path / "scores"
+    write_source(source, "ben", "standard")
+    graph, _ = grid_resources()
+    first = PlanEvaluator(graph).add_metric(
+        Tally("population", "area", result_name="district_totals")
+    )
+    first.evaluate_stream(source, output)
+    population_path = output / "district_totals" / "population_tallies__scores.parquet"
+    population_bytes = population_path.read_bytes()
+
+    run = PlanEvaluator(graph).add_metric(CutEdges()).evaluate_stream(source, output)
+
+    assert run.metrics == ("district_totals", "cut_edges")
+    assert population_path.read_bytes() == population_bytes
+    assert (output / "district_totals" / "area_tallies__scores.parquet").is_file()
+    assert (output / "cut_edges__scores.parquet").is_file()
+
+
+def test_evaluate_stream_requires_update_to_replace_an_existing_score(tmp_path: Path) -> None:
+    source = tmp_path / "plans.ben"
+    output = tmp_path / "scores"
+    write_source(source, "ben", "standard")
+    graph, _ = grid_resources()
+    evaluator = PlanEvaluator(graph).add_metric(Tally("population"))
+    evaluator.evaluate_stream(source, output)
+    manifest = run_manifest(output).read_bytes()
+    table = (output / "population" / "population_tallies__scores.parquet").read_bytes()
+
+    with pytest.raises(FileExistsError, match="update=True"):
+        evaluator.evaluate_stream(source, output)
+
+    assert run_manifest(output).read_bytes() == manifest
+    assert (output / "population" / "population_tallies__scores.parquet").read_bytes() == table
+
+
+def test_evaluate_stream_update_replaces_only_matching_scores(tmp_path: Path) -> None:
+    source = tmp_path / "plans.ben"
+    output = tmp_path / "scores"
+    write_source(source, "ben", "standard")
+    graph, _ = grid_resources()
+    PlanEvaluator(graph).add_metric(
+        Tally("population", "area", result_name="district_totals")
+    ).add_metric(CutEdges()).evaluate_stream(source, output)
+    cut_edges = (output / "cut_edges__scores.parquet").read_bytes()
+
+    run = (
+        PlanEvaluator(graph)
+        .add_metric(Tally("population", result_name="district_totals"))
+        .evaluate_stream(source, output, update=True)
+    )
+
+    assert run.metrics == ("district_totals", "cut_edges")
+    assert (output / "district_totals" / "population_tallies__scores.parquet").is_file()
+    assert not (output / "district_totals" / "area_tallies__scores.parquet").exists()
+    assert (output / "cut_edges__scores.parquet").read_bytes() == cut_edges
+    assert run._metric_metadata["district_totals"].subkeys == ("population",)
+
+
+def test_evaluate_stream_rolls_back_tables_when_manifest_publication_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "plans.ben"
+    output = tmp_path / "scores"
+    write_source(source, "ben", "standard")
+    graph, _ = grid_resources()
+    PlanEvaluator(graph).add_metric(
+        Tally("population", "area", result_name="district_totals")
+    ).evaluate_stream(source, output)
+    expected = EvaluationRun.open(output).read("district_totals")
+    original = {
+        path.relative_to(output): path.read_bytes() for path in output.rglob("*") if path.is_file()
+    }
+
+    def fail_manifest(*args, **kwargs):
+        raise OSError("injected manifest failure")
+
+    monkeypatch.setattr(evaluator_module, "_write_run_manifest", fail_manifest)
+    with pytest.raises(OSError, match="injected manifest failure"):
+        PlanEvaluator(graph).add_metric(
+            Tally("population", result_name="district_totals")
+        ).evaluate_stream(source, output, update=True)
+
+    assert {
+        path.relative_to(output): path.read_bytes() for path in output.rglob("*") if path.is_file()
+    } == original
+    pd.testing.assert_frame_equal(EvaluationRun.open(output).read("district_totals"), expected)
+
+
+def test_evaluate_stream_does_not_overwrite_an_untracked_score_path(tmp_path: Path) -> None:
+    source = tmp_path / "plans.ben"
+    output = tmp_path / "scores"
+    write_source(source, "ben", "standard")
+    graph, _ = grid_resources()
+    PlanEvaluator(graph).add_metric(Tally("population")).evaluate_stream(source, output)
+    marker = output / "cut_edges__scores.parquet"
+    marker.write_bytes(b"untracked")
+    manifest = run_manifest(output).read_bytes()
+
+    with pytest.raises(FileExistsError, match="untracked"):
+        PlanEvaluator(graph).add_metric(CutEdges()).evaluate_stream(source, output)
+
+    assert marker.read_bytes() == b"untracked"
+    assert run_manifest(output).read_bytes() == manifest
+
+
+def test_evaluate_stream_rejects_new_scores_with_different_run_dimensions(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "plans.ben"
+    shorter_source = tmp_path / "shorter.ben"
+    output = tmp_path / "scores"
+    write_source(source, "ben", "standard")
+    with BenEncoder(shorter_source, variant="standard") as stream:
+        stream.write([0, 0, 1, 1])
+    graph, _ = grid_resources()
+    PlanEvaluator(graph).add_metric(Tally("population")).evaluate_stream(source, output)
+    manifest = run_manifest(output).read_bytes()
+
+    with pytest.raises(ValueError, match="run dimensions"):
+        PlanEvaluator(graph).add_metric(CutEdges()).evaluate_stream(shorter_source, output)
+
+    assert run_manifest(output).read_bytes() == manifest
+    assert not (output / "cut_edges__scores.parquet").exists()
+
+
+def test_evaluate_stream_adds_scores_to_a_version_one_run(tmp_path: Path) -> None:
+    source = tmp_path / "plans.ben"
+    output = tmp_path / "scores"
+    write_source(source, "ben", "standard")
+    graph, _ = grid_resources()
+    PlanEvaluator(graph).add_metric(CutEdges()).evaluate_stream(source, output)
+
+    current_manifest = run_manifest(output)
+    manifest = json.loads(current_manifest.read_text())
+    table = manifest["metrics"][0]["tables"][0]
+    legacy_table = output / "cut_edges" / "scores.parquet"
+    legacy_table.parent.mkdir()
+    (output / table["path"]).rename(legacy_table)
+    metric = manifest["metrics"][0]
+    metric["table"] = "cut_edges/scores.parquet"
+    metric["table_size"] = table["size"]
+    metric["table_sha256"] = table["sha256"]
+    del metric["tables"]
+    manifest["format_version"] = 1
+    (output / "manifest.json").write_text(json.dumps(manifest))
+    current_manifest.unlink()
+
+    run = PlanEvaluator(graph).add_metric(Tally("population")).evaluate_stream(source, output)
+
+    assert run.metrics == ("cut_edges", "population")
+    assert run_manifest(output).is_file()
+    assert not (output / "manifest.json").exists()
+    assert legacy_table.is_file()
+    assert cast(pd.Series, run.read("cut_edges")).tolist() == [2, 2]
+
+
+def test_evaluation_run_can_open_a_renamed_run_directory(tmp_path: Path) -> None:
+    source = tmp_path / "plans.ben"
+    output = tmp_path / "original_scores"
+    renamed = tmp_path / "renamed_scores"
+    write_source(source, "ben", "standard")
+    graph, _ = grid_resources()
+    PlanEvaluator(graph).add_metric(CutEdges()).evaluate_stream(source, output)
+    output.rename(renamed)
+
+    run = EvaluationRun.open(renamed)
+
+    assert run.metrics == ("cut_edges",)
+    assert cast(pd.Series, run.read("cut_edges")).tolist() == [2, 2]
 
 
 def test_evaluate_stream_zero_limit_writes_a_valid_empty_run(tmp_path: Path) -> None:
@@ -1451,14 +1704,15 @@ def test_evaluate_stream_zero_limit_writes_a_valid_empty_run(tmp_path: Path) -> 
     run = scorer().evaluate_stream(source, output, max_samples=0)
 
     assert run.summary == EvaluationSummary(samples=0, accepted=0)
-    manifest = json.loads((output / "manifest.json").read_text())
+    manifest = json.loads(run_manifest(output).read_text())
     assert manifest["summary"] == {
         "samples": 0,
         "accepted": 0,
     }
     assert manifest["district_ids"] == []
     for metric in manifest["metrics"]:
-        assert pq.read_table(output / metric["table"]).num_rows == 0
+        for table in metric["tables"]:
+            assert pq.read_table(output / table["path"]).num_rows == 0
         value = run.read(metric["instance"], expand_repetitions=True)
         assert isinstance(value, (pd.Series, pd.DataFrame))
         assert value.empty

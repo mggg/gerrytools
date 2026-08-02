@@ -142,18 +142,16 @@ def normalize_paintball_data(
 def paintball_coordinates(
     voteshares: Sequence[float], seatshares: Sequence[float]
 ) -> tuple[list[float], list[float]]:
-    """Transform paintball shares to plotted coordinates: the canonical ``(1 - v, 1 - s)``.
+    """Return direct ``(vote share, seat share)`` paintball coordinates.
 
     Args:
         voteshares (Sequence[float]): Vote-share values in ``[0, 1]``.
         seatshares (Sequence[float]): Seat-share values in ``[0, 1]``.
 
     Returns:
-        tuple[list[float], list[float]]: X and Y coordinate vectors in the unit square.
+        tuple[list[float], list[float]]: Vote-share x-coordinates and seat-share y-coordinates.
     """
-    x_coordinates = [1.0 - vote_share for vote_share in voteshares]
-    y_coordinates = [1.0 - seat_share for seat_share in seatshares]
-    return x_coordinates, y_coordinates
+    return list(voteshares), list(seatshares)
 
 
 def horizontal_hull_vertices(

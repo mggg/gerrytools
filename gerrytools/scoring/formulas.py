@@ -33,12 +33,13 @@ def district_vote_shares(
     represented by ``NaN``.
 
     Args:
-        party_votes: Nonnegative party vote tallies. The last axis represents districts.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative party vote tallies. The last axis represents districts.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        An array with the input shape containing district-level shares in :math:`[0, 1]` or
-        ``NaN`` for zero-turnout districts.
+        NDArray[np.float64]: An array with the input shape containing district-level shares in
+            :math:`[0, 1]`, or ``NaN`` for zero-turnout districts.
     """
     return _partisan_math.district_vote_shares(party_votes, opposition_votes)
 
@@ -51,11 +52,12 @@ def district_wins(party_votes: ArrayLike, opposition_votes: ArrayLike) -> NDArra
     by DeFord et al.
 
     Args:
-        party_votes: Nonnegative party vote tallies. The last axis represents districts.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative party vote tallies. The last axis represents districts.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        A Boolean array with the same shape as the inputs.
+        NDArray[np.bool\_]: A Boolean array with the same shape as the inputs.
     """
     return _partisan_math.district_wins(party_votes, opposition_votes)
 
@@ -67,12 +69,13 @@ def seats(party_votes: ArrayLike, opposition_votes: ArrayLike) -> NDArray[np.int
     districts contribute no seat. Earlier axes, such as election or batch axes, are preserved.
 
     Args:
-        party_votes: Nonnegative party vote tallies. The last axis represents districts.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative party vote tallies. The last axis represents districts.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        The seat count for each row preceding the district axis, or a scalar for one-dimensional
-        inputs.
+        NDArray[np.intp] | np.intp: The seat count for each row preceding the district axis, or a
+            scalar for one-dimensional inputs.
     """
     return np.sum(district_wins(party_votes, opposition_votes), axis=-1)
 
@@ -88,12 +91,13 @@ def overall_vote_share(
     two-party votes returns ``NaN``.
 
     Args:
-        party_votes: Nonnegative party vote tallies. The last axis represents districts.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative party vote tallies. The last axis represents districts.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        The aggregate share for each row preceding the district axis, or a scalar for
-        one-dimensional inputs.
+        NDArray[np.float64] | np.float64: The aggregate share for each row preceding the district
+            axis, or a scalar for one-dimensional inputs.
     """
     return _partisan_math.overall_vote_share(party_votes, opposition_votes)
 
@@ -111,14 +115,16 @@ def _partisan_shares_and_reference(
     the district shares.
 
     Args:
-        party_votes: Nonnegative party vote tallies. The last axis represents districts.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
-        turnout_model: ``"equal"`` for equal district weights or ``"observed"`` for observed
-            two-party turnout weights.
+        party_votes (ArrayLike): Nonnegative party vote tallies. The last axis represents districts.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
+        turnout_model (TurnoutModel): ``"equal"`` for equal district weights or ``"observed"`` for
+            observed two-party turnout weights.
 
     Returns:
-        District shares with the input shape and reference shares with shape ``(..., 1)``.
-        Zero-turnout district shares and references for rows with no votes are ``NaN``.
+        tuple[NDArray[np.float64], NDArray[np.float64]]: District shares with the input shape and
+            reference shares with shape ``(..., 1)``. Zero-turnout district shares and references
+            for rows with no votes are ``NaN``.
 
     Raises:
         ValueError: If the vote arrays are invalid or ``turnout_model`` is unsupported.
@@ -159,12 +165,13 @@ def efficiency_gap(
     differential. A row with no votes returns ``NaN``.
 
     Args:
-        party_votes: Nonnegative party vote tallies. The last axis represents districts.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative party vote tallies. The last axis represents districts.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        The efficiency gap for each row preceding the district axis, or a scalar for
-        one-dimensional inputs.
+        NDArray[np.float64] | np.float64: The efficiency gap for each row preceding the district
+            axis, or a scalar for one-dimensional inputs.
 
     References:
         - Bernstein and Duchin, "A Formula Goes to Court: Partisan Gerrymandering and the Efficiency
@@ -201,12 +208,13 @@ def simplified_efficiency_gap(
     definition is required.
 
     Args:
-        party_votes: Nonnegative party vote tallies. The last axis represents districts.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative party vote tallies. The last axis represents districts.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        The simplified gap for each row preceding the district axis, or a scalar for
-        one-dimensional inputs.
+        NDArray[np.float64] | np.float64: The simplified gap for each row preceding the district
+            axis, or a scalar for one-dimensional inputs.
 
     References:
         - Bernstein and Duchin, "A Formula Goes to Court: Partisan Gerrymandering and the Efficiency
@@ -234,12 +242,13 @@ def mean_median(
     identify the party favored by a map. Any zero-turnout district makes the result ``NaN``.
 
     Args:
-        party_votes: Nonnegative party vote tallies. The last axis represents districts.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative party vote tallies. The last axis represents districts.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        The mean-median score for each row preceding the district axis, or a scalar for
-        one-dimensional inputs.
+        NDArray[np.float64] | np.float64: The mean-median score for each row preceding the district
+            axis, or a scalar for one-dimensional inputs.
 
     References:
         - DeFord et al., "Implementing Partisan Symmetry: Problems and Paradoxes," Political
@@ -271,14 +280,18 @@ def partisan_bias(
     equal weight in the seat count.
 
     Args:
-        party_votes: Nonnegative party vote tallies. The last axis represents districts.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
-        turnout_model: How to locate the observed election on the vote axis. ``"equal"`` gives
-            districts equal weight; ``"observed"`` weights their shares by two-party turnout.
+        party_votes (ArrayLike): Nonnegative party vote tallies. The last axis represents districts.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
+        turnout_model (TurnoutModel, optional): How to locate the observed election on the vote
+            axis. Defaults to ``"equal"``.
+            ``"equal"`` gives districts equal weight; ``"observed"`` weights their shares by
+            two-party turnout.
 
     Returns:
-        Partisan bias for each row preceding the district axis, or a scalar for one-dimensional
-        inputs. A row with no valid district shares returns ``NaN``.
+        NDArray[np.float64] | np.float64: Partisan bias for each row preceding the district axis, or
+            a scalar for one-dimensional inputs. A row with no valid district shares returns
+            ``NaN``.
 
     References:
         - DeFord et al., "Implementing Partisan Symmetry: Problems and Paradoxes," Political
@@ -317,14 +330,17 @@ def partisan_gini(
     constructed from an undefined district share.
 
     Args:
-        party_votes: Nonnegative party vote tallies. The last axis represents districts.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
-        turnout_model: How to locate the observed election on the vote axis. ``"equal"`` gives
-            districts equal weight; ``"observed"`` weights their shares by two-party turnout.
+        party_votes (ArrayLike): Nonnegative party vote tallies. The last axis represents districts.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
+        turnout_model (TurnoutModel, optional): How to locate the observed election on the vote
+            axis. Defaults to ``"equal"``.
+            ``"equal"`` gives districts equal weight; ``"observed"`` weights their shares by
+            two-party turnout.
 
     Returns:
-        The partisan Gini score for each row preceding the district axis, or a scalar for
-        one-dimensional inputs.
+        NDArray[np.float64] | np.float64: The partisan Gini score for each row preceding the
+            district axis, or a scalar for one-dimensional inputs.
 
     References:
         - DeFord et al., "Implementing Partisan Symmetry: Problems and Paradoxes," Political
@@ -351,11 +367,14 @@ def _election_stack(
     axes, if present, are batch axes. The helper preserves all axes and performs no reshaping.
 
     Args:
-        party_votes: Nonnegative party vote tallies with elections on the penultimate axis.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative party vote tallies with elections on the penultimate
+            axis.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        Party and opposition tallies as finite, nonnegative ``float64`` arrays.
+        tuple[NDArray[np.float64], NDArray[np.float64]]: Party and opposition tallies as finite,
+            nonnegative ``float64`` arrays.
 
     Raises:
         ValueError: If the vote arrays are invalid, have different shapes, lack an election axis,
@@ -371,14 +390,14 @@ def competitive_contests(
     party_votes: ArrayLike,
     opposition_votes: ArrayLike,
     *,
-    points_within: float = 0.03,
+    vote_share_margin: float = 0.03,
 ) -> NDArray[np.intp] | np.intp:
     r"""Count election-district contests within an open interval around 50 percent.
 
     A contest is counted when the party's two-party share :math:`v` satisfies
-    :math:`1/2-d < v < 1/2+d`, where :math:`d` is ``points_within``. The endpoints are excluded.
-    The function counts contests, not unique districts, so a district can contribute once for each
-    supplied election. Zero-turnout contests are excluded.
+    :math:`1/2-d < v < 1/2+d`, where :math:`d` is ``vote_share_margin``. The endpoints are
+    excluded. The function counts contests, not unique districts, so a district can contribute
+    once for each supplied election. Zero-turnout contests are excluded.
 
     This is an operational competitiveness count rather than a canonical partisan-symmetry score.
     A threshold is a modeling choice and should not be interpreted as a universal definition of a
@@ -386,25 +405,31 @@ def competitive_contests(
     caveat for partisan-symmetry analysis.
 
     Args:
-        party_votes: Nonnegative tallies with elections on the penultimate axis and districts last.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
-        points_within: Half-width of the open competitive interval. Must lie in :math:`[0, 1/2]`.
+        party_votes (ArrayLike): Nonnegative tallies with elections on the penultimate axis and
+            districts last.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
+        vote_share_margin (float, optional): Half-width of the open competitive interval. Must lie
+            in :math:`[0, 1/2]`. Defaults to 0.03.
 
     Returns:
-        The number of competitive election-district contests for each preceding batch row, or a
-        scalar when no batch axes are present.
+        NDArray[np.intp] | np.intp: The number of competitive election-district contests for each
+            preceding batch row, or a scalar when no batch axes are present.
+
+    Raises:
+        ValueError: If the margin or vote arrays are invalid.
 
     References:
         - DeFord et al., "Implementing Partisan Symmetry: Problems and Paradoxes," Political
             Analysis 31 (2023), Section 1.2.3. https://doi.org/10.1017/pan.2021.49
     """
-    if not isinstance(points_within, Real) or isinstance(points_within, bool):
-        raise ValueError("points_within must be a real number")
-    if not np.isfinite(points_within) or not 0 <= points_within <= 0.5:
-        raise ValueError("points_within must be finite and between zero and one half")
+    if not isinstance(vote_share_margin, Real) or isinstance(vote_share_margin, bool):
+        raise ValueError("vote_share_margin must be a real number")
+    if not np.isfinite(vote_share_margin) or not 0 <= vote_share_margin <= 0.5:
+        raise ValueError("vote_share_margin must be finite and between zero and one half")
     party, opposition = _election_stack(party_votes, opposition_votes)
     shares = district_vote_shares(party, opposition)
-    close = (shares > 0.5 - points_within) & (shares < 0.5 + points_within)
+    close = (shares > 0.5 - vote_share_margin) & (shares < 0.5 + vote_share_margin)
     return np.sum(close, axis=(-2, -1))
 
 
@@ -416,11 +441,13 @@ def party_wins_by_district(party_votes: ArrayLike, opposition_votes: ArrayLike) 
     partisan-fairness metric in the literature.
 
     Args:
-        party_votes: Nonnegative tallies with elections on the penultimate axis and districts last.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative tallies with elections on the penultimate axis and
+            districts last.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        An integer array indexed by any batch axes and then by district.
+        NDArray[np.intp]: An integer array indexed by any batch axes and then by district.
 
     References:
         - DeFord et al., "Implementing Partisan Symmetry: Problems and Paradoxes," Political
@@ -442,11 +469,14 @@ def swing_districts(
     that the literature has a universal election set or threshold for defining a swing district.
 
     Args:
-        party_votes: Nonnegative tallies with elections on the penultimate axis and districts last.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative tallies with elections on the penultimate axis and
+            districts last.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        The number of swing districts for each preceding batch row, or a scalar without batch axes.
+        NDArray[np.intp] | np.intp: The number of swing districts for each preceding batch row, or a
+            scalar without batch axes.
     """
     party, opposition = _election_stack(party_votes, opposition_votes)
     stable_party = np.all(party > opposition, axis=-2)
@@ -464,12 +494,14 @@ def party_districts(
     a strict party win in every election.
 
     Args:
-        party_votes: Nonnegative tallies with elections on the penultimate axis and districts last.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative tallies with elections on the penultimate axis and
+            districts last.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        The number of stable party districts for each preceding batch row, or a scalar without
-        batch axes.
+        NDArray[np.intp] | np.intp: The number of stable party districts for each preceding batch
+            row, or a scalar without batch axes.
     """
     party, opposition = _election_stack(party_votes, opposition_votes)
     return np.sum(np.all(party > opposition, axis=-2), axis=-1)
@@ -485,12 +517,14 @@ def opposition_party_districts(
     contest therefore prevents the district from being classified as stable for the opposition.
 
     Args:
-        party_votes: Nonnegative tallies with elections on the penultimate axis and districts last.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative tallies with elections on the penultimate axis and
+            districts last.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        The number of stable opposition districts for each preceding batch row, or a scalar
-        without batch axes.
+        NDArray[np.intp] | np.intp: The number of stable opposition districts for each preceding
+            batch row, or a scalar without batch axes.
     """
     party, opposition = _election_stack(party_votes, opposition_votes)
     return np.sum(np.all(opposition > party, axis=-2), axis=-1)
@@ -510,11 +544,14 @@ def aggregate_seats(
     8 of the 12 election-district contests.
 
     Args:
-        party_votes: Nonnegative tallies with elections on the penultimate axis and districts last.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative tallies with elections on the penultimate axis and
+            districts last.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        The aggregate count for each preceding batch row, or a scalar without batch axes.
+        NDArray[np.intp] | np.intp: The aggregate count for each preceding batch row, or a scalar
+            without batch axes.
     """
     party, opposition = _election_stack(party_votes, opposition_votes)
     return np.sum(party > opposition, axis=(-2, -1))
@@ -531,11 +568,14 @@ def mean_signed_seat_vote_gap(
     to a proportional seats-votes benchmark; negative values indicate underrepresentation.
 
     Args:
-        party_votes: Nonnegative tallies with elections on the penultimate axis and districts last.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative tallies with elections on the penultimate axis and
+            districts last.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        The mean signed gap for each preceding batch row, or a scalar without batch axes.
+        NDArray[np.float64] | np.float64: The mean signed gap for each preceding batch row, or a
+            scalar without batch axes.
 
     References:
         - DeFord et al., "Implementing Partisan Symmetry: Problems and Paradoxes," Political
@@ -560,11 +600,14 @@ def mean_absolute_seat_vote_gap(
     seat-vote disproportionality without assigning it a partisan direction.
 
     Args:
-        party_votes: Nonnegative tallies with elections on the penultimate axis and districts last.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative tallies with elections on the penultimate axis and
+            districts last.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        The mean absolute gap for each preceding batch row, or a scalar without batch axes.
+        NDArray[np.float64] | np.float64: The mean absolute gap for each preceding batch row, or a
+            scalar without batch axes.
 
     References:
         - DeFord et al., "Implementing Partisan Symmetry: Problems and Paradoxes," Political
@@ -600,15 +643,21 @@ def eguia(
     District and region ties count as wins for neither side.
 
     Args:
-        party_votes: Nonnegative party tallies with districts on the last axis.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
-        region_party_votes: Nonnegative party tallies with regions on the last axis.
-        region_opposition_votes: Nonnegative opposition tallies matching ``region_party_votes``.
-        region_populations: Nonnegative region populations, broadcastable to the region vote shape.
+        party_votes (ArrayLike): Nonnegative party tallies with districts on the last axis.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
+        region_party_votes (ArrayLike): Nonnegative party tallies with regions on the last axis.
+        region_opposition_votes (ArrayLike): Nonnegative opposition tallies matching
+            ``region_party_votes``.
+        region_populations (ArrayLike): Nonnegative region populations, broadcastable to the region
+            vote shape.
 
     Returns:
-        The Eguia score over compatible district and region election or batch axes. A row whose
-        regions have zero total population returns ``NaN``.
+        NDArray[np.float64] | np.float64: The Eguia score over compatible district and region
+            election or batch axes. A row whose regions have zero total population returns ``NaN``.
+
+    Raises:
+        ValueError: If vote or population arrays are invalid or have incompatible shapes.
 
     References:
         - Eguia, "A Measure of Partisan Advantage in Redistricting," Election Law Journal 21
@@ -650,10 +699,11 @@ def _positive_population_totals(populations: ArrayLike) -> NDArray[np.float64]:
     districts may have zero population, but every row must have a strictly positive total.
 
     Args:
-        populations: Nonnegative populations with districts on the last axis.
+        populations (ArrayLike): Nonnegative populations with districts on the last axis.
 
     Returns:
-        Populations as a finite, nonnegative ``float64`` array with the input shape.
+        NDArray[np.float64]: Populations as a finite, nonnegative ``float64`` array with the input
+            shape.
 
     Raises:
         ValueError: If the input fails :func:`_nonnegative` validation or any row has zero total
@@ -674,10 +724,12 @@ def population_deviations(populations: ArrayLike) -> NDArray[np.float64]:
     population.
 
     Args:
-        populations: Nonnegative district populations. The last axis represents districts.
+        populations (ArrayLike): Nonnegative district populations. The last axis represents
+            districts.
 
     Returns:
-        An array with the input shape containing signed deviations as proportions of ideal.
+        NDArray[np.float64]: An array with the input shape containing signed deviations as
+            proportions of ideal.
 
     References:
         - Evenwel v. Abbott, 578 U.S. 54 (2016), discussing equal population and maximum
@@ -692,22 +744,24 @@ def population_deviations(populations: ArrayLike) -> NDArray[np.float64]:
 
 
 def max_absolute_population_deviation(
-    populations: ArrayLike, *, relative: bool = False
+    populations: ArrayLike, *, relative_to_ideal: bool = False
 ) -> NDArray[np.float64] | np.float64:
     r"""Return the largest one-district absolute deviation from ideal population.
 
-    The raw result is :math:`\max_i |P_i-P^*|`. With ``relative=True``, it is divided by ideal
-    population :math:`P^*`. This is the worst individual departure from ideal. It is not the
+    The raw result is :math:`\max_i |P_i-P^*|`. With ``relative_to_ideal=True``, it is divided by
+    ideal population :math:`P^*`. This is the worst individual departure from ideal. It is not the
     conventional plan-wide "maximum population deviation," which adds the largest positive and
     negative percentage deviations and is computed by :func:`max_population_deviation`.
 
     Args:
-        populations: Nonnegative district populations. The last axis represents districts.
-        relative: Return a proportion of ideal population instead of a population count.
+        populations (ArrayLike): Nonnegative district populations. The last axis represents
+            districts.
+        relative_to_ideal (bool, optional): Return a proportion of ideal population instead of a
+            population count. Defaults to False.
 
     Returns:
-        The largest absolute deviation for each preceding batch row, or a scalar without batch
-        axes.
+        NDArray[np.float64] | np.float64: The largest absolute deviation for each preceding batch
+            row, or a scalar without batch axes.
 
     References:
         - Evenwel v. Abbott, 578 U.S. 54, 60 n.2 (2016), defining the conventional plan-wide
@@ -719,26 +773,29 @@ def max_absolute_population_deviation(
     values = _positive_population_totals(populations)
     ideal = np.mean(values, axis=-1)
     deviation = np.max(np.abs(values - np.expand_dims(ideal, axis=-1)), axis=-1)
-    return _divide(deviation, ideal) if relative else deviation
+    return _divide(deviation, ideal) if relative_to_ideal else deviation
 
 
 def max_population_deviation(
-    populations: ArrayLike, *, relative: bool = False
+    populations: ArrayLike, *, relative_to_ideal: bool = False
 ) -> NDArray[np.float64] | np.float64:
     r"""Return the conventional maximum population deviation of a plan.
 
-    The raw result is :math:`\max_i P_i-\min_i P_i`. With ``relative=True``, it is divided by the
-    ideal population. The relative form equals the largest positive percentage deviation plus the
-    magnitude of the largest negative percentage deviation, which is the convention described in
-    Evenwel v. Abbott. This plan-wide range differs from the worst single-district absolute
-    deviation returned by :func:`max_absolute_population_deviation`.
+    The raw result is :math:`\max_i P_i-\min_i P_i`. With ``relative_to_ideal=True``, it is divided
+    by the ideal population. The relative form equals the largest positive percentage deviation
+    plus the magnitude of the largest negative percentage deviation, which is the convention
+    described in Evenwel v. Abbott. This plan-wide range differs from the worst single-district
+    absolute deviation returned by :func:`max_absolute_population_deviation`.
 
     Args:
-        populations: Nonnegative district populations. The last axis represents districts.
-        relative: Return a proportion of ideal population instead of a population count.
+        populations (ArrayLike): Nonnegative district populations. The last axis represents
+            districts.
+        relative_to_ideal (bool, optional): Return a proportion of ideal population instead of a
+            population count. Defaults to False.
 
     Returns:
-        Maximum population deviation for each preceding batch row, or a scalar without batch axes.
+        NDArray[np.float64] | np.float64: Maximum population deviation for each preceding batch row,
+            or a scalar without batch axes.
 
     References:
         - Evenwel v. Abbott, 578 U.S. 54, 60 n.2 (2016).
@@ -748,7 +805,7 @@ def max_population_deviation(
     """
     values = _positive_population_totals(populations)
     deviation = np.max(values, axis=-1) - np.min(values, axis=-1)
-    if not relative:
+    if not relative_to_ideal:
         return deviation
     return _divide(deviation, np.mean(values, axis=-1))
 
@@ -761,11 +818,16 @@ def demographic_shares(
     The result is :math:`G_i/P_i`. A district with zero total population returns ``NaN``.
 
     Args:
-        subgroup_populations: Nonnegative subgroup populations by district.
-        total_populations: Matching nonnegative totals that contain the subgroup populations.
+        subgroup_populations (ArrayLike): Nonnegative subgroup populations by district.
+        total_populations (ArrayLike): Matching nonnegative totals that contain the subgroup
+            populations.
 
     Returns:
-        An array of shares in :math:`[0, 1]`, with ``NaN`` where the denominator is zero.
+        NDArray[np.float64]: An array of shares in :math:`[0, 1]`, with ``NaN`` where the
+            denominator is zero.
+
+    Raises:
+        ValueError: If the population arrays are invalid or a subgroup exceeds its total.
     """
     subgroup, total = _matching(
         subgroup_populations,
@@ -787,13 +849,18 @@ def districts_above_threshold(
     r"""Count districts whose subgroup share is strictly above a threshold.
 
     Args:
-        subgroup_populations: Nonnegative subgroup populations by district.
-        total_populations: Matching nonnegative totals that contain the subgroup populations.
-        threshold: Share threshold in :math:`[0, 1]`; the comparison is strictly greater than.
+        subgroup_populations (ArrayLike): Nonnegative subgroup populations by district.
+        total_populations (ArrayLike): Matching nonnegative totals that contain the subgroup
+            populations.
+        threshold (float, optional): Share threshold in :math:`[0, 1]`; the comparison is strictly
+            greater than. Defaults to 0.5.
 
     Returns:
-        The number of districts above the threshold for each preceding batch row, or a scalar
-        without batch axes.
+        NDArray[np.intp] | np.intp: The number of districts above the threshold for each preceding
+            batch row, or a scalar without batch axes.
+
+    Raises:
+        ValueError: If the threshold or population arrays are invalid.
     """
     if not isinstance(threshold, Real) or isinstance(threshold, bool):
         raise ValueError("threshold must be a real number")
@@ -803,7 +870,7 @@ def districts_above_threshold(
     return np.sum(shares > threshold, axis=-1)
 
 
-def schwartzberg(polsby_popper: ArrayLike) -> NDArray[np.float64]:
+def schwartzberg(polsby_popper_scores: ArrayLike) -> NDArray[np.float64]:
     r"""Derive Schwartzberg compactness from Polsby-Popper compactness.
 
     For a positive Polsby-Popper score :math:`PP`, this function returns
@@ -817,24 +884,50 @@ def schwartzberg(polsby_popper: ArrayLike) -> NDArray[np.float64]:
     fairness.
 
     Args:
-        polsby_popper: Positive Polsby-Popper scores no greater than 1, within numerical tolerance.
+        polsby_popper_scores (ArrayLike): Positive Polsby-Popper scores no greater than 1, within
+            numerical tolerance.
 
     Returns:
-        Schwartzberg scores with the same shape as the input.
+        NDArray[np.float64]: Schwartzberg scores with the same shape as the input.
+
+    Raises:
+        ValueError: If a Polsby-Popper score is nonpositive, greater than one, or nonfinite.
 
     References:
         - Schwartzberg, "Reapportionment, Gerrymanders, and the Notion of Compactness," Minnesota
             Law Review 50 (1966), 443. https://doi.org/10.24926/265535.2601
         - Polsby and Popper, "The Third Criterion: Compactness as a Procedural Safeguard Against
             Partisan Gerrymandering," Yale Law & Policy Review 9 (1991), 301-353.
-            `Article PDF
-            <https://openyls.law.yale.edu/bitstream/handle/20.500.13051/17448/18_9YaleL_PolyRev301_SpringSummer1991_.pdf?isAllowed=y&sequence=2>`_
+            `Article record <https://openyls.law.yale.edu/handle/20.500.13051/17448>`_.
         - Duchin and Tenner, "Discrete Geometry for Electoral Geography," Political Geography 109
             (2024), 103040. https://doi.org/10.1016/j.polgeo.2023.103040
     """
-    scores = _nonnegative(polsby_popper, "polsby_popper")
+    scores = _nonnegative(polsby_popper_scores, "polsby_popper_scores")
     if np.any(scores == 0):
-        raise ValueError("polsby_popper scores must be positive")
+        raise ValueError("polsby_popper_scores must be positive")
     if np.any(scores > 1 + 1e-12):
-        raise ValueError("polsby_popper scores cannot exceed one")
+        raise ValueError("polsby_popper_scores cannot exceed one")
     return 1 / np.sqrt(np.minimum(scores, 1))
+
+
+def disproportionality(
+    party_votes: ArrayLike, opposition_votes: ArrayLike
+) -> NDArray[np.float64] | np.float64:
+    r"""Return the party's signed seat-share minus aggregate vote-share gap.
+
+    Positive values indicate that the party wins a larger share of seats than votes; negative
+    values indicate that it wins a smaller share. District ties are not wins.
+
+    Args:
+        party_votes (ArrayLike): Nonnegative party vote tallies. The last axis represents districts.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
+
+    Returns:
+        NDArray[np.float64] | np.float64: The disproportionality score for each row preceding the
+            district axis, or a scalar for one-dimensional inputs.
+    """
+    party_votes, opposition_votes = _paired(party_votes, opposition_votes)
+    seat_share = np.mean(party_votes > opposition_votes, axis=-1)
+    vote_share = overall_vote_share(party_votes, opposition_votes)
+    return seat_share - vote_share

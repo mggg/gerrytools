@@ -54,6 +54,7 @@ fn detects_ben_xben_and_verified_bendl_sources() {
     let source = AssignmentSource::open(bendl.path()).unwrap();
     assert_eq!(source.variant().unwrap(), BenVariant::Standard);
     assert_eq!(source.declared_sample_count(), Some(1));
+    source.validate_bundle_graph_node_order(None).unwrap();
 }
 
 #[test]

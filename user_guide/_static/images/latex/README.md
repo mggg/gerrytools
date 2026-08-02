@@ -29,3 +29,4 @@ uv run python user_guide/_generate_latex_images.py
 | `tikztable-heatmap.png` | `user_guide/user/latex/tikztable_styling.ipynb` |
 | `tikztable-highlights.png` | `user_guide/user/latex/tikztable.ipynb` |
 | `tikztable-rules.png` | `user_guide/user/latex/tikztable.ipynb` |
+| `tikztable-showcase.png` | `user_guide/user/latex/tikztable_styling.ipynb` |

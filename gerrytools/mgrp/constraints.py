@@ -244,8 +244,8 @@ class Constraints:
     ) -> Constraints:
         """(RustReCom) Require every district to meet a minimum population share.
 
-        For each district, ``rustrecom`` divides the district sum of ``numerator_col`` by the sum of all
-        district totals named in ``denominator_cols``. The initial assignment must satisfy
+        For each district, ``rustrecom`` divides the district sum of ``numerator_col`` by the sum
+        of all district totals named in ``denominator_cols``. The initial assignment must satisfy
         ``share >= threshold`` in every district, and a proposal is rejected if either changed
         district falls below the floor. Equality with the threshold is allowed.
 
@@ -257,14 +257,15 @@ class Constraints:
             denominator_cols (Sequence[str]): Nonempty sequence of numeric node-attribute columns
                 whose district sums form the denominator. Pass a sequence such as ``["VAP"]``;
                 passing a bare string would be interpreted as a sequence of characters.
-            threshold (float): Minimum permitted district share. ``rustrecom`` expects a finite value in
-                the inclusive range ``[0, 1]``.
+            threshold (float): Minimum permitted district share. ``rustrecom`` expects a finite
+                value in the inclusive range ``[0, 1]``.
 
         Returns:
             Constraints: This builder instance, allowing additional methods to be chained.
 
         Note:
-            Missing or nonnumeric graph columns are reported by ``rustrecom`` after the container starts.
+            Missing or nonnumeric graph columns are reported by ``rustrecom`` after the container
+            starts.
             ReCom currently accepts only one constraint specification per run.
         """
         return self._add(
@@ -432,7 +433,7 @@ class Constraints:
         """(MSMS) Require population-heavy nodes to meet packed-district targets.
 
         See the `MSMS PackNodeConstraint implementation
-        <https://github.com/mggg/Multi-Scale-Map-Sampler/blob/3f4a6c829789c28f9a7d0b6f1455011cbbd06bf8/src/constraints.jl#L38-L64>`_.
+        <https://github.com/mggg/Multi-Scale-Map-Sampler/blob/3f4a6c8/src/constraints.jl#L38-L64>`_.
 
         At every hierarchy level, MSMS computes
         ``floor(node_population / ideal_population) - unpack`` for each node and omits nodes whose
@@ -458,7 +459,7 @@ class Constraints:
         """(MSMS) Set the budget for excess district intersections with coarse nodes.
 
         See the `MSMS MaxCoarseNodeSplits implementation
-        <https://github.com/mggg/Multi-Scale-Map-Sampler/blob/3f4a6c829789c28f9a7d0b6f1455011cbbd06bf8/src/constraints.jl#L220-L231>`_.
+        <https://github.com/mggg/Multi-Scale-Map-Sampler/blob/3f4a6c8/src/constraints.jl#L220>`_.
 
         For every top-level coarse node ``N``, let ``k_N`` be the number of districts intersecting
         it. MSMS requires ``sum(k_N - 1) <= max_splits``. A node intersected by three districts thus
@@ -478,7 +479,7 @@ class Constraints:
         """(MSMS) Limit district intersections separately within each coarse node.
 
         See the `MSMS AllowedExcessDistsInCoarseNodes implementation
-        <https://github.com/mggg/Multi-Scale-Map-Sampler/blob/3f4a6c829789c28f9a7d0b6f1455011cbbd06bf8/src/constraints.jl#L296-L361>`_.
+        <https://github.com/mggg/Multi-Scale-Map-Sampler/blob/3f4a6c8/src/constraints.jl#L296>`_.
 
         For a top-level coarse node at or above one ideal district of population, the baseline is
         ``ceil(node_population / ideal_population)`` intersecting districts. A node below one ideal
@@ -508,7 +509,7 @@ class Constraints:
         """(MSMS) Require connected traversal within partially included hierarchy nodes.
 
         See the `MSMS ConstrainDiscontinuousTraversals implementation
-        <https://github.com/mggg/Multi-Scale-Map-Sampler/blob/3f4a6c829789c28f9a7d0b6f1455011cbbd06bf8/src/constraints.jl#L127-L154>`_.
+        <https://github.com/mggg/Multi-Scale-Map-Sampler/blob/3f4a6c8/src/constraints.jl#L127>`_.
 
         Before a Forest ReCom cut, MSMS examines the merged region selected for recombination. In
         every hierarchy node that the region only partially occupies, the included child-level nodes
@@ -604,6 +605,16 @@ def validate_constraint_spec(value: object) -> ConstraintSpec:
     """Copy and validate one constraint document before container construction.
 
     The copy is deep so nested values (e.g. ``denominator_cols``) never alias the input.
+
+    Args:
+        value (object): Raw constraint dictionary.
+
+    Returns:
+        ConstraintSpec: Deep-copied, validated constraint specification.
+
+    Raises:
+        TypeError: If the document or one of its values has the wrong type.
+        ValueError: If its name, fields, or values are invalid.
     """
     if not isinstance(value, dict):
         raise TypeError(f"constraint must be a dictionary; got {type(value).__name__}.")

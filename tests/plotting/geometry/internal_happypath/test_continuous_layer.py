@@ -10,6 +10,7 @@ from matplotlib.pyplot import get_cmap
 from shapely.geometry import box
 
 from gerrytools.plotting.geometry._layers._continuous import _ContinuousColorLayer
+from tests.plotting._typing_utils import as_any
 
 
 def make_layer(values, **kwargs):
@@ -94,8 +95,8 @@ class TestBinnedColorSeries:
     def test_binned_mappable_clamps_like_color_series(self):
         layer = make_layer([0.5, 1.5], bins=[0.0, 1.0, 2.0])
         mappable, _ = layer.mappable()
-        assert mappable.norm(-1.0) == 0
-        assert mappable.norm(3.0) == 1
+        assert mappable.norm(as_any(-1.0)) == 0
+        assert mappable.norm(as_any(3.0)) == 1
 
 
 class TestDuplicateIndexColorSeries:

@@ -5,18 +5,29 @@ import stat
 import subprocess
 import sys
 import warnings
+from io import BytesIO
 from pathlib import Path
 from typing import cast
 
+import geopandas as gpd
 import networkx as nx
 import numpy as np
+import pandas as pd
 import pytest
-from binary_ensemble import BenDecoder, BendlDecoder, BendlEncoder
+from binary_ensemble import BenDecoder
+from geopandas.testing import assert_geodataframe_equal
 from gerrychain import Graph, MarkovChain, Partition
 from gerrychain.partition import GeographicPartition
 from gerrychain.partition.assignment import Assignment
 
-from gerrytools.ben import RecordedChain, RecordedRun
+from gerrytools.ben import (
+    BendlDecoder,
+    BendlEncoder,
+    RecordedChain,
+    RecordedRun,
+    read_geoparquet_asset,
+    read_parquet_asset,
+)
 
 
 def configured_chain(
@@ -46,6 +57,32 @@ def configured_chain(
     )
     chain.proposal_fn = lambda partition, *, rng: partition.flip({0: 1})
     return chain
+
+
+def test_parquet_asset_helpers_read_dataframes(tmp_path):
+    table = pd.DataFrame({"GEOID": ["001", "002"], "population": [10, 20]})
+    geodata = gpd.GeoDataFrame(
+        {"GEOID": ["001", "002"]},
+        geometry=gpd.points_from_xy([-105.0, -104.5], [39.5, 40.0]),
+        crs="EPSG:4326",
+    )
+    path = tmp_path / "assets.bendl"
+    table_buffer = BytesIO()
+    geodata_buffer = BytesIO()
+    table.to_parquet(table_buffer, index=False)
+    geodata.to_parquet(geodata_buffer, index=False)
+
+    with BendlEncoder(path) as encoder:
+        encoder.add_asset("table.parquet", table_buffer.getvalue(), "binary")
+        encoder.add_asset("units.parquet", geodata_buffer.getvalue(), "binary")
+
+    decoder = BendlDecoder(path)
+    decoder.verify()
+    table_result = read_parquet_asset(decoder, "table.parquet")
+    geodata_result = read_geoparquet_asset(decoder, "units.parquet")
+
+    pd.testing.assert_frame_equal(table_result, table)
+    assert_geodataframe_equal(geodata_result, geodata)
 
 
 @pytest.mark.parametrize("order", ["mlc", "rcm", "key", None])
@@ -148,7 +185,7 @@ def test_numpy_array_fails_during_preparation(tmp_path):
     with pytest.raises(TypeError, match="JSON serializable") as error:
         RecordedChain(graph, output_path=tmp_path / "bad.bendl", graph_order=None)
 
-    assert "no-order canonicalization" in error.value.__notes__[0]
+    assert any("no-order canonicalization" in note for note in error.value.__notes__)
 
 
 @pytest.mark.parametrize(
@@ -178,6 +215,22 @@ def test_reuses_graph_after_partition_conversion(tmp_path):
     assert all(
         "__networkx_node__" not in attributes for _, attributes in second.graph.nodes(data=True)
     )
+
+
+def test_accepts_networkx_backed_gerrychain_graph(tmp_path):
+    graph = nx.path_graph(4)
+    nx.set_node_attributes(graph, {0: 0, 1: 0, 2: 1, 3: 1}, "district")
+    chain = RecordedChain(
+        Graph.from_networkx(graph),
+        output_path=tmp_path / "gerrychain-graph.bendl",
+        graph_order=None,
+        total_steps=1,
+    )
+    chain.initial_partition = Partition(chain.graph, "district")
+    chain.proposal_fn = lambda partition, *, rng: partition
+
+    assert list(chain) == [chain.initial_partition]
+    assert chain.recording.decoder.read_graph() is not None
 
 
 @pytest.mark.parametrize("graph", [nx.DiGraph([(0, 1)]), nx.MultiGraph([(0, 1)])])
@@ -216,16 +269,21 @@ def test_recording_options_are_owned_and_read_only(tmp_path):
 
 
 def test_records_live_partitions_metadata_and_vectors(tmp_path):
-    chain = configured_chain(tmp_path, metadata={"seed": 1})
+    chain = configured_chain(tmp_path, metadata={"seed": 1, "notes": ["original"]})
 
     yielded = list(chain)
+    expected = [partition.assignment_vector.tolist() for partition in yielded]
+    recording = chain.recording
+    metadata = cast(dict, recording.metadata)
+    metadata["notes"].append("changed")
 
     assert yielded[0] is chain.initial_partition
-    assert len(chain.recording.decoder) == 3
-    assert chain.recording.decoder.read_metadata() == {"seed": 1}
-    assert list(chain.recording.decoder) == [
-        partition.assignment_vector.tolist() for partition in yielded
-    ]
+    assert recording.count_samples() == 3
+    assert len(recording) == 3
+    assert recording.metadata == {"seed": 1, "notes": ["original"]}
+    assert list(recording) == expected
+    assert list(recording) == expected
+    assert recording.verify() is None
 
 
 def test_numpy_scalar_metadata_is_normalized_and_records(tmp_path):
@@ -527,7 +585,7 @@ def test_parent_close_failure_does_not_annotate_foreign_exception(tmp_path, monk
     assert getattr(foreign, "__notes__", []) == []
 
 
-def test_lookup_and_partition_at_are_zero_based_and_preserve_updaters(tmp_path):
+def test_assignment_and_partition_access_are_zero_based_and_preserve_updaters(tmp_path):
     updater = lambda partition: len(partition.assignment)
     chain = configured_chain(tmp_path)
     assert chain.initial_partition is not None
@@ -536,17 +594,18 @@ def test_lookup_and_partition_at_are_zero_based_and_preserve_updaters(tmp_path):
     sequential = iter(chain.recording.decoder)
     first_from_cursor = next(sequential)
 
-    first_vector = chain.recording.lookup(0)
+    first_vector = chain.recording.assignment_at(0)
     first = chain.recording.partition_at(0)
     middle = chain.recording.partition_at(1)
 
     assert first_vector == first_from_cursor
+    assert chain.recording.lookup(0) == first_vector
     assert first.assignment_vector.tolist() == first_from_cursor
     assert first["size"] == 4
     assert first.graph is middle.graph
     assert next(sequential) == chain.recording.decoder.lookup(1)
     with pytest.raises(IndexError):
-        chain.recording.lookup(3)
+        chain.recording.assignment_at(3)
 
 
 @pytest.mark.parametrize(
@@ -624,6 +683,16 @@ def test_recorded_run_without_embedded_graph_raises_for_partitions(tmp_path):
         recorded_run.partition_at(0)
 
 
+def test_recorded_run_from_bendl_reopens_published_recording(tmp_path):
+    chain = configured_chain(tmp_path, total_steps=2)
+    live_vectors = [partition.assignment_vector.tolist() for partition in chain]
+
+    recording = RecordedRun.from_bendl(str(chain.output_path))
+
+    assert list(recording.decoder) == live_vectors
+    assert recording.partition_at(1).assignment_vector.tolist() == live_vectors[1]
+
+
 def test_truncated_finalized_file_raises_on_read(tmp_path):
     chain = configured_chain(tmp_path, total_steps=2)
     list(chain)
@@ -690,15 +759,31 @@ def test_recording_handle_survives_active_and_failed_reruns(tmp_path):
 
 def test_successful_same_path_rerun_invalidates_old_handle(tmp_path):
     chain = configured_chain(tmp_path, total_steps=3)
-    list(chain)
+    original = [partition.assignment_vector.tolist() for partition in chain]
     stale = chain.recording
-    assert len(stale.lookup(0)) == 4  # prime the cached decoder before the rerun
+    iterator = iter(stale)
+    assert next(iterator) == original[0]
+    assert len(stale.assignment_at(0)) == 4  # prime the cached decoder before the rerun
 
     chain.total_steps = 2
     list(chain.allow_overwrite())
 
     with pytest.raises(RuntimeError, match="later rerun overwrote"):
         stale.lookup(0)
+    with pytest.raises(RuntimeError, match="later rerun overwrote"):
+        stale.assignment_at(0)
+    with pytest.raises(RuntimeError, match="later rerun overwrote"):
+        stale.count_samples()
+    with pytest.raises(RuntimeError, match="later rerun overwrote"):
+        len(stale)
+    with pytest.raises(RuntimeError, match="later rerun overwrote"):
+        _ = stale.metadata
+    with pytest.raises(RuntimeError, match="later rerun overwrote"):
+        stale.verify()
+    with pytest.raises(RuntimeError, match="later rerun overwrote"):
+        iter(stale)
+    with pytest.raises(RuntimeError, match="later rerun overwrote"):
+        next(iterator)
     with pytest.raises(RuntimeError, match="later rerun overwrote"):
         stale.subsample_every(1)
     assert stale.path == chain.output_path.resolve()  # path itself stays readable

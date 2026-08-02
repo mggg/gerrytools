@@ -111,7 +111,10 @@ def test_aligned_geodataframe_requires_a_projected_crs() -> None:
 
 def test_aligned_geodataframe_requires_a_geodataframe() -> None:
     with pytest.raises(TypeError, match="GeoDataFrame"):
-        aligned_geodataframe(["a"], pd.DataFrame({"geometry": [box(0, 0, 1, 1)]}))  # type: ignore[arg-type]
+        aligned_geodataframe(
+            ["a"],
+            pd.DataFrame({"geometry": [box(0, 0, 1, 1)]}),  # type: ignore
+        )
 
 
 @pytest.mark.parametrize(

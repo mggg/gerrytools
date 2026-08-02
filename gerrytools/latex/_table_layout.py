@@ -118,6 +118,33 @@ class TablePreamble:
             tuple(TableBoundary(extra=boundary.extra) for boundary in self.boundaries),
         )
 
+    def reordered(self, order: list[int]) -> TablePreamble:
+        """Move column specs while keeping separator syntax at rendered boundaries."""
+        if order == list(range(len(self.alignments))):
+            return self
+        alignments = tuple(self.alignments[index] for index in order)
+        boundaries: list[TableBoundary] = []
+        for position in range(len(order) + 1):
+            positional = self.boundaries[position]
+            _, middle, _ = positional._parts(position)
+            if position == 0:
+                closing, _, _ = self.boundaries[0]._parts(0)
+            else:
+                closing, _, _ = self.boundaries[order[position - 1] + 1]._parts(
+                    order[position - 1] + 1
+                )
+            if position == len(order):
+                _, _, opening = self.boundaries[-1]._parts(len(order))
+            else:
+                _, _, opening = self.boundaries[order[position]]._parts(order[position])
+            boundaries.append(
+                TableBoundary(
+                    positional.vrules,
+                    closing + middle[positional.vrules :] + opening,
+                )
+            )
+        return TablePreamble(alignments, tuple(boundaries))
+
 
 @dataclass(frozen=True)
 class IndexColumn:
@@ -298,6 +325,9 @@ def resolved_preamble(df: pd.DataFrame, options: TableOptions) -> TablePreamble:
             "Current tabular format does not match DataFrame columns. Got "
             f"{len(preamble.alignments)} colspecs but expected {expected}."
         )
+    ordering = column_ordering(df, options)
+    positions = {column: index for index, column in enumerate(df.columns)}
+    preamble = preamble.reordered([positions[column] for column in ordering])
     if not options.include_index:
         return preamble
     index = options.index_column

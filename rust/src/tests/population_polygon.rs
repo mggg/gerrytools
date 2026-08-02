@@ -40,7 +40,7 @@ fn prepares_owner_totals_and_polygon_index() {
     .unwrap();
 
     assert_eq!(metric.surface.owner_totals, [9.0, 5.0]);
-    let envelope = AABB::from_corners(Point::new(0.0, 0.0), Point::new(0.45, 1.0));
+    let envelope = AABB::from_corners([0.0, 0.0], [0.45, 1.0]);
     let indexed = metric
         .surface
         .polygons
@@ -70,6 +70,106 @@ fn aligned_surface_matches_the_checked_explicit_mapping() {
             owners: 2,
         }
     );
+}
+
+#[test]
+fn prepared_geometry_infers_unique_population_owners() {
+    let units = [rectangle(0.0, 0.0, 1.0, 1.0), rectangle(1.0, 0.0, 2.0, 1.0)];
+    let geometry = Arc::new(PreparedGeometry::from_wkb(&units).unwrap());
+    let metric = PreparedPopulationPolygon::from_prepared_geometry(
+        Arc::clone(&geometry),
+        &[rectangle(1.1, 0.1, 1.9, 0.9), rectangle(0.1, 0.1, 0.9, 0.9)],
+        vec![5.0, 7.0],
+    )
+    .unwrap();
+
+    assert_eq!(metric.surface.owner_totals, [7.0, 5.0]);
+    assert_eq!(values(&metric.score(&[0, 1]).unwrap()), [1.0, 1.0]);
+}
+
+#[test]
+fn prepared_geometry_infers_ownership_from_coverage_not_a_representative_point() {
+    let units = [rectangle(0.0, 0.0, 1.0, 1.0)];
+    let geometry = Arc::new(PreparedGeometry::from_wkb(&units).unwrap());
+    // Half of this 1e-12-area polygon is a tolerated overlay residue. Its center lies exactly on
+    // the unit boundary, so representative-point containment would reject it.
+    let population = [rectangle(1.0 - 5e-7, 0.5, 1.0 + 5e-7, 0.5 + 1e-6)];
+
+    let metric =
+        PreparedPopulationPolygon::from_prepared_geometry(geometry, &population, vec![3.0])
+            .unwrap();
+
+    assert_eq!(metric.surface.owner_totals, [3.0]);
+}
+
+#[test]
+fn prepared_geometry_owner_inference_rejects_a_material_boundary_crossing() {
+    let units = [rectangle(0.0, 0.0, 1.0, 1.0)];
+    let geometry = Arc::new(PreparedGeometry::from_wkb(&units).unwrap());
+    let population = [rectangle(0.5, 0.1, 1.5, 0.9)];
+
+    assert_eq!(
+        PreparedPopulationPolygon::from_prepared_geometry(geometry, &population, vec![1.0])
+            .unwrap_err(),
+        Error::PopulationGeometryOwnerCount {
+            observation: 0,
+            count: 0,
+        }
+    );
+}
+
+#[test]
+fn prepared_geometry_owner_inference_resolves_thin_holes_above_tolerance() {
+    let hole_width = 1e-10;
+    let units = [polygon_wkb(&[
+        &[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (0.0, 0.0)],
+        &[
+            (0.5 - hole_width / 2.0, 0.45),
+            (0.5 - hole_width / 2.0, 0.55),
+            (0.5 + hole_width / 2.0, 0.55),
+            (0.5 + hole_width / 2.0, 0.45),
+            (0.5 - hole_width / 2.0, 0.45),
+        ],
+    ])];
+    let geometry = Arc::new(PreparedGeometry::from_wkb(&units).unwrap());
+    let population = [rectangle(0.4, 0.4, 0.6, 0.6)];
+
+    assert_eq!(
+        PreparedPopulationPolygon::from_prepared_geometry(geometry, &population, vec![1.0])
+            .unwrap_err(),
+        Error::PopulationGeometryOwnerCount {
+            observation: 0,
+            count: 0,
+        }
+    );
+}
+
+#[test]
+fn prepared_geometry_owner_inference_reports_the_lowest_nonunique_observation() {
+    let duplicate_units = [rectangle(0.0, 0.0, 1.0, 1.0), rectangle(0.0, 0.0, 1.0, 1.0)];
+    let geometry = Arc::new(PreparedGeometry::from_wkb(&duplicate_units).unwrap());
+    let population = [rectangle(0.1, 0.1, 0.9, 0.9), rectangle(2.0, 2.0, 3.0, 3.0)];
+
+    assert_eq!(
+        PreparedPopulationPolygon::from_prepared_geometry(geometry, &population, vec![1.0, 1.0],)
+            .unwrap_err(),
+        Error::PopulationGeometryOwnerCount {
+            observation: 0,
+            count: 2,
+        }
+    );
+}
+
+#[test]
+fn aligned_prepared_surface_shares_graph_geometry() {
+    let units = [rectangle(0.0, 0.0, 1.0, 1.0), rectangle(1.0, 0.0, 2.0, 1.0)];
+    let geometry = Arc::new(PreparedGeometry::from_wkb(&units).unwrap());
+    let unit_geometries = geometry.geometries();
+    let metric =
+        PreparedPopulationPolygon::from_aligned_prepared_geometry(geometry, vec![5.0, 7.0])
+            .unwrap();
+
+    assert!(Arc::ptr_eq(&unit_geometries, &metric.surface.geometries));
 }
 
 #[test]
@@ -357,11 +457,11 @@ fn generated_rtree_queries_match_direct_envelope_scans() {
             .unwrap();
 
     for query in 0..200 {
-        let lower = Point::new(
+        let lower = [
             -10.0 + query as f64 * 0.05,
             -8.0 + (query % 37) as f64 * 0.1,
-        );
-        let upper = Point::new(lower.x() + 3.5, lower.y() + 2.25);
+        ];
+        let upper = [lower[0] + 3.5, lower[1] + 2.25];
         let envelope = AABB::from_corners(lower, upper);
         let mut indexed = metric
             .surface

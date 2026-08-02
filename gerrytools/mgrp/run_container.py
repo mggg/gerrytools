@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import os
+import sys
 import tempfile
 import warnings
 from abc import ABC, abstractmethod
@@ -29,12 +30,24 @@ class RunInfo:
     """Base class for validated runner configuration dataclasses."""
 
     def validate(self) -> None:
-        """Validate the current field values before they cross the runner boundary."""
+        """Validate the current field values before they cross the runner boundary.
+
+        Raises:
+            NotImplementedError: Always; subclasses must implement validation.
+        """
         raise NotImplementedError
 
     @staticmethod
     def validate_force_print(writer: str, force_print: bool) -> None:
-        """Reject binary writers when output would be decoded as console text."""
+        """Reject binary writers when output would be decoded as console text.
+
+        Args:
+            writer (str): Selected output writer.
+            force_print (bool): Whether output is forced to the console stream.
+
+        Raises:
+            ValueError: If console output is requested for a binary writer.
+        """
         if force_print and writer in BINARY_WRITERS:
             raise ValueError(
                 f"force_print is not supported with the {writer} writer; its binary "
@@ -58,9 +71,19 @@ RunInfoT = TypeVar("RunInfoT", bound=RunInfo)
 """The run-info type a runner configuration (and its container) accepts."""
 
 
+def _partial_output_path(output: Path) -> Path:
+    """Return an unused sibling name for output from a failed run."""
+    candidate = output.with_name(f"{output.name}.partial")
+    suffix = 1
+    while candidate.exists() or candidate.is_symlink():
+        candidate = output.with_name(f"{output.name}.partial.{suffix}")
+        suffix += 1
+    return candidate
+
+
 @contextmanager
 def _preserve_outputs_on_failure(expected_files: list[str]) -> Iterator[None]:
-    """Hide existing outputs during a rerun and restore them if the rerun fails."""
+    """Hide old outputs during a rerun and preserve failed output under partial names."""
     outputs = [Path(output) for output in expected_files]
     backup_dirs: dict[Path, Path] = {}
     backups: list[tuple[Path, Path]] = []
@@ -84,10 +107,17 @@ def _preserve_outputs_on_failure(expected_files: list[str]) -> Iterator[None]:
         yield
     except BaseException as run_error:
         recovery_errors: list[BaseException] = []
+        partials: list[Path] = []
         if run_started:
             for output in outputs:
                 try:
-                    output.unlink(missing_ok=True)
+                    if not output.exists() and not output.is_symlink():
+                        continue
+                    if not output.is_file() and not output.is_symlink():
+                        raise IsADirectoryError(f"Expected output path is not a file: {output}")
+                    partial = _partial_output_path(output)
+                    output.replace(partial)
+                    partials.append(partial)
                 except BaseException as error:
                     recovery_errors.append(error)
         for output, backup in backups:
@@ -100,6 +130,11 @@ def _preserve_outputs_on_failure(expected_files: list[str]) -> Iterator[None]:
                 backup_dir.rmdir()
             except BaseException as error:
                 recovery_errors.append(error)
+        if partials:
+            run_error.add_note(
+                "Partial output from the failed run was preserved at: "
+                + ", ".join(str(path) for path in partials)
+            )
         if recovery_errors:
             raise BaseExceptionGroup(
                 "The run failed and its previous outputs could not be fully restored",
@@ -260,6 +295,9 @@ class RunnerConfig(ABC, Generic[RunInfoT]):
 
         The container name is deliberately not set here: Docker generates one, so
         concurrent runs and reruns after a crash never collide on a fixed name.
+
+        Returns:
+            dict: Docker SDK volume configuration with read-only input and writable output mounts.
         """
         # Create the output folder before Docker mounts it; otherwise Docker
         # creates it owned by root and the user cannot delete their own results.
@@ -300,6 +338,16 @@ class RunnerConfig(ABC, Generic[RunInfoT]):
         are themselves pure functions of the configuration, so the digest is well defined.
 
         The resolved host path distinguishes input graphs that share a basename.
+
+        Args:
+            run_info (RunInfoT): Validated settings for one run.
+
+        Returns:
+            str: First ten hexadecimal characters of the configuration digest.
+
+        Raises:
+            TypeError: If ``run_info`` has the wrong concrete type for this runner.
+            ValueError: If its settings cannot be validated or serialized as strict JSON.
         """
         self._check_run_info(run_info)
         payload = json.dumps(
@@ -312,13 +360,26 @@ class RunnerConfig(ABC, Generic[RunInfoT]):
     def file_stem(self, run_info: RunInfoT) -> str:
         """The output/log file stem shared by every artifact of a run: the human-readable
         stem plus the config hash.
+
+        Args:
+            run_info (RunInfoT): Validated settings for one run.
+
+        Returns:
+            str: Human-readable run stem followed by its configuration digest.
         """
         self._check_run_info(run_info)
         return f"{self._stem(run_info)}_{self.config_hash(run_info)}"
 
     @abstractmethod
     def run_command(self, run_info: RunInfoT) -> list:
-        """The argv to execute in the Docker container for this run."""
+        """Return the command to execute in the Docker container.
+
+        Args:
+            run_info (RunInfoT): Validated settings for one run.
+
+        Returns:
+            list: Command arguments passed to the container.
+        """
 
     def canonical_stdout_command(self, run_info: RunInfoT) -> list:
         """The argv for a run forced to canonical assignment output on stdout.
@@ -326,6 +387,15 @@ class RunnerConfig(ABC, Generic[RunInfoT]):
         Overridden by the MCMC runners; defensive here, since
         :meth:`RunContainer.mcmc_run_with_updaters` rejects run infos without updaters
         before this base implementation can be reached.
+
+        Args:
+            run_info (RunInfoT): Validated settings for one run.
+
+        Returns:
+            list: Command arguments that emit canonical assignments to standard output.
+
+        Raises:
+            NotImplementedError: If the runner does not support canonical standard output.
         """
         raise NotImplementedError(f"{type(self).__name__} does not support canonical stdout runs.")
 
@@ -368,6 +438,12 @@ class RunnerConfig(ABC, Generic[RunInfoT]):
     def output_file(self, run_info: RunInfoT) -> str | None:
         """The host path of the file the run will produce, or None when the output
         is printed to stdout instead.
+
+        Args:
+            run_info (RunInfoT): Validated settings for one run.
+
+        Returns:
+            str | None: Host output path, or None when output is printed to standard output.
         """
         self._check_run_info(run_info)
         output_name = self._output_name(run_info)
@@ -377,12 +453,31 @@ class RunnerConfig(ABC, Generic[RunInfoT]):
         """Host paths of every file the run promises to produce.
 
         Runners with sidecar artifacts (e.g. an optimizer scores CSV) extend this.
+
+        Args:
+            run_info (RunInfoT): Validated settings for one run.
+
+        Returns:
+            list[str]: Host paths the run promises to create.
         """
         output_file = self.output_file(run_info)
         return [] if output_file is None else [output_file]
 
+    @staticmethod
+    def _sidecar_file(output_file: str, suffix: str) -> str:
+        """Return a sidecar beside ``output_file`` after replacing its final extension."""
+        output = Path(output_file)
+        return str(output.with_name(f"{output.stem}_{suffix}"))
+
     def log_file(self, run_info: RunInfoT) -> str:
-        """The host path of the log file capturing the run's stderr."""
+        """Return the host path of the log file capturing the run's standard error.
+
+        Args:
+            run_info (RunInfoT): Validated settings for one run.
+
+        Returns:
+            str: Host path of the run log.
+        """
         self._check_run_info(run_info)
         log_file_dir = self.log_folder / self.input_stem
         os.makedirs(log_file_dir, exist_ok=True)
@@ -622,6 +717,46 @@ class RunContainer(Generic[RunInfoT]):
                 f"The {self.config.engine} engine command failed with exit code {exit_code}."
             )
 
+    def _abort_streamed_exec(self) -> None:
+        """Force-remove the dedicated container after a streamed command is abandoned."""
+        container = self.container
+        if container is None:
+            return
+        self._chown_outputs()
+        try:
+            container.remove(force=True)
+        except Exception as error:
+            raise RuntimeError("Could not stop the abandoned streamed engine command.") from error
+        self.container = None
+
+    def _cleanup_exec_stream(self, stream: object, *, completed: bool) -> None:
+        """Close a Docker exec stream and stop its container if consumption failed."""
+        primary_error = sys.exception()
+        cleanup_errors: list[Exception] = []
+        close = getattr(stream, "close", None)
+        try:
+            if close is not None:
+                close()
+        except Exception as error:
+            cleanup_errors.append(error)
+        if not completed:
+            try:
+                self._abort_streamed_exec()
+            except Exception as error:
+                cleanup_errors.append(error)
+        if cleanup_errors:
+            if primary_error is not None and not isinstance(primary_error, GeneratorExit):
+                for error in cleanup_errors:
+                    primary_error.add_note(
+                        f"Stream cleanup also failed with {type(error).__name__}: {error}"
+                    )
+            elif len(cleanup_errors) == 1:
+                raise cleanup_errors[0] from primary_error
+            else:
+                raise ExceptionGroup("The streamed engine cleanup failed", cleanup_errors) from (
+                    primary_error
+                )
+
     @staticmethod
     def _parse_json_line(raw_line: bytes):
         """Decode and parse one stdout line as JSON, wrapping any failure uniformly."""
@@ -643,30 +778,34 @@ class RunContainer(Generic[RunInfoT]):
         # stdout chunks can split a JSON line, or even a multi-byte character, so buffer bytes
         # and decode only complete lines.
         stdout_buffer = b""
-        stderr_decoder = codecs.getincrementaldecoder("utf-8")()
+        stderr_decoder = codecs.getincrementaldecoder("utf-8")(errors="backslashreplace")
         stream, exec_id = self._exec_stream(cmd)
-        # Demuxed docker-py streams yield one-sided (stdout, None) / (None, stderr) frames.
-        for stdout, stderr in stream:
-            if stdout is not None:
-                stdout_buffer += stdout
-                complete_lines = stdout_buffer.split(b"\n")
-                stdout_buffer = complete_lines.pop()  # keep the incomplete tail
-                for raw_line in complete_lines:
-                    if raw_line.strip():
-                        yield (self._parse_json_line(raw_line), None)
-            if stderr is not None:
-                yield (None, stderr_decoder.decode(stderr))
+        completed = False
+        try:
+            # Demuxed docker-py streams yield one-sided (stdout, None) / (None, stderr) frames.
+            for stdout, stderr in stream:
+                if stdout is not None:
+                    stdout_buffer += stdout
+                    complete_lines = stdout_buffer.split(b"\n")
+                    stdout_buffer = complete_lines.pop()  # keep the incomplete tail
+                    for raw_line in complete_lines:
+                        if raw_line.strip():
+                            yield (self._parse_json_line(raw_line), None)
+                if stderr is not None:
+                    yield (None, stderr_decoder.decode(stderr))
 
-        # A nonzero exit makes any residual stream tail failure output, not data.
-        self._check_exit_status(exec_id)
+            # A nonzero exit makes any residual stream tail failure output, not data.
+            completed = True
+            self._check_exit_status(exec_id)
+            final_stderr = stderr_decoder.decode(b"", final=True)
+            if final_stderr:
+                yield (None, final_stderr)
 
-        # Flush the stderr decoder so a stream truncated mid-character raises instead of
-        # silently dropping the tail; a complete stream flushes to "".
-        stderr_decoder.decode(b"", final=True)
-
-        # The final JSON line may arrive without a trailing newline; parse it too.
-        if stdout_buffer.strip():
-            yield (self._parse_json_line(stdout_buffer), None)
+            # The final JSON line may arrive without a trailing newline; parse it too.
+            if stdout_buffer.strip():
+                yield (self._parse_json_line(stdout_buffer), None)
+        finally:
+            self._cleanup_exec_stream(stream, completed=completed)
 
     def run(self, run_info: RunInfoT) -> str | None:
         """
@@ -675,7 +814,7 @@ class RunContainer(Generic[RunInfoT]):
         sent to an output file is printed to the console.
 
         Args:
-            run_info: The run-info object for the configured runner.
+            run_info (RunInfoT): The run-info object for the configured runner.
 
         Returns:
             str | None: The host path of the output file the run produced, or
@@ -692,18 +831,23 @@ class RunContainer(Generic[RunInfoT]):
         with _preserve_outputs_on_failure(expected_files), _preserve_log_on_failure(log_file):
             # Docker frames can split multi-byte characters, so decode each stream incrementally.
             stdout_decoder = codecs.getincrementaldecoder("utf-8")()
-            stderr_decoder = codecs.getincrementaldecoder("utf-8")()
+            stderr_decoder = codecs.getincrementaldecoder("utf-8")(errors="backslashreplace")
             stream, exec_id = self._exec_stream(cmd)
-            with open(log_file, "w", encoding="utf-8", newline="") as f:
-                for stdout, stderr in stream:
-                    if stdout is not None:
-                        print(stdout_decoder.decode(stdout), end="")
-                    if stderr is not None:
-                        f.write(stderr_decoder.decode(stderr))
-                        f.flush()  # Ensure the output is written immediately
-                self._check_exit_status(exec_id)
-                print(stdout_decoder.decode(b"", final=True), end="")
-                f.write(stderr_decoder.decode(b"", final=True))
+            completed = False
+            try:
+                with open(log_file, "w", encoding="utf-8", newline="") as f:
+                    for stdout, stderr in stream:
+                        if stdout is not None:
+                            print(stdout_decoder.decode(stdout), end="")
+                        if stderr is not None:
+                            f.write(stderr_decoder.decode(stderr))
+                            f.flush()  # Ensure the output is written immediately
+                    self._check_exit_status(exec_id)
+                    print(stdout_decoder.decode(b"", final=True), end="")
+                    f.write(stderr_decoder.decode(b"", final=True))
+                completed = True
+            finally:
+                self._cleanup_exec_stream(stream, completed=completed)
 
             invalid = [
                 expected
@@ -728,8 +872,12 @@ class RunContainer(Generic[RunInfoT]):
         (stale-output hiding, expected-file verification, log preservation): the results
         stream to the caller, and any files the engine writes are left untouched.
 
+        Exhaust the iterator normally. Closing it early force-removes the dedicated container so
+        the abandoned engine cannot continue running; the current ``RunContainer`` cannot then be
+        reused.
+
         Args:
-            run_info: The run-info object for the configured runner.
+            run_info (RunInfoT): The run-info object for the configured runner.
 
         Yields:
             tuple[dict, str]: JSON object parsed from the container's stdout and
@@ -749,7 +897,7 @@ class RunContainer(Generic[RunInfoT]):
         sampled plan, and yields the results.
 
         Args:
-            run_info: A RecomRunInfo or ForestRunInfo carrying updaters.
+            run_info (RunInfoT): A RecomRunInfo or ForestRunInfo carrying updaters.
 
         Yields:
             tuple[dict, str]: Dictionary of the sample number and updater values and the
@@ -778,11 +926,24 @@ class RunContainer(Generic[RunInfoT]):
                 "the wrong nodes."
             )
 
-        for json_obj, stderr_text in self._iter_json_lines(cmd):
-            if json_obj is None:
-                yield (None, stderr_text)
-            else:
-                yield from self._process_output(graph, json_obj, run_info.updaters, stderr_text)
+        stream = self._iter_json_lines(cmd)
+        try:
+            for json_obj, stderr_text in stream:
+                if json_obj is None:
+                    yield (None, stderr_text)
+                else:
+                    yield from self._process_output(graph, json_obj, run_info.updaters, stderr_text)
+        finally:
+            primary_error = sys.exception()
+            try:
+                stream.close()
+            except Exception as error:
+                if primary_error is not None and not isinstance(primary_error, GeneratorExit):
+                    primary_error.add_note(
+                        f"Stream cleanup also failed with {type(error).__name__}: {error}"
+                    )
+                else:
+                    raise
 
     def _process_output(
         self,

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from io import BytesIO
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any, cast
 
 import matplotlib
@@ -55,8 +57,8 @@ def show_figure(
 ) -> None:
     """Display a figure inline in notebooks or via GUI backend in scripts.
 
-    If no GUI backend is available, the figure is written to ``non_gui_filename``
-    and a short message is printed.
+    If no GUI backend is available, the figure is written to a unique temporary file and a short
+    message is printed. ``non_gui_filename`` supplies only the readable stem and image suffix.
 
     Args:
         fig (Figure): Matplotlib figure to display.
@@ -84,22 +86,43 @@ def show_figure(
             pass
 
     if not _is_gui_capable_backend(fig):
-        fig.savefig(non_gui_filename, **savefig_kwargs)
+        output_path = _save_temporary_figure(fig, non_gui_filename, savefig_kwargs)
         backend_name = matplotlib.get_backend()
-        print(f"[{non_gui_prefix}] Non-GUI backend ({backend_name}); saved to {non_gui_filename}")
+        print(f"[{non_gui_prefix}] Non-GUI backend ({backend_name}); saved to {output_path}")
         return
 
     figure_number = getattr(fig, "number", None)
     if figure_number is None:
         # A GUI backend, but the figure is not pyplot-managed, so pyplot cannot raise a
         # window for it.
-        fig.savefig(non_gui_filename, **savefig_kwargs)
-        print(f"[{non_gui_prefix}] Figure is not pyplot-managed; saved to {non_gui_filename}")
+        output_path = _save_temporary_figure(fig, non_gui_filename, savefig_kwargs)
+        print(f"[{non_gui_prefix}] Figure is not pyplot-managed; saved to {output_path}")
         return
 
     # Only reachable with a live interactive GUI backend; the test suite runs on Agg.
     plt.figure(figure_number)  # pragma: no cover
     plt.show(block=True)  # pragma: no cover
+
+
+def _temporary_figure_path(filename: str) -> Path:
+    hint = Path(filename)
+    suffix = hint.suffix or ".png"
+    with NamedTemporaryFile(prefix=f"{hint.stem}-", suffix=suffix, delete=False) as temporary:
+        return Path(temporary.name)
+
+
+def _save_temporary_figure(
+    fig: Figure,
+    filename: str,
+    savefig_kwargs: dict[str, Any],
+) -> Path:
+    output_path = _temporary_figure_path(filename)
+    try:
+        fig.savefig(output_path, **savefig_kwargs)
+    except Exception:
+        output_path.unlink(missing_ok=True)
+        raise
+    return output_path
 
 
 def save_figure(fig: Figure, filepath: str, **kwargs: object) -> None:

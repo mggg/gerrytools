@@ -55,8 +55,8 @@ ResolvedColor: TypeAlias = tuple[str, float]
 CategoryKey: TypeAlias = Hashable
 """Hashable category/group key used by categorical and geometry plot APIs."""
 
-CategoryColorMap: TypeAlias = Mapping[CategoryKey, Color]
-"""Mapping from category keys to explicit colors for categorical layers."""
+CategoryColorMap: TypeAlias = Mapping[CategoryKey, Color | None]
+"""Mapping from category keys to colors or transparent fills for categorical layers."""
 
 TickType: TypeAlias = Literal["major", "minor", "both"]
 """Matplotlib tick-set selector accepted by tick styling APIs."""

@@ -61,16 +61,18 @@ def preview_palette(
     Preview a color palette as horizontal swatches.
 
     Args:
-        colors: Sequence of colors. Each can be anything the gerrytools resolver accepts: a
-            package color name (e.g. "citizen_blue"), a hex string (e.g. "#ff0000"), or an RGB
-            triple.
-        figsize: Size of the figure (width, height). Ignored when ``ax`` is provided.
-        show_indices: If True, annotate each swatch with its index.
-        show_hex: If True, annotate each swatch with its hex code.
-        ax: Optional existing axes to draw onto. If None, a fresh figure and axes are created.
+        colors (Sequence[Color]): Sequence of colors. Each can be anything the gerrytools resolver
+            accepts: a package color name (e.g. "citizen_blue"), a hex string (e.g. "#ff0000"), or
+            an RGB triple.
+        figsize (tuple[float, float]): Size of the figure (width, height). Ignored when ``ax`` is
+            provided.
+        show_indices (bool): If True, annotate each swatch with its index.
+        show_hex (bool): If True, annotate each swatch with its hex code.
+        ax (Axes | None): Optional existing axes to draw onto. If None, a fresh figure and axes are
+            created.
 
     Returns:
-        The Matplotlib figure and axes.
+        tuple[Figure, Axes]: The Matplotlib figure and axes.
 
     Raises:
         ValueError: If ``colors`` is empty or a color cannot be resolved.
@@ -127,15 +129,19 @@ def compare_palettes(
     Compare multiple color palettes as horizontal rows.
 
     Args:
-        palettes: A mapping from palette names to color sequences, or a sequence of color
-            sequences whose rows will be named 0, 1, 2, and so on. Colors can be anything the
-            gerrytools resolver accepts: package color names, hex strings, or RGB triples.
-        figsize: Matplotlib figure size (width, height). If None, chosen based
-          on number of palettes and max length.
-        show_hex: If True, write hex codes inside swatches (can get busy).
+        palettes (Union[Mapping[str, Sequence[Color]], Sequence[Sequence[Color]]]): A mapping from
+            palette names to color sequences, or a sequence of color sequences whose rows will be
+            named 0, 1, 2, and so on. Colors can be anything the gerrytools resolver accepts:
+            package color names, hex strings, or RGB triples.
+        figsize (tuple[float, float] | None, optional): Matplotlib figure size. Defaults to None,
+            which chooses dimensions from the number and maximum length of the palettes.
+        show_hex (bool, optional): Whether to write hex codes inside swatches. Defaults to False.
 
     Returns:
-        (fig, ax)
+        tuple[Figure, Axes]: (fig, ax)
+
+    Raises:
+        ValueError: If ``palettes`` is empty or contains an invalid color.
     """
     # Normalize palettes to dict[name -> list[RGB triples]]
     items: list[tuple[str, Sequence[Color]]]

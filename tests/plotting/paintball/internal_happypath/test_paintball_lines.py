@@ -79,12 +79,12 @@ class TestPaintBallLineManagement:
 
 
 class TestPaintBallCoordinates:
-    def test_coordinates_are_one_minus_data(self):
+    def test_coordinates_are_direct_votes_seats_points(self):
         pb = PaintballPlot()
         pb.add_seats_votes_data([0.3, 0.7], [0.2, 0.8])
         xs, ys = pb._paintball_coordinates()
-        assert xs == [pytest.approx(0.7), pytest.approx(0.3)]
-        assert ys == [pytest.approx(0.8), pytest.approx(0.2)]
+        assert xs == [pytest.approx(0.3), pytest.approx(0.7)]
+        assert ys == [pytest.approx(0.2), pytest.approx(0.8)]
 
     def test_center_point_maps_to_center(self):
         pb = PaintballPlot()
@@ -93,19 +93,19 @@ class TestPaintBallCoordinates:
         assert xs == [pytest.approx(0.5)]
         assert ys == [pytest.approx(0.5)]
 
-    def test_boundary_zero_maps_to_one(self):
+    def test_boundary_zero_stays_zero(self):
         pb = PaintballPlot()
         pb.add_seats_votes_data([0.0], [0.0])
         xs, ys = pb._paintball_coordinates()
-        assert xs == [pytest.approx(1.0)]
-        assert ys == [pytest.approx(1.0)]
+        assert xs == [pytest.approx(0.0)]
+        assert ys == [pytest.approx(0.0)]
 
-    def test_boundary_one_maps_to_zero(self):
+    def test_boundary_one_stays_one(self):
         pb = PaintballPlot()
         pb.add_seats_votes_data([1.0], [1.0])
         xs, ys = pb._paintball_coordinates()
-        assert xs == [pytest.approx(0.0)]
-        assert ys == [pytest.approx(0.0)]
+        assert xs == [pytest.approx(1.0)]
+        assert ys == [pytest.approx(1.0)]
 
 
 # ==============================
@@ -124,14 +124,13 @@ class TestHorizontalHullVertices:
         assert vertices[0] == vertices[1]
 
     def test_two_points_same_y(self):
-        # Both have same seat share (so same transformed y)
+        # Both have the same seat share.
         pb = PaintballPlot()
         pb.add_seats_votes_data([0.3, 0.7], [0.5, 0.5])
         vertices = pb._horizontal_hull_vertices()
         assert len(vertices) == 2
-        # min-x on left side, max-x on right side
-        xs = [v[0] for v in vertices]
-        assert min(xs) <= max(xs)
+        xs = [vertex[0] for vertex in vertices]
+        assert xs == [pytest.approx(0.3), pytest.approx(0.7)]
 
     def test_three_points_different_y_produces_hull(self):
         pb = PaintballPlot()

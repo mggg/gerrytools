@@ -35,23 +35,39 @@ print(precincts.shape)
 print(precincts.crs)
 ```
 
-## Georgia demonstration ensemble
+## Georgia demonstration ensembles
 
-{download}`Download the Georgia demonstration ensemble
-<../../_static/data/ga_congressional_ensemble.json>` (592 KB).
+{download}`Download Georgia ensemble A
+<../../_static/data/ga_congressional_ensemble_a.json>` (947 KB) or
+{download}`Georgia ensemble B <../../_static/data/ga_congressional_ensemble_b.json>` (948 KB).
 
-The file contains 1,000 plans with fourteen district-level Black and White voting-age population
-shares per plan. Its original chain configuration was not retained, so use it to learn data
-shaping and plotting rather than to draw substantive conclusions about an ensemble.
+Each file contains 1,000 plans with fourteen district-level Black and White voting-age population
+shares per plan, plus signed Democratic disproportionality scores for thirteen statewide elections
+from 2016 through 2024. The two independent ReCom runs support examples that compare several
+datasets and summarize partisan performance across elections. They are compact plotting fixtures
+rather than ensembles for substantive analysis.
 
 <!-- docs-test: skip -- requires the reader to download the linked JSON file -->
 ```python
 import json
 
-records = json.loads(
-    (data_dir / "ga_congressional_ensemble.json").read_text(encoding="utf-8")
-)
+records = json.loads((data_dir / "ga_congressional_ensemble_a.json").read_text(encoding="utf-8"))
 print(len(records), records[0].keys())
+```
+
+{download}`Download the 100,000-position Georgia disproportionality scores
+<../../_static/data/ga_congressional_disproportionality_100000.parquet>` (378 KB).
+
+This Parquet file contains signed Democratic disproportionality scores for thirteen statewide
+elections from 2016 through 2024. It supports the mean-versus-variance example in the scatter plot
+guide without requiring readers to score the underlying chain.
+
+<!-- docs-test: skip -- requires the reader to download the linked Parquet file -->
+```python
+import pandas as pd
+
+scores = pd.read_parquet(data_dir / "ga_congressional_disproportionality_100000.parquet")
+print(scores.shape)
 ```
 
 ## Colorado scoring bundle

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any, cast
 from warnings import warn
 
 from matplotlib.axes import Axes
@@ -135,6 +136,9 @@ class GerryPlotBase(_AxisApiMixin, _AnnotationApiMixin, _LegendMixin, _AxesBacke
         """Set whether the plot displays a Matplotlib grid.
 
         Until this is called, builds leave any grid state already on the axes alone.
+
+        Args:
+            enabled (bool): Whether to display the grid.
         """
         self.grid = enabled
 
@@ -260,7 +264,7 @@ class GerryPlotBase(_AxisApiMixin, _AnnotationApiMixin, _LegendMixin, _AxesBacke
                         style.linealpha,
                         field="linecolor",
                     ),
-                    linestyle=style.linestyle,
+                    linestyle=cast("Any", style.linestyle),
                     linewidth=style.linewidth,
                     label=line.name,
                 )
@@ -287,7 +291,7 @@ class GerryPlotBase(_AxisApiMixin, _AnnotationApiMixin, _LegendMixin, _AxesBacke
                     field="bandcolor",
                 ),
                 edgecolor=style.resolved_edgecolor(owner=self.__class__.__name__),
-                linestyle=style.linestyle,
+                linestyle=cast("Any", style.linestyle),
                 linewidth=style.linewidth,
                 label=band.name,
             )

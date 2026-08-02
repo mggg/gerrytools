@@ -1,6 +1,7 @@
 import logging
 import warnings
 from pathlib import Path
+from typing import cast
 
 import matplotlib
 
@@ -9,6 +10,8 @@ matplotlib.use("Agg")
 import numpy as np
 import pytest
 from geopandas import GeoDataFrame
+from matplotlib.collections import PathCollection
+from matplotlib.colors import to_rgba
 from shapely import contains_xy
 from shapely.geometry import box
 
@@ -72,6 +75,30 @@ def test_target_crs_reassignment_resamples_dots():
     assert np.all((offsets[:, 1] >= miny) & (offsets[:, 1] <= maxy))
 
 
+def test_mutating_density_values_invalidates_cached_dots():
+    gdf = GeoDataFrame(
+        {"district": [1], "population": [100]},
+        geometry=[box(0, 0, 1, 1)],
+        crs="EPSG:3857",
+    )
+    plot = DotDensityPlot(
+        gdf,
+        outline_column="district",
+        people_per_dot=10,
+        show_labels=False,
+        silent=True,
+        rng_seed=3,
+    )
+    plot.add_density_layer("population", "red", n_jobs=1)
+    before = len(np.asarray(plot.ax.collections[-1].get_offsets()))
+
+    plot.gdf["population"] *= 2
+    plot.show_axis = True
+    after = len(np.asarray(plot.ax.collections[-1].get_offsets()))
+
+    assert after == 2 * before
+
+
 class TestDotDensityRngContract:
     """Layer sampling and interleaving draw from independent derived generators."""
 
@@ -127,6 +154,25 @@ class TestDotDensityRngContract:
         plot.show_axis = True
         second_offsets = np.asarray(plot.ax.collections[-1].get_offsets(), dtype=float)
         np.testing.assert_array_equal(first_offsets, second_offsets)
+
+    def test_interleaving_keeps_each_dot_attached_to_its_layer_color(self, testing_gdf):
+        plot = self._dot_plot(testing_gdf)
+        plot.add_density_layer("maj_pop", "red", n_jobs=1)
+        plot.add_density_layer("min_pop", "blue", n_jobs=1)
+
+        expected = {}
+        for column, color in (("maj_pop", "red"), ("min_pop", "blue")):
+            x, y = self._cached_xy(plot, column)
+            expected.update(
+                {(float(px), float(py)): to_rgba(color) for px, py in zip(x, y, strict=True)}
+            )
+
+        collection = cast(PathCollection, plot.ax.collections[-1])
+        offsets = np.asarray(collection.get_offsets(), dtype=float)
+        colors = np.asarray(collection.get_facecolor(), dtype=float)
+        assert len(offsets) == len(colors) == len(expected)
+        for point, color in zip(offsets, colors, strict=True):
+            np.testing.assert_allclose(color, expected[(float(point[0]), float(point[1]))])
 
     def test_setting_rng_seed_invalidates_and_changes_dots(self, testing_gdf):
         plot = self._dot_plot(testing_gdf, seed=1)
@@ -196,6 +242,47 @@ class TestDotDensityMarkerOptions:
         plot.add_density_layer(column="tot_pop", color="blue")
         plot.save(str(tmp_path / "dot_marker.png"))
         assert (tmp_path / "dot_marker.png").exists()
+
+    def test_explicit_none_marker_edge_removes_edge(self, testing_gdf):
+        plot = DotDensityPlot(
+            testing_gdf,
+            outline_column="district",
+            silent=True,
+            people_per_dot=500,
+            show_labels=False,
+        )
+        plot.set_marker_options(markeredgecolor="red")
+        plot.set_marker_options(markeredgecolor=None)
+
+        assert plot._marker_options.markeredgecolor == "none"
+        assert plot._marker_options.markeredgealpha == 0.0
+        assert plot._marker_options.markeredgewidth == 0.0
+
+    def test_visible_marker_edge_restores_default_width_after_none(self, testing_gdf):
+        plot = DotDensityPlot(
+            testing_gdf,
+            outline_column="district",
+            silent=True,
+            people_per_dot=500,
+            show_labels=False,
+        )
+        plot.set_marker_options(markeredgecolor=None)
+        plot.set_marker_options(markeredgecolor="red")
+
+        assert plot._marker_options.markeredgecolor == "#ff0000"
+        assert plot._marker_options.markeredgewidth == 0.8
+
+    def test_explicit_zero_marker_edgewidth_stays_hidden(self, testing_gdf):
+        plot = DotDensityPlot(
+            testing_gdf,
+            outline_column="district",
+            silent=True,
+            people_per_dot=500,
+            show_labels=False,
+        )
+        plot.set_marker_options(markeredgecolor="red", markeredgewidth=0.0)
+
+        assert plot._marker_options.markeredgewidth == 0.0
 
 
 class TestDotDensityValidationErrors:

@@ -199,7 +199,7 @@ class TestGerryPlotBaseBuildWithStyles:
             os.unlink(tmppath)
 
     def test_arrow_length_with_explicit_arrowtail_raises(self):
-        from gerrytools.plotting.data._gerryplot_dataclasses import ArrowPlacement
+        from gerrytools.plotting.data import ArrowPlacement, LabelArrowOptions
 
         sp = ScatterPlot()
         placement_with_tail = ArrowPlacement(arrowtail=(0.3, 0.3))
@@ -207,6 +207,8 @@ class TestGerryPlotBaseBuildWithStyles:
             sp.add_label_arrow(
                 arrowtip=(0.5, 0.5),
                 direction="right",
-                arrow_length=10.0,
-                arrowplacement=placement_with_tail,
+                arrow_options=LabelArrowOptions(
+                    arrow_length=10.0,
+                    placement=placement_with_tail,
+                ),
             )

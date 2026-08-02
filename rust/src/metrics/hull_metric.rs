@@ -1,14 +1,20 @@
 //! Shared full-scan and incremental drivers for hull-style district metrics.
 
+use crate::geometry::robust_convex_hull;
 use crate::scoring::delta::{apply_changes, expanded_assignment, validate_changes, DeltaChange};
 use crate::scoring::district::{district_ids, observed_districts, DistrictOccupancy, DistrictSet};
 use crate::{DistrictTable, Error, Result};
+use geo::{Coord, Polygon};
 
 /// Tolerance for ratio-style scores exceeding their 1.0 ceiling; shared by the hull ratios
 /// (which clamp within it) and Polsby-Popper/Schwartzberg (which reject beyond it).
 pub(crate) const RATIO_SCORE_EPS: f64 = 1e-9;
 /// Looser tolerance for state-clipped ratios, where boolean clipping adds overlay noise.
 pub(crate) const CLIPPED_RATIO_SCORE_EPS: f64 = 1e-8;
+
+pub(crate) fn district_hull(points: &mut [Coord<f64>]) -> Polygon<f64> {
+    robust_convex_hull(points)
+}
 
 /// Compact one dense score-per-district slab into a single-column result table.
 pub(crate) fn district_score_table(observed: &DistrictSet, scores: &[f64]) -> DistrictTable {
@@ -258,5 +264,42 @@ impl<'a, S: HullScorer> IncrementalHullMetric<'a, S> {
             )?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod district_hull_tests {
+    use super::*;
+    use geo::IsConvex;
+
+    #[test]
+    fn district_hull_does_not_retrace_an_interior_vertex() {
+        let mut points = vec![
+            Coord::from((-2064.3649325436318, 2730.896316839746)),
+            Coord::from((-1522.348449763663, 2011.6161501336799)),
+            Coord::from((-820.3014135364234, 1079.9682661743652)),
+            Coord::from((808.8160174928399, 564.9877784054688)),
+            Coord::from((1432.8319847267508, 1035.2175378433947)),
+            Coord::from((2048.7533488451854, 1499.347576319679)),
+            Coord::from((2518.2306617694326, 2438.24986430806)),
+            Coord::from((717.8452181749713, 4827.442044150855)),
+            Coord::from((1259.86170095494, 4108.161877444789)),
+            Coord::from((717.8452181749713, 4827.442044150855)),
+            Coord::from((-18.68430479830249, 5804.849733583088)),
+            Coord::from((-2009.3284380240657, 4304.791784677448)),
+            Coord::from((-2355.8226115960265, 4043.689696845276)),
+        ];
+
+        let hull = district_hull(&mut points);
+
+        assert!(hull.exterior().is_strictly_ccw_convex());
+        assert_eq!(
+            hull.exterior()
+                .0
+                .iter()
+                .filter(|&&point| point == Coord::from((717.8452181749713, 4827.442044150855)))
+                .count(),
+            1,
+        );
     }
 }

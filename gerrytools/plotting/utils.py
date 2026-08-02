@@ -61,7 +61,7 @@ def _validated_nonneg_finite(value: object, *, field: str) -> float:
 
 
 def _resolve_color_clamped_width(
-    color: Color,
+    color: Color | None,
     alpha: float | None,
     width: float,
     *,
@@ -148,13 +148,13 @@ def _resolve_alpha_override(
     override color itself (``None``).
 
     Args:
-        color_given: Whether the caller explicitly passed a color override.
-        alpha: The alpha kwarg passed by the caller, or None if not given.
-        base_color: The (already resolved) color from the base options.
-        base_alpha: The (already resolved) alpha from the base options.
+        color_given (bool): Whether the caller explicitly passed a color override.
+        alpha (float | None): The alpha kwarg passed by the caller, or None if not given.
+        base_color (object): The (already resolved) color from the base options.
+        base_alpha (float | None): The (already resolved) alpha from the base options.
 
     Returns:
-        The alpha to style with.
+        float | None: The alpha to style with.
     """
     if alpha is not None:
         return alpha
@@ -178,14 +178,61 @@ def _replace_non_none(options: DataclassT, **overrides: object) -> DataclassT:
     lets an explicit ``None`` color mean "none".
 
     Args:
-        options: The base options dataclass instance.
-        **overrides: Field overrides; entries that are None are ignored.
+        options (DataclassT): The base options dataclass instance.
+        **overrides (object): Field overrides; entries that are None are ignored.
 
     Returns:
-        A new instance of the same dataclass type with overrides applied.
+        DataclassT: A new instance of the same dataclass type with overrides applied.
     """
     field_updates = {name: value for name, value in overrides.items() if value is not None}
     return cast(DataclassT, dataclasses.replace(cast(Any, options), **field_updates))
+
+
+def _replace_with_color_overrides(
+    options: DataclassT,
+    *color_alpha_fields: tuple[str, str],
+    **overrides: object,
+) -> DataclassT:
+    """Copy an options dataclass while distinguishing omitted colors from ``None``.
+
+    Non-color fields retain the usual ``None``-means-inherit behavior. Each named color uses
+    ``UNSET`` for inheritance, while an explicit ``None`` becomes Matplotlib's transparent
+    ``"none"`` color. Paired alpha fields follow :func:`_resolve_alpha_override`.
+
+    Args:
+        options (DataclassT): Base options dataclass.
+        *color_alpha_fields (tuple[str, str]): ``(color_field, alpha_field)`` pairs.
+        **overrides (object): Explicit field overrides.
+
+    Returns:
+        DataclassT: A validated copy with the explicit overrides applied.
+    """
+    paired_names = {name for pair in color_alpha_fields for name in pair}
+    updates = {
+        name: value
+        for name, value in overrides.items()
+        if name not in paired_names and value is not None and not isinstance(value, Unset)
+    }
+    for color_field, alpha_field in color_alpha_fields:
+        color = overrides.get(color_field, UNSET)
+        alpha = overrides.get(alpha_field)
+        color_given = not isinstance(color, Unset)
+        if not color_given and alpha is None:
+            continue
+        base_color = getattr(options, color_field)
+        base_alpha = getattr(options, alpha_field)
+        updates[color_field] = (
+            base_color if not color_given else ("none" if color is None else color)
+        )
+        updates[alpha_field] = _resolve_alpha_override(
+            color_given,
+            cast("float | None", alpha),
+            base_color,
+            cast("float | None", base_alpha),
+        )
+    if not updates:
+        return cast(DataclassT, dataclasses.replace(cast(Any, options)))
+    return cast(DataclassT, dataclasses.replace(cast(Any, options), **updates))
 
 
 def _coerce_to_1d_float_array(
@@ -299,7 +346,7 @@ def _coerce_to_1d_finite_float_array(
         field (str): Field name used in validation error messages.
 
     Returns:
-        1D ndarray of finite float values.
+        NDArray[np.float64]: 1D ndarray of finite float values.
 
     Raises:
         ValueError: If input cannot be coerced to 1D float array.

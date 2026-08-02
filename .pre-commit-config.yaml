@@ -17,13 +17,13 @@ repos:
         name: format-check
         entry: sh -c 'uv run ruff check --select I --diff "$@" && uv run ruff format --check "$@"' --
         language: system
-        types: [python]
+        types_or: [python, jupyter]
         pass_filenames: true
       - id: lint
         name: lint
         entry: uv run ruff check
         language: system
-        types: [python]
+        types_or: [python, jupyter]
         pass_filenames: true
       # - id: typecheck
       #   name: typecheck

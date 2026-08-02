@@ -67,13 +67,14 @@ def population_overlap(
     Unobserved pairs are represented by zeros. The input is never modified.
 
     Args:
-        units: Unit-level table containing both assignments and a population weight.
-        source: Column containing the plan labels that will be relabeled.
-        target: Column containing the reference plan labels.
-        population: Column containing finite, nonnegative population weights.
+        units (pd.DataFrame): Unit-level table containing both assignments and a population weight.
+        source (str): Column containing the plan labels that will be relabeled.
+        target (str): Column containing the reference plan labels.
+        population (str): Column containing finite, nonnegative population weights.
 
     Returns:
-        A floating-point DataFrame with source labels as its index and target labels as columns.
+        pd.DataFrame: A floating-point DataFrame with source labels as its index and target labels
+            as columns.
 
     Raises:
         ValueError: If a required column is absent, the assignment columns contain missing labels,
@@ -98,10 +99,11 @@ def population_overlap(
             "__population": weights.to_numpy(),
         }
     )
-    grouped = records.groupby(["__source", "__target"], observed=True, sort=False)[
-        "__population"
-    ].sum()
-    matrix = cast(pd.DataFrame, grouped.unstack(fill_value=0.0))
+    grouped = cast(
+        pd.Series,
+        records.groupby(["__source", "__target"], observed=True, sort=False)["__population"].sum(),
+    )
+    matrix = grouped.unstack(fill_value=0.0)
     matrix = matrix.reindex(index=source_labels, columns=target_labels, fill_value=0.0).astype(
         np.float64
     )
@@ -126,15 +128,16 @@ def areal_overlap(
     Geometries are validated both before and after the transformation.
 
     Args:
-        source: District geometries for the plan that will be relabeled.
-        target: District geometries for the reference plan.
-        source_label: Unique district-label column in ``source``.
-        target_label: Unique district-label column in ``target``.
-        crs: Optional projected CRS in any form accepted by GeoPandas.
+        source (gpd.GeoDataFrame): District geometries for the plan that will be relabeled.
+        target (gpd.GeoDataFrame): District geometries for the reference plan.
+        source_label (str): Unique district-label column in ``source``.
+        target_label (str): Unique district-label column in ``target``.
+        crs (Any | None, optional): Projected CRS in any form accepted by GeoPandas. Defaults to
+            None, which transforms ``target`` to ``source.crs``.
 
     Returns:
-        A floating-point DataFrame with source labels as its index and target labels as columns.
-        Nonintersecting pairs have value zero.
+        pd.DataFrame: A floating-point DataFrame with source labels as its index and target labels
+            as columns. Nonintersecting pairs have value zero.
 
     Raises:
         TypeError: If either input is not a GeoDataFrame.
@@ -186,9 +189,10 @@ def areal_overlap(
         return matrix
 
     intersections["__area"] = intersections.geometry.area
-    areas = intersections.groupby(["__source", "__target"], observed=True, sort=False)[
-        "__area"
-    ].sum()
+    areas = cast(
+        pd.Series,
+        intersections.groupby(["__source", "__target"], observed=True, sort=False)["__area"].sum(),
+    )
     for key, area in areas.items():
         source_value, target_value = cast(tuple[Hashable, Hashable], key)
         matrix.at[source_value, target_value] = area

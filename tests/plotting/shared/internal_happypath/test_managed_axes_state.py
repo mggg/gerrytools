@@ -108,6 +108,18 @@ class TestExternalArtifactPreservation:
         hist.ax
         assert len(ax.images) == n_before
 
+    def test_histogram_autoscale_keeps_external_collection_visible(self):
+        fig, ax = plt.subplots()
+        ax.scatter([100.0], [100.0])
+        hist = Histogram(ax=ax)
+        hist.add_dataset([1.0, 2.0, 3.0])
+
+        x_limits = hist.ax.get_xlim()
+        y_limits = hist.ax.get_ylim()
+
+        assert x_limits[0] <= 100.0 <= x_limits[1]
+        assert y_limits[0] <= 100.0 <= y_limits[1]
+
 
 class TestGerrytoolsArtifactLeak:
     def test_histogram_artist_counts_stay_flat_across_rebuilds(self):
@@ -429,6 +441,20 @@ class TestLegendLifecycle:
         hist.ax
         assert hist._ax.get_legend() is None
 
+    def test_rebinding_back_remembers_which_legend_gerrytools_placed(self):
+        _, first_ax = plt.subplots()
+        _, second_ax = plt.subplots()
+        hist = Histogram(ax=first_ax, legend=True)
+        hist.add_dataset([1, 2, 3], name="A")
+        assert hist.ax.get_legend() is not None
+
+        hist.bind_to_ax(second_ax)
+        assert second_ax.get_legend() is not None
+        hist.legend = False
+        hist.bind_to_ax(first_ax)
+
+        assert first_ax.get_legend() is None
+
     def test_include_legend_assignment_reclaims_legend_unit(self):
         hist = _simple_hist()
         hist.add_dataset([1, 2, 3], name="A")
@@ -513,6 +539,21 @@ class TestBindToAx:
         hist.ax
         # Old axes content was not removed.
         assert _total_artist_count(old_ax) >= n_before
+
+    def test_round_trip_does_not_misclassify_own_limits_and_ticks_as_external(self):
+        box = _simple_box()
+        original_ax = box.ax
+        _, other_ax = plt.subplots()
+        box.bind_to_ax(other_ax)
+        box.bind_to_ax(original_ax)
+
+        box.add_dataset({"C": [100.0, 110.0, 120.0]}, add_extra_labels=True)
+        rebound = box.ax
+
+        assert rebound.get_ylim()[1] >= 120.0
+        assert "C" in [label.get_text() for label in rebound.get_xticklabels()]
+        assert box._axes_state._units["x_ticks"].ownership != "external"
+        assert box._axes_state._units["y_limits"].ownership != "external"
 
 
 class TestScenarioE:

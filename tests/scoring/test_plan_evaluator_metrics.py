@@ -80,7 +80,7 @@ def population_frame(geometries, weights) -> gpd.GeoDataFrame:
 def population_metric(geometries, weights) -> PopulationPolygon:
     return PopulationPolygon(
         "population",
-        alternative_pop_gdf=population_frame(geometries, weights),
+        population_units=population_frame(geometries, weights),
     )
 
 
@@ -92,10 +92,10 @@ def test_all_native_base_metrics_share_one_plan_evaluator_result() -> None:
     scorer.add_metric(Reock())
     scorer.add_metric(ConvexHullRatio())
     scorer.add_metric(StateClippedConvexHullRatio(box(0, 0, 2, 2)))
-    scorer.add_metric(PolsbyPopper(source="graph", name="polsby_graph"))
-    scorer.add_metric(PolsbyPopper(source="geometry", name="polsby_geometry"))
+    scorer.add_metric(PolsbyPopper(area_attr="area", result_name="polsby_graph"))
+    scorer.add_metric(PolsbyPopper(result_name="polsby_geometry"))
     scorer.add_metric(CutEdges())
-    scorer.add_metric(CutEdges(weight="cut_weight", name="weighted_cut_edges"))
+    scorer.add_metric(CutEdges(weight_attr="cut_weight", result_name="weighted_cut_edges"))
     scorer.add_metric(RegionSplits("COUNTY", "MUNI"))
     scorer.add_metric(RegionPieces("COUNTY", "MUNI"))
     scorer.add_metric(RegionParts("COUNTY", "MUNI"))
@@ -104,7 +104,7 @@ def test_all_native_base_metrics_share_one_plan_evaluator_result() -> None:
             "COUNTY",
             {"population": "population"},
             include_count=True,
-            name="county_totals",
+            result_name="county_totals",
         ),
     )
 
@@ -255,26 +255,32 @@ def test_geometry_metrics_require_geometry_when_registered() -> None:
         PlanEvaluator(graph).add_metric(ConvexHullRatio())
     with pytest.raises(RuntimeError, match="StateClippedConvexHullRatio requires geometry"):
         PlanEvaluator(graph).add_metric(StateClippedConvexHullRatio(box(0, 0, 2, 2)))
-    with pytest.raises(RuntimeError, match="PolsbyPopper requires geometry"):
-        PlanEvaluator(graph).add_metric(PolsbyPopper(source="geometry"))
 
 
 def test_metric_descriptions_reject_ambiguous_or_empty_options() -> None:
-    assert PolsbyPopper().source == "auto"
     assert TallyByRegion("COUNTY", "population").columns == (("population", "population"),)
     assert TallyByRegion("COUNTY", ["population", "vap"]).columns == (
         ("population", "population"),
         ("vap", "vap"),
     )
     assert TallyByRegion("COUNTY", {"population": "TOTPOP"}).columns == (("population", "TOTPOP"),)
-    with pytest.raises(ValueError, match="source must"):
-        PolsbyPopper(source="other")  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="graph column options"):
-        PolsbyPopper(source="geometry", area="area")
-    with pytest.raises(ValueError, match="perimeter or boundary_perimeter"):
-        PolsbyPopper(source="graph", perimeter="perim", boundary_perimeter="boundary")
+    with pytest.raises(ValueError, match="area_attr must be a nonempty graph attribute name"):
+        PolsbyPopper(area_attr="")
+    with pytest.raises(ValueError, match="perimeter_attr must be a nonempty graph attribute name"):
+        PolsbyPopper(perimeter_attr="")
+    with pytest.raises(
+        ValueError,
+        match="boundary_perimeter_attr must be a nonempty graph attribute name",
+    ):
+        PolsbyPopper(boundary_perimeter_attr="")
+    with pytest.raises(
+        ValueError, match="shared_perimeter_attr must be a nonempty graph attribute name"
+    ):
+        PolsbyPopper(shared_perimeter_attr="")
+    with pytest.raises(ValueError, match="perimeter_attr or boundary_perimeter_attr"):
+        PolsbyPopper(perimeter_attr="perim", boundary_perimeter_attr="boundary")
     with pytest.raises(ValueError, match="nonempty string"):
-        CutEdges(weight="")
+        CutEdges(weight_attr="")
     with pytest.raises(ValueError, match="RegionSplits requires"):
         RegionSplits()
     with pytest.raises(ValueError, match="nonempty string"):
@@ -282,11 +288,14 @@ def test_metric_descriptions_reject_ambiguous_or_empty_options() -> None:
     with pytest.raises(ValueError, match="at least one column"):
         TallyByRegion("COUNTY")
     with pytest.raises(TypeError, match="string, iterable, mapping"):
-        TallyByRegion("COUNTY", 1)  # type: ignore[arg-type]
+        TallyByRegion("COUNTY", 1)  # type: ignore
     with pytest.raises(ValueError, match="column names"):
-        TallyByRegion("COUNTY", [("population", "population")])  # type: ignore[list-item]
+        TallyByRegion(
+            "COUNTY",
+            [("population", "population")],  # type: ignore
+        )
     with pytest.raises(TypeError, match="bool"):
-        TallyByRegion("COUNTY", include_count=1)  # type: ignore[arg-type]
+        TallyByRegion("COUNTY", include_count=1)  # type: ignore
     with pytest.raises(ValueError, match="cannot contain 'count'"):
         TallyByRegion("COUNTY", {"count": "population"}, include_count=True)
     with pytest.raises(ValueError, match="column names"):
@@ -296,23 +305,26 @@ def test_metric_descriptions_reject_ambiguous_or_empty_options() -> None:
     with pytest.raises(ValueError, match="population_col must be a nonempty"):
         PopulationPolygon("")
     with pytest.raises(TypeError, match="positional"):
-        PopulationPolygon("population", population_frame([box(0, 0, 1, 1)], [1]))  # type: ignore[misc]
+        PopulationPolygon(
+            "population",
+            population_frame([box(0, 0, 1, 1)], [1]),  # type: ignore
+        )
     empty = gpd.GeoDataFrame(
         {"population": []},
         geometry=[],
         crs="EPSG:3857",
     )
     with pytest.raises(ValueError, match="at least one observation"):
-        PopulationPolygon("population", alternative_pop_gdf=empty)
+        PopulationPolygon("population", population_units=empty)
     missing_weight = gpd.GeoDataFrame(
         geometry=[box(0, 0, 1, 1)],
         crs="EPSG:3857",
     )
     with pytest.raises(ValueError, match="does not contain population column"):
-        PopulationPolygon("population", alternative_pop_gdf=missing_weight)
+        PopulationPolygon("population", population_units=missing_weight)
     invalid_weight = population_frame([box(0, 0, 1, 1)], [-1])
     with pytest.raises(ValueError, match="finite and nonnegative"):
-        PopulationPolygon("population", alternative_pop_gdf=invalid_weight)
+        PopulationPolygon("population", population_units=invalid_weight)
 
     graph, geometry = grid_resources()
     missing_base_column = geometry.copy()
@@ -341,7 +353,7 @@ def test_population_polygon_requires_projected_matching_polygon_geometry() -> No
         geometry=[box(0, 0, 1, 1)],
     )
     with pytest.raises(ValueError, match="must have a CRS"):
-        PopulationPolygon("population", alternative_pop_gdf=no_crs)
+        PopulationPolygon("population", population_units=no_crs)
 
     geographic = gpd.GeoDataFrame(
         {"population": [1]},
@@ -349,7 +361,7 @@ def test_population_polygon_requires_projected_matching_polygon_geometry() -> No
         crs="EPSG:4326",
     )
     with pytest.raises(ValueError, match="projected CRS"):
-        PopulationPolygon("population", alternative_pop_gdf=geographic)
+        PopulationPolygon("population", population_units=geographic)
 
     points = gpd.GeoDataFrame(
         {"population": [1]},
@@ -357,14 +369,14 @@ def test_population_polygon_requires_projected_matching_polygon_geometry() -> No
         crs="EPSG:3857",
     )
     with pytest.raises(ValueError, match="only Polygon or MultiPolygon"):
-        PopulationPolygon("population", alternative_pop_gdf=points)
+        PopulationPolygon("population", population_units=points)
 
     graph = nx.empty_graph(1)
     graph_geometry = gpd.GeoDataFrame(geometry=[box(0, 0, 1, 1)], crs="EPSG:3857")
     population = population_frame([box(0, 0, 1, 1)], [1]).to_crs("EPSG:5070")
     with pytest.raises(ValueError, match="must use the same CRS"):
         PlanEvaluator(graph, geometry=graph_geometry).add_metric(
-            PopulationPolygon("population", alternative_pop_gdf=population)
+            PopulationPolygon("population", population_units=population)
         ).evaluate([0])
 
 
@@ -376,7 +388,7 @@ def test_population_polygon_base_path_uses_the_aligned_scorer_geodataframe() -> 
         geometry=[box(1, 0, 2, 1), box(0, 0, 1, 1)],
         crs="EPSG:3857",
     )
-    scorer = PlanEvaluator(graph, geometry=geometry, node_column="node").add_metric(
+    scorer = PlanEvaluator(graph, geometry=geometry, node_id_column="node").add_metric(
         PopulationPolygon("population")
     )
 
@@ -503,6 +515,34 @@ def test_population_polygon_native_path_preserves_observation_invariants() -> No
     np.testing.assert_allclose(split, expected, rtol=0, atol=0)
 
 
+def test_population_polygon_native_path_is_bit_stable_under_row_permutation() -> None:
+    geometries = [box(0, 0, 1, 1), box(1, 0, 2, 1), box(2, 0, 3, 1)]
+    population_geometries = [
+        box(0.1, 0.1, 0.2, 0.2),
+        box(0.3, 0.1, 0.4, 0.2),
+        box(0.5, 0.1, 0.6, 0.2),
+        box(1.1, 0.1, 1.9, 0.9),
+        box(2.1, 0.1, 2.9, 0.9),
+    ]
+    weights = [1e16, 1.0, 1.0, 1e16, 1.0]
+    graph = nx.Graph([(0, 1), (1, 2)])
+    frame = gpd.GeoDataFrame(geometry=geometries, crs="EPSG:3857")
+
+    def score(order: list[int]) -> np.ndarray:
+        population = population_frame(
+            [population_geometries[index] for index in order],
+            [weights[index] for index in order],
+        )
+        result = (
+            PlanEvaluator(graph, geometry=frame)
+            .add_metric(PopulationPolygon("population", population_units=population))
+            .evaluate({0: "A", 1: "B", 2: "A"})["population_polygon"]
+        )
+        return as_series(result).to_numpy()
+
+    np.testing.assert_array_equal(score([0, 1, 2, 3, 4]), score([1, 2, 0, 3, 4]))
+
+
 def test_population_polygon_native_path_handles_multipolygon_graph_units() -> None:
     geometries = [
         MultiPolygon([box(0, 0, 1, 1), box(3, 0, 4, 1)]),
@@ -554,8 +594,8 @@ def test_population_polygon_infers_unique_containing_graph_units() -> None:
         [box(0.1, 0.1, 0.9, 0.9), box(1.1, 0.1, 1.9, 0.9)],
         [10, 20],
     )
-    scorer = PlanEvaluator(graph, geometry=frame, node_column="node").add_metric(
-        PopulationPolygon("population", alternative_pop_gdf=population)
+    scorer = PlanEvaluator(graph, geometry=frame, node_id_column="node").add_metric(
+        PopulationPolygon("population", population_units=population)
     )
     np.testing.assert_allclose(
         scorer.evaluate({"left": 0, "right": 1})["population_polygon"],
@@ -564,13 +604,13 @@ def test_population_polygon_infers_unique_containing_graph_units() -> None:
 
     with pytest.raises(ValueError, match="covered by exactly one evaluator geometry; found 0"):
         outside = population_frame([box(3.1, 0.1, 3.9, 0.9)], [1])
-        PlanEvaluator(graph, geometry=frame, node_column="node").add_metric(
-            PopulationPolygon("population", alternative_pop_gdf=outside)
+        PlanEvaluator(graph, geometry=frame, node_id_column="node").add_metric(
+            PopulationPolygon("population", population_units=outside)
         ).evaluate({"left": 0, "right": 1})
     with pytest.raises(ValueError, match="covered by exactly one evaluator geometry; found 0"):
         crossing = population_frame([box(0.5, 0.1, 1.5, 0.9)], [1])
-        PlanEvaluator(graph, geometry=frame, node_column="node").add_metric(
-            PopulationPolygon("population", alternative_pop_gdf=crossing)
+        PlanEvaluator(graph, geometry=frame, node_id_column="node").add_metric(
+            PopulationPolygon("population", population_units=crossing)
         ).evaluate({"left": 0, "right": 1})
 
     overlapping = gpd.GeoDataFrame(
@@ -580,7 +620,7 @@ def test_population_polygon_infers_unique_containing_graph_units() -> None:
     ambiguous = population_frame([box(0.1, 0.1, 0.9, 0.9)], [1])
     with pytest.raises(ValueError, match="covered by exactly one evaluator geometry; found 2"):
         PlanEvaluator(nx.empty_graph(2), geometry=overlapping).add_metric(
-            PopulationPolygon("population", alternative_pop_gdf=ambiguous)
+            PopulationPolygon("population", population_units=ambiguous)
         ).evaluate([0, 1])
 
 
@@ -593,9 +633,27 @@ def test_geometry_polsby_popper_matches_geos_for_oblique_and_multipart_boundarie
     ]
     graph = nx.Graph([(0, 1), (2, 3)])
     frame = gpd.GeoDataFrame(geometry=geometries, crs="EPSG:3857")
-    scorer = PlanEvaluator(graph, geometry=frame).add_metric(PolsbyPopper(source="geometry"))
+    scorer = PlanEvaluator(graph, geometry=frame).add_metric(PolsbyPopper())
 
     for assignment in ([0, 0, 1, 1], [0, 1, 2, 3]):
+        values = as_series(scorer.evaluate(assignment)["polsby_popper"])
+        expected = []
+        for district in values.index:
+            merged = unary_union(
+                [geometry for geometry, label in zip(geometries, assignment) if label == district]
+            )
+            expected.append(4 * math.pi * merged.area / merged.length**2)
+        np.testing.assert_allclose(values, expected, rtol=1e-12, atol=1e-12)
+
+
+def test_generated_geometry_polsby_popper_matches_dissolved_shapely_oracle() -> None:
+    geometries = [box(column, row, column + 1, row + 1) for row in range(4) for column in range(4)]
+    frame = gpd.GeoDataFrame(geometry=geometries, crs="EPSG:3857")
+    scorer = PlanEvaluator(nx.empty_graph(len(frame)), geometry=frame).add_metric(PolsbyPopper())
+    rng = np.random.default_rng(0x5015_BEEF)
+
+    for _ in range(300):
+        assignment = rng.integers(0, 5, len(frame)).tolist()
         values = as_series(scorer.evaluate(assignment)["polsby_popper"])
         expected = []
         for district in values.index:
@@ -613,13 +671,13 @@ def test_explicit_geometry_crs_matches_preprojected_metrics() -> None:
 
     baseline = (
         PlanEvaluator(graph, geometry=projected)
-        .add_metric(PolsbyPopper(source="geometry"))
+        .add_metric(PolsbyPopper())
         .add_metric(Reock())
         .evaluate(assignment)
     )
     reprojected = (
-        PlanEvaluator(graph, geometry=geographic, crs=projected.crs)
-        .add_metric(PolsbyPopper(source="geometry"))
+        PlanEvaluator(graph, geometry=geographic, target_crs=projected.crs)
+        .add_metric(PolsbyPopper())
         .add_metric(Reock())
         .evaluate(assignment)
     )
@@ -863,7 +921,9 @@ def test_generated_state_clipped_ratios_match_independent_shapely_oracle() -> No
 
 def test_state_clipped_convex_hull_ratio_rejects_invalid_state_geometry() -> None:
     with pytest.raises(TypeError, match="Shapely"):
-        StateClippedConvexHullRatio("not geometry")  # type: ignore[arg-type]
+        StateClippedConvexHullRatio(
+            "not geometry"  # type: ignore
+        )
     with pytest.raises(ValueError, match="Polygon or MultiPolygon"):
         StateClippedConvexHullRatio(Polygon().boundary)
     with pytest.raises(ValueError, match="nonempty, valid"):

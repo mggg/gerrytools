@@ -48,3 +48,10 @@ def test_lazy_exports_resolve_cache_and_reject_unknown_names():
 
     with pytest.raises(AttributeError, match="no attribute 'nonexistent'"):
         _ = latex_package.nonexistent
+
+
+def test_tikz_plot_names_are_the_primary_public_exports():
+    import gerrytools.latex as latex_package
+
+    assert "TikzPaintballPlot" in latex_package.__all__
+    assert "TikzSeatsVotesPlot" in latex_package.__all__

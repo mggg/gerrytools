@@ -325,9 +325,10 @@ class TestCensusGetResponses:
 
         mock = MockHTTP().route(responder=fail)
 
-        with pytest.raises(httpx.ConnectError, match="connection failed"):
+        with pytest.raises(httpx.ConnectError, match="connection failed") as excinfo:
             _fetch(mock, "state")
 
+        assert excinfo.value.request.url.params["key"] == "REDACTED"
         assert len(mock.requests) == MAX_REQUEST_ATTEMPTS
         assert recorded_retry_sleeps == [1.0, 2.0, 4.0]
 
@@ -393,9 +394,32 @@ class TestApiKeyRedaction:
                 self._fetch(mock)
 
         assert self.SECRET_KEY not in str(excinfo.value)
+        assert self.SECRET_KEY not in str(excinfo.value.request.url)
+        assert self.SECRET_KEY not in str(excinfo.value.response.request.url)
+        assert excinfo.value.request.url.params["key"] == "REDACTED"
         retry_messages = [record.getMessage() for record in caplog.records]
         assert any("api.census.gov" in message for message in retry_messages)
         assert all(self.SECRET_KEY not in message for message in retry_messages)
+
+    def test_httpx_info_log_redacts_the_key(self, caplog: pytest.LogCaptureFixture):
+        mock = MockHTTP().route(json=[["GEO_ID"], ["1000000US55"]])
+
+        with caplog.at_level(logging.INFO, logger="httpx"):
+            self._fetch(mock)
+
+        messages = [record.getMessage() for record in caplog.records if record.name == "httpx"]
+        assert messages
+        assert all(self.SECRET_KEY not in message for message in messages)
+        assert any("key=REDACTED" in message for message in messages)
+
+    def test_httpx_filter_leaves_non_census_logs_unchanged(self, caplog: pytest.LogCaptureFixture):
+        url = httpx.URL(f"https://example.com/data?key={self.SECRET_KEY}")
+
+        with caplog.at_level(logging.INFO, logger="httpx"):
+            logging.getLogger("httpx").info("HTTP Request: GET %s", url)
+
+        messages = [record.getMessage() for record in caplog.records if record.name == "httpx"]
+        assert messages == [f"HTTP Request: GET {url}"]
 
     def test_http_error_body_redacts_an_echoed_key(self):
         mock = MockHTTP().route(status_code=400, text=f"bad key {self.SECRET_KEY}")
@@ -404,3 +428,4 @@ class TestApiKeyRedaction:
             self._fetch(mock)
 
         assert self.SECRET_KEY not in str(excinfo.value)
+        assert self.SECRET_KEY not in excinfo.value.response.text

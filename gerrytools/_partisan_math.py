@@ -20,11 +20,11 @@ def _nonnegative(values: ArrayLike, name: str) -> NDArray[np.float64]:
     the input shape. ``name`` is used only to identify the input in validation errors.
 
     Args:
-        values: Values to convert and validate.
-        name: Input name to include in error messages.
+        values (ArrayLike): Values to convert and validate.
+        name (str): Input name to include in error messages.
 
     Returns:
-        A ``float64`` NumPy array with the same shape as ``values``.
+        NDArray[np.float64]: A ``float64`` NumPy array with the same shape as ``values``.
 
     Raises:
         ValueError: If the input is scalar, has an empty final axis, contains a nonfinite value, or
@@ -49,13 +49,14 @@ def _matching(
     """Validate two nonnegative inputs and require identical shapes.
 
     Args:
-        first: First array-like input.
-        first_name: Name used for the first input in validation errors.
-        second: Second array-like input.
-        second_name: Name used for the second input in validation errors.
+        first (ArrayLike): First array-like input.
+        first_name (str): Name used for the first input in validation errors.
+        second (ArrayLike): Second array-like input.
+        second_name (str): Name used for the second input in validation errors.
 
     Returns:
-        The two inputs as finite, nonnegative ``float64`` arrays.
+        tuple[NDArray[np.float64], NDArray[np.float64]]: The two inputs as finite, nonnegative
+            ``float64`` arrays.
 
     Raises:
         ValueError: If either input fails :func:`_nonnegative` validation or their shapes differ.
@@ -73,11 +74,13 @@ def _paired(
     """Validate matching party and opposition vote arrays.
 
     Args:
-        party_votes: Nonnegative party vote tallies.
-        opposition_votes: Nonnegative opposition tallies with the same shape as ``party_votes``.
+        party_votes (ArrayLike): Nonnegative party vote tallies.
+        opposition_votes (ArrayLike): Nonnegative opposition tallies with the same shape as
+            ``party_votes``.
 
     Returns:
-        Party and opposition tallies as finite, nonnegative ``float64`` arrays.
+        tuple[NDArray[np.float64], NDArray[np.float64]]: Party and opposition tallies as finite,
+            nonnegative ``float64`` arrays.
 
     Raises:
         ValueError: If either input fails :func:`_nonnegative` validation or their shapes differ.
@@ -94,11 +97,11 @@ def _divide(
     otherwise validate either array; callers are responsible for rejecting inappropriate inputs.
 
     Args:
-        numerator: Values to divide.
-        denominator: Divisors broadcast-compatible with ``numerator``.
+        numerator (NDArray[np.float64]): Values to divide.
+        denominator (NDArray[np.float64]): Divisors broadcast-compatible with ``numerator``.
 
     Returns:
-        A ``float64`` array with the broadcast shape of both inputs.
+        NDArray[np.float64]: A ``float64`` array with the broadcast shape of both inputs.
 
     Raises:
         ValueError: If the input shapes cannot be broadcast together.

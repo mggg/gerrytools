@@ -9,7 +9,7 @@ import matplotlib.patheffects as patheffects
 from geopandas import GeoSeries
 from matplotlib.axes import Axes
 
-from gerrytools.colors import resolve_color_and_alpha
+from gerrytools.colors import resolve_color_and_alpha, resolve_rgba
 from gerrytools.plotting.geometry._layers._base import _to_target_crs
 from gerrytools.plotting.mpl.label_text_options import (
     LabelBoxOptions,
@@ -62,7 +62,7 @@ class _MarkerLayer:
 
     # Label style (centered in marker)
     show_labels: bool = True
-    # When set, the style supersedes the font/box fields and may vary the box per label
+    # When set, the label style supersedes the font/box fields and may vary the box per label
     # (e.g. equalizing badge circle diameters).
     label_style: LabelStyle | None = None
     label_font_options: LabelFontOptions = field(default_factory=LabelFontOptions)
@@ -120,9 +120,10 @@ class _MarkerLayer:
             font_options = (
                 self.label_style.font if self.label_style is not None else self.label_font_options
             )
-            outline_color, _ = resolve_color_and_alpha(
+            outline_color = resolve_rgba(
                 font_options.outlinecolor,
-                alpha=1.0,
+                field="outlinecolor",
+                owner="MarkerLayer",
             )
             text_effects: list[patheffects.AbstractPathEffect] = [
                 patheffects.Stroke(

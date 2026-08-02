@@ -33,7 +33,14 @@ _MplBaseColorWithAlpha: TypeAlias = tuple[MplBaseColor, Real]
 
 
 def is_finite_real(x: object) -> TypeGuard[Real]:
-    """Whether ``x`` is a finite real number; bools and NaN/inf are rejected."""
+    """Return whether ``x`` is a finite real number.
+
+    Args:
+        x (object): Value to inspect. Booleans are not treated as real numbers.
+
+    Returns:
+        bool: True for finite real numbers and False for booleans, NaN, infinity, and non-numbers.
+    """
     return isinstance(x, Real) and not isinstance(x, bool) and math.isfinite(float(x))
 
 
@@ -62,7 +69,10 @@ def validate_alpha(value: object, *, field: str = "alpha") -> float:
 
     Args:
         value (object): The value to validate.
-        field (str): Field name used in error messages.
+        field (str, optional): Field name used in error messages. Defaults to ``"alpha"``.
+
+    Returns:
+        float: Validated alpha value converted to a float.
 
     Raises:
         TypeError: If ``value`` is not a real number (bools are rejected).
@@ -82,7 +92,20 @@ def validate_alpha(value: object, *, field: str = "alpha") -> float:
 def normalize_rgb_components(
     red: float, green: float, blue: float, *, original_input: object
 ) -> tuple[float, float, float]:
-    """Normalize RGB to [0,1], detecting 0-255 scale and ambiguity. Pure helper."""
+    """Normalize RGB components to the ``[0, 1]`` scale.
+
+    Args:
+        red (float): Red component on either the ``[0, 1]`` or ``[0, 255]`` scale.
+        green (float): Green component on the same scale as ``red``.
+        blue (float): Blue component on the same scale as ``red``.
+        original_input (object): Original color value included in validation errors.
+
+    Returns:
+        tuple[float, float, float]: Components normalized to the ``[0, 1]`` scale.
+
+    Raises:
+        ValueError: If a component is negative, exceeds 255, or makes the scale ambiguous.
+    """
     max_component = max(red, green, blue)
     if max_component > 1.0:
         if any(component < 0.0 for component in (red, green, blue)):

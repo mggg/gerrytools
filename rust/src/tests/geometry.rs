@@ -1,6 +1,6 @@
 use super::*;
 use crate::{DistrictTable, PreparedConvexHullRatio, PreparedReock};
-use geo::{MultiPoint, Point};
+use geo::{BooleanOps, ConvexHull, MultiPoint, Point};
 
 fn polygon_wkb(rings: &[&[(f64, f64)]]) -> Vec<u8> {
     let mut bytes = vec![1];
@@ -136,6 +136,153 @@ fn prepares_geometry_metrics_from_ordered_wkb() {
 }
 
 #[test]
+fn prepared_geometry_discovers_exact_rook_topology_and_caches_hulls() {
+    let rows = [
+        square(0.0, 0.0),
+        square(1.0, 0.0),
+        square(1.0, 1.0),
+        square(3.0, 0.0),
+    ];
+    let geometry = PreparedGeometry::from_wkb(&rows).unwrap();
+
+    let rook = geometry.rook_measurements().unwrap();
+    let (edges, shared) = rook.inputs();
+    assert_eq!(edges, [(0, 1), (1, 2)]);
+    assert_eq!(shared, [1.0, 1.0]);
+
+    let first = geometry.unit_hulls().unwrap();
+    let second = geometry.unit_hulls().unwrap();
+    assert!(Arc::ptr_eq(&first, &second));
+}
+
+#[test]
+fn evaluator_rook_discovery_handles_split_and_zero_length_boundary_segments() {
+    let left = rectangle(0.0, 0.0, 1.0, 2.0);
+    let right = polygon_wkb(&[&[
+        (1.0, 0.0),
+        (2.0, 0.0),
+        (2.0, 2.0),
+        (1.0, 2.0),
+        (1.0, 1.0),
+        (1.0, 1.0),
+        (1.0, 0.0),
+    ]]);
+    let geometry = PreparedGeometry::from_wkb(&[left, right]).unwrap();
+
+    let (edges, shared) = geometry.rook_measurements().unwrap().inputs();
+    assert_eq!(edges, [(0, 1)]);
+    assert_eq!(shared, [2.0]);
+}
+
+#[test]
+fn evaluator_rook_discovery_applies_overlap_and_shared_length_thresholds() {
+    let shared = PreparedGeometry::from_wkb(&[
+        rectangle(0.0, 0.0, 1.0, 1.0),
+        rectangle(1.0, 0.0, 2.0, 2.0 * GEOMETRY_EPS),
+    ])
+    .unwrap();
+    assert_eq!(shared.rook_measurements().unwrap().inputs().0, [(0, 1)]);
+
+    let overlap = PreparedGeometry::from_wkb(&[
+        rectangle(0.0, 0.0, 1.0, 1.0),
+        rectangle(1.0 - 2.0 * GEOMETRY_EPS, 0.0, 2.0, 1.0),
+    ])
+    .unwrap()
+    .rook_measurements()
+    .unwrap_err();
+    assert!(overlap.to_string().contains("overlap by area"));
+}
+
+#[test]
+fn evaluator_rook_discovery_ignores_small_gaps_and_point_contacts() {
+    let rows = [square(0.0, 0.0), square(1.0 + 5e-9, 0.0), square(-1.0, 1.0)];
+    let geometry = PreparedGeometry::from_wkb(&rows).unwrap();
+
+    let (edges, shared) = geometry.rook_measurements().unwrap().inputs();
+    assert!(edges.is_empty(), "unexpected edges: {edges:?}");
+    assert!(shared.is_empty());
+}
+
+#[test]
+fn evaluator_rook_discovery_rejects_the_lowest_short_boundary() {
+    let rows = [
+        rectangle(0.0, 0.0, 1.0, 1.0),
+        rectangle(1.0, 0.0, 2.0, 5e-9),
+        rectangle(1.0, 0.5, 2.0, 0.5 + 5e-9),
+    ];
+    let error = PreparedGeometry::from_wkb(&rows)
+        .unwrap()
+        .rook_measurements()
+        .unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("edge (0, 1) geometries have no shared boundary"));
+}
+
+#[test]
+fn evaluator_rook_discovery_reports_overlap_before_boundary_errors() {
+    let rows = [
+        rectangle(0.0, 0.0, 2.0, 2.0),
+        rectangle(1.0, 0.0, 3.0, 2.0),
+        rectangle(2.0, 0.0, 3.0, 5e-9),
+    ];
+    let error = PreparedGeometry::from_wkb(&rows)
+        .unwrap()
+        .rook_measurements()
+        .unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("edge (0, 1) geometries overlap by area"));
+}
+
+#[test]
+fn evaluator_rook_results_and_errors_are_independent_of_rayon_threads() {
+    let valid = [
+        square(0.0, 0.0),
+        square(1.0, 0.0),
+        square(0.0, 1.0),
+        square(1.0, 1.0),
+    ];
+    let invalid = [
+        rectangle(0.0, 0.0, 1.0, 1.0),
+        rectangle(1.0, 0.0, 2.0, 5e-9),
+        rectangle(1.0, 0.5, 2.0, 0.5 + 5e-9),
+    ];
+    let run = |rows: &[Vec<u8>], threads| {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(threads)
+            .build()
+            .unwrap()
+            .install(|| {
+                PreparedGeometry::from_wkb(rows)
+                    .and_then(|geometry| geometry.rook_measurements())
+                    .map(|rook| rook.inputs())
+                    .map_err(|error| error.to_string())
+            })
+    };
+
+    assert_eq!(run(&valid, 1), run(&valid, 4));
+    assert_eq!(run(&invalid, 1), run(&invalid, 4));
+}
+
+#[test]
+fn prepared_geometry_row_errors_are_independent_of_rayon_threads() {
+    let rows = [vec![0], square(0.0, 0.0), vec![0]];
+    let run = |threads| {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(threads)
+            .build()
+            .unwrap()
+            .install(|| PreparedGeometry::from_wkb(&rows).unwrap_err().to_string())
+    };
+
+    assert_eq!(run(1), run(4));
+    assert!(run(1).contains("WKB row 0"));
+}
+
+#[test]
 fn clipped_hull_preparation_checks_state_coverage_with_a_narrow_overlay_tolerance() {
     let rows = [square(0.0, 0.0)];
     let almost_covering = polygon_wkb(&[&[
@@ -159,6 +306,69 @@ fn clipped_hull_preparation_checks_state_coverage_with_a_narrow_overlay_toleranc
         PreparedStateClippedConvexHullRatio::from_wkb(&rows, &materially_short),
         Err(Error::StateGeometryCoverage { unit: 0, .. })
     ));
+
+    // geo's default i32 overlay grid collapses this sliver even though its area is one hundred
+    // times the promised tolerance. Coverage validation must use the higher-precision path.
+    let above_tolerance_but_below_geo_resolution = polygon_wkb(&[&[
+        (0.0, 0.0),
+        (1.0 - 1e-10, 0.0),
+        (1.0 - 1e-10, 1.0),
+        (0.0, 1.0),
+        (0.0, 0.0),
+    ]]);
+    assert!(matches!(
+        PreparedStateClippedConvexHullRatio::from_wkb(
+            &rows,
+            &above_tolerance_but_below_geo_resolution,
+        ),
+        Err(Error::StateGeometryCoverage { unit: 0, .. })
+    ));
+
+    let protrusion_width = 2e-10;
+    let protruding_unit = polygon_wkb(&[&[
+        (0.0, 0.0),
+        (1.0 + protrusion_width, 0.0),
+        (1.0 + protrusion_width, 0.5),
+        (1.0, 0.5),
+        (1.0, 1.0),
+        (0.0, 1.0),
+        (0.0, 0.0),
+    ]]);
+    assert!(matches!(
+        PreparedStateClippedConvexHullRatio::from_wkb(&[protruding_unit], &rows[0]),
+        Err(Error::StateGeometryCoverage { unit: 0, .. })
+    ));
+
+    // The aggregate unary union must not erase an out-of-state protrusion before the precise
+    // coverage check. A single-row case does not exercise that union behavior.
+    let touching_rows = [
+        rectangle(0.0, 0.0, 1.0, 1.0),
+        rectangle(1.0, 0.0, 2.0 + protrusion_width, 1.0),
+    ];
+    let two_unit_state = rectangle(0.0, 0.0, 2.0, 1.0);
+    assert!(matches!(
+        PreparedStateClippedConvexHullRatio::from_wkb(&touching_rows, &two_unit_state),
+        Err(Error::StateGeometryCoverage { unit: 1, .. })
+    ));
+}
+
+#[test]
+fn topology_rejects_material_overlap_below_the_default_overlay_grid() {
+    let rows = [
+        rectangle(0.0, 0.0, 1_000.0, 1_000.0),
+        rectangle(1_000.0 - 1e-7, 0.0, 2_000.0, 1_000.0),
+    ];
+    let prepared = PreparedGeometry::from_wkb(&rows).unwrap();
+
+    assert!(prepared
+        .rook_measurements()
+        .unwrap_err()
+        .to_string()
+        .contains("overlap by area"));
+    assert!(PreparedPolsbyPopper::from_wkb(&rows, vec![(0, 1)])
+        .unwrap_err()
+        .to_string()
+        .contains("overlap by area"));
 }
 
 #[test]

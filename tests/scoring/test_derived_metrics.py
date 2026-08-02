@@ -61,12 +61,12 @@ def district_tallies(
 
 def metric_cases() -> list[MetricCase]:
     party: dict[str, object] = {
-        "party_votes": "party_1",
-        "opposition_votes": "opposition_1",
+        "party_vote_attr": "party_1",
+        "opposition_vote_attr": "opposition_1",
     }
     elections: dict[str, object] = {
-        "party_votes": ("party_1", "party_2"),
-        "opposition_votes": ("opposition_1", "opposition_2"),
+        "party_vote_attrs": ("party_1", "party_2"),
+        "opposition_vote_attrs": ("opposition_1", "opposition_2"),
     }
     return [
         (
@@ -87,6 +87,12 @@ def metric_cases() -> list[MetricCase]:
             scoring.OverallVoteShare("party_1", "opposition_1"),
             party,
             formulas.overall_vote_share,
+        ),
+        (
+            "disproportionality",
+            scoring.Disproportionality("party_1", "opposition_1"),
+            party,
+            formulas.disproportionality,
         ),
         (
             "efficiency_gap",
@@ -121,31 +127,38 @@ def metric_cases() -> list[MetricCase]:
         (
             "population_deviations",
             scoring.PopulationDeviations("population"),
-            {"population": "population"},
+            {"population_attr": "population"},
             formulas.population_deviations,
         ),
         (
             "max_absolute_population_deviation",
             scoring.MaxAbsolutePopulationDeviation("population", True),
-            {"population": "population", "relative": True},
+            {"population_attr": "population", "relative_to_ideal": True},
             formulas.max_absolute_population_deviation,
         ),
         (
             "max_population_deviation",
             scoring.MaxPopulationDeviation("population", True),
-            {"population": "population", "relative": True},
+            {"population_attr": "population", "relative_to_ideal": True},
             formulas.max_population_deviation,
         ),
         (
             "demographic_shares",
             scoring.DemographicShares("subgroup", "population"),
-            {"subgroup": "subgroup", "total": "population"},
+            {
+                "subgroup_population_attr": "subgroup",
+                "total_population_attr": "population",
+            },
             formulas.demographic_shares,
         ),
         (
             "districts_above_threshold",
             scoring.DistrictsAboveThreshold("subgroup", "population", 0.4),
-            {"subgroup": "subgroup", "total": "population", "threshold": 0.4},
+            {
+                "subgroup_population_attr": "subgroup",
+                "total_population_attr": "population",
+                "threshold": 0.4,
+            },
             formulas.districts_above_threshold,
         ),
         (
@@ -155,7 +168,7 @@ def metric_cases() -> list[MetricCase]:
                 ("opposition_1", "opposition_2"),
                 0.1,
             ),
-            {**elections, "points_within": 0.1},
+            {**elections, "vote_share_margin": 0.1},
             formulas.competitive_contests,
         ),
         (
@@ -236,20 +249,35 @@ def formula_result(
         "max_absolute_population_deviation",
         "max_population_deviation",
     }:
-        (population,) = district_tallies(frame, assignment, [str(options["population"])])
-        kwargs = {"relative": options["relative"]} if "relative" in options else {}
+        (population,) = district_tallies(
+            frame,
+            assignment,
+            [str(options["population_attr"])],
+        )
+        kwargs = (
+            {"relative_to_ideal": options["relative_to_ideal"]}
+            if "relative_to_ideal" in options
+            else {}
+        )
         return formula(population, **kwargs)
     if name in {"demographic_shares", "districts_above_threshold"}:
         subgroup, total = district_tallies(
             frame,
             assignment,
-            [str(options["subgroup"]), str(options["total"])],
+            [
+                str(options["subgroup_population_attr"]),
+                str(options["total_population_attr"]),
+            ],
         )
         kwargs = {"threshold": options["threshold"]} if "threshold" in options else {}
         return formula(subgroup, total, **kwargs)
 
-    party_columns = options["party_votes"]
-    opposition_columns = options["opposition_votes"]
+    party_key = "party_vote_attr" if "party_vote_attr" in options else "party_vote_attrs"
+    opposition_key = (
+        "opposition_vote_attr" if "opposition_vote_attr" in options else "opposition_vote_attrs"
+    )
+    party_columns = options[party_key]
+    opposition_columns = options[opposition_key]
     if isinstance(party_columns, str):
         party, opposition = district_tallies(
             frame, assignment, [party_columns, str(opposition_columns)]
@@ -267,7 +295,7 @@ def formula_result(
         )
         party = np.stack(party_rows)
         opposition = np.stack(opposition_rows)
-    kwargs = {key: options[key] for key in ("turnout_model", "points_within") if key in options}
+    kwargs = {key: options[key] for key in ("turnout_model", "vote_share_margin") if key in options}
     return formula(party, opposition, **kwargs)
 
 
@@ -409,6 +437,7 @@ def test_native_vote_share_metrics_match_formula_nan_propagation(
         .add_metric(scoring.EfficiencyGap("party", "opposition"))
         .add_metric(scoring.SimplifiedEfficiencyGap("party", "opposition"))
         .add_metric(scoring.OverallVoteShare("party", "opposition"))
+        .add_metric(scoring.Disproportionality("party", "opposition"))
     )
 
     result = evaluator.evaluate(assignment)
@@ -430,9 +459,18 @@ def test_native_vote_share_metrics_match_formula_nan_propagation(
         result["overall_vote_share"],
         formulas.overall_vote_share(party_tallies, opposition_tallies),
     )
+    assert_same(
+        result["disproportionality"],
+        formulas.disproportionality(party_tallies, opposition_tallies),
+    )
     if party_tallies.sum() + opposition_tallies.sum() == 0:
         # A plan with no two-party votes anywhere has no defined plan-level score at all.
-        for name in ("efficiency_gap", "simplified_efficiency_gap", "overall_vote_share"):
+        for name in (
+            "efficiency_gap",
+            "simplified_efficiency_gap",
+            "overall_vote_share",
+            "disproportionality",
+        ):
             assert np.isnan(result[name])
 
 
@@ -477,8 +515,8 @@ def test_derived_metrics_return_natural_scalar_and_district_types() -> None:
         scoring.seats(
             frame,
             "district",
-            party_votes="party_1",
-            opposition_votes="opposition_1",
+            party_vote_attr="party_1",
+            opposition_vote_attr="opposition_1",
         ),
         int,
     )
@@ -486,8 +524,8 @@ def test_derived_metrics_return_natural_scalar_and_district_types() -> None:
         scoring.overall_vote_share(
             frame,
             "district",
-            party_votes="party_1",
-            opposition_votes="opposition_1",
+            party_vote_attr="party_1",
+            opposition_vote_attr="opposition_1",
         ),
         float,
     )
@@ -495,8 +533,8 @@ def test_derived_metrics_return_natural_scalar_and_district_types() -> None:
         scoring.district_wins(
             frame,
             "district",
-            party_votes="party_1",
-            opposition_votes="opposition_1",
+            party_vote_attr="party_1",
+            opposition_vote_attr="opposition_1",
         ).dtype
         == np.bool_
     )
@@ -504,8 +542,8 @@ def test_derived_metrics_return_natural_scalar_and_district_types() -> None:
         scoring.party_wins_by_district(
             frame,
             "district",
-            party_votes=("party_1", "party_2"),
-            opposition_votes=("opposition_1", "opposition_2"),
+            party_vote_attrs=("party_1", "party_2"),
+            opposition_vote_attrs=("opposition_1", "opposition_2"),
         ).dtype
         == np.int64
     )
@@ -528,7 +566,7 @@ def test_every_derived_metric_streams_like_evaluate_many(tmp_path: Path, variant
 
     evaluator.evaluate_stream(source, output, batch_size=1)
 
-    manifest = json.loads((output / "manifest.json").read_text())
+    manifest = json.loads((output / "manifest__scores.json").read_text())
     cases = metric_cases()
     assert [metric["instance"] for metric in manifest["metrics"]] == [case[0] for case in cases]
     for description, (name, _, options, _) in zip(manifest["metrics"], cases, strict=True):
@@ -536,7 +574,7 @@ def test_every_derived_metric_streams_like_evaluate_many(tmp_path: Path, variant
         assert description["options"] == json.loads(json.dumps(options))
         assert description["subkeys"] == ["score"]
         assert description["shape"] in {"district", "plan"}
-        actual = pq.read_table(output / name / "scores.parquet").to_pydict()
+        actual = pq.read_table(output / f"{name}__scores.parquet").to_pydict()
         expected_values = expected.array(name)
         if expected_values.ndim == 2:
             np.testing.assert_allclose(
@@ -579,9 +617,9 @@ def test_numpy_scalar_metric_options_are_json_serializable(metric) -> None:
         (
             lambda: scoring.MaxPopulationDeviation(
                 "population",
-                relative=cast(bool, 1),
+                relative_to_ideal=cast(bool, 1),
             ),
-            "relative",
+            "relative_to_ideal",
         ),
         (
             lambda: scoring.DistrictsAboveThreshold("subgroup", "total", 1.1),
@@ -589,7 +627,7 @@ def test_numpy_scalar_metric_options_are_json_serializable(metric) -> None:
         ),
         (
             lambda: scoring.CompetitiveContests(("party",), ("opposition",), 0.6),
-            "points_within",
+            "vote_share_margin",
         ),
         (
             lambda: scoring.PartyDistricts((), ()),

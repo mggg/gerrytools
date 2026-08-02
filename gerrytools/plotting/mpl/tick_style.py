@@ -13,13 +13,32 @@ logger = get_logger(__name__)
 
 @dataclass(frozen=True)
 class TickStyle:
-    """Data class representing the style of axis ticks."""
+    """Style options for axis ticks and their labels.
+
+    Attributes:
+        size (float | int): Tick-label font size. Defaults to 10.
+        rotation (float | int): Tick-label rotation in degrees. Defaults to 0.
+        fontcolor (Color | None): Tick-label color. None removes the color. Defaults to
+            ``"black"``.
+        fontalpha (float | None): Optional tick-label opacity override. Defaults to None.
+        tickcolor (Color | None): Tick-mark color. None removes the color. Defaults to
+            ``"black"``.
+        tickalpha (float | None): Optional tick-mark opacity override. Defaults to None.
+        fontweight (str): Tick-label font weight. Defaults to ``"normal"``.
+        fontstyle (Literal["normal", "italic", "oblique"]): Tick-label slant. Defaults to
+            ``"normal"``.
+        fontfamily (str): Tick-label font family. Defaults to ``"sans-serif"``.
+        ticktype (TickType): Whether to style major, minor, or both ticks. Defaults to ``"major"``.
+
+    Raises:
+        ValueError: If a size, color, alpha, or tick type is invalid.
+    """
 
     size: float | int = 10
     rotation: float | int = 0
-    fontcolor: Color = "black"
+    fontcolor: Color | None = "black"
     fontalpha: float | None = None
-    tickcolor: Color = "black"
+    tickcolor: Color | None = "black"
     tickalpha: float | None = None
     fontweight: str = "normal"
     fontstyle: Literal["normal", "italic", "oblique"] = "normal"

@@ -35,7 +35,7 @@ _INVISIBLE_MARKER = PointMarkerOptions(
     markeredgewidth=0.0,
 )
 
-# Default font for geography labels when the caller gives neither font options nor a style.
+# Default font for geography labels when the caller gives neither font options nor a label style.
 _DEFAULT_LABEL_FONT = LabelFontOptions(
     fontcolor="black",
     fontsize=4,
@@ -55,12 +55,12 @@ class LabelOptions:
     single ``label_options`` argument.
 
     Attributes:
-        style (LabelStyle | str | None): A ``LabelStyle`` or the name of a registered style
+        label_style (LabelStyle | str | None): A ``LabelStyle`` or the name of a registered style
             (see ``LABEL_STYLES``, e.g. ``"badge"`` for district-number badges or ``"halo"``
             for outlined text). Mutually exclusive with ``font_options`` / ``box_options``.
             A style name resolves to its ``LabelStyle`` at construction. Defaults to None.
         font_options (LabelFontOptions | None): Font options for the labels. When None (and
-            no ``style`` is given) the plot method's default font applies. Defaults to None.
+            no ``label_style`` is given) the plot method's default font applies. Defaults to None.
         box_options (LabelBoxOptions | None): Box options for the labels. When None the box
             is disabled (unless the plot method supplies its own default). Defaults to None.
         adjustments (dict | None): Per-label position tweaks, mapping a label to a
@@ -75,11 +75,11 @@ class LabelOptions:
             Defaults to None.
 
     Raises:
-        ValueError: If ``style`` is combined with ``font_options`` / ``box_options``, or the
-            style name is unknown.
+        ValueError: If ``label_style`` is combined with ``font_options`` / ``box_options``, or
+            the style name is unknown.
     """
 
-    style: LabelStyle | str | None = None
+    label_style: LabelStyle | str | None = None
     font_options: LabelFontOptions | None = None
     box_options: LabelBoxOptions | None = None
     adjustments: dict | None = None
@@ -87,20 +87,25 @@ class LabelOptions:
     exclude: Sequence[CategoryKey] | None = None
 
     def __post_init__(self) -> None:
-        if self.style is not None:
+        if self.label_style is not None:
             if self.font_options is not None or self.box_options is not None:
                 raise ValueError(
-                    "Pass either `style` or explicit `font_options` / `box_options`, not both.",
+                    "Pass either `label_style` or explicit `font_options` / `box_options`, "
+                    "not both.",
                 )
-            object.__setattr__(self, "style", resolve_label_style(self.style))
+            object.__setattr__(
+                self,
+                "label_style",
+                resolve_label_style(self.label_style),
+            )
 
     @property
-    def resolved_style(self) -> LabelStyle | None:
-        """The resolved ``LabelStyle``, or None when no style was given."""
+    def resolved_label_style(self) -> LabelStyle | None:
+        """Return the resolved ``LabelStyle``, or None when no label style was given."""
         # __post_init__ has already replaced any style name with its LabelStyle.
-        style = self.style
-        assert not isinstance(style, str)
-        return style
+        label_style = self.label_style
+        assert not isinstance(label_style, str)
+        return label_style
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,22 +118,22 @@ class _LabelRequest:
     dissolved: bool = False
 
 
-def _merge_style_arg(
-    style: LabelStyle | str | None,
+def _merge_label_style_arg(
+    label_style: LabelStyle | str | None,
     label_options: LabelOptions | None,
 ) -> LabelOptions | None:
-    """Fold the top-level ``style=`` shorthand into the ``label_options`` bundle.
+    """Fold the top-level ``label_style=`` shorthand into the ``label_options`` bundle.
 
     Raises:
-        ValueError: If both the shorthand and ``label_options.style`` are given.
+        ValueError: If both the shorthand and ``label_options.label_style`` are given.
     """
-    if style is None:
+    if label_style is None:
         return label_options
     if label_options is None:
-        return LabelOptions(style=style)
-    if label_options.style is not None:
-        raise ValueError("Pass `style` or `label_options.style`, not both.")
-    return replace(label_options, style=style)
+        return LabelOptions(label_style=label_style)
+    if label_options.label_style is not None:
+        raise ValueError("Pass `label_style` or `label_options.label_style`, not both.")
+    return replace(label_options, label_style=label_style)
 
 
 def _label_keep_mask(labels: Sequence[object], exclude: Sequence[CategoryKey]) -> list[bool]:
@@ -158,7 +163,7 @@ def _queue_label_request(
         keep = _label_keep_mask(gdf[label_column].tolist(), options.exclude)
         gdf = GeoDataFrame(gdf[keep])
 
-    if options.font_options is None and options.style is None:
+    if options.font_options is None and options.label_style is None:
         options = replace(options, font_options=_DEFAULT_LABEL_FONT)
 
     requests.append(
@@ -237,7 +242,7 @@ def _draw_deferred_labels(
             formatted = ", ".join(repr(label) for label in sorted(duplicates))
             raise ValueError(f"Computed label text must be unique; duplicates: {formatted}.")
 
-        # Defaults (a style, when present, supersedes the font/box options)
+        # Defaults (a label style, when present, supersedes the font/box options)
         options = req.options
         font = options.font_options if options.font_options is not None else LabelFontOptions()
         boxopt = (
@@ -252,7 +257,7 @@ def _draw_deferred_labels(
             labels=labels,
             marker_options=_INVISIBLE_MARKER,
             show_labels=True,
-            label_style=options.resolved_style,
+            label_style=options.resolved_label_style,
             label_adjustments=options.adjustments,
             label_fontsize=options.fontsize,
             label_font_options=font,

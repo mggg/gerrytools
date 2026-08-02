@@ -83,7 +83,20 @@ def graph_node_count(path):
     return len(json.loads(Path(path).read_text())["nodes"])
 
 
-@pytest.mark.parametrize("writer", ["canonical", "jsonl", "jsonl-full"])
+@pytest.mark.parametrize(
+    "writer",
+    [
+        "tsv",
+        "jsonl",
+        "pcompress",
+        "jsonl-full",
+        "assignments",
+        "canonicalized-assignments",
+        "canonical",
+        "ben",
+        "bendl",
+    ],
+)
 def test_recom_config_transport_and_provenance(mgrp_image, tmp_path, writer):
     graph = FIXTURES / "mgrp_7x7.json"
     runner = RecomRunnerConfig(
@@ -117,7 +130,44 @@ def test_recom_config_transport_and_provenance(mgrp_image, tmp_path, writer):
         )
         assert_provenance(runner, (run_info,), output_path)
     else:
-        assert_inline_recom_provenance(runner, run_info, output_path)
+        if writer in ("jsonl", "jsonl-full"):
+            assert_inline_recom_provenance(runner, run_info, output_path)
+        else:
+            for expected in runner.expected_files(run_info):
+                assert Path(expected).is_file()
+                assert Path(expected).stat().st_size > 0
+
+
+def test_recom_streaming_apis(mgrp_image, tmp_path):
+    graph = FIXTURES / "mgrp_7x7.json"
+    runner = RecomRunnerConfig(
+        str(graph),
+        output_folder=str(tmp_path / "output"),
+        log_folder=str(tmp_path / "logs"),
+    )
+    run_info = RecomRunInfo(
+        pop_col="TOTPOP",
+        assignment_col="district",
+        variant="A",
+        n_steps=2,
+        pop_tol=0.2,
+        writer="canonical",
+        force_print=True,
+        updaters={"district_count": lambda partition: len(partition.parts)},
+    )
+
+    with RunContainer(runner, docker_image_name=mgrp_image) as container:
+        raw_records = [record for record, _ in container.run_iter(run_info) if record is not None]
+        updated_records = [
+            record for record, _ in container.mcmc_run_with_updaters(run_info) if record is not None
+        ]
+
+    assert raw_records
+    for record in raw_records:
+        assert len(record["assignment"]) == graph_node_count(graph)
+        assert len(set(record["assignment"])) == 4
+    assert updated_records
+    assert all(record["updaters"]["district_count"] == 4 for record in updated_records)
 
 
 def test_optimizers_run_and_write_scores(mgrp_image, tmp_path):

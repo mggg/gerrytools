@@ -14,6 +14,7 @@ from gerrytools.plotting.geometry.geoplotbase import (
     _CategoricalColorLayer,
     _MarkerLayer,
 )
+from gerrytools.plotting.mpl.label_text_options import LabelFontOptions
 from tests.plotting._typing_utils import as_any
 
 
@@ -371,4 +372,22 @@ class TestMarkerLayerRender:
         np.testing.assert_allclose(marker_line.get_xdata(), [0])
         np.testing.assert_allclose(marker_line.get_ydata(), [0])
         assert len(ax.texts) == 0
+        plt.close(fig)
+
+    def test_label_outline_preserves_embedded_alpha(self):
+        import matplotlib.pyplot as plt
+
+        layer = _MarkerLayer(
+            point_geometries=GeoSeries([Point(0, 0)]),
+            labels=["A"],
+            label_font_options=LabelFontOptions(outlinecolor="#ff000040"),
+        )
+        fig, ax = plt.subplots()
+
+        layer.render(ax)
+
+        stroke = ax.texts[0].get_path_effects()[0]
+        assert getattr(stroke, "_gc")["foreground"] == pytest.approx(
+            (1.0, 0.0, 0.0, 0.25), abs=1 / 255
+        )
         plt.close(fig)

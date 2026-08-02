@@ -6,6 +6,7 @@ matplotlib.use("Agg")
 
 import numpy as np
 import pytest
+from matplotlib.patches import Rectangle
 
 from gerrytools.plotting.data.histogram import Histogram
 
@@ -52,7 +53,7 @@ class TestHistogramActualBuilds:
     def test_build_with_binwidth(self):
         h = Histogram()
         h.add_dataset([1.0, 2.0, 3.0])
-        h.set_bins_by_width(0.5)
+        h.set_bin_widths(0.5)
 
         np.testing.assert_allclose(h._compute_bins(), [1.0, 1.5, 2.0, 2.5, 3.0])
 
@@ -69,7 +70,7 @@ class TestHistogramActualBuilds:
     def test_build_with_centered_bin_alignment(self):
         h = Histogram()
         h.add_dataset([1.0, 2.0, 3.0])
-        h.center_data_on_bin_edges()
+        h.center_bars()
         ax = h.ax
         assert ax is not None
 
@@ -115,30 +116,27 @@ class TestHistogramCenterOnBinEdgeErrors:
         h = Histogram()
         h.display_warnings(False)
         h.set_bins([0, 1, 3, 6])
-        h.center_data_on_bin_edges()
+        h.center_bars()
         h.add_dataset([0.5, 1.5, 4.0])
         with pytest.raises(ValueError, match="Cannot center histogram"):
             h.ax
 
 
 # ===================================
-# == WEAVE/STACK EDGEWIDTH WARNING ==
+# == GROUPED/STACK DEFAULT EDGES ==
 # ===================================
 
 
-class TestHistogramGroupedEdgeWidthWarning:
-    """Grouped and stack modes warn when edge widths are enabled."""
+class TestHistogramGroupedEdges:
+    """Grouped and stack modes support the default visible bar edges."""
 
-    def test_grouped_with_positive_edgewidth_warns(self):
-
+    def test_grouped_default_edges_do_not_warn(self):
         h = Histogram()
-        h.add_dataset([1.0, 2.0, 3.0], histtype="grouped", edgewidth=1.0, edgecolor="black")
+        h.add_dataset([1.0, 2.0, 3.0], histtype="grouped")
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             h.ax
-            user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
-            assert len(user_warnings) >= 1
-            assert any("edgewidth" in str(x.message).lower() for x in user_warnings)
+        assert not [x for x in w if issubclass(x.category, UserWarning)]
 
 
 # ==========================================
@@ -152,7 +150,7 @@ class TestHistogramOutlineCenteredBins:
     def test_outline_histogram_with_centered_bins(self):
         h = Histogram()
         h.display_warnings(False)
-        h.center_data_on_bin_edges()
+        h.center_bars()
         h.add_dataset(
             [1.0, 1.0, 2.0, 2.0, 3.0],
             histtype="outline",
@@ -199,8 +197,7 @@ class TestMarkerClearanceZeroHeightPath:
 
 class TestColorOverrideAlpha:
     def test_edgecolor_override_draws_opaque_edges(self):
-        # Regression: edgecolor="black" with no edgealpha must not inherit the alpha resolved
-        # from the default edgecolor "none" (0.0), which drew invisible edges.
+        # An explicit edge color with no edge alpha must remain opaque.
         h = Histogram()
         h.add_dataset([0.0, 1.0, 1.0, 2.0], edgecolor="black", edgewidth=0.7)
         bar_edge_rgba = h.ax.patches[0].get_edgecolor()
@@ -213,6 +210,20 @@ class TestColorOverrideAlpha:
         assert bar_edge_rgba == (0.0, 0.0, 0.0, 0.4)
 
 
+@pytest.mark.parametrize(
+    ("weights", "expected_heights"),
+    [(None, [2.0, 1.0]), ([2.0, 3.0, 4.0], [5.0, 4.0])],
+    ids=["counts", "weights"],
+)
+def test_bar_heights_match_histogram_counts_and_weights(weights, expected_heights):
+    h = Histogram()
+    h.set_bins([0.0, 1.0, 2.0])
+    h.add_dataset([0.2, 0.7, 1.4], weights=weights)
+
+    bars = [patch for patch in h.ax.patches if isinstance(patch, Rectangle)]
+    assert [patch.get_height() for patch in bars] == expected_heights
+
+
 class TestGroupedCenteredBinAlignment:
     def test_grouped_centered_group_tiles_around_bin_edge(self):
         # Regression: grouped bars were offset from the raw edges but drawn align="center",
@@ -221,7 +232,7 @@ class TestGroupedCenteredBinAlignment:
         h.set_bins([0.0, 1.0, 2.0])
         h.add_dataset([0.5, 1.5], histtype="grouped", name="a")
         h.add_dataset([0.5, 1.5], histtype="grouped", name="b")
-        h.center_data_on_bin_edges()
+        h.center_bars()
         ax = h.ax
 
         from matplotlib.patches import Rectangle
@@ -239,7 +250,7 @@ class TestGroupedCenteredBinAlignment:
         h.set_bins([0.0, 1.0, 2.0])
         h.add_dataset([0.5, 1.5], histtype="grouped", name="a")
         h.add_dataset([0.5, 1.5], histtype="grouped", name="b")
-        h.center_data_on_bin_edges()
+        h.center_bars()
         h.add_points_above(0.5, name="pt", centered_on_bin=True)
         ax = h.ax
 
@@ -253,7 +264,7 @@ class TestGroupedCenteredBinAlignment:
         h = Histogram()
         h.set_bins([0.0, 1.0, 2.0])
         h.add_dataset([0.1] * 5 + [1.1])
-        h.center_data_on_bin_edges()
+        h.center_bars()
         h.add_points_above(0.9)
 
         point_y = float(np.asarray(h.ax.lines[-1].get_ydata())[0])

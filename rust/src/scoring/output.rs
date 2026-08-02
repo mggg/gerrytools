@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
+use std::fmt::Write as _;
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::{Component, Path, PathBuf};
@@ -188,6 +189,7 @@ impl Default for RunWriterOptions {
 pub struct RunWriter {
     output_path: PathBuf,
     temp_path: PathBuf,
+    run_name: String,
     metadata: RunMetadata,
     writers: Vec<MetricWriter>,
     district_ids: Option<Vec<u16>>,
@@ -212,15 +214,26 @@ impl RunWriter {
         metadata: RunMetadata,
         options: RunWriterOptions,
     ) -> Result<Self> {
-        validate_metadata(&metadata, options)?;
         let output_path = output_path.as_ref().to_path_buf();
+        validate_metadata(&metadata, options)?;
         validate_output_path(&output_path)?;
 
         let parent = output_parent(&output_path);
+        let run_name = encode_path_component(
+            &output_path
+                .file_name()
+                .expect("validated output path has a file name")
+                .to_string_lossy(),
+        );
+        validate_output_paths(&metadata, &run_name)?;
         fs::create_dir_all(parent)?;
         let temp_path = create_temp_directory(parent, &output_path)?;
-        let writers = match create_metric_writers(&temp_path, &metadata.metrics, options.batch_rows)
-        {
+        let writers = match create_metric_writers(
+            &temp_path,
+            &run_name,
+            &metadata.metrics,
+            options.batch_rows,
+        ) {
             Ok(writers) => writers,
             Err(error) => {
                 let _ = fs::remove_dir_all(&temp_path);
@@ -231,6 +244,7 @@ impl RunWriter {
         Ok(Self {
             output_path,
             temp_path,
+            run_name,
             metadata,
             writers,
             district_ids: None,
@@ -337,8 +351,18 @@ impl RunWriter {
         for writer in std::mem::take(&mut self.writers) {
             writer.finish(self.district_ids.as_deref().unwrap_or_default())?;
         }
+        let mut directories = HashSet::new();
         for metric in &self.metadata.metrics {
-            sync_directory(&self.temp_path.join(&metric.instance))?;
+            for table in physical_tables(&self.run_name, metric) {
+                if let Some(parent) = self.temp_path.join(table.relative_path).parent() {
+                    if parent != self.temp_path {
+                        directories.insert(parent.to_path_buf());
+                    }
+                }
+            }
+        }
+        for directory in directories {
+            sync_directory(&directory)?;
         }
         self.write_manifest(summary)?;
         sync_directory(&self.temp_path)?;
@@ -354,8 +378,19 @@ impl RunWriter {
             .metrics
             .iter()
             .map(|metric| -> Result<Value> {
-                let table = format!("{}/scores.parquet", metric.instance);
-                let (table_size, table_sha256) = file_integrity(&self.temp_path.join(&table))?;
+                let tables = physical_tables(&self.run_name, metric)
+                    .into_iter()
+                    .map(|table| -> Result<Value> {
+                        let (size, sha256) =
+                            file_integrity(&self.temp_path.join(&table.relative_path))?;
+                        Ok(json!({
+                            "path": table.relative_path,
+                            "subkeys": table.subkeys,
+                            "size": size,
+                            "sha256": sha256,
+                        }))
+                    })
+                    .collect::<Result<Vec<_>>>()?;
                 let mut description = json!({
                     "kind": metric.kind,
                     "instance": metric.instance,
@@ -363,9 +398,7 @@ impl RunWriter {
                     "shape": metric.shape,
                     "subkeys": metric.subkeys,
                     "dtypes": metric.dtypes,
-                    "table": table,
-                    "table_size": table_size,
-                    "table_sha256": table_sha256,
+                    "tables": tables,
                 });
                 if let Some(axes) = &metric.axes {
                     description
@@ -390,7 +423,7 @@ impl RunWriter {
             summary_json.insert("unique_districts".into(), json!(unique_districts));
         }
         let manifest = json!({
-            "format_version": 1,
+            "format_version": 2,
             "source": self.metadata.source.as_ref().map(|path| json!({"path": path})),
             "summary": summary_json,
             "district_ids": self.district_ids.as_deref().unwrap_or_default(),
@@ -401,7 +434,9 @@ impl RunWriter {
             ],
             "metrics": metrics,
         });
-        let path = self.temp_path.join("manifest.json");
+        let path = self
+            .temp_path
+            .join(format!("manifest__{}.json", self.run_name));
         let mut file = File::create(path)?;
         serde_json::to_writer_pretty(&mut file, &manifest)
             .map_err(|error| Error::Output(format!("manifest output error: {error}")))?;
@@ -490,30 +525,42 @@ impl Drop for RunWriter {
 }
 
 struct MetricWriter {
+    shape: TableShape,
+    subkeys: Vec<String>,
+    tables: Vec<TableWriter>,
+}
+
+struct TableWriter {
     path: PathBuf,
     shape: TableShape,
     subkeys: Vec<String>,
+    indices: Vec<usize>,
     batch_rows: usize,
     /// The schema is built once, when the first district ids are known, and reused per batch.
     writer: Option<(SchemaRef, ArrowWriter<File>)>,
     sample_offsets: Vec<u64>,
     repetitions: Vec<u16>,
     accepted_indices: Vec<u64>,
-    columns: Vec<Vec<f64>>,
+    values: Vec<Vec<f64>>,
 }
 
 impl MetricWriter {
-    fn new(path: PathBuf, metadata: &MetricMetadata, batch_rows: usize) -> Self {
+    fn new(root: &Path, run_name: &str, metadata: &MetricMetadata, batch_rows: usize) -> Self {
+        let tables = physical_tables(run_name, metadata)
+            .into_iter()
+            .map(|table| {
+                TableWriter::new(
+                    root.join(&table.relative_path),
+                    metadata.shape,
+                    table,
+                    batch_rows,
+                )
+            })
+            .collect();
         Self {
-            path,
             shape: metadata.shape,
             subkeys: metadata.subkeys.clone(),
-            batch_rows,
-            writer: None,
-            sample_offsets: Vec::with_capacity(batch_rows),
-            repetitions: Vec::with_capacity(batch_rows),
-            accepted_indices: Vec::with_capacity(batch_rows),
-            columns: Vec::new(),
+            tables,
         }
     }
 
@@ -547,25 +594,56 @@ impl MetricWriter {
     }
 
     fn push(&mut self, score: &PlanScore, metric: &MetricScore) -> Result<()> {
+        for table in &mut self.tables {
+            table.push(score, metric)?;
+        }
+        Ok(())
+    }
+
+    fn finish(self, district_ids: &[u16]) -> Result<()> {
+        for table in self.tables {
+            table.finish(district_ids)?;
+        }
+        Ok(())
+    }
+}
+
+impl TableWriter {
+    fn new(path: PathBuf, shape: TableShape, table: PhysicalTable, batch_rows: usize) -> Self {
+        Self {
+            path,
+            shape,
+            subkeys: table.subkeys,
+            indices: table.columns,
+            batch_rows,
+            writer: None,
+            sample_offsets: Vec::with_capacity(batch_rows),
+            repetitions: Vec::with_capacity(batch_rows),
+            accepted_indices: Vec::with_capacity(batch_rows),
+            values: Vec::new(),
+        }
+    }
+
+    fn push(&mut self, score: &PlanScore, metric: &MetricScore) -> Result<()> {
         match metric {
             MetricScore::District(table) => {
-                let value_columns = table.column_count() * table.district_ids().len();
+                let value_columns = self.indices.len() * table.district_ids().len();
                 self.ensure_columns(value_columns);
-                for subkey in 0..table.column_count() {
+                for (output, &subkey) in self.indices.iter().enumerate() {
                     for (district, value) in table
                         .column(subkey)
                         .expect("validated district-table column")
                         .iter()
                         .enumerate()
                     {
-                        self.columns[subkey * table.district_ids().len() + district].push(*value);
+                        self.values[output * table.district_ids().len() + district].push(*value);
                     }
                 }
             }
             MetricScore::Plan(table) => {
-                self.ensure_columns(table.values().len());
-                for (column, value) in self.columns.iter_mut().zip(table.values()) {
-                    column.push(*value);
+                self.ensure_columns(self.indices.len());
+                for (output, &column) in self.indices.iter().enumerate() {
+                    self.values[output].push(table.values()[column]);
                 }
             }
         }
@@ -581,12 +659,12 @@ impl MetricWriter {
     }
 
     fn ensure_columns(&mut self, count: usize) {
-        if self.columns.is_empty() {
-            self.columns = (0..count)
+        if self.values.is_empty() {
+            self.values = (0..count)
                 .map(|_| Vec::with_capacity(self.batch_rows))
                 .collect();
         }
-        debug_assert_eq!(self.columns.len(), count);
+        debug_assert_eq!(self.values.len(), count);
     }
 
     fn finish(mut self, district_ids: &[u16]) -> Result<()> {
@@ -644,10 +722,10 @@ impl MetricWriter {
             ))),
         ];
         debug_assert_eq!(
-            self.columns.len(),
+            self.values.len(),
             schema.fields().len() - PREFIX_COLUMN_COUNT
         );
-        for column in &mut self.columns {
+        for column in &mut self.values {
             arrays.push(Arc::new(Float64Array::from(std::mem::replace(
                 column,
                 Vec::with_capacity(self.batch_rows),
@@ -751,6 +829,27 @@ fn validate_metadata(metadata: &RunMetadata, options: RunWriterOptions) -> Resul
                     "plan subkey {subkey:?} conflicts with a prefix column"
                 )));
             }
+        }
+    }
+    Ok(())
+}
+
+fn validate_output_paths(metadata: &RunMetadata, run_name: &str) -> Result<()> {
+    let mut paths = metadata
+        .metrics
+        .iter()
+        .flat_map(|metric| physical_tables(run_name, metric))
+        .map(|table| PathBuf::from(table.relative_path))
+        .collect::<Vec<_>>();
+    paths.push(PathBuf::from(format!("manifest__{run_name}.json")));
+    for (index, left) in paths.iter().enumerate() {
+        if paths[index + 1..]
+            .iter()
+            .any(|right| left == right || left.starts_with(right) || right.starts_with(left))
+        {
+            return Err(invalid_run(format!(
+                "score output path {left:?} conflicts with another metric"
+            )));
         }
     }
     Ok(())
@@ -899,21 +998,87 @@ fn create_temp_directory(parent: &Path, output_path: &Path) -> Result<PathBuf> {
     Err(io::Error::new(io::ErrorKind::AlreadyExists, "temporary path collision").into())
 }
 
+struct PhysicalTable {
+    relative_path: String,
+    subkeys: Vec<String>,
+    columns: Vec<usize>,
+}
+
+fn physical_tables(run_name: &str, metric: &MetricMetadata) -> Vec<PhysicalTable> {
+    if metric.kind == "tally" {
+        return metric
+            .subkeys
+            .iter()
+            .enumerate()
+            .map(|(column, subkey)| PhysicalTable {
+                relative_path: format!(
+                    "{}/{}_tallies__{run_name}.parquet",
+                    metric.instance,
+                    encode_path_component(subkey)
+                ),
+                subkeys: vec![subkey.clone()],
+                columns: vec![column],
+            })
+            .collect();
+    }
+    if metric.kind == "tally_by_region" {
+        let (metric_axis, region_count) = match metric.axes.as_ref() {
+            Some(MetricAxesMetadata::Region(axes)) => (&axes.metric, axes.region.labels.len()),
+            _ => unreachable!("validated tally-by-region metadata has region axes"),
+        };
+        return metric_axis
+            .iter()
+            .enumerate()
+            .map(|(metric_index, name)| {
+                let start = metric_index * region_count;
+                let end = start + region_count;
+                PhysicalTable {
+                    relative_path: format!(
+                        "{}/{}_tallies_by_region__{run_name}.parquet",
+                        metric.instance,
+                        encode_path_component(name)
+                    ),
+                    subkeys: metric.subkeys[start..end].to_vec(),
+                    columns: (start..end).collect(),
+                }
+            })
+            .collect();
+    }
+
+    vec![PhysicalTable {
+        relative_path: format!("{}__{run_name}.parquet", metric.instance),
+        subkeys: metric.subkeys.clone(),
+        columns: (0..metric.subkeys.len()).collect(),
+    }]
+}
+
+fn encode_path_component(value: &str) -> String {
+    let mut encoded = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-' | b'.') {
+            encoded.push(char::from(byte));
+        } else {
+            write!(&mut encoded, "%{byte:02X}").expect("writing to a string cannot fail");
+        }
+    }
+    encoded
+}
+
 fn create_metric_writers(
     temp_path: &Path,
+    run_name: &str,
     metadata: &[MetricMetadata],
     batch_rows: usize,
 ) -> Result<Vec<MetricWriter>> {
     metadata
         .iter()
         .map(|metric| {
-            let directory = temp_path.join(&metric.instance);
-            fs::create_dir(&directory)?;
-            Ok(MetricWriter::new(
-                directory.join("scores.parquet"),
-                metric,
-                batch_rows,
-            ))
+            for table in physical_tables(run_name, metric) {
+                if let Some(parent) = temp_path.join(table.relative_path).parent() {
+                    fs::create_dir_all(parent)?;
+                }
+            }
+            Ok(MetricWriter::new(temp_path, run_name, metric, batch_rows))
         })
         .collect()
 }
@@ -927,7 +1092,12 @@ fn output_parent(output_path: &Path) -> &Path {
 }
 
 fn sync_directory(path: &Path) -> Result<()> {
+    #[cfg(unix)]
     File::open(path)?.sync_all()?;
+    // Windows does not let std::fs::File open a directory. Metric files are already synced
+    // before publication; skip the additional directory-metadata barrier there.
+    #[cfg(not(unix))]
+    let _ = path;
     Ok(())
 }
 

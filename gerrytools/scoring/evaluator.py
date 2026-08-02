@@ -4,7 +4,7 @@ import json
 import math
 import numbers
 import os
-import warnings
+import tempfile
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass
 from itertools import chain
@@ -16,12 +16,10 @@ from weakref import WeakSet
 import networkx as nx
 import numpy as np
 import pandas as pd
-from binary_ensemble import BendlDecoder
 from geopandas import GeoDataFrame
 from gerrychain import Graph as GerryGraph
 from gerrychain import Partition
 from pyproj import CRS
-from shapely import STRtree, from_wkb, point_on_surface
 from tqdm.auto import tqdm
 
 from gerrytools import _scoring_engine
@@ -31,14 +29,19 @@ from gerrytools._geodataframe import (
     _validated_geometry_frame,
 )
 
+from ._manifest import find_manifest_path, preferred_manifest_path
+from ._types import (
+    EvaluationSummary,
+    _MetricResult,
+    _ResultShape,
+    _StreamRunOptions,
+    is_valid_metric_name,
+)
 from .metrics import Metric, _merged_keys, _MetricBase, _OutputSpec, _ResourceSpec
 from .result import (
     EnsembleEvalResult,
     EvaluationRun,
-    EvaluationSummary,
     PlanEvalResult,
-    _MetricResult,
-    is_valid_metric_name,
 )
 
 _MAX_DISTRICTS = _scoring_engine.MAX_DISTRICTS
@@ -73,8 +76,8 @@ class _LogicalOutput:
 @dataclass(frozen=True, slots=True)
 class _GeometrySource:
     frame: GeoDataFrame
-    node_column: str | None
-    crs: CRS | None
+    node_id_column: str | None
+    target_crs: CRS | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,6 +92,7 @@ class _PreparedGeometry:
     frame: GeoDataFrame
     wkb: tuple[bytes, ...]
     crs: CRS
+    native: _scoring_engine.PreparedGeometry
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,8 +113,6 @@ class _PreparedResources:
     region_columns: Mapping[tuple[str, str], _PreparedRegion]
     alignment: _UnitAlignment | None
     geometry: _PreparedGeometry | None
-    rook_edges: tuple[tuple[int, int], ...] | None
-    population_positions: Mapping[tuple[bytes, ...], tuple[int, ...]]
     fixed_values: Mapping[Hashable, float]
 
 
@@ -123,8 +125,6 @@ class _ResourceCandidate:
     region_columns: dict[tuple[str, str], _PreparedRegion]
     alignment: _UnitAlignment | None
     geometry: _PreparedGeometry | None
-    rook_edges: tuple[tuple[int, int], ...] | None
-    population_positions: dict[tuple[bytes, ...], tuple[int, ...]]
     fixed_values: dict[Hashable, float]
 
 
@@ -137,13 +137,20 @@ class PlanEvaluator:
     and restored in the result.
 
     Args:
-        graph: An undirected, simple NetworkX-compatible graph containing metric attributes.
-        geometry: Optional GeoDataFrame with exactly one row per graph node. The whole aligned
-            frame is authoritative for ordinary node and region columns, except that its active
-            geometry column is reserved for geometry-backed metrics.
-        node_column: Optional geometry-frame column containing graph node identifiers. The
-            GeoDataFrame index is used when omitted.
-        crs: Optional projected CRS used by geometry-backed metrics.
+        graph (nx.Graph): An undirected, simple NetworkX-compatible graph containing metric
+            attributes.
+        geometry (GeoDataFrame | None, optional): GeoDataFrame with exactly one row per graph node.
+            The whole aligned frame is authoritative for ordinary node and region columns, except
+            that its active geometry column is reserved for geometry-backed metrics. Defaults to
+            None.
+        node_id_column (str | None, optional): Geometry-frame column containing graph node
+            identifiers. Defaults to None, which uses the GeoDataFrame index.
+        target_crs (Any | None, optional): Projected CRS used by geometry-backed metrics. Defaults
+            to None, which uses the geometry's CRS.
+
+    Raises:
+        ValueError: If the graph is empty, directed, a multigraph, or otherwise incompatible with
+            the supplied geometry options.
     """
 
     def __init__(
@@ -151,15 +158,15 @@ class PlanEvaluator:
         graph: nx.Graph,
         *,
         geometry: GeoDataFrame | None = None,
-        node_column: str | None = None,
-        crs: Any | None = None,
+        node_id_column: str | None = None,
+        target_crs: Any | None = None,
     ) -> None:
         if graph.is_directed():
             raise ValueError("graph must be undirected")
         if graph.is_multigraph():
             raise ValueError("graph must be simple, not a multigraph")
-        if geometry is None and (node_column is not None or crs is not None):
-            raise ValueError("node_column and crs require geometry")
+        if geometry is None and (node_id_column is not None or target_crs is not None):
+            raise ValueError("node_id_column and target_crs require geometry")
 
         self._node_order = tuple(graph.nodes)
         if not self._node_order:
@@ -184,7 +191,11 @@ class PlanEvaluator:
         self._engine_prepared: tuple[_OutputSpec, ...] = ()
         self._outputs: tuple[_LogicalOutput, ...] = ()
         if geometry is not None:
-            self.add_geometry(geometry, node_column=node_column, crs=crs)
+            self.add_geometry(
+                geometry,
+                node_id_column=node_id_column,
+                target_crs=target_crs,
+            )
 
     @property
     def _node_count(self) -> int:
@@ -203,25 +214,53 @@ class PlanEvaluator:
         self,
         geometry: GeoDataFrame,
         *,
-        node_column: str | None = None,
-        crs: Any | None = None,
+        node_id_column: str | None = None,
+        target_crs: Any | None = None,
     ) -> "PlanEvaluator":
-        """Record an authoritative GeoDataFrame for lazy metric preparation."""
+        """Record an authoritative GeoDataFrame for lazy metric preparation.
+
+        Args:
+            geometry (GeoDataFrame): Frame containing one row per graph node.
+            node_id_column (str | None, optional): Column containing graph node identifiers.
+                Defaults to None, which uses the frame index.
+            target_crs (Any | None, optional): Projected CRS for geometry metrics. Defaults to None.
+
+        Returns:
+            PlanEvaluator: This evaluator, for chained registration.
+
+        Raises:
+            RuntimeError: If geometry is already registered or a metric was added first.
+            TypeError: If ``geometry`` is not a GeoDataFrame.
+            ValueError: If ``node_id_column`` is not a nonempty string or ``target_crs`` is invalid.
+        """
         if self._metrics:
             raise RuntimeError("geometry must be added before the first metric")
         if self._has_geometry:
             raise RuntimeError("geometry has already been added")
         if not isinstance(geometry, GeoDataFrame):
             raise TypeError("geometry must be a GeoDataFrame")
-        if node_column is not None and (not isinstance(node_column, str) or not node_column):
-            raise ValueError("node_column must be a nonempty string or None")
-        target_crs = None if crs is None else CRS.from_user_input(crs)
-        self._geometry_source = _GeometrySource(geometry, node_column, target_crs)
+        if node_id_column is not None and (
+            not isinstance(node_id_column, str) or not node_id_column
+        ):
+            raise ValueError("node_id_column must be a nonempty string or None")
+        resolved_crs = None if target_crs is None else CRS.from_user_input(target_crs)
+        self._geometry_source = _GeometrySource(geometry, node_id_column, resolved_crs)
         self._invalidate()
         return self
 
     def add_metric(self, metric: Metric) -> "PlanEvaluator":
-        """Register one logical metric and return this evaluator."""
+        """Register one logical metric.
+
+        Args:
+            metric (Metric): Metric description to register.
+
+        Returns:
+            PlanEvaluator: This evaluator, for chained registration.
+
+        Raises:
+            TypeError: If ``metric`` is not a supported metric description.
+            ValueError: If its result name is already registered or its options are invalid.
+        """
         if not isinstance(metric, _MetricBase):
             raise TypeError("metric must be a supported GerryTools metric description")
         instance = _result_name(metric)
@@ -237,6 +276,16 @@ class PlanEvaluator:
 
         Result names and metric requirements are all checked before any metric is registered, so
         a failure anywhere in the batch registers nothing.
+
+        Args:
+            *metrics (Metric): Metric descriptions to register.
+
+        Returns:
+            PlanEvaluator: This evaluator, for chained registration.
+
+        Raises:
+            TypeError: If any value is not a supported metric description.
+            ValueError: If a result name is duplicated or metric options are invalid.
         """
         names = {name for name, _ in self._metrics}
         batch: list[tuple[str, _MetricBase]] = []
@@ -262,6 +311,10 @@ class PlanEvaluator:
         caches that combined result, so requesting additional metrics from the same partition does
         not evaluate the plan again. The returned mapping reflects the metrics registered when this
         method is called.
+
+        Returns:
+            dict[str, Callable[[Partition], Any]]: Updaters keyed by registered metric name, plus
+            one internal updater that shares the combined evaluation.
         """
         names = self.metrics
         if not names:
@@ -278,7 +331,18 @@ class PlanEvaluator:
         return updaters
 
     def evaluate(self, plan: Assignment | Partition) -> PlanEvalResult:
-        """Evaluate one assignment or GerryChain partition."""
+        """Evaluate one assignment or GerryChain partition.
+
+        Args:
+            plan (Assignment | Partition): District assignment or compatible partition.
+
+        Returns:
+            PlanEvalResult: Values keyed by registered metric name.
+
+        Raises:
+            TypeError: If the plan or required graph attributes have incompatible types.
+            ValueError: If the plan, graph resources, or metric inputs are invalid.
+        """
         self._prepare()
         results, _ = self._score_rows([self._normalize_plan(plan)])
         return PlanEvalResult(results)
@@ -294,10 +358,19 @@ class PlanEvaluator:
         """Evaluate a nonempty batch of assignments or partitions with stable district labels.
 
         Args:
-            plans: Assignments or partitions to evaluate.
-            sample_ids: Optional unique result-index values in plan order.
-            track_uniqueness: Count label-invariant unique plans and districts.
-            progress: Display a terminal- or notebook-aware progress bar.
+            plans (Iterable[Assignment | Partition]): Assignments or partitions to evaluate.
+            sample_ids (Iterable[Hashable] | None, optional): Unique result-index values in plan
+                order. Defaults to None, which uses a range index.
+            track_uniqueness (bool, optional): Whether to count label-invariant unique plans and
+                districts. Defaults to False.
+            progress (bool, optional): Whether to display a progress bar. Defaults to False.
+
+        Returns:
+            EnsembleEvalResult: Metric values and optional uniqueness summary for every plan.
+
+        Raises:
+            TypeError: If a Boolean option or plan has an incompatible type.
+            ValueError: If ``plans`` is empty or plan data and sample identifiers are invalid.
         """
         if not isinstance(track_uniqueness, bool):
             raise TypeError("track_uniqueness must be a boolean")
@@ -332,32 +405,44 @@ class PlanEvaluator:
     def evaluate_stream(
         self,
         source: str | os.PathLike[str],
-        output: str | os.PathLike[str],
+        output_dir: str | os.PathLike[str],
         *,
         max_samples: int | np.integer | None = None,
         batch_size: int | np.integer = 256,
         track_uniqueness: bool = False,
         progress: bool = False,
+        update: bool = False,
     ) -> EvaluationRun:
-        """Evaluate a BEN, XBEN, or finalized BENDL stream into an atomic Parquet run directory.
+        """Evaluate a BEN, XBEN, or finalized BENDL stream into a Parquet run directory.
 
         Assignment positions must follow this evaluator's graph-node order. The output path must
-        not already exist. A BENDL graph, when present, must use exactly that node order. BEN,
-        XBEN, and graph-free BENDL inputs leave ordering to the caller. A failed run leaves no
-        published directory.
+        contain scores for the same assignment stream when it already exists. New score names are
+        added to an existing run. Existing names require ``update=True`` and are replaced. A BENDL
+        graph, when present, must use exactly this evaluator's node order. BEN, XBEN, and graph-free
+        BENDL inputs leave ordering to the caller.
 
         Args:
-            source: Input BEN, XBEN, or finalized BENDL file.
-            output: New directory for the version-1 manifest and metric tables.
-            max_samples: Optional limit after expanding frame repetitions. Zero writes an empty
-                run.
-            batch_size: Maximum number of full assignment frames scored in one engine batch.
-            track_uniqueness: Count label-invariant unique plans and districts. Incremental streams
-                rehash districts touched by each delta; unrelated plans require full scans.
-            progress: Display a terminal- or notebook-aware progress bar.
+            source (str | os.PathLike[str]): Input BEN, XBEN, or finalized BENDL file.
+            output_dir (str | os.PathLike[str]): Directory containing the manifest and score tables.
+            max_samples (int | np.integer | None, optional): Limit after expanding frame
+                repetitions. Zero writes an empty run. Defaults to None, which reads the full run.
+            batch_size (int | np.integer, optional): Maximum full assignment frames scored in one
+                engine batch. Defaults to 256.
+            track_uniqueness (bool, optional): Whether to count label-invariant unique plans and
+                districts. Defaults to False.
+            progress (bool, optional): Whether to display a progress bar. Defaults to False.
+            update (bool, optional): Whether to replace registered score names already present in
+                ``output_dir``. New names are always added. Defaults to False.
 
         Returns:
-            The completed evaluation run.
+            EvaluationRun: The completed evaluation run.
+
+        Raises:
+            FileExistsError: If a registered score name is already present and ``update`` is
+                false.
+            RuntimeError: If no metrics are registered.
+            TypeError: If a Boolean option has an incompatible type.
+            ValueError: If a numeric option, input stream, assignment, or output path is invalid.
         """
         if not self._metrics:
             raise RuntimeError("at least one metric must be registered before scoring")
@@ -379,14 +464,12 @@ class PlanEvaluator:
             raise TypeError("track_uniqueness must be a boolean")
         if not isinstance(progress, bool):
             raise TypeError("progress must be a boolean")
+        if not isinstance(update, bool):
+            raise TypeError("update must be a boolean")
 
         source_path = Path(source)
-        output_path = Path(output)
-        source_samples = _verify_bendl_node_order(
-            source_path,
-            self._node_order,
-            count_samples=progress,
-        )
+        output_path = Path(output_dir)
+        bendl_node_order_json = _node_order_json(self._node_order)
         engine = self._prepare()
         metrics = []
         for (instance, metric), logical_output in zip(self._metrics, self._outputs, strict=True):
@@ -400,7 +483,7 @@ class PlanEvaluator:
                 "dtypes": list(spec.dtypes),
                 "axes": {"metric": [str(column) for column in spec.columns]},
             }
-            if spec.shape == "region":
+            if spec.shape == _ResultShape.REGION:
                 assert spec.region_name is not None
                 labels = self._stream_region_labels(instance, spec.region_name)
                 if len(labels) != len(spec.regions):
@@ -416,26 +499,62 @@ class PlanEvaluator:
             (logical_output.source, list(logical_output.columns))
             for logical_output in self._outputs
         ]
-        if progress:
-            total = max_samples
-            if source_samples is not None:
-                total = source_samples if max_samples is None else min(source_samples, max_samples)
-            with tqdm(total=total, desc="Evaluating ensemble", unit="sample") as bar:
+        stream_options: _StreamRunOptions = {
+            "bendl_node_order_json": bendl_node_order_json,
+            "max_samples": max_samples,
+            "batch_size": batch_size,
+            "track_uniqueness": track_uniqueness,
+            "progress": None,
+        }
+        existing = EvaluationRun.open(output_path) if output_path.exists() else None
+        if existing is not None:
+            duplicates = tuple(name for name in self.metrics if name in existing.metrics)
+            if duplicates and not update:
+                names = ", ".join(repr(name) for name in duplicates)
+                raise FileExistsError(
+                    f"evaluation run already contains {names}; pass update=True to replace them"
+                )
+
+        def score(target: Path) -> None:
+            if progress:
+                total = max_samples
+                with tqdm(total=total, desc="Evaluating ensemble", unit="sample") as bar:
+
+                    def report_progress(amount: int, discovered_total: int | None) -> None:
+                        if discovered_total is None:
+                            bar.update(amount)
+                        else:
+                            bar.reset(total=discovered_total)
+
+                    stream_options["progress"] = report_progress
+                    engine.score_run(
+                        source_path,
+                        target,
+                        metadata,
+                        stream_options,
+                        projections,
+                    )
+            else:
                 engine.score_run(
                     source_path,
-                    output_path,
+                    target,
                     metadata,
-                    (max_samples, batch_size, track_uniqueness, bar.update),
+                    stream_options,
                     projections,
                 )
-        else:
-            engine.score_run(
-                source_path,
-                output_path,
-                metadata,
-                (max_samples, batch_size, track_uniqueness, None),
-                projections,
-            )
+
+        if existing is None:
+            score(output_path)
+            return EvaluationRun.open(output_path)
+
+        output_parent = output_path.parent if output_path.parent != Path("") else Path(".")
+        with tempfile.TemporaryDirectory(
+            dir=output_parent,
+            prefix=f".{output_path.name}.update-",
+        ) as temporary:
+            staged = Path(temporary) / output_path.name
+            score(staged)
+            _merge_evaluation_run(output_path, existing, staged)
         return EvaluationRun.open(output_path)
 
     def _score_rows(
@@ -463,7 +582,7 @@ class PlanEvaluator:
                 [row[output.source] for row in engine_rows],
                 dtype=np.float64,
             )
-            if spec.shape == "region":
+            if spec.shape == _ResultShape.REGION:
                 values = values.reshape(
                     plan_count,
                     engine_spec.value_count,
@@ -476,7 +595,7 @@ class PlanEvaluator:
                     len(labels),
                 )
                 districts = labels
-            elif spec.shape == "district":
+            elif spec.shape == _ResultShape.DISTRICT:
                 values = values.reshape(
                     plan_count,
                     engine_spec.value_count,
@@ -541,7 +660,7 @@ class PlanEvaluator:
             outputs = []
             for (_, metric), source in zip(self._metrics, sources, strict=True):
                 prepared = engine_prepared[source]
-                if prepared.shape == "region":
+                if prepared.shape == _ResultShape.REGION:
                     columns = tuple(range(prepared.value_count))
                     spec = prepared
                 else:
@@ -555,10 +674,6 @@ class PlanEvaluator:
             if candidate is not None:
                 if not candidate.spec.fixed_values.issubset(candidate.fixed_values):
                     raise RuntimeError("metric preparation did not build every fixed resource")
-                if not candidate.spec.population_surfaces.issubset(candidate.population_positions):
-                    raise RuntimeError(
-                        "metric preparation did not build every population-position resource"
-                    )
                 resources = _freeze_resources(candidate)
             else:
                 resources = self._resources
@@ -585,8 +700,6 @@ class PlanEvaluator:
             region_columns={} if current is None else dict(current.region_columns),
             alignment=None if current is None else current.alignment,
             geometry=None if current is None else current.geometry,
-            rook_edges=None if current is None else current.rook_edges,
-            population_positions=({} if current is None else dict(current.population_positions)),
             fixed_values={} if current is None else dict(current.fixed_values),
         )
         if required.alignment and candidate.alignment is None:
@@ -601,9 +714,6 @@ class PlanEvaluator:
             candidate.region_columns[resource] = self._build_region_column(*resource, candidate)
         if required.geometry and candidate.geometry is None:
             candidate.geometry = self._build_geometry(candidate)
-        if required.rook and candidate.rook_edges is None:
-            assert candidate.geometry is not None
-            candidate.rook_edges = _rook_edges(candidate.geometry.frame)
         return candidate
 
     def _invalidate(self) -> None:
@@ -745,7 +855,7 @@ class PlanEvaluator:
     def _stream_region_labels(self, instance: str, key: str) -> list[dict[str, object]]:
         resource = self._ordinary_column_resource(key)
         region = self._resource_view().region_columns[resource]
-        labels = []
+        labels: list[dict[str, object]] = []
         seen: set[tuple[str, str | int]] = set()
         for node, value in zip(self._node_order, region.raw, strict=True):
             if value is None:
@@ -778,36 +888,18 @@ class PlanEvaluator:
             raise RuntimeError(f"{metric} geometry was not prepared")
         return geometry
 
-    def _geometry_rook_edges(self) -> list[tuple[int, int]]:
-        edges = self._resource_view().rook_edges
-        if edges is None:
-            raise RuntimeError("geometry rook topology was not prepared")
-        return list(edges)
-
-    def _population_positions(self, rows: tuple[bytes, ...]) -> list[int]:
-        resources = self._resource_view()
-        if rows not in resources.population_positions:
-            if (
-                not isinstance(resources, _ResourceCandidate)
-                or rows not in resources.spec.population_surfaces
-                or resources.geometry is None
-            ):
-                raise RuntimeError("alternative population positions were not prepared")
-            resources.population_positions[rows] = _population_positions(
-                resources.geometry.frame, rows
-            )
-        return list(resources.population_positions[rows])
-
     def _build_alignment(self) -> _UnitAlignment:
         source = self._geometry_source
         assert source is not None
         units = source.frame
-        if source.node_column is None:
+        if source.node_id_column is None:
             unit_nodes = units.index
         else:
-            if source.node_column not in units.columns:
-                raise ValueError(f"geometry does not contain node column {source.node_column!r}")
-            unit_nodes = units[source.node_column]
+            if source.node_id_column not in units.columns:
+                raise ValueError(
+                    f"geometry does not contain node ID column {source.node_id_column!r}"
+                )
+            unit_nodes = units[source.node_id_column]
         return _UnitAlignment(
             _alignment_positions(self._node_order, unit_nodes, target_name="graph nodes")
         )
@@ -909,11 +1001,13 @@ class PlanEvaluator:
             source.frame.iloc[list(candidate.alignment.positions)][[geometry_column]].copy(),
         )
         frame.index = _object_index(self._node_order, "node")
-        validated = _validated_geometry_frame(frame, crs=source.crs)
+        validated = _validated_geometry_frame(frame, crs=source.target_crs)
+        wkb = tuple(bytes(value) for value in validated.geometry.to_wkb(hex=False))
         return _PreparedGeometry(
             validated,
-            tuple(bytes(value) for value in validated.geometry.to_wkb(hex=False)),
+            wkb,
             CRS.from_user_input(validated.crs),
+            _scoring_engine._prepare_geometry(wkb),
         )
 
 
@@ -935,50 +1029,155 @@ def _checked_numeric_values(
     return tuple(checked)
 
 
-def _rook_edges(frame: GeoDataFrame) -> tuple[tuple[int, int], ...]:
-    reset = cast(GeoDataFrame, frame.reset_index(drop=True))
-    graph = cast(
-        "nx.Graph[int]",
-        GerryGraph.from_geodataframe(
-            reset,
-            adjacency="rook",
-            cols_to_add=[],
-            reproject=False,
-        ).get_nx_graph(),
-    )
-    return tuple(sorted((min(left, right), max(left, right)) for left, right in graph.edges))
+def _merge_evaluation_run(
+    output: Path,
+    existing: EvaluationRun,
+    staged: Path,
+) -> None:
+    staged_run = EvaluationRun.open(staged)
+    if (
+        existing.summary.samples != staged_run.summary.samples
+        or existing.summary.accepted != staged_run.summary.accepted
+        or existing._districts != staged_run._districts
+    ):
+        raise ValueError("new scores do not match the existing run dimensions")
+
+    existing_manifest = _version_2_manifest(_read_run_manifest(output))
+    staged_manifest = _version_2_manifest(_read_run_manifest(staged))
+    existing_entries = cast("list[dict[str, object]]", existing_manifest["metrics"])
+    staged_entries = cast("list[dict[str, object]]", staged_manifest["metrics"])
+    staged_by_name = {cast(str, entry["instance"]): entry for entry in staged_entries}
+
+    merged = []
+    for entry in existing_entries:
+        name = cast(str, entry["instance"])
+        merged.append(staged_by_name.pop(name, entry))
+    merged.extend(entry for entry in staged_entries if entry["instance"] in staged_by_name)
+
+    replaced = set(existing.metrics) & set(staged_run.metrics)
+    stale = {table.path for name in replaced for table in existing._metric_metadata[name].tables}
+    staged_tables = [
+        table for metric in staged_run._metric_metadata.values() for table in metric.tables
+    ]
+    destinations = {output / table.path.relative_to(staged): table.path for table in staged_tables}
+    unrelated = {
+        table.path
+        for name, metric in existing._metric_metadata.items()
+        if name not in replaced
+        for table in metric.tables
+    }
+    for destination in destinations:
+        if any(_paths_overlap(destination, path) for path in unrelated):
+            raise ValueError(f"score output path conflicts with an existing metric: {destination}")
+        if os.path.lexists(destination) and destination not in stale:
+            raise FileExistsError(f"new score would overwrite an untracked path: {destination}")
+        parent = destination.parent
+        while parent != output:
+            if parent.is_symlink() or (os.path.lexists(parent) and not parent.is_dir()):
+                raise FileExistsError(f"new score has an obstructed output path: {parent}")
+            parent = parent.parent
+
+    rollback_root = staged.parent / ".rollback"
+    backups: dict[Path, Path] = {}
+    installed: list[Path] = []
+    try:
+        for destination, source in destinations.items():
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            if os.path.lexists(destination):
+                backup = rollback_root / destination.relative_to(output)
+                backup.parent.mkdir(parents=True, exist_ok=True)
+                os.replace(destination, backup)
+                backups[destination] = backup
+            os.replace(source, destination)
+            installed.append(destination)
+
+        existing_manifest["metrics"] = merged
+        _write_run_manifest(output, existing_manifest)
+    except BaseException:
+        for destination in reversed(installed):
+            destination.unlink(missing_ok=True)
+        for destination, backup in backups.items():
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(backup, destination)
+        raise
+
+    for path in stale - set(destinations):
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+    for parent in sorted(
+        {path.parent for path in stale}, key=lambda path: len(path.parts), reverse=True
+    ):
+        if parent != output:
+            try:
+                parent.rmdir()
+            except OSError:
+                pass
 
 
-def _population_positions(frame: GeoDataFrame, rows: tuple[bytes, ...]) -> tuple[int, ...]:
-    population = from_wkb(np.asarray(rows, dtype=object))
-    graph_geometry = np.asarray(frame.geometry.array)
-    pairs = STRtree(graph_geometry).query(point_on_surface(population), predicate="within")
-    candidates: list[list[int]] = [[] for _ in rows]
-    for observation, node in zip(pairs[0], pairs[1], strict=True):
-        candidates[int(observation)].append(int(node))
+def _read_run_manifest(path: Path) -> dict[str, object]:
+    with find_manifest_path(path).open() as file:
+        manifest = json.load(file)
+    if not isinstance(manifest, dict):
+        raise ValueError("evaluation manifest must be an object")
+    return cast("dict[str, object]", manifest)
 
-    positions = []
-    for observation, (geometry, possible) in enumerate(zip(population, candidates, strict=True)):
-        tolerance = 1e-12 * max(float(geometry.area), 1.0)
-        covering = [
-            node
-            for node in possible
-            if float(geometry.difference(graph_geometry[node]).area) <= tolerance
+
+def _version_2_manifest(manifest: dict[str, object]) -> dict[str, object]:
+    version = manifest.get("format_version")
+    if version == 2:
+        return manifest
+    if version != 1:
+        raise ValueError("evaluation manifest must use format version 1 or 2")
+    metrics = cast("list[dict[str, object]]", manifest["metrics"])
+    for metric in metrics:
+        metric["tables"] = [
+            {
+                "path": metric.pop("table"),
+                "subkeys": metric["subkeys"],
+                "size": metric.pop("table_size"),
+                "sha256": metric.pop("table_sha256"),
+            }
         ]
-        if len(covering) != 1:
-            hint = (
-                " (degenerate or boundary-touching geometry, such as one whose "
-                "representative point falls on the owner's boundary, can defeat "
-                "coverage inference even when an owner covers it)"
-                if not covering
-                else ""
-            )
-            raise ValueError(
-                f"alternative population geometry {observation} must be covered by exactly "
-                f"one evaluator geometry; found {len(covering)}{hint}"
-            )
-        positions.append(covering[0])
-    return tuple(positions)
+    manifest["format_version"] = 2
+    return manifest
+
+
+def _write_run_manifest(path: Path, manifest: dict[str, object]) -> None:
+    previous = find_manifest_path(path)
+    published = preferred_manifest_path(path)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path,
+            prefix=".manifest-",
+            delete=False,
+        ) as file:
+            temporary = Path(file.name)
+            json.dump(manifest, file, allow_nan=False, indent=2)
+            file.write("\n")
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temporary, published)
+        temporary = None
+        if previous != published:
+            try:
+                previous.unlink(missing_ok=True)
+            except OSError:
+                pass
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def _paths_overlap(left: Path, right: Path) -> bool:
+    left_parts = left.parts
+    right_parts = right.parts
+    common = min(len(left_parts), len(right_parts))
+    return left_parts[:common] == right_parts[:common]
 
 
 def _freeze_resources(candidate: _ResourceCandidate) -> _PreparedResources:
@@ -990,8 +1189,6 @@ def _freeze_resources(candidate: _ResourceCandidate) -> _PreparedResources:
         region_columns=MappingProxyType(candidate.region_columns),
         alignment=candidate.alignment,
         geometry=candidate.geometry,
-        rook_edges=candidate.rook_edges,
-        population_positions=MappingProxyType(candidate.population_positions),
         fixed_values=MappingProxyType(candidate.fixed_values),
     )
 
@@ -1010,32 +1207,13 @@ def _partition_assignment(partition: Partition) -> dict[Hashable, Hashable]:
     return assignment
 
 
-def _verify_bendl_node_order(
-    source: Path,
-    node_order: tuple[Hashable, ...],
-    *,
-    count_samples: bool = False,
-) -> int | None:
-    with source.open("rb") as file:
-        magic = file.read(8)
-    if not magic.startswith(b"BENDL"):
-        # Raw BEN and XBEN inputs carry no graph, so ordering stays the caller's responsibility.
+def _node_order_json(node_order: tuple[Hashable, ...]) -> str | None:
+    try:
+        return json.dumps(node_order, allow_nan=False, separators=(",", ":"))
+    except (TypeError, ValueError):
+        # Raw BEN/XBEN streams carry no graph and can score arbitrary hashable labels.
+        # Rust rejects this missing comparison only when the source is actually BENDL.
         return None
-    if magic != b"BENDL\0\0\x01":
-        # Fail closed: skipping here would silently drop the one ordering guard this
-        # streaming path advertises.
-        raise ValueError(
-            f"unrecognized BENDL version magic {magic!r}; node-order verification only "
-            "supports BENDL version 1"
-        )
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message="XBEN may take a second to start decoding")
-        decoder = BendlDecoder(source)
-        graph = decoder.read_graph()
-        sample_count = decoder.count_samples() if count_samples else None
-    if graph is not None and tuple(graph.nodes) != node_order:
-        raise ValueError("BENDL graph node order must exactly match evaluator node order")
-    return sample_count
 
 
 def _partition_graph(partition: Partition) -> nx.Graph:
@@ -1070,7 +1248,7 @@ def _is_missing(value: Any) -> bool:
 
 
 def _result_name(metric: _MetricBase) -> str:
-    result = metric._default_name() if metric.name is None else metric.name
+    result = metric._default_name() if metric.result_name is None else metric.result_name
     if not isinstance(result, str):
         raise TypeError("metric name must be a string")
     if not is_valid_metric_name(result):
@@ -1082,7 +1260,7 @@ def _result_name(metric: _MetricBase) -> str:
 
 
 def _stream_subkeys(instance: str, spec: _OutputSpec) -> list[str]:
-    if spec.shape == "region":
+    if spec.shape == _ResultShape.REGION:
         return [
             f"{metric}__region_{region}"
             for metric in spec.columns
@@ -1101,7 +1279,7 @@ def _stream_region_axes(
     spec: _OutputSpec,
     labels: list[dict[str, object]],
 ) -> dict[str, object]:
-    assert spec.shape == "region" and spec.region_name is not None
+    assert spec.shape == _ResultShape.REGION and spec.region_name is not None
     return {
         "metric": list(spec.columns),
         "region": {"name": spec.region_name, "labels": labels},

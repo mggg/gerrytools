@@ -387,6 +387,8 @@ def test_recom_numeric_domains_rejected_at_construction(field, value):
         ("pop_col", ""),
         ("assignment_col", ""),
         ("rng_seed", True),
+        ("rng_seed", -1),
+        ("rng_seed", 2**64),
         ("sum_cols", ["TOTPOP", ""]),
         ("cut_edges_count", 1),
         ("show_progress", 1),
@@ -401,6 +403,11 @@ def test_recom_config_field_types_rejected(field, value):
     settings[field] = value
     with pytest.raises(ValueError, match=field):
         RecomRunInfo(**settings)
+
+
+def test_recom_accepts_u64_seed_bound():
+    run_info = RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A", rng_seed=2**64 - 1)
+    assert command_config(run_info)["rng_seed"] == 2**64 - 1
 
 
 @pytest.mark.parametrize("assignment_col", ["CD/2020", r"..\CD"])

@@ -83,7 +83,26 @@ tasks:
     silent: true
     cmds:
       - task: sync
+      - |
+        hooks_path="$(git config --local --get core.hooksPath || true)"
+        default_hooks_path="$(git rev-parse --absolute-git-dir)/hooks"
+        if [ "$hooks_path" = ".git/hooks" ] || [ "$hooks_path" = "$default_hooks_path" ]; then
+          git config --local --unset-all core.hooksPath
+        fi
       - uv run pre-commit install
+
+  build:
+    desc: Build and install the native extension in the development environment
+    silent: true
+    cmds:
+      - uv run maturin develop --release --locked
+
+  build-dist:
+    desc: Build a wheel and source distribution in the local dist directory
+    silent: true
+    cmds:
+      - uv run maturin build --release --locked --out dist
+      - uv run maturin sdist --manifest-path rust/Cargo.toml --out dist
 
   format:
     desc: Format the codebase using Ruff
@@ -104,10 +123,12 @@ tasks:
       - uv run ruff format --check {{.PKG}} {{.TEST_PATHS}} {{.DOCS_DIR}}/*.py {{.DOCS_DIR}}/user
 
   lint:
-    desc: Lint the codebase using Ruff
+    desc: Lint the codebase using Ruff (`task lint -- --fix` to apply fixes)
     silent: true
     cmds:
-      - uv run ruff check {{.PKG}} {{.TEST_PATHS}} {{.DOCS_DIR}}/*.py {{.DOCS_DIR}}/user
+      - >-
+        uv run ruff check {{.CLI_ARGS}}
+        {{.PKG}} {{.TEST_PATHS}} {{.DOCS_DIR}}/*.py {{.DOCS_DIR}}/user
 
   typecheck:
     desc: Run type checks using Ty and Pyright
@@ -162,6 +183,7 @@ tasks:
       TERM: xterm
     cmds:
       - task: sync
+      - task: build
       - uv run pytest -v {{.PYTEST_ARGS}}
 
   test:
@@ -207,6 +229,7 @@ tasks:
     desc: Update plotting image snapshots
     silent: true
     env:
+      PYTHONHASHSEED: "0"
       UPDATE_SNAPSHOTS: "1"
     cmds:
       - task: sync
@@ -216,6 +239,7 @@ tasks:
     desc: Verify plotting image snapshots against the committed baselines
     silent: true
     env:
+      PYTHONHASHSEED: "0"
       # Override any UPDATE_SNAPSHOTS leaked from the shell or .env; "0" is not truthy.
       UPDATE_SNAPSHOTS: "0"
     cmds:
@@ -226,6 +250,7 @@ tasks:
     desc: Update LaTeX image snapshots (requires a local LaTeX toolchain)
     silent: true
     env:
+      PYTHONHASHSEED: "0"
       UPDATE_SNAPSHOTS: "1"
     cmds:
       - task: sync
@@ -235,6 +260,7 @@ tasks:
     desc: Verify LaTeX image snapshots against the committed baselines
     silent: true
     env:
+      PYTHONHASHSEED: "0"
       # Override any UPDATE_SNAPSHOTS leaked from the shell or .env; "0" is not truthy.
       UPDATE_SNAPSHOTS: "0"
     cmds:

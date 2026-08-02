@@ -7,6 +7,7 @@ matplotlib.use("Agg")
 from pathlib import Path
 
 import pytest
+from matplotlib import colors as mcolors
 
 from gerrytools.plotting.other.subway import (
     SubwaySignOptions,
@@ -156,6 +157,21 @@ class TestSubwayBasicRendering:
         out = str(tmp_path / "single.png")
         subway_signs(colors=["#3366cc"], labels=["1"], filepath=out)
         assert Path(out).exists()
+
+    def test_sign_options_accept_gerrytools_colors(self):
+        import matplotlib.pyplot as plt
+
+        figure, axes = subway_signs(
+            colors=["red"],
+            labels=["A"],
+            sign_options=SubwaySignOptions(edgecolor="denim", fontcolor="denim"),
+        )
+
+        assert axes.patches[0].get_edgecolor() == pytest.approx(mcolors.to_rgba("#1560bd"))
+        assert mcolors.to_rgba(axes.texts[0].get_color()) == pytest.approx(
+            mcolors.to_rgba("#1560bd")
+        )
+        plt.close(figure)
 
 
 # ====================

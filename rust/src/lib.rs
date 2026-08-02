@@ -9,6 +9,7 @@ mod python;
 mod scoring;
 
 pub use error::{Error, Result};
+pub(crate) use geometry::PreparedGeometry;
 pub use geometry::{Coordinate, PreparedUnitHulls, UnitHull, UnitHullCache};
 pub use metrics::{
     IncrementalAreaPerimeterMetrics, IncrementalConvexHullRatio, IncrementalCutEdges,

@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.0.0] - 2026-08-01
-
 GerryTools 2.0.0 is a rewrite. Every subpackage changed, the public API is not backward
 compatible with 1.x, and no deprecation aliases are provided. Read the migration notes below
 before upgrading.
@@ -36,9 +34,11 @@ Highlights:
     `nx.Graph`, or a `GeoDataFrame`.
   - `gerrytools.scoring.formulas` exposes the underlying array formulas for callers that already
     have district-level arrays and want to skip the evaluator entirely.
-  - Streamed runs publish an atomic, self-describing run directory (`manifest.json` plus one
-    Parquet table per metric), read back through `EvaluationRun` with a memory guard
-    (`EvaluationMemoryError`) so an oversized read fails loudly instead of exhausting RAM.
+  - Streamed runs publish a self-describing run directory with a run-named JSON manifest and
+    Parquet score tables. Tallies and region tallies use one table per requested attribute. New
+    score names can be added later; `update=True` replaces matching names. `EvaluationRun` reads
+    the directory with a memory guard (`EvaluationMemoryError`) so an oversized read fails loudly
+    instead of exhausting RAM.
 - **A compiled scoring engine.** The package now builds with
   [maturin](https://www.maturin.rs/) and ships a Rust extension module
   (`gerrytools._scoring_engine`) implementing tallies, compactness scores, cut edges, region
@@ -53,7 +53,7 @@ Highlights:
   namespace with `get_named_color`, `resolve_rgba`, `compare_palettes`, and `preview_palette`.
   The LaTeX color table is a Python dictionary rather than a JSON file loaded at import.
 - **`gerrytools.latex`: LaTeX document and figure generation.** `TexDocument`, `TexTable`,
-  `TikzTable`, `PaintballPlot`, and `SeatsVotesPlot` emit publication-ready `.tex`, with
+  `TikzTable`, `TikzPaintballPlot`, and `TikzSeatsVotesPlot` emit publication-ready `.tex`, with
   `latex_escape` and a formatter system (`highlight_gt`, `round_decimals`,
   `diverging_gradient_formatter`, `compose_formatters`).
 - **`gerrytools.plan_comparison`: plan-to-plan comparison.** `population_overlap`,
@@ -150,7 +150,7 @@ gerrytools
     └── rename.py
 ```
 
-  New structure (private modules, prefixed with `_`, are omitted):
+New structure (private modules, prefixed with `_`, are omitted):
 
 ```console
 gerrytools
@@ -245,74 +245,99 @@ rust/src        # the compiled scoring engine, built as gerrytools._scoring_engi
   list of updater callables passed to `summarize`, 2.0.0 registers metric instances on a
   `PlanEvaluator`. Name mapping:
 
-  | 1.x | 2.0.0 metric class | 2.0.0 single-plan function |
-  | --- | --- | --- |
-  | `splits` | `RegionSplits` | `region_splits` |
-  | `pieces` | `RegionPieces` | `region_pieces` |
-  | `competitive_contests` | `CompetitiveContests` | `competitive_contests` |
-  | `swing_districts` | `SwingDistricts` | `swing_districts` |
-  | `party_districts` | `PartyDistricts` | `party_districts` |
-  | `opp_party_districts` | `OppositionPartyDistricts` | `opposition_party_districts` |
-  | `party_wins_by_district` | `PartyWinsByDistrict` | `party_wins_by_district` |
-  | `seats` | `Seats` | `seats` |
-  | `aggregate_seats` | `AggregateSeats` | `aggregate_seats` |
-  | `efficiency_gap` | `EfficiencyGap` | `efficiency_gap` |
-  | `simplified_efficiency_gap` | `SimplifiedEfficiencyGap` | `simplified_efficiency_gap` |
-  | `mean_median` | `MeanMedian` | `mean_median` |
-  | `partisan_bias` | `PartisanBias` | `partisan_bias` |
-  | `partisan_gini` | `PartisanGini` | `partisan_gini` |
-  | `eguia` | `Eguia` | `eguia` |
-  | `deviations` | `PopulationDeviations` | `population_deviations` |
-  | `max_deviation` | `MaxPopulationDeviation` | `max_population_deviation` |
-  | `demographic_shares` | `DemographicShares` | `demographic_shares` |
-  | `demographic_tallies` | `Tally`, `TallyByRegion` | `tally`, `tally_by_region` |
-  | `gingles_districts` | `DistrictsAboveThreshold` | `districts_above_threshold` |
-  | `reock` | `Reock` | `reock` |
-  | `polsby_popper` | `PolsbyPopper` | `polsby_popper` |
-  | `schwartzberg` | `Schwartzberg` | `schwartzberg` |
-  | `convex_hull` | `ConvexHullRatio` | `convex_hull_ratio` |
-  | `pop_polygon` | `PopulationPolygon` | `population_polygon` |
-  | `cut_edges` | `CutEdges` | `cut_edges` |
-  | `summarize` | `PlanEvaluator.evaluate` | n/a |
-  | `summarize_many` | `PlanEvaluator.evaluate_many` | n/a |
+  | 1.x                         | 2.0.0 metric class            | 2.0.0 single-plan function   |
+  | --------------------------- | ----------------------------- | ---------------------------- |
+  | `splits`                    | `RegionSplits`                | `region_splits`              |
+  | `pieces`                    | `RegionPieces`                | `region_pieces`              |
+  | `competitive_contests`      | `CompetitiveContests`         | `competitive_contests`       |
+  | `swing_districts`           | `SwingDistricts`              | `swing_districts`            |
+  | `party_districts`           | `PartyDistricts`              | `party_districts`            |
+  | `opp_party_districts`       | `OppositionPartyDistricts`    | `opposition_party_districts` |
+  | `party_wins_by_district`    | `PartyWinsByDistrict`         | `party_wins_by_district`     |
+  | `seats`                     | `Seats`                       | `seats`                      |
+  | `aggregate_seats`           | `AggregateSeats`              | `aggregate_seats`            |
+  | `efficiency_gap`            | `EfficiencyGap`               | `efficiency_gap`             |
+  | `simplified_efficiency_gap` | `SimplifiedEfficiencyGap`     | `simplified_efficiency_gap`  |
+  | `mean_median`               | `MeanMedian`                  | `mean_median`                |
+  | `partisan_bias`             | `PartisanBias`                | `partisan_bias`              |
+  | `partisan_gini`             | `PartisanGini`                | `partisan_gini`              |
+  | `eguia`                     | `Eguia`                       | `eguia`                      |
+  | `deviations`                | `PopulationDeviations`        | `population_deviations`      |
+  | `max_deviation`             | `MaxPopulationDeviation`      | `max_population_deviation`   |
+  | `demographic_shares`        | `DemographicShares`           | `demographic_shares`         |
+  | `demographic_tallies`       | `Tally`, `TallyByRegion`      | `tally`, `tally_by_region`   |
+  | `gingles_districts`         | `DistrictsAboveThreshold`     | `districts_above_threshold`  |
+  | `reock`                     | `Reock`                       | `reock`                      |
+  | `polsby_popper`             | `PolsbyPopper`                | `polsby_popper`              |
+  | `schwartzberg`              | `Schwartzberg`                | `schwartzberg`               |
+  | `convex_hull`               | `ConvexHullRatio`             | `convex_hull_ratio`          |
+  | `pop_polygon`               | `PopulationPolygon`           | `population_polygon`         |
+  | `cut_edges`                 | `CutEdges`                    | `cut_edges`                  |
+  | `summarize`                 | `PlanEvaluator.evaluate`      | n/a                          |
+  | `summarize_many`            | `PlanEvaluator.evaluate_many` | n/a                          |
 
 - **`gerrytools.plotting` moved from functions to plot classes.** A 1.x call such as
   `histogram(ax, scores)` becomes `Histogram()`, then `add_dataset(...)`, then `.ax` or
   `.save(...)`. Rendering is lazy: the figure is built on first access to `.ax`, so constructing
   a plot in a notebook no longer emits an empty figure. Name mapping:
 
-  | 1.x | 2.0.0 |
-  | --- | --- |
-  | `histogram` | `Histogram` |
-  | `violin` | `ViolinPlot` |
-  | `boxplot` | `BoxPlot` |
-  | `scatterplot` | `ScatterPlot` |
-  | `sealevel` | `SeaLevelPlot` |
-  | `drawplan` | `GeoPlot.add_districting_plan_layer` |
-  | `choropleth` | `GeoPlot.add_choropleth_layer` |
-  | `districtnumbers` | `GeoPlot.add_label_layer` |
-  | `drawgraph` | `draw_graph` |
-  | `arrow` | `add_arrow` methods (`add_label_arrow`, `add_text_arrow`, and axis variants) |
-  | `ideal` | `add_vertical_lines` / `add_horizontal_lines` (multiple lines, optional jitter) |
-  | `bins` | `Histogram.set_bins` / `Histogram.set_bins_by_width` |
-  | `districtr`, `flare`, `purples`, `redbluecmap`, `latex` | `gerrytools.colors` |
+  | 1.x                                                     | 2.0.0                                                                           |
+  | ------------------------------------------------------- | ------------------------------------------------------------------------------- |
+  | `histogram`                                             | `Histogram`                                                                     |
+  | `violin`                                                | `ViolinPlot`                                                                    |
+  | `boxplot`                                               | `BoxPlot`                                                                       |
+  | `scatterplot`                                           | `ScatterPlot`                                                                   |
+  | `sealevel`                                              | `SeaLevelPlot`                                                                  |
+  | `drawplan`                                              | `GeoPlot.add_districting_plan_layer`                                            |
+  | `choropleth`                                            | `GeoPlot.add_choropleth_layer`                                                  |
+  | `districtnumbers`                                       | `GeoPlot.add_label_layer`                                                       |
+  | `drawgraph`                                             | `draw_graph`                                                                    |
+  | `arrow`                                                 | `add_arrow` methods (`add_label_arrow`, `add_text_arrow`, and axis variants)    |
+  | `ideal`                                                 | `add_vertical_lines` / `add_horizontal_lines` (multiple lines, optional jitter) |
+  | `bins`                                                  | `Histogram.set_bins` / `Histogram.set_bin_widths`                            |
+  | `districtr`, `flare`, `purples`, `redbluecmap`, `latex` | `gerrytools.colors`                                                             |
 
 - **`gerrytools.data` reorganized around US Census tables.** Census access lives under
   `gerrytools.data.uscensus`, and year selection is a parameter rather than a function name.
 
-  | 1.x | 2.0.0 |
-  | --- | --- |
-  | `census10`, `census20` | `census(..., year=...)` |
-  | `acs5` | `acs`, `acs_full` |
-  | `estimatecvap2010`, `estimatecvap2020` | `block_cvap_estimates` |
-  | `fetchgeometries` | `geometries20`, `vtds20`, `dualgraphs20` |
-  | `variables` | `pl_table`, `census_column_name`, the `*TableInfo` classes |
+  | 1.x                                    | 2.0.0                                                      |
+  | -------------------------------------- | ---------------------------------------------------------- |
+  | `census10`, `census20`                 | `census(..., year=...)`                                    |
+  | `acs5`                                 | `acs`, `acs_full`                                          |
+  | `estimatecvap2010`, `estimatecvap2020` | `block_cvap_estimates`                                     |
+  | `fetchgeometries`                      | `geometries20`, `vtds20`, `dualgraphs20`                   |
+  | `variables`                            | `pl_table`, `census_column_name`, the `*TableInfo` classes |
+
+  Migration details that are not simple renames:
+  - `census()` requires an explicit Census API key; 1.x supplied a package default. Its default
+    geography is now `"state"`, not `"block"`, so pass `geometry="block"` when porting a
+    `census20(state)` call.
+  - `cvap()` now requires both `geometry` and `year`.
+  - `geometries20()` raises for an unknown geography instead of warning and falling back.
+
+- **Additional 1.x API removals and constructor changes:**
+  - The `gerrytools.scoring.types.Score` custom-score extension point is removed with no direct
+    replacement. The 2.0 metric set is closed because each metric requires scoring-engine
+    support; 1.x `Score` subclasses cannot be registered with `PlanEvaluator`.
+  - `SMCRunnerConfig(shapefile_dir, shapefile_name, ...)` now takes one `shapefile_path`.
+  - `ForestRunInfo` replaces `region_name`/`subregion_name` with `levels` and replaces the output
+    booleans with `writer`.
+  - Top-level `gerrytools.__version__`, `gerrytools.mgrp_available`, and the implicit
+    `gerrytools.mgrp` attribute are removed. Import subpackages explicitly and use
+    `importlib.metadata.version("gerrytools")` for the installed version.
+  - Color constants use uppercase names: `defaultGray` is `DEFAULT_GREY`, `citizenBlue` is
+    `CITIZEN_BLUE`, `overlays` is `OVERLAYS`, and the old plotting `latex` dictionary is
+    `gerrytools.colors.LATEX_COLOR_DICT`.
+  - `plotting.utils.sort_elections` and `geometry.dissolve.by_area` are removed with no direct
+    replacement.
+  - `districtr()` retains its purpose, but extension colors beyond the first 39 and the casing of
+    ten base hex strings changed. Do not compare its color strings byte-for-byte across releases.
 
 - **`gerrytools.ben` rewritten around BENDL.** 1.x wrapped the `binary-ensemble` CLI through
   Docker; 2.0.0 depends on `binary-ensemble` 2.0.0 directly and records to BENDL. The
   `ben`, `ben_replay`, `msms_parse`, `smc_parse`, `canonicalize_ben_file`, and `relabel_*`
   functions are replaced by `RecordedChain` and `RecordedRun`.
-- `RecordedChain.lookup()` and the `subsample_*()` methods now always return assignment vectors.
+- `RecordedRun.lookup()` and the `subsample_*()` methods now always return assignment vectors.
   Use `partition_at()` for one reconstructed partition, or wrap vector iterables with
   `partitions()` to reconstruct them lazily.
 - **`gerrytools.mgrp` run configuration is validated.** `SMCMapInfo` and `SMCRedistInfo` are

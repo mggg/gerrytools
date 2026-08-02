@@ -97,15 +97,15 @@ class ArrowTextStyle:
 
     Attributes:
         fontsize (float, optional): Text size in points. Defaults to ``10.0``.
-        fontcolor (Color, optional): Text color. Defaults to ``"black"``.
+        fontcolor (Color | None, optional): Text color. None makes the text transparent.
+            Defaults to ``"black"``.
         fontalpha (float | None, optional): Optional alpha override for ``fontcolor``.
             Defaults to None.
-        fontoutlinecolor (Color | None, optional): Optional outline color for text glyphs.
-            If None, no outline is drawn. Defaults to None.
+        fontoutlinecolor (Color | None, optional): Outline color for text glyphs. None removes the
+            outline. Defaults to ``"black"``.
         fontoutlinealpha (float | None, optional): Optional alpha override for
             ``fontoutlinecolor``. Defaults to None.
-        fontoutlinewidth (float, optional): Outline width in points.
-            Defaults to ``0.0``.
+        fontoutlinewidth (float, optional): Outline width in points. Defaults to ``0.5``.
         fontweight (FontWeight | None, optional): Font weight (for example ``"bold"``).
             Defaults to None.
         fontstyle (FontStyle | None, optional): Font style.
@@ -117,10 +117,13 @@ class ArrowTextStyle:
             Horizontal text alignment. Defaults to None.
         verticalalignment (Literal["bottom", "center", "top"] | None, optional):
             Vertical text alignment. Defaults to None.
+
+    Raises:
+        ValueError: If a font, color, alpha, outline, rotation, or alignment value is invalid.
     """
 
     fontsize: float = 10.0
-    fontcolor: Color = "black"
+    fontcolor: Color | None = "black"
     fontalpha: float | None = None
     fontoutlinecolor: Color | None = "black"
     fontoutlinealpha: float | None = None
@@ -141,7 +144,7 @@ class ArrowTextStyle:
         resolved_fc, resolved_fa = resolve_color_and_alpha(
             self.fontcolor,
             self.fontalpha,
-            allow_none=False,
+            allow_none=True,
             field="fontcolor",
             owner="ArrowTextStyle",
             logger=logger,
@@ -178,10 +181,12 @@ class TextArrowStyle:
     """Styling options for text arrows rendered via ``Axes.text(..., bbox=...)``.
 
     Attributes:
-        arrowfacecolor (Color, optional): Fill color of the arrow box. Defaults to ``"#5c676f"``.
+        arrowfacecolor (Color | None, optional): Fill color of the arrow box. None removes
+            the fill. Defaults to ``"#5c676f"``.
         arrowfacealpha (float | None, optional): Optional alpha override for ``arrowfacecolor``.
             Defaults to None.
-        arrowedgecolor (Color, optional): Edge color of the arrow box. Defaults to ``"black"``.
+        arrowedgecolor (Color | None, optional): Edge color of the arrow box. None removes
+            the edge. Defaults to ``"black"``.
         arrowedgealpha (float | None, optional): Optional alpha override for
             ``arrowedgecolor``. Defaults to None.
         arrowedgewidth (float, optional): Edge width in points. Defaults to ``1.0``.
@@ -189,11 +194,14 @@ class TextArrowStyle:
             Defaults to ``0.3``.
         boxstyle (str | None, optional): Explicit boxstyle override.
             When None, GerryPlot selects a direction-aware default. Defaults to None.
+
+    Raises:
+        ValueError: If a color, alpha, width, or padding value is invalid.
     """
 
-    arrowfacecolor: Color = "#5c676f"
+    arrowfacecolor: Color | None = "#5c676f"
     arrowfacealpha: float | None = None
-    arrowedgecolor: Color = "black"
+    arrowedgecolor: Color | None = "black"
     arrowedgealpha: float | None = None
     arrowedgewidth: float = 1.0
     boxpad: float = 0.3
@@ -206,7 +214,7 @@ class TextArrowStyle:
         resolved_fc, resolved_fa = resolve_color_and_alpha(
             self.arrowfacecolor,
             self.arrowfacealpha,
-            allow_none=False,
+            allow_none=True,
             field="arrowfacecolor",
             owner="TextArrowStyle",
             logger=logger,
@@ -242,17 +250,22 @@ class LabelArrowStyle:
             Defaults to ``0.0``.
         shrink_b (float, optional): Shrink amount at the tip end in points.
             Defaults to ``0.0``.
-        arrowfacecolor (Color, optional): Face color of the arrow head.
+        arrowfacecolor (Color | None, optional): Face color of the arrow head. None removes
+            the fill.
             Defaults to ``"#5c676f"``.
         arrowfacealpha (float | None, optional): Optional alpha override for ``arrowfacecolor``.
             Defaults to None.
-        arrowedgecolor (Color, optional): Outline color of the arrow.
+        arrowedgecolor (Color | None, optional): Outline color of the arrow. None removes
+            the edge.
             Defaults to ``"black"``.
         arrowedgealpha (float | None, optional): Optional alpha override for
             ``arrowedgecolor``. Defaults to None.
         arrowedgewidth (float, optional): Arrow outline width in points.
             Defaults to ``1.0``.
         linestyle (str, optional): Arrow line style. Defaults to ``"-"``.
+
+    Raises:
+        ValueError: If a color, alpha, width, shrink, or arrow-scale value is invalid.
     """
 
     arrowstyle: str = "-|>"
@@ -260,9 +273,9 @@ class LabelArrowStyle:
     arrowhead_scale: float = 12.0
     shrink_a: float = 0.0
     shrink_b: float = 0.0
-    arrowfacecolor: Color = "#5c676f"
+    arrowfacecolor: Color | None = "#5c676f"
     arrowfacealpha: float | None = None
-    arrowedgecolor: Color = "black"
+    arrowedgecolor: Color | None = "black"
     arrowedgealpha: float | None = None
     arrowedgewidth: float = 1.0
     linestyle: str = "-"
@@ -274,7 +287,7 @@ class LabelArrowStyle:
         resolved_fc, resolved_fa = resolve_color_and_alpha(
             self.arrowfacecolor,
             self.arrowfacealpha,
-            allow_none=False,
+            allow_none=True,
             field="arrowfacecolor",
             owner="LabelArrowStyle",
             logger=logger,
@@ -316,6 +329,9 @@ class ArrowPlacement:
         zorder (int | float, optional): Draw order; coerced to int. Defaults to ``20``.
         clip_on (bool, optional): Whether artists should be clipped to the axes patch.
             Defaults to False.
+
+    Raises:
+        ValueError: If a distance, offset, or explicit arrow-tail coordinate is invalid.
     """
 
     coordinate_system: Literal["data", "axes fraction"] = "data"
@@ -345,6 +361,21 @@ class ArrowPlacement:
 
 
 @dataclass(frozen=True)
+class TextArrowOptions:
+    """Advanced options for a text-style annotation arrow.
+
+    Attributes:
+        placement (ArrowPlacement, optional): Placement, clipping, and draw-order options.
+            Defaults to ``ArrowPlacement()``.
+        style (TextArrowStyle, optional): Arrow-box fill, outline, and shape styling. Defaults to
+            ``TextArrowStyle()``.
+    """
+
+    placement: ArrowPlacement = field(default_factory=ArrowPlacement)
+    style: TextArrowStyle = field(default_factory=TextArrowStyle)
+
+
+@dataclass(frozen=True)
 class LabelArrowOptions:
     """Advanced options for a label-style annotation arrow.
 
@@ -355,6 +386,9 @@ class LabelArrowOptions:
             order. Defaults to an arrow with a tail length of ``0.04``.
         style (LabelArrowStyle, optional): Arrowhead, outline, and line styling. Defaults to
             ``LabelArrowStyle()``.
+
+    Raises:
+        ValueError: If ``arrow_length`` is invalid or conflicts with an explicit arrow tail.
     """
 
     arrow_length: float | None = None

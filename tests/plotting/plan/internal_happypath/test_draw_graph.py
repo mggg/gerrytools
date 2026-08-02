@@ -42,6 +42,17 @@ def test_draw_graph_accepts_explicit_positions():
     plt.close(ax.figure)
 
 
+def test_draw_graph_components_do_not_register_pyplot_figures():
+    plt.close("all")
+    graph = nx.Graph()
+    graph.add_nodes_from([(0, {"x": 0, "y": 0}), (1, {"x": 1, "y": 1})])
+
+    pairs = draw_graph_components(graph, x="x", y="y")
+
+    assert len(pairs) == 2
+    assert plt.get_fignums() == []
+
+
 def test_draw_graph_coerces_coordinate_attributes_to_float(monkeypatch):
     graph = nx.Graph()
     graph.add_node("a", x="-90.5", y="40.25")

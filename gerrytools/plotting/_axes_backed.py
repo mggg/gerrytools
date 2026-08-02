@@ -50,6 +50,7 @@ class _AxesBackedPlot:
     _finalizer: weakref.finalize | None
     _figure_is_shared: bool
     _artists: _ArtistRegistry
+    _artist_histories: dict[Axes, _ArtistRegistry]
     _axes_state: _ManagedAxesState
     _axis_needs_update: bool
 
@@ -93,7 +94,7 @@ class _AxesBackedPlot:
                 plt.close(self.fig)  # pragma: no cover
             self._finalizer = weakref.finalize(self, plt.close, self.fig)
         else:
-            new_fig = cast(Figure, ax.figure)
+            new_fig = cast(Figure, ax.get_figure(root=True))
             # An axes on the plot's own owned figure keeps ownership; detaching the
             # finalizer here would leak the figure in pyplot's manager forever.
             if not (old_owned and new_fig is old_fig):
@@ -121,15 +122,26 @@ class _AxesBackedPlot:
             ax (matplotlib.axes.Axes | None): The matplotlib axes to render onto, or ``None``
                 to revert to a fresh-figure render.
         """
-        same_axes = ax is self._ax
+        old_ax = self._ax
+        same_axes = ax is old_ax
+        if not same_axes:
+            self._axes_state.remember_axes(old_ax)
+            histories = getattr(self, "_artist_histories", {})
+            self._artist_histories = histories
+            # Closed owned figures cannot be revisited. External axes and other axes on the
+            # current owned figure can, so retain their managed artists until a later rebind.
+            if self._figure_is_shared or (ax is not None and ax.figure is self.fig):
+                histories[old_ax] = self._artists
         self._attach_axes(ax)
 
         if same_axes:
             self._artists.remove_all()
         else:
-            # Detach from the old axes without removing its artists: rebind is non-destructive.
-            self._artists = _ArtistRegistry()
-            self._axes_state.reset_history()
+            self._artists = self._artist_histories.pop(self._ax, _ArtistRegistry())
+            # Rebinding is non-destructive when leaving an axes. If that axes is revisited,
+            # replace this plot's earlier rendering before drawing its current state.
+            self._artists.remove_all()
+            self._axes_state.restore_axes(self._ax)
             self._axes_state.initialize_from_ax(self._ax)
         if ax is not None:
             self._update_axis()

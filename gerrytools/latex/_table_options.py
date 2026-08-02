@@ -29,6 +29,8 @@ class TableOptions:
         index_name (Optional[str]): Name to use for the index column header.
             If None and include_index is True, uses df.index.name or "". Default is None.
         index_column (IndexColumn): Parsed index-column syntax.
+        group_index (IndexColumn | None): Optional syntax for the group-header index cell.
+            Defaults to None.
         nan_string (str): String to represent NaN values in the table. Default is "NaN".
         hrule_counts (list[int]): List of counts of horizontal rules at each boundary.
             Boundary 0 is after header, k is after row k-1. Default is empty list.

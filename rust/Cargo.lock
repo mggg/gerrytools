@@ -407,6 +407,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 
 [[package]]
+name = "clipper2"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "88f87fde54c74a3f45d04e691a14deb3eaebc85c3c889d59eca9129aa3894c5a"
+dependencies = [
+ "clipper2c-sys",
+ "libc",
+ "thiserror 2.0.19",
+]
+
+[[package]]
+name = "clipper2c-sys"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0afb0f7cef3e89b98fb687395b7d12c70521871f3a876465641ed5aeb450b9a8"
+dependencies = [
+ "cc",
+ "libc",
+]
+
+[[package]]
 name = "colorchoice"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -724,9 +745,11 @@ dependencies = [
  "arrow-array",
  "arrow-schema",
  "binary-ensemble",
+ "clipper2",
  "fastrand",
  "geo",
  "geo-traits",
+ "lzma-sys",
  "parquet",
  "pyo3",
  "rayon",

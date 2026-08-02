@@ -33,31 +33,31 @@ class TestHistogramBins:
         assert isinstance(h._bins, np.ndarray)
         np.testing.assert_array_equal(h._bins, np.arange(0, 11, 1.0))
 
-    def test_set_bins_by_width(self):
+    def test_set_bin_widths(self):
         h = Histogram()
-        h.set_bins_by_width(0.5)
+        h.set_bin_widths(0.5)
         assert h._binwidth == 0.5
         assert h._bins is None
 
-    def test_set_bins_by_width_none_resets(self):
+    def test_set_bin_widths_none_resets(self):
         h = Histogram()
         h.set_bins(20)
-        h.set_bins_by_width(None)
+        h.set_bin_widths(None)
         assert h._binwidth is None
         assert h._bins is None
 
     def test_set_bins_clears_prior_binwidth(self):
-        # Mirror of the reset above: set_bins and set_bins_by_width are
+        # Mirror of the reset above: set_bins and set_bin_widths are
         # mutually exclusive, so each clears the other's setting.
         h = Histogram()
-        h.set_bins_by_width(0.5)
+        h.set_bin_widths(0.5)
         h.set_bins(20)
         assert h._bins == 20
         assert h._binwidth is None
 
-    def test_center_data_on_bin_edges(self):
+    def test_center_bars(self):
         h = Histogram()
-        h.center_data_on_bin_edges()
+        h.center_bars()
         assert h._bin_alignment == "center"
 
 
@@ -85,6 +85,15 @@ class TestHistogramPointsAbove:
         h = Histogram()
         h.add_points_above(5.0)
         assert len(h._histpointlist_list) == 1
+
+    def test_explicit_none_colors_remove_marker_fill_and_edge(self):
+        h = Histogram()
+        h.add_points_above(5.0, facecolor=None, markeredgecolor=None)
+
+        marker = h._histpointlist_list[0].point_data
+        assert marker.markerfacecolor == "none"
+        assert marker.markeredgecolor == "none"
+        assert marker.markeredgewidth == 0.0
 
     def test_add_list_of_points(self):
         h = Histogram()
@@ -178,10 +187,10 @@ class TestHistogramLegend:
 
 class TestHistogramInputRejection:
     @pytest.mark.parametrize("bad_binwidth", [0.0, -1.0, float("nan"), float("inf")])
-    def test_set_bins_by_width_rejects_nonpositive_or_nonfinite(self, bad_binwidth):
+    def test_set_bin_widths_rejects_nonpositive_or_nonfinite(self, bad_binwidth):
         h = Histogram()
         with pytest.raises(ValueError, match="binwidth must be a positive finite number"):
-            h.set_bins_by_width(bad_binwidth)
+            h.set_bin_widths(bad_binwidth)
 
     def test_empty_points_above_raises_valueerror(self):
         h = Histogram()

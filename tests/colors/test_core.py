@@ -139,7 +139,7 @@ class TestConvertColorToHexaOrNone:
 
     def test_convert_unknown_value_raises(self):
         with pytest.raises(ValueError, match="Unknown color value"):
-            convert_color_to_hexa_or_none(object())  # type: ignore[arg-type]
+            convert_color_to_hexa_or_none(object())  # type: ignore
 
 
 # ==============================

@@ -111,6 +111,24 @@ class TestTractCvapRates:
                 race_categories=("total",),
             )
 
+    @pytest.mark.parametrize(
+        ("vap", "cvap"),
+        [(float("nan"), 10), (100, float("nan")), (-1, 0), (100, -1)],
+    )
+    def test_invalid_tract_estimates_raise(self, vap, cvap):
+        tract_est = pd.DataFrame(
+            {"total_vap_acs5_24": [vap], "total_cvap_acs5_24": [cvap]},
+            index=pd.Index(["55001000100"]),
+        )
+
+        with pytest.raises(ValueError, match=r"total.*55001000100.*finite and nonnegative"):
+            _tract_cvap_rates(
+                tract_est,
+                denominator_threshold=20,
+                acs_year=2024,
+                race_categories=("total",),
+            )
+
 
 # ===========================
 # == BLOCK CVAP ESTIMATION ==
@@ -275,7 +293,7 @@ class TestBlockCvapEstimates:
         assert isinstance(result, pd.DataFrame)
         assert result.empty
 
-    def test_single_county_produces_block_estimates(self, mock_http: MockHTTP):
+    def test_single_county_joins_block_to_matching_tract_rate(self, mock_http: MockHTTP):
         pl_variables = list(PLBlockVAPTableInfo().construct_variable_names())
         # 15-char block GEOID: state 55 / county 001 / tract 000100 / block 1000.
         block_geoid = "550010001001000"
@@ -283,9 +301,9 @@ class TestBlockCvapEstimates:
         def acs_payload(request: httpx.Request) -> httpx.Response:
             geography = request.url.params["for"]
             if geography.startswith("tract:"):
-                payload = valid_vap_cvap_payload("55001000100")
+                payload = valid_vap_cvap_payload("55001000100", vap_value=100, cvap_value=10)
             else:
-                payload = valid_vap_cvap_payload("55", vap_value=4)
+                payload = valid_vap_cvap_payload("55", vap_value=100, cvap_value=5)
             return httpx.Response(200, json=payload)
 
         mock_http.route(url_contains="/acs/acs5", responder=acs_payload)
@@ -310,7 +328,7 @@ class TestBlockCvapEstimates:
         assert block["GEOID"] == block_geoid
         assert block["STATEFP"] == "55"
         assert block["TRACT_GEOID"] == "55001000100"
-        assert block["total_cvap_acs5_24_pl_20"] == pytest.approx(5.0)
+        assert block["total_cvap_acs5_24_pl_20"] == pytest.approx(2.0)
         assert pd.api.types.is_numeric_dtype(result["total_cvap_acs5_24_pl_20"])
 
     def test_multiple_counties_concatenate_with_clean_index(self, mock_http: MockHTTP):

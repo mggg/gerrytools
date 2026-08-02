@@ -160,6 +160,16 @@ class TestPaintBallMarkerOptions:
         pb.set_marker_options(color="red")
         assert pb._marker_options.markerfacecolor == "#ff0000"
 
+    def test_set_none_colors_removes_marker_fill_and_edge(self):
+        pb = simple_paintball()
+        pb.set_marker_options(color=None, edgecolor=None)
+
+        assert pb._marker_options.markerfacecolor == "none"
+        assert pb._marker_options.markerfacealpha == 0.0
+        assert pb._marker_options.markeredgecolor == "none"
+        assert pb._marker_options.markeredgealpha == 0.0
+        assert pb._marker_options.markeredgewidth == 0.0
+
     def test_set_marker_string(self):
         pb = simple_paintball()
         pb.set_marker_options(marker="s")
@@ -174,6 +184,21 @@ class TestPaintBallMarkerOptions:
         pb = simple_paintball()
         pb.set_marker_options(edgecolor="blue")
         assert pb._marker_options.markeredgecolor == "#0000ff"
+
+    def test_visible_edgecolor_restores_default_width_after_none(self):
+        pb = simple_paintball()
+        pb.set_marker_options(edgecolor=None)
+        pb.set_marker_options(edgecolor="blue")
+
+        assert pb._marker_options.markeredgecolor == "#0000ff"
+        assert pb._marker_options.markeredgewidth == 0.5
+
+    def test_explicit_zero_edgewidth_stays_hidden_with_visible_color(self):
+        pb = simple_paintball()
+        pb.set_marker_options(edgecolor=None)
+        pb.set_marker_options(edgecolor="blue", edgewidth=0.0)
+
+        assert pb._marker_options.markeredgewidth == 0.0
 
     def test_set_edgewidth(self):
         pb = simple_paintball()
@@ -233,7 +258,17 @@ class TestPaintBallHullOptions:
     def test_set_hull_color(self):
         pb = simple_paintball()
         pb.set_hull_options(color="green")
-        assert pb._hull_style.facecolor == "green"
+        assert pb._hull_style.facecolor == "#00ff00"
+
+    def test_set_none_colors_removes_hull_fill_and_edge(self):
+        pb = simple_paintball()
+        pb.set_hull_options(color=None, edgecolor=None)
+
+        assert pb._hull_style.facecolor == "none"
+        assert pb._hull_style.facealpha == 0.0
+        assert pb._hull_style.edgecolor == "none"
+        assert pb._hull_style.edgealpha == 0.0
+        assert pb._hull_style.edgewidth == 0.0
 
     def test_set_hull_alpha(self):
         pb = simple_paintball()
@@ -243,7 +278,22 @@ class TestPaintBallHullOptions:
     def test_set_hull_edgecolor(self):
         pb = simple_paintball()
         pb.set_hull_options(edgecolor="black")
-        assert pb._hull_style.edgecolor == "black"
+        assert pb._hull_style.edgecolor == "#000000"
+
+    def test_visible_hull_edgecolor_restores_default_width_after_none(self):
+        pb = simple_paintball()
+        pb.set_hull_options(edgecolor=None)
+        pb.set_hull_options(edgecolor="black")
+
+        assert pb._hull_style.edgecolor == "#000000"
+        assert pb._hull_style.edgewidth == 2.0
+
+    def test_explicit_zero_hull_edgewidth_stays_hidden_with_visible_color(self):
+        pb = simple_paintball()
+        pb.set_hull_options(edgecolor=None)
+        pb.set_hull_options(edgecolor="black", edgewidth=0.0)
+
+        assert pb._hull_style.edgewidth == 0.0
 
     def test_set_hull_edgewidth(self):
         pb = simple_paintball()
@@ -299,7 +349,7 @@ class TestPaintBallHullOptions:
         pb = simple_paintball()
         pb.set_hull_options(color="red", edgewidth=4.0)
         pb.set_hull_options(alpha=0.5)
-        assert pb._hull_style.facecolor == "red"
+        assert pb._hull_style.facecolor == "#ff0000"
         assert pb._hull_style.edgewidth == 4.0
 
 

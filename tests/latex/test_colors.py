@@ -104,7 +104,7 @@ class TestColorSpecParsing:
 
     def test_to_latex_xcolor_or_html_spec_invalid_shape_raises(self):
         with pytest.raises(ValueError, match="tuple of length 3"):
-            to_latex_xcolor_or_html_spec((1, 2))  # type: ignore[arg-type]
+            to_latex_xcolor_or_html_spec((1, 2))  # type: ignore
 
     def test_to_latex_xcolor_or_html_spec_invalid_range_raises(self):
         with pytest.raises(ValueError, match="range \\[0\\.0, 1\\.0\\] or \\[0, 255\\]"):

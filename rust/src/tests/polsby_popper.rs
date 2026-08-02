@@ -99,11 +99,33 @@ fn rejects_nonpositive_areas_perimeters_and_negative_shared_perimeters() {
     assert!(matches!(
         PreparedPolsbyPopper::from_boundary_perimeters(
             vec![1.0; 2],
-            vec![-2.0; 2],
+            vec![-0.5; 2],
             vec![(0, 1)],
-            vec![1.0],
+            vec![1e12],
         ),
-        Err(Error::InvalidInput(message)) if message.contains("nonpositive total perimeter")
+        Err(Error::InvalidInput(message)) if message.contains("negative boundary perimeter")
+    ));
+    assert_eq!(
+        PreparedPolsbyPopper::from_boundary_perimeters(vec![1.0], vec![f64::NAN], vec![], vec![],)
+            .unwrap_err(),
+        Error::NonFinitePolsbyPopperInput
+    );
+}
+
+#[test]
+fn rejects_summed_shared_perimeter_greater_than_unit_perimeter() {
+    assert!(matches!(
+        PreparedPolsbyPopper::new(
+            vec![1.0; 3],
+            vec![4.0; 3],
+            vec![(0, 1), (0, 2)],
+            vec![2.1, 2.1],
+        ),
+        Err(Error::InvalidInput(message))
+            if message.contains("unit 0 has total perimeter 4")
+                && message.contains("edges connected to it sum to 4.2")
+                && message.contains("different geometries or CRSs")
+                && message.contains("geometry-backed scoring")
     ));
 }
 

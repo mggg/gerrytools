@@ -91,6 +91,16 @@ class TestCategoricalColormapColorAmbiguity:
             plot.add_districting_plan_layer("district", colormap="districtr")
 
 
+def test_external_aspect_survives_geoplot_rebuild(testing_gdf):
+    plot = GeoPlot(testing_gdf, silent=True)
+    ax = plot.ax
+    ax.set_aspect("auto")
+
+    plot.title = "rebuild"
+
+    assert plot.ax.get_aspect() == "auto"
+
+
 class TestGeoPlotPositionalArgs:
     def test_choropleth_datacolumn_is_first_positional(self, testing_gdf):
         plot = GeoPlot(testing_gdf, dpi=50, silent=True)
@@ -383,6 +393,29 @@ class TestColorbarRebind:
         plot.ax
 
         assert len(fig.axes) == 2
+        assert len(plot._colorbar_axes) == 1
+
+    def test_rebind_back_to_previous_axes_replaces_colorbar(self, testing_gdf):
+        fig_a, ax_a = plt.subplots()
+        plot = self._plot_with_colorbar_on(testing_gdf, ax_a)
+        fig_b, ax_b = plt.subplots()
+
+        for target, figure in ((ax_b, fig_b), (ax_a, fig_a), (ax_b, fig_b), (ax_a, fig_a)):
+            plot.bind_to_ax(target)
+            assert len(figure.axes) == 2
+            assert len(plot._colorbar_axes) == 1
+
+    def test_rebind_rebuilds_caller_removed_inactive_colorbar(self, testing_gdf):
+        fig_a, ax_a = plt.subplots()
+        plot = self._plot_with_colorbar_on(testing_gdf, ax_a)
+        old_colorbar = fig_a.axes[1]
+        _, ax_b = plt.subplots()
+        plot.bind_to_ax(ax_b)
+
+        old_colorbar.remove()
+        plot.bind_to_ax(ax_a)
+
+        assert len(fig_a.axes) == 2
         assert len(plot._colorbar_axes) == 1
 
 

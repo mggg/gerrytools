@@ -13,7 +13,12 @@ from .overlap import population_overlap
 
 @dataclass(frozen=True)
 class MinimumDispersion:
-    """The optimal district relabeling and its displaced population."""
+    """The optimal district relabeling and its displaced population.
+
+    Attributes:
+        relabeling (dict[Hashable, Hashable]): Comparison-to-reference district label mapping.
+        population (float): Population displaced under the relabeling.
+    """
 
     relabeling: dict[Hashable, Hashable]
     population: float
@@ -105,10 +110,11 @@ def optimal_relabeling(overlap: pd.DataFrame) -> dict[Hashable, Hashable]:
     A square matrix is required because a district relabeling must be a complete bijection.
 
     Args:
-        overlap: Finite, nonnegative overlap weights with unique row and column labels.
+        overlap (pd.DataFrame): Finite, nonnegative overlap weights with unique row and column
+            labels.
 
     Returns:
-        A dictionary mapping every source label to one target label.
+        dict[Hashable, Hashable]: A dictionary mapping every source label to one target label.
 
     Raises:
         TypeError: If ``overlap`` is not a DataFrame.
@@ -205,13 +211,13 @@ def population_dispersion(
     plan has arbitrary labels that should first be optimally matched to the reference plan.
 
     Args:
-        units: Unit-level table containing both assignments and population.
-        reference: Reference-plan assignment column.
-        comparison: Comparison-plan assignment column.
-        population: Finite, nonnegative population column.
+        units (pd.DataFrame): Unit-level table containing both assignments and population.
+        reference (str): Reference-plan assignment column.
+        comparison (str): Comparison-plan assignment column.
+        population (str): Finite, nonnegative population column.
 
     Returns:
-        The sum of population in units whose two labels differ.
+        float: The sum of population in units whose two labels differ.
     """
     overlap = population_overlap(units, source=comparison, target=reference, population=population)
     retained = sum(overlap.at[label, label] for label in overlap.index if label in overlap.columns)
@@ -228,14 +234,14 @@ def population_dispersion_by_district(
     """Return displaced population grouped by reference district.
 
     Args:
-        units: Unit-level table containing both assignments and population.
-        reference: Reference-plan assignment column.
-        comparison: Comparison-plan assignment column.
-        population: Finite, nonnegative population column.
+        units (pd.DataFrame): Unit-level table containing both assignments and population.
+        reference (str): Reference-plan assignment column.
+        comparison (str): Comparison-plan assignment column.
+        population (str): Finite, nonnegative population column.
 
     Returns:
-        A floating-point Series indexed by reference district. Each value is the population that
-        the comparison plan assigns outside that same district label.
+        pd.Series: A floating-point Series indexed by reference district. Each value is the
+            population that the comparison plan assigns outside that same district label.
     """
     overlap = population_overlap(units, source=comparison, target=reference, population=population)
     displaced = overlap.sum(axis=0).astype(np.float64)
@@ -287,13 +293,14 @@ def minimum_population_dispersion(
     unit-level data preparation.
 
     Args:
-        units: Unit-level table containing both assignments and population.
-        reference: Reference-plan assignment column.
-        comparison: Comparison-plan assignment column to relabel.
-        population: Finite, nonnegative population column.
+        units (pd.DataFrame): Unit-level table containing both assignments and population.
+        reference (str): Reference-plan assignment column.
+        comparison (str): Comparison-plan assignment column to relabel.
+        population (str): Finite, nonnegative population column.
 
     Returns:
-        The optimal comparison-to-reference label mapping and the resulting displaced population.
+        MinimumDispersion: The optimal comparison-to-reference label mapping and the resulting
+            displaced population.
 
     Raises:
         ValueError: If the plans have different numbers of realized districts or any input fails
@@ -390,14 +397,16 @@ def minimum_population_dispersion_with_parity(
     objective decides which two enter the even group and how all four districts are matched.
 
     Args:
-        units: Unit-level table containing both assignments and population.
-        reference: Reference-plan assignment column.
-        comparison: Comparison-plan assignment column to relabel.
-        population: Finite, nonnegative population column.
-        even_reference_districts: Unique reference labels treated as even for the parity rule.
+        units (pd.DataFrame): Unit-level table containing both assignments and population.
+        reference (str): Reference-plan assignment column.
+        comparison (str): Comparison-plan assignment column to relabel.
+        population (str): Finite, nonnegative population column.
+        even_reference_districts (Iterable[Hashable]): Unique reference labels treated as even for
+            the parity rule.
 
     Returns:
-        The parity-optimal comparison-to-reference mapping and its displaced population.
+        MinimumDispersion: The parity-optimal comparison-to-reference mapping and its displaced
+            population.
 
     Raises:
         ValueError: If the plans have different numbers of realized districts, an even label is

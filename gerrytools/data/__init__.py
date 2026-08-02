@@ -1,6 +1,4 @@
-"""
-Facilities for processing data and districting plans in a standardized fashion.
-"""
+"""Facilities for processing data and districting plans in a standardized fashion."""
 
 from . import uscensus
 from .geometries import dualgraphs20, geometries20, vtds20

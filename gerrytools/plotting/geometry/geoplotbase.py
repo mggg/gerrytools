@@ -10,7 +10,7 @@ from shapely.geometry import Point
 
 from gerrytools.plotting._artist_registry import _ArtistRegistry
 from gerrytools.plotting._axes_backed import _AxesBackedPlot, deferred_axis_update
-from gerrytools.plotting._axes_state import Unit, _ManagedAxesState
+from gerrytools.plotting._axes_state import Unit, _ManagedAxesState, _recompute_data_limits
 from gerrytools.plotting.data._axis_api import _TitleApiMixin, _TitleText
 from gerrytools.plotting.geometry._labels import (
     _DEFAULT_LABEL_FONT,
@@ -19,7 +19,7 @@ from gerrytools.plotting.geometry._labels import (
     _draw_deferred_labels,
     _label_keep_mask,
     _LabelRequest,
-    _merge_style_arg,
+    _merge_label_style_arg,
     _queue_label_request,
 )
 from gerrytools.plotting.geometry._layers import (
@@ -104,7 +104,7 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
     Attributes:
         gdf (GeoDataFrame): The base GeoDataFrame for the plot.
         fig (Figure): The Matplotlib Figure object.
-        target_crs: The target CRS for reprojecting geometries.
+        target_crs (CRSLike | None): The target CRS for reprojecting geometries.
         silent (bool): Whether to suppress informational output throughout the rendering process.
     """
 
@@ -216,11 +216,11 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
         geo_source: GeoDataFrame | GeoSeries | None = None,
         geometry_mask: pd.Series | None = None,
         dissolve_column: str | None = None,
-        edgecolor: Color = "black",
+        edgecolor: Color | None = "black",
         edgealpha: float | None = None,
         edgewidth: float = 0.5,
         show_labels: bool = False,
-        style: LabelStyle | str | None = None,
+        label_style: LabelStyle | str | None = None,
         label_options: LabelOptions | None = None,
         zorder: int = 3,
     ) -> None:
@@ -234,20 +234,26 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
                 before dissolving. Default is None.
             dissolve_column (str | None): Optional column to dissolve geometries by before
                 outlining. Default is None.
-            edgecolor (Color): Color for geometry edges. Default is "black".
+            edgecolor (Color | None): Color for geometry edges. Pass ``None`` for no
+                edge. Default is "black".
             edgealpha (float | None): Alpha transparency for edge colors. Default is None.
             edgewidth (float): Width of geometry edges. Default is 0.5.
             show_labels (bool): Whether to show labels on the outlined geometries. Default is False.
-            style (LabelStyle | str | None): Shorthand for ``label_options.style``: a
+            label_style (LabelStyle | str | None): Shorthand for
+                ``label_options.label_style``: a
                 ``LabelStyle`` or registered style name (e.g. ``"badge"``, ``"halo"``).
-                Mutually exclusive with a ``label_options`` that carries its own style.
+                Mutually exclusive with a ``label_options`` that carries its own label style.
                 Defaults to None.
             label_options (LabelOptions | None): Bundled label styling and placement options
-                (style or font/box options, per-label adjustments and font sizes, and excluded
-                labels). When None (or with a None ``font_options`` and no style), labels use the
-                default geography font: fontcolor="black", fontsize=4, fontweight="roman",
-                outlinecolor="grey", outlinewidth=0.2. Default is None.
+                (label style or font/box options, per-label adjustments and font sizes, and
+                excluded labels). When None (or with a None ``font_options`` and no label style),
+                labels use the default geography font: fontcolor="black", fontsize=4,
+                fontweight="roman", outlinecolor="grey", outlinewidth=0.2. Default is None.
             zorder (int): Z-order for rendering. Default is 3.
+
+        Raises:
+            TypeError: If dissolving is requested for a source that is not a GeoDataFrame.
+            ValueError: If labels are requested without a dissolve column or options are invalid.
         """
         if geo_source is None:
             geo_source = self.gdf
@@ -291,7 +297,7 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
                 self._label_requests,
                 gdf=dissolved,
                 label_column=dissolve_column,
-                options=_merge_style_arg(style, label_options),
+                options=_merge_label_style_arg(label_style, label_options),
                 zorder=zorder + 1,
                 dissolved=True,
             )
@@ -303,10 +309,10 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
         *,
         geo_source: GeoDataFrame | GeoSeries | None = None,
         geometry_mask: pd.Series | None = None,
-        facecolor: Color = "gray",
+        facecolor: Color | None = "gray",
         facealpha: float | None = 0.5,
         show_labels: bool = False,
-        style: LabelStyle | str | None = None,
+        label_style: LabelStyle | str | None = None,
         label_options: LabelOptions | None = None,
         zorder: int = 10,
     ) -> None:
@@ -319,19 +325,25 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
                 the layer. If None, uses the base gdf of the GeoPlotBase. Default is None.
             geometry_mask (pd.Series | None): Optional boolean mask to filter geometries. Default is
                 None.
-            facecolor (Color): Color for geometry faces. Default is "gray".
+            facecolor (Color | None): Color for geometry faces. Pass ``None`` for no
+                fill. Default is "gray".
             facealpha (float | None): Alpha transparency for face colors. Default is 0.5.
             show_labels (bool): Whether to show labels on the highlighted geometries. Default is
                 False.
-            style (LabelStyle | str | None): Shorthand for ``label_options.style``: a
+            label_style (LabelStyle | str | None): Shorthand for
+                ``label_options.label_style``: a
                 ``LabelStyle`` or registered style name (e.g. ``"badge"``, ``"halo"``).
-                Mutually exclusive with a ``label_options`` that carries its own style.
+                Mutually exclusive with a ``label_options`` that carries its own label style.
                 Defaults to None.
             label_options (LabelOptions | None): Bundled label styling and placement options
-                (style or font/box options, per-label adjustments and font sizes, and excluded
-                labels). When None (or with a None ``font_options`` and no style), labels use the
-                default geography font. Default is None.
+                (label style or font/box options, per-label adjustments and font sizes, and
+                excluded labels). When None (or with a None ``font_options`` and no label style),
+                labels use the default geography font. Default is None.
             zorder (int): Z-order for rendering. Default is 10.
+
+        Raises:
+            TypeError: If labels are requested from a source that is not a GeoDataFrame.
+            ValueError: If label inputs or styling options are invalid.
         """
         # Validate before touching layer state, so a failed call registers nothing.
         label_source: GeoDataFrame | None = None
@@ -384,7 +396,7 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
                 self._label_requests,
                 gdf=label_source,
                 label_column=label_column,
-                options=_merge_style_arg(style, label_options),
+                options=_merge_label_style_arg(label_style, label_options),
                 zorder=zorder + 1,
             )
 
@@ -398,7 +410,7 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
         marker_options: PointMarkerOptions | None = None,
         show_labels: bool = True,
         labels: Sequence[str] | None = None,
-        style: LabelStyle | str | None = None,
+        label_style: LabelStyle | str | None = None,
         label_options: LabelOptions | None = None,
         zorder: int = 2,
     ) -> None:
@@ -426,19 +438,23 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
                 Default is None.
             show_labels (bool): Whether to show labels on the markers. Default is True.
             labels (Sequence[str] | None): Optional labels for each marker. Default is None.
-            style (LabelStyle | str | None): Shorthand for ``label_options.style``: a
+            label_style (LabelStyle | str | None): Shorthand for
+                ``label_options.label_style``: a
                 ``LabelStyle`` or registered style name (e.g. ``"badge"``, ``"halo"``).
-                Mutually exclusive with a ``label_options`` that carries its own style.
+                Mutually exclusive with a ``label_options`` that carries its own label style.
                 Defaults to None.
             label_options (LabelOptions | None): Bundled label styling and placement options
-                (style or font/box options, per-label adjustments and font sizes, and
+                (label style or font/box options, per-label adjustments and font sizes, and
                 excluded labels). Styles may vary the box per label, e.g. equalizing badge
                 circle diameters. When None (or with None ``font_options`` /
                 ``box_options``), labels use default ``LabelFontOptions()`` and a disabled
                 box. Default is None.
             zorder (int, optional): Z-order for rendering. Defaults to ``2``.
+
+        Raises:
+            ValueError: If point sources, labels, or styling options are invalid.
         """
-        merged_options = _merge_style_arg(style, label_options)
+        merged_options = _merge_label_style_arg(label_style, label_options)
         options = merged_options if merged_options is not None else LabelOptions()
         if marker_options is None:
             marker_options = PointMarkerOptions(
@@ -483,7 +499,7 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
             labels=labels,
             marker_options=marker_options,
             show_labels=show_labels,
-            label_style=options.resolved_style,
+            label_style=options.resolved_label_style,
             label_adjustments=options.adjustments,
             label_fontsize=options.fontsize,
             label_font_options=label_font_options,
@@ -499,7 +515,7 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
         *,
         latlon_list: Sequence[tuple[float, float]] | None = None,
         input_crs: CRSLike | None = None,
-        style: LabelStyle | str | None = None,
+        label_style: LabelStyle | str | None = None,
         label_options: LabelOptions | None = None,
         zorder: int = 2,
     ) -> None:
@@ -517,18 +533,19 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
                 ``latlon_list`` or a CRS-less ``points_geoseries``. If None, ``latlon_list``
                 is assumed EPSG:4326 (lat/lon) and a CRS-bearing ``points_geoseries`` keeps
                 its own CRS. Points are reprojected to the plot CRS at render. Default is None.
-            style (LabelStyle | str | None): Shorthand for ``label_options.style``: a
+            label_style (LabelStyle | str | None): Shorthand for
+                ``label_options.label_style``: a
                 ``LabelStyle`` or registered style name (e.g. ``"badge"``, ``"halo"``).
-                Mutually exclusive with a ``label_options`` that carries its own style.
+                Mutually exclusive with a ``label_options`` that carries its own label style.
                 Defaults to None.
             label_options (LabelOptions | None): Bundled label styling and placement options
-                (style or font/box options, per-label adjustments and font sizes, and
-                excluded labels). When None (or with a None ``font_options`` and no style),
+                (label style or font/box options, per-label adjustments and font sizes, and
+                excluded labels). When None (or with a None ``font_options`` and no label style),
                 labels use the default geography font: fontcolor="black", fontsize=4,
                 fontweight="roman", outlinecolor="grey", outlinewidth=0.2. Default is None.
             zorder (int, optional): Z-order for rendering. Defaults to ``2``.
         """
-        merged_options = _merge_style_arg(style, label_options)
+        merged_options = _merge_label_style_arg(label_style, label_options)
         options = merged_options if merged_options is not None else LabelOptions()
         point_geometries = _resolve_points(
             points_geoseries,
@@ -540,7 +557,7 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
         if labels is None:
             labels = [str(i) for i in range(len(point_geometries))]
 
-        if options.font_options is None and options.style is None:
+        if options.font_options is None and options.label_style is None:
             options = replace(options, font_options=_DEFAULT_LABEL_FONT)
 
         self.add_marker_layer(
@@ -618,10 +635,7 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
 
     def _recompute_data_limits(self) -> None:
         """Recompute limits, adding collections that Matplotlib's ``relim`` skips."""
-        self._ax.relim()
-        for collection in self._ax.collections:
-            bounds = collection.get_datalim(self._ax.transData)
-            self._ax.update_datalim(bounds.get_points())
+        _recompute_data_limits(self._ax)
 
     def focus_axes(
         self,
@@ -647,6 +661,9 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
                 (0.02 = 2%); with ``pad_mode="data"`` they are absolute data units.
                 Defaults to 0.02.
             pad_mode (Literal): "fraction" or "data". Defaults to "fraction".
+
+        Raises:
+            ValueError: If no usable geometries remain or padding options are invalid.
         """
         if geo_source is None:
             geo_source = self.gdf
@@ -765,6 +782,17 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
             "axis_visibility", external, apply_visibility, lambda: bool(self._ax.axison)
         )
 
+    def _apply_aspect(
+        self,
+        external: set[Unit],
+        previous: float | Literal["auto", "equal"],
+    ) -> None:
+        """Preserve an externally selected aspect across GeoPandas layer rendering."""
+        if "aspect" in external:
+            self._ax.set_aspect(previous)
+        else:
+            self._axes_state.record_default("aspect", self._ax.get_aspect())
+
     def _apply_extra_units(self, external: set[Unit]) -> None:
         """Hook: reconcile subclass-managed axes units (e.g. the dot-density legend)."""
 
@@ -775,12 +803,14 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
         points and clipping reflect the final view.
         """
         before, external = self._axes_state.begin_rebuild(self._ax)
+        previous_aspect = cast(float | Literal["auto", "equal"], self._ax.get_aspect())
         self._artists.remove_all()
         self._recompute_data_limits()
         self._build_plot()
         self._axes_state.restore_autoscale_protected(self._ax, before, external)
         self._apply_text(self._title_text, external)
         self._apply_axis_visibility(external)
+        self._apply_aspect(external, previous_aspect)
         self._apply_limits(external)
         self._apply_extra_units(external)
         label_positions = _draw_deferred_labels(
@@ -808,6 +838,7 @@ class GeoPlotBase(_TitleApiMixin, _AxesBackedPlot):
 
         Raises:
             ValueError: If ``as_lat_long`` is True on a plot with no CRS.
+            RuntimeError: If a plot build completes without producing label positions.
         """
         self._update_axis()
         positions = self._last_label_positions

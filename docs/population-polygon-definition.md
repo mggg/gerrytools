@@ -91,7 +91,7 @@ Containment and ownership are automatic because each observation is its graph un
 
 ### Alternative population surface
 
-`alternative_pop_gdf` replaces the default population surface with another polygon layer, usually
+`population_units` replaces the default population surface with another polygon layer, usually
 at a finer resolution. Its rows and `population_col` values define both the numerator and the
 denominator. A finer surface can reduce the full-weight effect of polygons that intersect only a
 small part of the hull, but the scorer still assigns every intersecting polygon's complete weight.
@@ -170,7 +170,7 @@ from gerrytools.scoring import PlanEvaluator, PopulationPolygon
 scorer = PlanEvaluator(
     graph,
     geometry=graph_units,
-    node_column="graph_node",
+    node_id_column="graph_node",
 ).add_metric(PopulationPolygon("population"))
 ```
 
@@ -179,11 +179,11 @@ scorer = PlanEvaluator(
 ```python
 metric = PopulationPolygon(
     "population",
-    alternative_pop_gdf=population_blocks,
+    population_units=population_blocks,
 )
 ```
 
-When `alternative_pop_gdf` is omitted, the evaluator's aligned geometry GeoDataFrame supplies both
+When `population_units` is omitted, the evaluator's aligned geometry GeoDataFrame supplies both
 geometries and values. When it is present, that frame supplies both. The same `population_col` must
 exist in the selected frame.
 
@@ -196,11 +196,11 @@ metric is constructed.
 ### Required inputs
 
 - The evaluator geometry must have exactly one row per graph node, aligned by its index or by
-  `node_column`.
+  `node_id_column`.
 - Evaluator and alternative population geometries must be valid, nonempty `Polygon` or
   `MultiPolygon` values with positive area.
 - Evaluator and alternative population geometries must use the same projected CRS. The evaluator
-  geometry may be explicitly transformed with `PlanEvaluator(..., crs=...)`; the alternative
+  geometry may be explicitly transformed with `PlanEvaluator(..., target_crs=...)`; the alternative
   surface is not reprojected automatically.
 - `population_col` must exist in whichever GeoDataFrame supplies the population surface.
 - Population values must be finite and nonnegative, and at least one value must be positive.

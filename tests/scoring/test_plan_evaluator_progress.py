@@ -13,6 +13,7 @@ from gerrytools.scoring import PlanEvaluator, Tally
 class ProgressRecorder:
     def __init__(self, **options: Any) -> None:
         self.options = options
+        self.total = options.get("total")
         self.updates: list[int] = []
         self.closed = False
 
@@ -24,6 +25,9 @@ class ProgressRecorder:
 
     def update(self, amount: int) -> None:
         self.updates.append(amount)
+
+    def reset(self, *, total: int) -> None:
+        self.total = total
 
 
 def evaluator() -> PlanEvaluator:
@@ -63,9 +67,12 @@ def test_evaluate_many_reports_completed_native_batches(monkeypatch: pytest.Monk
     assert bars[0].closed
 
 
-def test_evaluate_stream_uses_bendl_expanded_sample_count(
+@pytest.mark.parametrize(("max_samples", "expected"), [(None, 3), (2, 2), (10, 3)])
+def test_evaluate_stream_reports_bendl_progress_without_a_second_read(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    max_samples: int | None,
+    expected: int,
 ) -> None:
     source = tmp_path / "plans.bendl"
     output = tmp_path / "scores"
@@ -76,16 +83,22 @@ def test_evaluate_stream_uses_bendl_expanded_sample_count(
         stream.write([0, 1, 1])
     bars = record_progress(monkeypatch)
 
-    run = evaluator().evaluate_stream(source, output, progress=True)
+    run = evaluator().evaluate_stream(
+        source,
+        output,
+        max_samples=max_samples,
+        progress=True,
+    )
 
-    assert run.summary.samples == 3
+    assert run.summary.samples == expected
     assert len(bars) == 1
     assert bars[0].options == {
-        "total": 3,
+        "total": max_samples,
         "desc": "Evaluating ensemble",
         "unit": "sample",
     }
-    assert sum(bars[0].updates) == 3
+    assert bars[0].total == expected
+    assert sum(bars[0].updates) == expected
     assert bars[0].closed
 
 
@@ -116,10 +129,13 @@ def test_evaluate_stream_preserves_progress_callback_exception(
 
 def test_progress_must_be_boolean(tmp_path: Path) -> None:
     with pytest.raises(TypeError, match="progress must be a boolean"):
-        evaluator().evaluate_many([[0, 0, 1]], progress=1)  # type: ignore[arg-type]
+        evaluator().evaluate_many(
+            [[0, 0, 1]],
+            progress=1,  # type: ignore
+        )
     with pytest.raises(TypeError, match="progress must be a boolean"):
         evaluator().evaluate_stream(
             tmp_path / "missing.ben",
             tmp_path / "scores",
-            progress=1,  # type: ignore[arg-type]
+            progress=1,  # type: ignore
         )

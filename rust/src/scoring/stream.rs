@@ -198,7 +198,8 @@ impl<'a> Scorer<'a> {
         F: FnMut(PlanScore) -> Result<()>,
     {
         let mut frames = source.open_frames()?;
-        let mut batch = Vec::with_capacity(options.batch_size.max(1));
+        let batch_size = options.batch_size.max(1);
+        let mut batch = Vec::with_capacity(batch_size.min(DEFAULT_BATCH_SIZE));
         let mut remaining = options.max_samples;
         let mut frame_index = 0_u64;
         let mut summary = StreamSummary::default();
@@ -212,7 +213,7 @@ impl<'a> Scorer<'a> {
             ensure_positive_repetitions(repetitions, frame_index)?;
             frame_index += 1;
             batch.push((frame, cap_repetitions(&mut remaining, repetitions)));
-            if batch.len() == options.batch_size.max(1) {
+            if batch.len() == batch_size {
                 self.emit_full_batch(&batch, &mut summary, &mut uniqueness, &mut emit)?;
                 batch.clear();
             }

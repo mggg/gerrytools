@@ -43,6 +43,15 @@ class TikzTableOptions(TableOptions):
 
     Extends :class:`TableOptions` with the ``NiceTabular``-specific settings; every shared field
     keeps the same semantics.
+
+    Attributes:
+        cell_space_limits (str): Minimum vertical space around cell content as a LaTeX dimension.
+            Defaults to ``"1pt"``.
+        table_name (str): PGF node-name prefix for the table. Defaults to ``"table"``.
+        extra_draws (list[str]): Raw TikZ commands emitted after the table. Defaults to an empty
+            list.
+        cell_borders (dict[tuple[int, int], set[str]]): Border sides keyed by one-based
+            ``(row, column)`` cell coordinates. Defaults to an empty mapping.
     """
 
     # --- NiceTabular-specific ---
@@ -156,6 +165,9 @@ class TikzTable(_TableBase):
             col (int | list[int]): TikZ column index (or list of indices).
             sides (str | Iterable[str]): ``"top"``, ``"bottom"``, ``"left"``,
                 ``"right"`` — or an iterable of them, or ``"all"``.
+
+        Raises:
+            ValueError: If a side is unsupported or a row or column index is out of bounds.
         """
         rows = [row] if isinstance(row, int) else list(row)
         cols = [col] if isinstance(col, int) else list(col)

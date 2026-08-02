@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 import numbers
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Literal, TypeAlias, cast
 
@@ -12,9 +12,10 @@ from geopandas import GeoDataFrame
 from pyproj import CRS
 from shapely.geometry.base import BaseGeometry
 
-from ..result import _Dtype
+from .._types import _Dtype, _ResultShape
 from ._base import (
     _KeyedMetric,
+    _keys,
     _merged_keys,
     _MetricBase,
     _OutputSpec,
@@ -24,11 +25,11 @@ from ._base import (
 if TYPE_CHECKING:
     from collections.abc import Hashable
 
-    from gerrytools._scoring_engine import ScoringEngine
+    from gerrytools._scoring_engine import PreparedGeometry, ScoringEngine
 
     from ..evaluator import PlanEvaluator
 
-_GeometryAdder: TypeAlias = Callable[[Sequence[bytes], list[tuple[int, int]]], None]
+_GeometryAdder: TypeAlias = Callable[["PreparedGeometry"], None]
 _GraphAdder: TypeAlias = Callable[
     [list[float], list[float], list[tuple[int, int]], list[float]], None
 ]
@@ -53,6 +54,9 @@ class ConvexHullRatio(_MetricBase):
     <https://data-democracy.org/publications/political-geometry/01-Duchin.pdf>`_, and Duchin and
     Tenner, `Discrete Geometry for Electoral Geography
     <https://doi.org/10.1016/j.polgeo.2023.103040>`_.
+
+    Args:
+        result_name (str | None, optional): Result key. Defaults to ``"convex_hull_ratio"``.
     """
 
     _kind: ClassVar[str] = "convex_hull_ratio"
@@ -65,8 +69,8 @@ class ConvexHullRatio(_MetricBase):
         return _ResourceSpec(geometry=True)
 
     def _prepare(self, backend: ScoringEngine, evaluator: PlanEvaluator) -> _OutputSpec:
-        backend.add_convex_hull_ratio(evaluator._require_geometry("ConvexHullRatio").wkb)
-        return _OutputSpec("district", ("score",), ("float",))
+        backend.add_convex_hull_ratio(evaluator._require_geometry("ConvexHullRatio").native)
+        return _OutputSpec(_ResultShape.DISTRICT, ("score",), ("float",))
 
     def _options(self) -> dict[str, object]:
         return {"source": "geometry"}
@@ -95,7 +99,14 @@ class StateClippedConvexHullRatio(_MetricBase):
     <https://doi.org/10.1016/j.polgeo.2023.103040>`_.
 
     Args:
-        state_geometry: Nonempty, valid Polygon or MultiPolygon covering every scoring unit.
+        state_geometry (BaseGeometry): Nonempty, valid Polygon or MultiPolygon covering every
+            scoring unit.
+        result_name (str | None, optional): Result key. Defaults to
+            ``"state_clipped_convex_hull_ratio"``.
+
+    Raises:
+        TypeError: If ``state_geometry`` is not a Shapely geometry.
+        ValueError: If it is not a nonempty, valid Polygon or MultiPolygon with positive area.
     """
 
     _kind: ClassVar[str] = "state_clipped_convex_hull_ratio"
@@ -119,10 +130,10 @@ class StateClippedConvexHullRatio(_MetricBase):
 
     def _prepare(self, backend: ScoringEngine, evaluator: PlanEvaluator) -> _OutputSpec:
         backend.add_state_clipped_convex_hull_ratio(
-            evaluator._require_geometry("StateClippedConvexHullRatio").wkb,
+            evaluator._require_geometry("StateClippedConvexHullRatio").native,
             bytes(self.state_geometry.wkb),
         )
-        return _OutputSpec("district", ("score",), ("float",))
+        return _OutputSpec(_ResultShape.DISTRICT, ("score",), ("float",))
 
     def _options(self) -> dict[str, object]:
         return {"source": "geometry", "state_geometry": "explicit"}
@@ -134,7 +145,7 @@ class PopulationPolygon(_MetricBase):
 
     By default, the evaluator's aligned GeoDataFrame supplies both population geometry and the
     ``population_col`` values. Each row already corresponds to one graph node. Supplying
-    ``alternative_pop_gdf`` instead uses its finer population polygons and infers the unique scorer
+    ``population_units`` instead uses its finer population polygons and infers the unique scorer
     geometry containing each one.
 
     For district :math:`D`, population polygons :math:`G_i`, weights :math:`w_i`, their uniquely
@@ -165,9 +176,15 @@ class PopulationPolygon(_MetricBase):
     <https://doi.org/10.1016/j.polgeo.2023.103040>`_.
 
     Args:
-        population_col: Column containing nonnegative population values.
-        alternative_pop_gdf: Optional projected GeoDataFrame containing a finer population surface.
-            When omitted, ``population_col`` is read from the evaluator's aligned geometry.
+        population_col (str): Column containing nonnegative population values.
+        population_units (GeoDataFrame | None, optional): Projected GeoDataFrame containing a
+            finer population surface. Defaults to None, which reads ``population_col`` from the
+            evaluator's aligned geometry.
+        result_name (str | None, optional): Result key. Defaults to ``"population_polygon"``.
+
+    Raises:
+        TypeError: If ``population_units`` is not a GeoDataFrame or None.
+        ValueError: If a column, CRS, geometry, or population value is invalid.
     """
 
     _kind: ClassVar[str] = "population_polygon"
@@ -180,34 +197,34 @@ class PopulationPolygon(_MetricBase):
         self,
         population_col: str,
         *,
-        alternative_pop_gdf: GeoDataFrame | None = None,
-        name: str | None = None,
+        population_units: GeoDataFrame | None = None,
+        result_name: str | None = None,
     ) -> None:
-        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "result_name", result_name)
         if not isinstance(population_col, str) or not population_col:
             raise ValueError("PopulationPolygon population_col must be a nonempty column name")
         object.__setattr__(self, "population_col", population_col)
 
-        if alternative_pop_gdf is None:
+        if population_units is None:
             object.__setattr__(self, "alternative_geometries", None)
             object.__setattr__(self, "alternative_weights", None)
             object.__setattr__(self, "alternative_crs", None)
             return
-        if not isinstance(alternative_pop_gdf, GeoDataFrame):
-            raise TypeError("alternative_pop_gdf must be a GeoDataFrame or None")
-        if population_col not in alternative_pop_gdf.columns:
+        if not isinstance(population_units, GeoDataFrame):
+            raise TypeError("population_units must be a GeoDataFrame or None")
+        if population_col not in population_units.columns:
             raise ValueError(
-                f"alternative_pop_gdf does not contain population column {population_col!r}"
+                f"population_units does not contain population column {population_col!r}"
             )
-        if alternative_pop_gdf.empty:
+        if population_units.empty:
             raise ValueError("PopulationPolygon requires at least one observation")
-        if alternative_pop_gdf.crs is None:
-            raise ValueError("PopulationPolygon alternative_pop_gdf must have a CRS")
-        population_crs = CRS.from_user_input(alternative_pop_gdf.crs)
+        if population_units.crs is None:
+            raise ValueError("PopulationPolygon population_units must have a CRS")
+        population_crs = CRS.from_user_input(population_units.crs)
         if not population_crs.is_projected:
-            raise ValueError("PopulationPolygon alternative_pop_gdf must use a projected CRS")
+            raise ValueError("PopulationPolygon population_units must use a projected CRS")
 
-        geometry = alternative_pop_gdf.geometry
+        geometry = population_units.geometry
         if geometry.isna().any():
             raise ValueError("PopulationPolygon geometries cannot contain missing values")
         if geometry.is_empty.any():
@@ -221,7 +238,7 @@ class PopulationPolygon(_MetricBase):
         if (geometry.area <= 0).any():
             raise ValueError("PopulationPolygon geometries must have positive area")
 
-        weight_values = tuple(alternative_pop_gdf[population_col])
+        weight_values = tuple(population_units[population_col])
         checked_weights = []
         for index, value in enumerate(weight_values):
             if (
@@ -243,27 +260,20 @@ class PopulationPolygon(_MetricBase):
         object.__setattr__(self, "alternative_weights", tuple(checked_weights))
         object.__setattr__(self, "alternative_crs", population_crs.to_wkt())
 
-    def _resolve(
-        self, evaluator: PlanEvaluator
-    ) -> tuple[tuple[bytes, ...], list[float], list[int] | None]:
-        """Resolve validated ``(aligned rows, weights, covering positions)`` scorer inputs.
-
-        Positions are ``None`` on the aligned path, where each weight already belongs to the graph
-        node at its own row.
-        """
+    def _resolve(self, evaluator: PlanEvaluator) -> tuple[PreparedGeometry, list[float]]:
+        """Resolve the shared Rust geometry resource and population weights."""
         geometry = evaluator._require_geometry("PopulationPolygon")
         if self.alternative_geometries is None:
             weights = evaluator._nonnegative_node_column(self.population_col, "PopulationPolygon")
             if sum(weights) <= 0:
                 raise ValueError("PopulationPolygon population must have a positive total")
-            return geometry.wkb, weights, None
+            return geometry.native, weights
         assert self.alternative_crs is not None and self.alternative_weights is not None
         if CRS.from_user_input(self.alternative_crs) != geometry.crs:
             raise ValueError(
-                "PopulationPolygon alternative_pop_gdf and evaluator geometry must use the same CRS"
+                "PopulationPolygon population_units and evaluator geometry must use the same CRS"
             )
-        positions = evaluator._population_positions(self.alternative_geometries)
-        return geometry.wkb, list(self.alternative_weights), positions
+        return geometry.native, list(self.alternative_weights)
 
     def _validate(self, evaluator: PlanEvaluator) -> None:
         self._resolve(evaluator)
@@ -274,37 +284,26 @@ class PopulationPolygon(_MetricBase):
             if self.alternative_geometries is not None
             else frozenset((evaluator._ordinary_column_resource(self.population_col),))
         )
-        surfaces = (
-            frozenset()
-            if self.alternative_geometries is None
-            else frozenset((self.alternative_geometries,))
-        )
-        return _ResourceSpec(
-            node_columns=columns,
-            geometry=True,
-            population_surfaces=surfaces,
-        )
+        return _ResourceSpec(node_columns=columns, geometry=True)
 
     def _prepare(self, backend: ScoringEngine, evaluator: PlanEvaluator) -> _OutputSpec:
-        rows, weights, positions = self._resolve(evaluator)
-        if positions is None:
-            backend.add_population_polygon_aligned(rows, weights)
+        geometry, weights = self._resolve(evaluator)
+        if self.alternative_geometries is None:
+            backend.add_population_polygon_aligned(geometry, weights)
         else:
-            assert self.alternative_geometries is not None
             backend.add_population_polygon(
-                rows,
+                geometry,
                 list(self.alternative_geometries),
                 weights,
-                positions,
             )
-        return _OutputSpec("district", ("score",), ("float",))
+        return _OutputSpec(_ResultShape.DISTRICT, ("score",), ("float",))
 
     def _options(self) -> dict[str, object]:
         options: dict[str, object] = {
             "model": "full_weight_intersection",
             "population_col": self.population_col,
             "surface": (
-                "scorer_geometry" if self.alternative_geometries is None else "alternative_pop_gdf"
+                "scorer_geometry" if self.alternative_geometries is None else "population_units"
             ),
         }
         if self.alternative_geometries is not None:
@@ -314,7 +313,11 @@ class PopulationPolygon(_MetricBase):
 
 @dataclass(frozen=True, slots=True)
 class Reock(_MetricBase):
-    """Score district area divided by its minimum enclosing-circle area."""
+    """Score district area divided by its minimum enclosing-circle area.
+
+    Args:
+        result_name (str | None, optional): Result key. Defaults to ``"reock"``.
+    """
 
     _kind: ClassVar[str] = "reock"
 
@@ -326,8 +329,8 @@ class Reock(_MetricBase):
         return _ResourceSpec(geometry=True)
 
     def _prepare(self, backend: ScoringEngine, evaluator: PlanEvaluator) -> _OutputSpec:
-        backend.add_reock(evaluator._require_geometry("Reock").wkb)
-        return _OutputSpec("district", ("score",), ("float",))
+        backend.add_reock(evaluator._require_geometry("Reock").native)
+        return _OutputSpec(_ResultShape.DISTRICT, ("score",), ("float",))
 
     def _options(self) -> dict[str, object]:
         return {"source": "geometry"}
@@ -337,68 +340,73 @@ class Reock(_MetricBase):
 class PolsbyPopper(_MetricBase):
     """Score district compactness from graph measurements or aligned geometry.
 
-    The default ``source="auto"`` uses aligned geometry when the evaluator has it and graph
-    measurements otherwise. Supplying any graph-column option also selects graph measurements.
-    Set ``source`` explicitly to override that choice.
+    With no graph-attribute options, the scorer derives every measurement from the evaluator's
+    aligned geometry when one is available and otherwise uses the graph's default attributes.
+    Supplying any graph-attribute option selects graph measurements and ignores evaluator geometry.
+    Graph scoring reads every measurement from the attributes named by ``area_attr`` and
+    ``shared_perimeter_attr``, together with either ``perimeter_attr`` for total perimeter or
+    ``boundary_perimeter_attr`` for only the exterior portion. All graph attributes must be
+    measured from the same geometry in the same projected CRS.
 
-    Graph-backed scoring uses ``area`` and ``shared_perimeter`` node/edge columns. Supply either a
-    total ``perimeter`` node column or a ``boundary_perimeter`` column containing only the portion
-    on the exterior boundary. Geometry-backed scoring derives all measurements from aligned WKB.
+    Args:
+        area_attr (str | None, optional): Graph node attribute containing unit areas. Defaults to
+            None, which uses ``"area"`` when graph measurements are selected.
+        perimeter_attr (str | None, optional): Graph node attribute containing total unit
+            perimeters. Defaults to None. Mutually exclusive with ``boundary_perimeter_attr``.
+        boundary_perimeter_attr (str | None, optional): Graph node attribute containing exterior
+            boundary perimeter. Defaults to None, which uses ``"boundary_perim"`` when graph
+            measurements are selected and ``perimeter_attr`` is omitted.
+        shared_perimeter_attr (str | None, optional): Graph edge attribute containing shared
+            boundary lengths. Defaults to None, which uses ``"shared_perim"`` for graph scoring.
+        result_name (str | None, optional): Result key. Defaults to ``"polsby_popper"``.
+
+    Raises:
+        ValueError: If an attribute name is empty or both perimeter attributes are supplied.
     """
 
     _kind: ClassVar[str] = "polsby_popper"
     _geometry_label: ClassVar[str] = "PolsbyPopper"
     _output_columns: ClassVar[tuple[str, ...]] = ("score",)
-    source: Literal["auto", "graph", "geometry"] = "auto"
-    area: str | None = None
-    perimeter: str | None = None
-    boundary_perimeter: str | None = None
-    shared_perimeter: str | None = None
+    area_attr: str | None = None
+    perimeter_attr: str | None = None
+    boundary_perimeter_attr: str | None = None
+    shared_perimeter_attr: str | None = None
 
     def __post_init__(self) -> None:
-        if self.source not in {"auto", "graph", "geometry"}:
-            raise ValueError("PolsbyPopper source must be 'auto', 'graph', or 'geometry'")
-        graph_options = (
-            self.area,
-            self.perimeter,
-            self.boundary_perimeter,
-            self.shared_perimeter,
-        )
-        if self.source == "geometry":
-            if any(option is not None for option in graph_options):
-                raise ValueError(
-                    "graph column options cannot be used with geometry-backed scoring; "
-                    "omit geometry to use graph columns"
-                )
-            return
-        if self.perimeter is not None and self.boundary_perimeter is not None:
-            raise ValueError("provide perimeter or boundary_perimeter, not both")
+        for name, value in (
+            ("area_attr", self.area_attr),
+            ("perimeter_attr", self.perimeter_attr),
+            ("boundary_perimeter_attr", self.boundary_perimeter_attr),
+            ("shared_perimeter_attr", self.shared_perimeter_attr),
+        ):
+            if value is not None and (not isinstance(value, str) or not value):
+                raise ValueError(f"{name} must be a nonempty graph attribute name or None")
+        if self.perimeter_attr is not None and self.boundary_perimeter_attr is not None:
+            raise ValueError("provide perimeter_attr or boundary_perimeter_attr, not both")
 
     def _resolved_source(self, evaluator: PlanEvaluator) -> Literal["graph", "geometry"]:
-        if self.source != "auto":
-            return self.source
         if any(
             option is not None
             for option in (
-                self.area,
-                self.perimeter,
-                self.boundary_perimeter,
-                self.shared_perimeter,
+                self.area_attr,
+                self.perimeter_attr,
+                self.boundary_perimeter_attr,
+                self.shared_perimeter_attr,
             )
         ):
             return "graph"
         return "geometry" if evaluator._has_geometry else "graph"
 
     def _graph_keys(self) -> tuple[str, str | None, str | None, str]:
-        perimeter = self.perimeter
-        boundary = self.boundary_perimeter
+        perimeter = self.perimeter_attr
+        boundary = self.boundary_perimeter_attr
         if perimeter is None:
             boundary = boundary or "boundary_perim"
         return (
-            self.area or "area",
+            self.area_attr or "area",
             perimeter,
             boundary,
-            self.shared_perimeter or "shared_perim",
+            self.shared_perimeter_attr or "shared_perim",
         )
 
     def _graph_columns(
@@ -421,17 +429,15 @@ class PolsbyPopper(_MetricBase):
 
     def _same_measurements(self, other: "PolsbyPopper") -> bool:
         return (
-            self.source,
-            self.area,
-            self.perimeter,
-            self.boundary_perimeter,
-            self.shared_perimeter,
+            self.area_attr,
+            self.perimeter_attr,
+            self.boundary_perimeter_attr,
+            self.shared_perimeter_attr,
         ) == (
-            other.source,
-            other.area,
-            other.perimeter,
-            other.boundary_perimeter,
-            other.shared_perimeter,
+            other.area_attr,
+            other.perimeter_attr,
+            other.boundary_perimeter_attr,
+            other.shared_perimeter_attr,
         )
 
     def _merge(self, other: _MetricBase) -> _MetricBase | None:
@@ -440,11 +446,10 @@ class PolsbyPopper(_MetricBase):
         if type(other) is type(self):
             return self
         return _AreaPerimeterMetrics(
-            source=self.source,
-            area=self.area,
-            perimeter=self.perimeter,
-            boundary_perimeter=self.boundary_perimeter,
-            shared_perimeter=self.shared_perimeter,
+            area_attr=self.area_attr,
+            perimeter_attr=self.perimeter_attr,
+            boundary_perimeter_attr=self.boundary_perimeter_attr,
+            shared_perimeter_attr=self.shared_perimeter_attr,
         )
 
     def _column_indices(self, available: tuple[Hashable, ...]) -> tuple[int, ...]:
@@ -472,7 +477,7 @@ class PolsbyPopper(_MetricBase):
         add_geometry, add_graph_total, add_graph_boundary = self._engine_adders(backend)
         if self._resolved_source(evaluator) == "geometry":
             geometry = evaluator._require_geometry(self._geometry_label)
-            add_geometry(geometry.wkb, evaluator._geometry_rook_edges())
+            add_geometry(geometry.native)
         else:
             areas, total, boundary, shared = self._graph_columns(evaluator)
             if total is not None:
@@ -481,7 +486,7 @@ class PolsbyPopper(_MetricBase):
                 assert boundary is not None
                 add_graph_boundary(areas, boundary, evaluator._edges, shared)
         dtypes: tuple[_Dtype, ...] = ("float",) * len(self._output_columns)
-        return _OutputSpec("district", self._output_columns, dtypes)
+        return _OutputSpec(_ResultShape.DISTRICT, self._output_columns, dtypes)
 
     def _validate(self, evaluator: PlanEvaluator) -> None:
         if self._resolved_source(evaluator) == "geometry":
@@ -491,7 +496,7 @@ class PolsbyPopper(_MetricBase):
 
     def _resources(self, evaluator: PlanEvaluator) -> _ResourceSpec:
         if self._resolved_source(evaluator) == "geometry":
-            return _ResourceSpec(geometry=True, rook=True)
+            return _ResourceSpec(geometry=True)
         area, perimeter, boundary, shared = self._graph_keys()
         columns = (area,) + ((perimeter,) if perimeter is not None else (boundary,))
         return _ResourceSpec(
@@ -501,48 +506,42 @@ class PolsbyPopper(_MetricBase):
         )
 
     def _stream_options(self, evaluator: PlanEvaluator) -> dict[str, object]:
-        options = self._options()
-        if options.get("source") != "auto":
-            return options
         if self._resolved_source(evaluator) == "geometry":
             return {"source": "geometry"}
 
         area, perimeter, boundary_perimeter, shared_perimeter = self._graph_keys()
         options: dict[str, object] = {
             "source": "graph",
-            "area": area,
-            "shared_perimeter": shared_perimeter,
+            "area_attr": area,
+            "shared_perimeter_attr": shared_perimeter,
         }
         if perimeter is not None:
-            options["perimeter"] = perimeter
+            options["perimeter_attr"] = perimeter
         else:
             assert boundary_perimeter is not None
-            options["boundary_perimeter"] = boundary_perimeter
+            options["boundary_perimeter_attr"] = boundary_perimeter
         return options
 
     def _options(self) -> dict[str, object]:
-        if self.source == "geometry":
-            return {"source": "geometry"}
-        if self.source == "auto" and not any(
+        if not any(
             option is not None
             for option in (
-                self.area,
-                self.perimeter,
-                self.boundary_perimeter,
-                self.shared_perimeter,
+                self.area_attr,
+                self.perimeter_attr,
+                self.boundary_perimeter_attr,
+                self.shared_perimeter_attr,
             )
         ):
-            return {"source": "auto"}
+            return {}
         area, perimeter, boundary_perimeter, shared_perimeter = self._graph_keys()
         options: dict[str, object] = {
-            "source": self.source,
-            "area": area,
-            "shared_perimeter": shared_perimeter,
+            "area_attr": area,
+            "shared_perimeter_attr": shared_perimeter,
         }
         if perimeter is not None:
-            options["perimeter"] = perimeter
+            options["perimeter_attr"] = perimeter
         else:
-            options["boundary_perimeter"] = boundary_perimeter
+            options["boundary_perimeter_attr"] = boundary_perimeter
         return options
 
 
@@ -552,8 +551,23 @@ class Schwartzberg(PolsbyPopper):
 
     For Polsby-Popper score :math:`PP`, Schwartzberg is :math:`1/\sqrt{PP}`. A circle has value
     one and larger values indicate less compactness. It accepts the same geometry and graph
-    measurement sources as :class:`PolsbyPopper`. When both metrics use the same source and column
-    options in one evaluator, they share one engine area-and-perimeter state.
+    measurement-source rules as :class:`PolsbyPopper`. When both metrics use the same
+    graph-attribute options in one evaluator, they share one engine area-and-perimeter state.
+
+    Args:
+        area_attr (str | None, optional): Graph node attribute containing unit areas. Defaults to
+            None, which uses ``"area"`` when graph measurements are selected.
+        perimeter_attr (str | None, optional): Graph node attribute containing total unit
+            perimeters. Defaults to None. Mutually exclusive with ``boundary_perimeter_attr``.
+        boundary_perimeter_attr (str | None, optional): Graph node attribute containing exterior
+            boundary perimeter. Defaults to None, which uses ``"boundary_perim"`` when graph
+            measurements are selected and ``perimeter_attr`` is omitted.
+        shared_perimeter_attr (str | None, optional): Graph edge attribute containing shared
+            boundary lengths. Defaults to None, which uses ``"shared_perim"`` for graph scoring.
+        result_name (str | None, optional): Result key. Defaults to ``"schwartzberg"``.
+
+    Raises:
+        ValueError: If an attribute name is empty or both perimeter attributes are supplied.
 
     References:
         - Schwartzberg, "Reapportionment, Gerrymanders, and the Notion of Compactness."
@@ -596,22 +610,35 @@ class _AreaPerimeterMetrics(PolsbyPopper):
 
 @dataclass(frozen=True, slots=True)
 class CutEdges(_MetricBase):
-    """Count cut graph edges or sum a numeric edge weight over them."""
+    """Count cut graph edges or sum a numeric edge weight over them.
+
+    Args:
+        weight_attr (str | None, optional): Numeric edge attribute to sum. Defaults to None, which
+            counts cut edges.
+        result_name (str | None, optional): Result key. Defaults to ``"cut_edges"``.
+
+    Raises:
+        ValueError: If ``weight_attr`` is neither None nor a nonempty string.
+    """
 
     _kind: ClassVar[str] = "cut_edges"
-    weight: str | None = None
+    weight_attr: str | None = None
 
     def __post_init__(self) -> None:
-        if self.weight is not None and (not isinstance(self.weight, str) or not self.weight):
-            raise ValueError("CutEdges weight must be a nonempty string or None")
+        if self.weight_attr is not None and (
+            not isinstance(self.weight_attr, str) or not self.weight_attr
+        ):
+            raise ValueError("CutEdges weight_attr must be a nonempty string or None")
 
     def _weights(self, evaluator: PlanEvaluator) -> list[float] | None:
-        return None if self.weight is None else evaluator._numeric_edge_column(self.weight)
+        return (
+            None if self.weight_attr is None else evaluator._numeric_edge_column(self.weight_attr)
+        )
 
     def _prepare(self, backend: ScoringEngine, evaluator: PlanEvaluator) -> _OutputSpec:
         backend.add_cut_edges(evaluator._node_count, evaluator._edges, self._weights(evaluator))
-        dtype = "int" if self.weight is None else "float"
-        return _OutputSpec("plan", (self.weight or "count",), (dtype,))
+        dtype = "int" if self.weight_attr is None else "float"
+        return _OutputSpec(_ResultShape.PLAN, (self.weight_attr or "count",), (dtype,))
 
     def _validate(self, evaluator: PlanEvaluator) -> None:
         self._weights(evaluator)
@@ -620,15 +647,25 @@ class CutEdges(_MetricBase):
         del evaluator
         return _ResourceSpec(
             topology=True,
-            edge_columns=frozenset() if self.weight is None else frozenset((self.weight,)),
+            edge_columns=(
+                frozenset() if self.weight_attr is None else frozenset((self.weight_attr,))
+            ),
         )
 
     def _options(self) -> dict[str, object]:
-        return {"weight": self.weight}
+        return {"weight_attr": self.weight_attr}
 
 
 @dataclass(frozen=True, slots=True, init=False)
 class _RegionMetric(_KeyedMetric):
+    def __init__(self, *region_attrs: str, result_name: str | None = None) -> None:
+        object.__setattr__(self, "result_name", result_name)
+        object.__setattr__(
+            self,
+            "keys",
+            _keys(region_attrs, type(self).__name__, "region attribute"),
+        )
+
     def _columns(self, evaluator: PlanEvaluator) -> list[list[int | None]]:
         return [evaluator._region_column(key)[0] for key in self.keys]
 
@@ -650,12 +687,17 @@ class _RegionMetric(_KeyedMetric):
 
     def _prepare(self, backend: ScoringEngine, evaluator: PlanEvaluator) -> _OutputSpec:
         self._register(backend, evaluator)
-        return _OutputSpec("plan", self.keys, ("int",) * len(self.keys))
+        return _OutputSpec(_ResultShape.PLAN, self.keys, ("int",) * len(self.keys))
 
 
 @dataclass(frozen=True, slots=True, init=False)
 class RegionSplits(_RegionMetric):
-    """Count fixed regions assigned to more than one district."""
+    """Count fixed regions assigned to more than one district.
+
+    Args:
+        *region_attrs (str): One or more columns containing fixed-region labels.
+        result_name (str | None, optional): Result key. Defaults to ``"region_splits"``.
+    """
 
     _kind: ClassVar[str] = "region_splits"
 
@@ -665,7 +707,12 @@ class RegionSplits(_RegionMetric):
 
 @dataclass(frozen=True, slots=True, init=False)
 class RegionPieces(_RegionMetric):
-    """Count occupied ``(fixed region, proposed district)`` pairs."""
+    """Count occupied ``(fixed region, proposed district)`` pairs.
+
+    Args:
+        *region_attrs (str): One or more columns containing fixed-region labels.
+        result_name (str | None, optional): Result key. Defaults to ``"region_pieces"``.
+    """
 
     _kind: ClassVar[str] = "region_pieces"
 
@@ -675,7 +722,12 @@ class RegionPieces(_RegionMetric):
 
 @dataclass(frozen=True, slots=True, init=False)
 class RegionParts(_RegionMetric):
-    """Count connected fixed-region-by-district parts in the induced region subgraphs."""
+    """Count connected fixed-region-by-district parts in the induced region subgraphs.
+
+    Args:
+        *region_attrs (str): One or more columns containing fixed-region labels.
+        result_name (str | None, optional): Result key. Defaults to ``"region_parts"``.
+    """
 
     _kind: ClassVar[str] = "region_parts"
 
@@ -694,24 +746,35 @@ class TallyByRegion(_MetricBase):
     order is preserved.
     ``include_count=True`` places a unit-count value named ``"count"`` first. Nodes with a
     missing region label contribute to no region.
+
+    Args:
+        region_attr (str): Column containing fixed-region labels.
+        columns (str | Iterable[str] | Mapping[str, str] | None, optional): Columns to sum. A
+            mapping assigns result names to source columns. Defaults to None.
+        include_count (bool, optional): Whether to include a unit count. Defaults to False.
+        result_name (str | None, optional): Result key. Defaults to ``"tally_by_region"``.
+
+    Raises:
+        TypeError: If ``columns`` or ``include_count`` has an incompatible type.
+        ValueError: If names repeat or are empty, or no tally is requested.
     """
 
     _kind: ClassVar[str] = "tally_by_region"
-    region: str
+    region_attr: str
     columns: tuple[tuple[str, str], ...]
     include_count: bool
 
     def __init__(
         self,
-        region: str,
+        region_attr: str,
         columns: str | Iterable[str] | Mapping[str, str] | None = None,
         *,
         include_count: bool = False,
-        name: str | None = None,
+        result_name: str | None = None,
     ) -> None:
-        object.__setattr__(self, "name", name)
-        if not isinstance(region, str) or not region:
-            raise ValueError("TallyByRegion region must be a nonempty string")
+        object.__setattr__(self, "result_name", result_name)
+        if not isinstance(region_attr, str) or not region_attr:
+            raise ValueError("TallyByRegion region_attr must be a nonempty string")
         if not isinstance(include_count, bool):
             raise TypeError("TallyByRegion include_count must be a bool")
 
@@ -739,14 +802,14 @@ class TallyByRegion(_MetricBase):
         if not include_count and not items:
             raise ValueError("TallyByRegion requires at least one column or include_count=True")
 
-        object.__setattr__(self, "region", region)
+        object.__setattr__(self, "region_attr", region_attr)
         object.__setattr__(self, "columns", cast("tuple[tuple[str, str], ...]", items))
         object.__setattr__(self, "include_count", include_count)
 
     def _inputs(
         self, evaluator: PlanEvaluator
     ) -> tuple[list[int | None], tuple[Hashable, ...], list[list[float]]]:
-        regions, labels = evaluator._region_column(self.region)
+        regions, labels = evaluator._region_column(self.region_attr)
         columns = [evaluator._numeric_node_column(column) for _, column in self.columns]
         return regions, labels, columns
 
@@ -757,7 +820,7 @@ class TallyByRegion(_MetricBase):
         dtypes: tuple[_Dtype, ...] = (("int",) if self.include_count else ()) + ("float",) * len(
             self.columns
         )
-        return _OutputSpec("region", names, dtypes, labels, self.region)
+        return _OutputSpec(_ResultShape.REGION, names, dtypes, labels, self.region_attr)
 
     def _validate(self, evaluator: PlanEvaluator) -> None:
         self._inputs(evaluator)
@@ -767,12 +830,12 @@ class TallyByRegion(_MetricBase):
             node_columns=frozenset(
                 evaluator._ordinary_column_resource(column) for _, column in self.columns
             ),
-            region_columns=frozenset((evaluator._ordinary_column_resource(self.region),)),
+            region_columns=frozenset((evaluator._ordinary_column_resource(self.region_attr),)),
         )
 
     def _options(self) -> dict[str, object]:
         return {
-            "region": self.region,
+            "region_attr": self.region_attr,
             "columns": dict(self.columns),
             "include_count": self.include_count,
         }

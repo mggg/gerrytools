@@ -2,7 +2,7 @@ import hashlib
 import json
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 import geopandas as gpd
 import networkx as nx
@@ -38,13 +38,13 @@ def resources() -> tuple[nx.Graph, gpd.GeoDataFrame, Partition]:
     return graph, frame, Partition(graph, assignment)
 
 
-def metric(*, name: str | None = None) -> Eguia:
+def metric(*, result_name: str | None = None) -> Eguia:
     return Eguia(
-        party_votes="party",
-        opposition_votes="opposition",
-        region="county",
-        population="population",
-        name=name,
+        party_vote_attr="party",
+        opposition_vote_attr="opposition",
+        region_attr="county",
+        population_attr="population",
+        result_name=result_name,
     )
 
 
@@ -63,9 +63,9 @@ def formula_score(frame: gpd.GeoDataFrame, assignment: Sequence[int | str]) -> f
         formulas.eguia(
             district_party,
             district_opposition,
-            grouped["party"].sum(),
-            grouped["opposition"].sum(),
-            grouped["population"].sum(),
+            cast(pd.Series, grouped["party"].sum()),
+            cast(pd.Series, grouped["opposition"].sum()),
+            cast(pd.Series, grouped["population"].sum()),
         )
     )
 
@@ -82,19 +82,19 @@ def test_single_plan_and_prepared_eguia_match_the_array_formula() -> None:
     assert prepared == pytest.approx(expected)
     assert scoring.eguia(
         partition,
-        party_votes="party",
-        opposition_votes="opposition",
-        region="county",
-        population="population",
+        party_vote_attr="party",
+        opposition_vote_attr="opposition",
+        region_attr="county",
+        population_attr="population",
         geometry=frame,
     ) == pytest.approx(expected)
     assert scoring.eguia(
         frame,
         "district",
-        party_votes="party",
-        opposition_votes="opposition",
-        region="county",
-        population="population",
+        party_vote_attr="party",
+        opposition_vote_attr="opposition",
+        region_attr="county",
+        population_attr="population",
     ) == pytest.approx(expected)
 
 
@@ -103,7 +103,7 @@ def test_eguia_and_public_tallies_share_one_hidden_native_bank() -> None:
     evaluator = (
         PlanEvaluator(graph, geometry=frame)
         .add_metric(metric())
-        .add_metric(Tally("party", "population", name="reported_tallies"))
+        .add_metric(Tally("party", "population", result_name="reported_tallies"))
     )
 
     result = evaluator.evaluate(["north", "north", "south", "south"])
@@ -133,7 +133,7 @@ def test_eguia_benchmark_is_prepared_once_and_reused(monkeypatch: pytest.MonkeyP
     evaluator.evaluate(["east", "west", "east", "west"])
     assert calls == 1
 
-    evaluator.add_metric(Tally("population", name="reported_population")).evaluate(
+    evaluator.add_metric(Tally("population", result_name="reported_population")).evaluate(
         ["north", "north", "south", "south"]
     )
     assert calls == 1
@@ -190,14 +190,14 @@ def test_eguia_rejects_invalid_fixed_inputs(column: str, value: object, message:
 
 @pytest.mark.parametrize(
     "column",
-    ["party_votes", "opposition_votes", "region", "population"],
+    ["party_vote_attr", "opposition_vote_attr", "region_attr", "population_attr"],
 )
 def test_eguia_rejects_invalid_column_names(column: str) -> None:
     options = {
-        "party_votes": "party",
-        "opposition_votes": "opposition",
-        "region": "county",
-        "population": "population",
+        "party_vote_attr": "party",
+        "opposition_vote_attr": "opposition",
+        "region_attr": "county",
+        "population_attr": "population",
     }
     options[column] = ""
 
@@ -237,30 +237,35 @@ def test_streamed_eguia_matches_in_memory_and_hides_tally_dependencies(
             stream.write(assignment)
 
     graph, frame, _ = resources()
-    evaluator = PlanEvaluator(graph, geometry=frame).add_metric(metric(name="eguia_2020"))
+    evaluator = PlanEvaluator(graph, geometry=frame).add_metric(metric(result_name="eguia_2020"))
     expected = evaluator.evaluate_many(plans).array("eguia_2020")[:, 0]
 
     evaluator.evaluate_stream(source, output, batch_size=2)
 
-    manifest = json.loads((output / "manifest.json").read_text())
+    manifest = json.loads((output / "manifest__scores.json").read_text())
     assert [description["instance"] for description in manifest["metrics"]] == ["eguia_2020"]
-    table_path = output / "eguia_2020" / "scores.parquet"
+    table_path = output / "eguia_2020__scores.parquet"
     assert manifest["metrics"][0] == {
         "kind": "eguia",
         "instance": "eguia_2020",
         "options": {
-            "party_votes": "party",
-            "opposition_votes": "opposition",
-            "region": "county",
-            "population": "population",
+            "party_vote_attr": "party",
+            "opposition_vote_attr": "opposition",
+            "region_attr": "county",
+            "population_attr": "population",
         },
         "shape": "plan",
         "subkeys": ["score"],
         "axes": {"metric": ["score"]},
         "dtypes": ["float"],
-        "table": "eguia_2020/scores.parquet",
-        "table_size": table_path.stat().st_size,
-        "table_sha256": hashlib.sha256(table_path.read_bytes()).hexdigest(),
+        "tables": [
+            {
+                "path": "eguia_2020__scores.parquet",
+                "subkeys": ["score"],
+                "size": table_path.stat().st_size,
+                "sha256": hashlib.sha256(table_path.read_bytes()).hexdigest(),
+            }
+        ],
     }
     table = pq.read_table(table_path).to_pydict()
     np.testing.assert_allclose(table["score"], expected)

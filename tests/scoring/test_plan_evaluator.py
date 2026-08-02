@@ -43,6 +43,15 @@ def test_public_api_exposes_the_evaluator_without_legacy_factories() -> None:
     assert not hasattr(scoring, "PlanTable")
     assert not hasattr(scoring, "ScoreResult")
     assert not hasattr(scoring, "RegionTally")
+    for internal_name in (
+        "Dtype",
+        "EvaluationValue",
+        "MetricResult",
+        "ResultShape",
+        "RunMetric",
+    ):
+        assert not hasattr(scoring, internal_name)
+        assert internal_name not in scoring.__all__
     assert scoring.TallyByRegion is TallyByRegion
     assert hasattr(scoring, "Eguia")
     assert hasattr(scoring, "formulas")
@@ -127,14 +136,14 @@ def test_construction_prepares_no_metric_or_partition_resources() -> None:
     assert evaluator._edge_labels is None
 
 
-def test_node_column_requires_geometry() -> None:
-    with pytest.raises(ValueError, match="node_column and crs require geometry"):
-        PlanEvaluator(graph(), node_column="node")
+def test_node_id_column_requires_geometry() -> None:
+    with pytest.raises(ValueError, match="node_id_column and target_crs require geometry"):
+        PlanEvaluator(graph(), node_id_column="node")
 
 
-def test_crs_requires_geometry() -> None:
-    with pytest.raises(ValueError, match="node_column and crs require geometry"):
-        PlanEvaluator(graph(), crs="EPSG:3857")
+def test_target_crs_requires_geometry() -> None:
+    with pytest.raises(ValueError, match="node_id_column and target_crs require geometry"):
+        PlanEvaluator(graph(), target_crs="EPSG:3857")
 
 
 def test_first_evaluation_prepares_once_and_reuses_both_cache_layers() -> None:
@@ -163,8 +172,8 @@ def test_to_updaters_evaluates_registered_metrics_once_per_partition(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     evaluator = PlanEvaluator(graph()).add_metrics(
-        Tally("population", name="population_total"),
-        Tally("voting_age", name="voting_age_total"),
+        Tally("population", result_name="population_total"),
+        Tally("voting_age", result_name="voting_age_total"),
     )
     original_evaluate = evaluator.evaluate
     calls = 0
@@ -212,7 +221,7 @@ def test_metric_addition_reuses_or_extends_published_resources() -> None:
     population = first.node_columns[("graph", "population")]
 
     source.nodes["a"]["population"] = "not numeric"
-    evaluator.add_metric(Tally("population", name="population_again")).evaluate([0, 0, 1])
+    evaluator.add_metric(Tally("population", result_name="population_again")).evaluate([0, 0, 1])
     assert evaluator._resources is first
     assert evaluator._engine is not first_engine
 
@@ -229,7 +238,7 @@ def test_failed_resource_extension_leaves_the_published_snapshot_unchanged() -> 
     resources = evaluator._resources
     assert resources is not None
 
-    evaluator.add_metrics(CutEdges(name="new_edges"), Tally("missing"))
+    evaluator.add_metrics(CutEdges(result_name="new_edges"), Tally("missing"))
 
     with pytest.raises(ValueError, match="missing"):
         evaluator.evaluate([0, 0, 1])
@@ -296,7 +305,7 @@ def test_tally_scores_arbitrary_district_labels_and_returns_labeled_table() -> N
 def test_getitem_results_are_writable_whatever_the_metrics_shape() -> None:
     evaluator = PlanEvaluator(graph()).add_metrics(
         Tally("population"),
-        Tally("population", "voting_age", name="both"),
+        Tally("population", "voting_age", result_name="both"),
         CutEdges(),
     )
     plan = [1, 1, 2]
@@ -344,7 +353,7 @@ def test_logical_tallies_remain_separate_while_native_columns_merge() -> None:
 
 def test_add_metrics_registers_metric_owned_and_default_names_in_order() -> None:
     evaluator = PlanEvaluator(graph()).add_metrics(
-        Tally("population", name="district_population"),
+        Tally("population", result_name="district_population"),
         CutEdges(),
     )
 
@@ -356,9 +365,9 @@ def test_add_metrics_registers_metric_owned_and_default_names_in_order() -> None
 
 def test_add_metrics_name_errors_do_not_partially_register_the_batch() -> None:
     batches = (
-        (CutEdges(name="new"), Tally("voting_age", name="population")),
-        (CutEdges(name="repeated"), Tally("voting_age", name="repeated")),
-        (CutEdges(name="new"), Tally("voting_age", name="../unsafe")),
+        (CutEdges(result_name="new"), Tally("voting_age", result_name="population")),
+        (CutEdges(result_name="repeated"), Tally("voting_age", result_name="repeated")),
+        (CutEdges(result_name="new"), Tally("voting_age", result_name="../unsafe")),
     )
     for batch in batches:
         evaluator = PlanEvaluator(graph()).add_metric(Tally("population"))
@@ -373,7 +382,7 @@ def test_add_metrics_configuration_errors_do_not_partially_register_the_batch() 
     evaluator = PlanEvaluator(graph()).add_metric(Tally("population"))
 
     with pytest.raises(RuntimeError, match="Reock requires geometry"):
-        evaluator.add_metrics(CutEdges(name="new"), Reock())
+        evaluator.add_metrics(CutEdges(result_name="new"), Reock())
 
     assert evaluator.metrics == ("population",)
 
@@ -381,7 +390,7 @@ def test_add_metrics_configuration_errors_do_not_partially_register_the_batch() 
 def test_add_metrics_defers_column_validation_until_evaluation() -> None:
     evaluator = PlanEvaluator(graph()).add_metric(Tally("population"))
 
-    evaluator.add_metrics(CutEdges(name="new"), Tally("missing_column"))
+    evaluator.add_metrics(CutEdges(result_name="new"), Tally("missing_column"))
 
     assert evaluator.metrics == ("population", "new", "missing_column")
     with pytest.raises(ValueError, match="missing_column"):
@@ -417,7 +426,19 @@ def test_evaluate_many_preserves_plan_order_and_requires_stable_districts() -> N
     with pytest.raises(ValueError, match="hashable"):
         scorer.evaluate_many(assignments, sample_ids=unhashable_ids)
     with pytest.raises(TypeError, match="track_uniqueness"):
-        scorer.evaluate_many(assignments, track_uniqueness=1)  # type: ignore[arg-type]
+        scorer.evaluate_many(
+            assignments,
+            track_uniqueness=1,  # type: ignore
+        )
+
+
+def test_evaluation_summary_repr_omits_untracked_uniqueness() -> None:
+    assert repr(EvaluationSummary(samples=10_000, accepted=10_000)) == (
+        "EvaluationSummary(samples=10000, accepted=10000)"
+    )
+    assert repr(EvaluationSummary(10, 8, 7, 20)) == (
+        "EvaluationSummary(samples=10, accepted=8, unique_plans=7, unique_districts=20)"
+    )
 
 
 def test_evaluate_many_optionally_counts_label_invariant_unique_plans_and_districts() -> None:
@@ -442,8 +463,8 @@ def test_evaluate_many_uses_range_index_and_exact_multi_value_axes_and_dtypes() 
     nx.set_node_attributes(source, {node: "all" for node in source}, "zone")
     evaluator = (
         PlanEvaluator(source)
-        .add_metric(Tally("population", "voting_age", name="demographics"))
-        .add_metric(RegionSplits("region", "zone", name="splits"))
+        .add_metric(Tally("population", "voting_age", result_name="demographics"))
+        .add_metric(RegionSplits("region", "zone", result_name="splits"))
         .add_metric(CutEdges())
     )
 
@@ -496,7 +517,7 @@ def test_tally_by_region_evaluate_many_has_sample_region_rows_and_metric_distric
                 "voting_age": "voting_age",
             },
             include_count=True,
-            name="regional_demographics",
+            result_name="regional_demographics",
         ),
     )
 
@@ -662,7 +683,7 @@ def test_single_column_tally_falls_back_when_the_column_is_not_a_usable_name() -
     assert isinstance(tallied, pd.Series)
     assert list(tallied) == [10.0, 20.0]
 
-    named = PlanEvaluator(spaced).add_metric(Tally("TOTAL POP", name="totpop"))
+    named = PlanEvaluator(spaced).add_metric(Tally("TOTAL POP", result_name="totpop"))
     assert named.metrics == ("totpop",)
 
 
@@ -672,7 +693,7 @@ def test_metric_names_are_explicit_safe_and_never_suffixed() -> None:
     with pytest.raises(ValueError, match="already registered"):
         scorer.add_metric(Tally("population"))
     with pytest.raises(ValueError, match="already registered"):
-        scorer.add_metric(Tally("voting_age", name="population"))
+        scorer.add_metric(Tally("voting_age", result_name="population"))
     for name in (
         "",
         ".",
@@ -684,25 +705,25 @@ def test_metric_names_are_explicit_safe_and_never_suffixed() -> None:
         "pöpulation",
     ):
         with pytest.raises(ValueError, match="ASCII"):
-            PlanEvaluator(graph()).add_metric(Tally("population", name=name))
+            PlanEvaluator(graph()).add_metric(Tally("population", result_name=name))
     with pytest.raises(TypeError, match="must be a string"):
         PlanEvaluator(graph()).add_metric(
-            Tally("population", name=1)  # type: ignore[arg-type]
+            Tally("population", result_name=1)  # type: ignore
         )
 
     evaluator = PlanEvaluator(graph()).add_metrics(
-        Tally("population", name="population_once"),
-        Tally("population", name="population_again"),
+        Tally("population", result_name="population_once"),
+        Tally("population", result_name="population_again"),
     )
     result = evaluator.evaluate([0, 0, 1])
     assert result.metrics == ("population_once", "population_again")
     assert len(evaluator._engine_prepared) == 1
     assert not any(name.endswith("_2") for name in result)
-    assert Tally("population", name="population_once") == Tally(
-        "population", name="population_again"
+    assert Tally("population", result_name="population_once") == Tally(
+        "population", result_name="population_again"
     )
-    assert hash(Tally("population", name="population_once")) == hash(
-        Tally("population", name="population_again")
+    assert hash(Tally("population", result_name="population_once")) == hash(
+        Tally("population", result_name="population_again")
     )
 
 
@@ -710,7 +731,7 @@ def test_duplicate_name_fails_before_validation_without_mutating_registrations()
     scorer = PlanEvaluator(graph()).add_metric(Tally("population"))
 
     with pytest.raises(ValueError, match="already registered"):
-        scorer.add_metric(Tally("missing", name="population"))
+        scorer.add_metric(Tally("missing", result_name="population"))
 
     result = scorer.evaluate([0, 0, 1])
     assert result.metrics == ("population",)
@@ -727,7 +748,7 @@ def test_edge_data_stays_paired_with_edges_when_graph_iteration_is_unsorted() ->
 
     scorer = PlanEvaluator(source)
     source.edges[0, 3]["cut_weight"] = 4_000
-    result = scorer.add_metric(CutEdges(weight="cut_weight")).evaluate([0, 0, 0, 1])
+    result = scorer.add_metric(CutEdges(weight_attr="cut_weight")).evaluate([0, 0, 0, 1])
 
     assert result["cut_edges"] == 4_000.0
     np.testing.assert_allclose(result.array("cut_edges"), [4_000])

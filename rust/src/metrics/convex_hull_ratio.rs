@@ -1,8 +1,9 @@
-use super::hull_metric::{full_scan_score, HullScorer, IncrementalHullMetric, RATIO_SCORE_EPS};
+use super::hull_metric::{
+    district_hull, full_scan_score, HullScorer, IncrementalHullMetric, RATIO_SCORE_EPS,
+};
 use crate::scoring::delta::DeltaChange;
 use crate::{DistrictTable, Error, PreparedUnitHulls, Result, UnitHull};
-use geo::algorithm::convex_hull::quick_hull;
-use geo::{Area, Coord, Polygon};
+use geo::{Area, Coord};
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -127,7 +128,7 @@ fn convex_hull_ratio(points: &mut [Coord<f64>], district_area: f64, district: u1
             area: district_area,
         });
     }
-    let hull_area = Polygon::new(quick_hull(points), Vec::new()).unsigned_area();
+    let hull_area = district_hull(points).unsigned_area();
     if !hull_area.is_finite() || hull_area <= 0.0 {
         return Err(Error::InvalidEnclosureArea {
             metric: "convex-hull",

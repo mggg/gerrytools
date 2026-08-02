@@ -52,7 +52,8 @@ class _CategoricalColorLayer(_GeoLayer):
             colormap and emits a ``UserWarning``. Defaults to "districtr".
         missing_color (MplCompatibleColor | None): Color to use for missing data.
         facealpha (float | None): Alpha transparency for face colors. Default is None.
-        edgecolor (Color): Color for geometry edges. Default is "none".
+        edgecolor (Color | None): Color for geometry edges. None removes the edge.
+            Default is "none".
         edgealpha (float | None): Alpha transparency for edge colors. Default is None.
         edgewidth (float): Width of geometry edges. Default is 0.5.
         zorder (int): Z-order for rendering. Default is 1.

@@ -96,7 +96,11 @@ class CategoricalDistributionPlotBase(GerryPlotBase):
 
     @property
     def group_width(self) -> float:
-        """Width allocated to each categorical group."""
+        """Width allocated to each categorical group.
+
+        Raises:
+            ValueError: When assigned a value outside ``(0, 1]``.
+        """
         return self._group_width
 
     @group_width.setter
@@ -110,7 +114,11 @@ class CategoricalDistributionPlotBase(GerryPlotBase):
 
     @property
     def width_scale(self) -> float:
-        """Relative width of artists within each categorical slot."""
+        """Relative width of artists within each categorical slot.
+
+        Raises:
+            ValueError: When assigned a value outside ``(0, 1]``.
+        """
         return self._width_scale
 
     @width_scale.setter
@@ -350,11 +358,11 @@ class CategoricalDistributionPlotBase(GerryPlotBase):
         labels: list[str] | None = None,
         column: str | None = None,
         name: str | None = None,
-        facecolor: Color = "black",
+        facecolor: Color | None = "black",
         facealpha: float | None = None,
         marker: str = "o",
         markersize: float = 7.0,
-        markeredgecolor: Color = "black",
+        markeredgecolor: Color | None = "black",
         markeredgealpha: float | None = None,
         markeredgewidth: float = 0.8,
         x_offset: float | None = None,
@@ -370,11 +378,13 @@ class CategoricalDistributionPlotBase(GerryPlotBase):
                 DataFrame with more than one column. Defaults to None.
             name (str | None, optional): Legend/display label for this point set.
                 Defaults to None.
-            facecolor (Color, optional): Marker face color. Defaults to ``"black"``.
+            facecolor (Color | None, optional): Marker face color. Pass ``None`` for no
+                fill. Defaults to ``"black"``.
             facealpha (float | None, optional): Marker face alpha in ``[0, 1]``. Defaults to None.
             marker (str, optional): Marker style passed to Matplotlib. Defaults to ``"o"``.
             markersize (float, optional): Marker size. Defaults to ``7.0``.
-            markeredgecolor (Color, optional): Marker edge color. Defaults to ``"black"``.
+            markeredgecolor (Color | None, optional): Marker edge color. Pass ``None``
+                for no edge. Defaults to ``"black"``.
             markeredgealpha (float | None, optional): Marker edge alpha in ``[0, 1]``.
                 Defaults to None.
             markeredgewidth (float, optional): Marker edge width. Defaults to ``0.8``.
@@ -419,7 +429,7 @@ class CategoricalDistributionPlotBase(GerryPlotBase):
     def update_group_vline_settings(
         self,
         *,
-        linecolor: Color = "#cccccc",
+        linecolor: Color | None = "#cccccc",
         linealpha: float = 1.0,
         linestyle: str = "-",
         linewidth: float = 0.8,
@@ -432,7 +442,8 @@ class CategoricalDistributionPlotBase(GerryPlotBase):
         restyling.
 
         Args:
-            linecolor (Color, optional): Guide line color. Defaults to ``"#cccccc"``.
+            linecolor (Color | None, optional): Guide line color. Pass ``None`` for
+                transparent lines. Defaults to ``"#cccccc"``.
             linealpha (float, optional): Guide line alpha in ``[0, 1]``. Defaults to ``1.0``.
             linestyle (str, optional): Matplotlib line style. Defaults to ``"-"``.
             linewidth (float, optional): Guide line width. Defaults to ``0.8``.
@@ -455,7 +466,11 @@ class CategoricalDistributionPlotBase(GerryPlotBase):
 
     @deferred_axis_update
     def display_group_separators(self, enabled: bool) -> None:
-        """Set whether vertical category-group separators are displayed."""
+        """Set whether vertical category-group separators are displayed.
+
+        Args:
+            enabled (bool): Whether to display the separators.
+        """
         self._include_group_vlines = enabled
 
     def _grouped_layout(self, n_sets: int) -> tuple[np.ndarray, np.ndarray, float]:

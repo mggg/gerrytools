@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, TypeVar, cast, overload
 
 import networkx as nx
 from geopandas import GeoDataFrame
@@ -15,6 +15,7 @@ from ..evaluator import (
     PlanEvaluator,
     _assignment_mapping,
     _is_missing,
+    _partition_assignment,
     _partition_graph,
     _result_name,
 )
@@ -27,6 +28,30 @@ SinglePlanResult: TypeAlias = float | int | Series | DataFrame
 
 
 GeoAssignment: TypeAlias = Assignment | str
+_ResultT = TypeVar("_ResultT", bound=SinglePlanResult)
+
+
+@overload
+def _expect(expected: type[_ResultT], result: SinglePlanResult) -> _ResultT: ...
+
+
+@overload
+def _expect(expected: tuple[type[_ResultT], ...], result: SinglePlanResult) -> _ResultT: ...
+
+
+def _expect(
+    expected: type[_ResultT] | tuple[type[_ResultT], ...],
+    result: SinglePlanResult,
+) -> _ResultT:
+    """Validate the runtime result at the single-plan API boundary."""
+    if not isinstance(result, expected):
+        names = (
+            " or ".join(item.__name__ for item in expected)
+            if isinstance(expected, tuple)
+            else expected.__name__
+        )
+        raise RuntimeError(f"metric returned {type(result).__name__}; expected {names}")
+    return cast("_ResultT", result)
 
 
 def _columns(values: str | Iterable[str]) -> tuple[str, ...]:
@@ -67,22 +92,24 @@ def _evaluate(
     metric: Metric,
     *,
     geometry: GeoDataFrame | None = None,
-    node_column: str | None = None,
-    crs: Any | None = None,
+    node_id_column: str | None = None,
+    target_crs: Any | None = None,
     topology_required: bool = False,
 ) -> SinglePlanResult:
+    if isinstance(assignment, GeoDataFrame):
+        raise TypeError("assignment must contain district labels, not a GeoDataFrame")
     if isinstance(source, Partition):
         if assignment is not None:
             raise TypeError("a Partition supplies its own assignment")
-        if geometry is None and (node_column is not None or crs is not None):
-            raise ValueError("node_column and crs require geometry")
+        if geometry is None and (node_id_column is not None or target_crs is not None):
+            raise ValueError("node_id_column and target_crs require geometry")
         evaluator = PlanEvaluator(
             _partition_graph(source),
             geometry=geometry,
-            node_column=node_column,
-            crs=crs,
+            node_id_column=node_id_column,
+            target_crs=target_crs,
         )
-        plan: Assignment | Partition = source
+        plan: Assignment = _partition_assignment(source)
     elif isinstance(source, nx.Graph):
         if assignment is None:
             raise TypeError("a graph source requires an assignment")
@@ -91,8 +118,8 @@ def _evaluate(
         evaluator = PlanEvaluator(
             source,
             geometry=geometry,
-            node_column=node_column,
-            crs=crs,
+            node_id_column=node_id_column,
+            target_crs=target_crs,
         )
         plan = assignment
     elif isinstance(source, GeoDataFrame):
@@ -100,14 +127,14 @@ def _evaluate(
             raise TypeError(f"{metric._kind} requires a GerryChain Partition or graph")
         if geometry is not None:
             raise TypeError("do not supply geometry when the source is already a GeoDataFrame")
-        if node_column is not None:
-            raise TypeError("node_column applies only to Partition geometry alignment")
+        if node_id_column is not None:
+            raise TypeError("node_id_column applies only to Partition geometry alignment")
         nodes = tuple(source.index)
-        evaluator = PlanEvaluator(nx.empty_graph(nodes), geometry=source, crs=crs)
+        evaluator = PlanEvaluator(nx.empty_graph(nodes), geometry=source, target_crs=target_crs)
         plan = _geodataframe_assignment(source, assignment)
     else:
         raise TypeError("source must be a GerryChain Partition, graph, or GeoDataFrame")
 
-    # Match evaluator registration, including explicit names.
+    # Match evaluator registration, including explicit result names.
     name = _result_name(metric)
     return evaluator.add_metric(metric).evaluate(plan)[name]

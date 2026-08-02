@@ -2,14 +2,14 @@
 
 import pytest
 
-from gerrytools.latex.paintball import PaintballOptions, PaintballPlot, _PaintballLine
+from gerrytools.latex.paintball import PaintballOptions, TikzPaintballPlot, _PaintballLine
 
 
-def named_lines(plot: PaintballPlot) -> dict[str, _PaintballLine]:
+def named_lines(plot: TikzPaintballPlot) -> dict[str, _PaintballLine]:
     return {name: line for name, line in plot._lines if name is not None}
 
 
-def unnamed_lines(plot: PaintballPlot) -> list[_PaintballLine]:
+def unnamed_lines(plot: TikzPaintballPlot) -> list[_PaintballLine]:
     return [line for name, line in plot._lines if name is None]
 
 
@@ -110,7 +110,7 @@ class TestPaintballDataclasses:
 # =========================
 class TestPaintballConstruction:
     def test_initialization_normalizes_seat_counts(self):
-        plot = PaintballPlot(
+        plot = TikzPaintballPlot(
             vote_share_data=[0.4, 0.6],
             seats_data=[2, 3],
             total_seats=4,
@@ -121,22 +121,22 @@ class TestPaintballConstruction:
 
     def test_initialization_rejects_length_mismatch(self):
         with pytest.raises(ValueError, match="same length"):
-            PaintballPlot(vote_share_data=[0.5], seats_data=[0.5, 0.6])
+            TikzPaintballPlot(vote_share_data=[0.5], seats_data=[0.5, 0.6])
 
     def test_initialization_rejects_empty_inputs(self):
         with pytest.raises(ValueError, match="at least one element"):
-            PaintballPlot(vote_share_data=[], seats_data=[])
+            TikzPaintballPlot(vote_share_data=[], seats_data=[])
 
     def test_initialization_rejects_invalid_seatshares_without_maximum_seats(self):
         with pytest.raises(ValueError, match="must be in \\[0, 1\\]"):
-            PaintballPlot(vote_share_data=[0.5], seats_data=[1.5])
+            TikzPaintballPlot(vote_share_data=[0.5], seats_data=[1.5])
 
     def test_initialization_rejects_invalid_scaled_seatshares(self):
         with pytest.raises(ValueError, match="seat-share values must be in"):
-            PaintballPlot(vote_share_data=[0.5], seats_data=[8], total_seats=4)
+            TikzPaintballPlot(vote_share_data=[0.5], seats_data=[8], total_seats=4)
 
     def test_add_voteshare_seatshare_data_extends_existing_data(self):
-        plot = PaintballPlot(vote_share_data=[0.4], seats_data=[0.5])
+        plot = TikzPaintballPlot(vote_share_data=[0.4], seats_data=[0.5])
         plot.add_seats_votes_data([0.6], [0.75])
 
         assert plot._voteshare_data == [0.4, 0.6]
@@ -148,7 +148,7 @@ class TestPaintballConstruction:
 # =====================
 class TestPaintballLines:
     def test_add_lines_with_slope_tracks_named_and_unnamed_lines(self):
-        plot = PaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
+        plot = TikzPaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
         plot.add_lines_with_slope([0.5, 2.0], linecolor="denim", linestyle="dotted")
         plot.add_lines_with_slope([1.0], linecolor="amber", name="custom")
 
@@ -157,7 +157,7 @@ class TestPaintballLines:
 
     def test_standard_guide_lines_are_added_by_method(self):
         # The ctor no longer seeds guide lines; the add_*_line methods every sibling uses do.
-        plot = PaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
+        plot = TikzPaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
         assert plot._lines == []
 
         plot.add_efficiency_gap_line()
@@ -171,14 +171,14 @@ class TestPaintballLines:
 
     def test_duplicate_names_keep_both_lines(self):
         # Regression: the earlier dict storage silently dropped the first line on a name reuse.
-        plot = PaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
+        plot = TikzPaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
         plot.add_lines_with_slope([0.5], name="dup")
         plot.add_lines_with_slope([2.0], name="dup")
 
         assert [line.slope for name, line in plot._lines if name == "dup"] == [0.5, 2.0]
 
     def test_clear_lines_clears_named_and_unnamed_lines(self):
-        plot = PaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
+        plot = TikzPaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
         plot.add_lines_with_slope([0.5], name="custom")
         plot.add_lines_with_slope([1.5])
         plot.clear_lines()
@@ -191,7 +191,7 @@ class TestPaintballLines:
 # =======================
 class TestPaintballOptionsManagement:
     def test_clear_options_resets_overrides(self):
-        plot = PaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
+        plot = TikzPaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
         plot.set_marker_options(size=12, color="black", alpha=0.4)
         plot.set_crosshair_options(color="red", width=2.0)
         plot.clear_options()
@@ -202,7 +202,7 @@ class TestPaintballOptionsManagement:
         assert plot.options.crosshair_width == 5.0
 
     def test_set_limits_with_rescale_updates_scales(self):
-        plot = PaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
+        plot = TikzPaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
         plot.set_xlim(0.25, 0.75, rescale=True)
         plot.set_ylim(0.2, 0.8, rescale=True)
 
@@ -212,7 +212,7 @@ class TestPaintballOptionsManagement:
         assert plot.options.yscale == pytest.approx(16.6667, rel=1e-4)
 
     def test_successive_rescales_preserve_drawn_width(self):
-        plot = PaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
+        plot = TikzPaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
 
         plot.set_xlim(0.25, 0.75, rescale=True)
         first_width = plot.options.xscale * (plot.options.xlim[1] - plot.options.xlim[0])
@@ -223,7 +223,7 @@ class TestPaintballOptionsManagement:
         assert second_width == pytest.approx(first_width)
 
     def test_set_scale_and_option_setters_update_all_edge_and_hull_values(self):
-        plot = PaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
+        plot = TikzPaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
 
         plot.set_scale(xscale=12.0, yscale=8.0)
         plot.set_marker_options(
@@ -251,7 +251,7 @@ class TestPaintballOptionsManagement:
         assert plot.options.hulledgealpha == 0.9
 
     def test_hull_options_omitted_kwargs_leave_settings_unchanged(self):
-        plot = PaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
+        plot = TikzPaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
         plot.set_hull_options(color="denim", edgewidth=1.5)
 
         plot.set_hull_options(alpha=0.3)
@@ -260,10 +260,8 @@ class TestPaintballOptionsManagement:
         assert plot.options.hulledgewidth == 1.5
         assert plot.options.hullalpha == 0.3
 
-    def test_hull_options_explicit_none_restores_marker_inheritance(self):
-        # Regression: None used to mean "leave unchanged", so a hull option could never be
-        # reset to inherit its marker counterpart again.
-        plot = PaintballPlot(vote_share_data=[0.4, 0.6], seats_data=[0.25, 0.75])
+    def test_hull_options_explicit_none_removes_fill_and_edge(self):
+        plot = TikzPaintballPlot(vote_share_data=[0.4, 0.6], seats_data=[0.25, 0.75])
         plot.set_hull_options(
             color="denim", alpha=0.3, edgecolor="amber", edgewidth=1.5, edgealpha=0.9
         )
@@ -279,11 +277,19 @@ class TestPaintballOptionsManagement:
         assert plot.options.hulledgealpha is None
 
         hull = plot._paintball_hull_str()
-        assert "fill=cadmiumgreen" in hull  # markercolor
+        assert "fill=none" in hull
+        assert "draw=none" in hull
         assert "fill opacity=0.8" in hull  # markeralpha
-        assert r"\color{cadmiumgreen}" in hull  # markeredgecolor
         assert "line width=0.5" in hull  # markeredgewidth
         assert "draw opacity=1.0" in hull  # markeredgealpha
+
+    def test_marker_options_explicit_none_removes_fill_and_edge(self):
+        plot = TikzPaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
+        plot.set_marker_options(color=None, edgecolor=None)
+
+        marker = plot._paintball_points_str()
+        assert "fill=none" in marker
+        assert "draw=none" in marker
 
 
 # =======================
@@ -291,7 +297,7 @@ class TestPaintballOptionsManagement:
 # =======================
 class TestPaintballStringGeneration:
     def test_inline_colors_never_mutate_the_document_color_table(self):
-        plot = PaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
+        plot = TikzPaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
 
         def inline(color):
             return plot._inline_color_value(plot._to_latex_color(color))
@@ -305,7 +311,7 @@ class TestPaintballStringGeneration:
         assert plot.document.color_dict == {}
 
     def test_document_properties_update_body_string(self):
-        plot = PaintballPlot(vote_share_data=[0.4, 0.6], seats_data=[0.5, 0.75])
+        plot = TikzPaintballPlot(vote_share_data=[0.4, 0.6], seats_data=[0.5, 0.75])
 
         point_document = plot.document
         hull_document = plot.hull_document
@@ -318,7 +324,7 @@ class TestPaintballStringGeneration:
         assert "fill=" in hull_document.body_string
 
     def test_print_emits_point_or_hull_body(self, capsys):
-        plot = PaintballPlot(vote_share_data=[0.4], seats_data=[0.5])
+        plot = TikzPaintballPlot(vote_share_data=[0.4], seats_data=[0.5])
 
         plot.print()
         out = capsys.readouterr().out
@@ -331,7 +337,7 @@ class TestPaintballStringGeneration:
         assert "fill=" in out
 
     def test_generate_latex_includes_crosshairs_lines_and_points(self):
-        plot = PaintballPlot(vote_share_data=[0.4], seats_data=[0.5])
+        plot = TikzPaintballPlot(vote_share_data=[0.4], seats_data=[0.5])
         plot.add_lines_with_slope([0.5], linecolor="denim", linestyle="dotted")
 
         latex = str(plot)
@@ -344,7 +350,7 @@ class TestPaintballStringGeneration:
 
     def test_crosshairs_span_configured_limits(self):
         # Regression (C5): crosshairs used to hardcode the unit square regardless of limits.
-        plot = PaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
+        plot = TikzPaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
         plot.set_xlim(0.25, 0.75)
         plot.set_ylim(0.2, 0.8)
 
@@ -354,7 +360,7 @@ class TestPaintballStringGeneration:
         assert "(0.25, 0.5) -- (0.75, 0.5)" in latex
 
     def test_hull_string_uses_hull_specific_overrides(self):
-        plot = PaintballPlot(vote_share_data=[0.4, 0.6], seats_data=[0.5, 0.75])
+        plot = TikzPaintballPlot(vote_share_data=[0.4, 0.6], seats_data=[0.5, 0.75])
         plot.set_hull_options(
             color="denim",
             alpha=0.3,
@@ -371,7 +377,7 @@ class TestPaintballStringGeneration:
         assert "draw opacity=0.9" in hull
 
     def test_hull_string_tracks_min_and_max_x_for_duplicate_y_values(self):
-        plot = PaintballPlot(
+        plot = TikzPaintballPlot(
             vote_share_data=[0.5, 0.8, 0.2],
             seats_data=[0.5, 0.5, 0.5],
         )
@@ -389,7 +395,7 @@ class TestPaintballStringGeneration:
 # ==================
 class TestPaintballExactOutput:
     def test_points_body_is_emitted_exactly(self):
-        plot = PaintballPlot([0.4, 0.6], [0.25, 0.75])
+        plot = TikzPaintballPlot([0.4, 0.6], [0.25, 0.75])
         plot.add_proportionality_line()
 
         expected = "\n".join(
@@ -406,8 +412,8 @@ class TestPaintballExactOutput:
                 r"(0.0, 0.0) -- (1.0, 1.0);}",
                 "",
                 r"\foreach \votes/\seats in {",
-                "    0.6000/0.7500,",
-                "    0.4000/0.2500",
+                "    0.4000/0.2500,",
+                "    0.6000/0.7500",
                 "} {",
                 r"    \node [transform shape=false, circle, inner sep=0pt, "
                 r"minimum size=8.00pt, fill=cadmiumgreen, draw=cadmiumgreen, "
@@ -423,7 +429,7 @@ class TestPaintballExactOutput:
         assert plot._generate_latex() == expected
 
     def test_hull_body_is_emitted_exactly(self):
-        plot = PaintballPlot([0.4, 0.6], [0.25, 0.75])
+        plot = TikzPaintballPlot([0.4, 0.6], [0.25, 0.75])
 
         expected = "\n".join(
             [
@@ -453,4 +459,4 @@ class TestPaintballExactOutput:
 
 @pytest.mark.latex
 def test_default_paintball_document_compiles():
-    PaintballPlot([0.4, 0.6], [0.25, 0.75]).document._compile_pdf()
+    TikzPaintballPlot([0.4, 0.6], [0.25, 0.75]).document._compile_pdf()

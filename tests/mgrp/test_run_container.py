@@ -144,23 +144,59 @@ class _FakeExecAPI:
 
     def __init__(self, chunks, exit_code=0):
         # Kept lazy so generator chunks can simulate an engine writing files mid-run.
-        self.chunks = chunks
+        self.stream = _FakeStream(chunks)
         self.exit_code = exit_code
 
     def exec_create(self, container_id, cmd, **kwargs):
         return {"Id": "exec-id"}
 
     def exec_start(self, exec_id, **kwargs):
-        return iter(self.chunks)
+        return self.stream
 
     def exec_inspect(self, exec_id):
         return {"ExitCode": self.exit_code}
+
+
+class _FakeStream:
+    def __init__(self, chunks):
+        self._chunks = iter(chunks)
+        self.closed = False
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self._chunks)
+
+    def close(self):
+        self.closed = True
+
+
+class _FakeContainer:
+    id = "fake-container"
+
+    def __init__(self):
+        self.removed = False
+        self.remove_error: Exception | None = None
+        self.events: list[tuple[str, object]] = []
+
+    def exec_run(self, cmd):
+        self.events.append(("exec_run", cmd))
+        return 0, b""
+
+    def remove(self, *, force=False):
+        assert force
+        self.events.append(("remove", force))
+        if self.remove_error is not None:
+            raise self.remove_error
+        self.removed = True
 
 
 class _FakeConfig(RunnerConfig):
     """Bypasses RunnerConfig.__init__: fixed engine name, log path, and optional output path."""
 
     engine = "fake-engine"
+    container_output_dir = "/output"
 
     def __init__(self, log_path, output_path=None):
         self._log_path = log_path
@@ -195,10 +231,14 @@ def make_streaming_container(chunks, exit_code=0, config=None):
         config=(
             config
             if config is not None
-            else SimpleNamespace(engine="fake-engine", run_command=lambda run_info: ["cmd"])
+            else SimpleNamespace(
+                engine="fake-engine",
+                container_output_dir="/output",
+                run_command=lambda run_info: ["cmd"],
+            )
         ),
         client=SimpleNamespace(api=_FakeExecAPI(chunks, exit_code)),
-        container=SimpleNamespace(id="fake-container"),
+        container=_FakeContainer(),
     )
 
 
@@ -217,14 +257,12 @@ def test_iter_json_lines_parses_final_json_line_without_trailing_newline():
     assert results == [({"sample": 1}, None), ({"sample": 2}, None)]
 
 
-def test_iter_json_lines_raises_when_stderr_ends_mid_character():
-    # Regression: a stderr stream truncated inside a multi-byte character used to leave the
-    # partial bytes buffered in the incremental decoder and silently drop them.
+def test_iter_json_lines_preserves_invalid_stderr_bytes():
     container = make_streaming_container([(None, b"err caf\xc3")])
-    iterator = container._iter_json_lines(["cmd"])
-    assert next(iterator) == (None, "err caf")
-    with pytest.raises(UnicodeDecodeError):
-        next(iterator)
+    assert list(container._iter_json_lines(["cmd"])) == [
+        (None, "err caf"),
+        (None, "\\xc3"),
+    ]
 
 
 def test_iter_json_lines_raises_on_invalid_final_json():
@@ -245,6 +283,42 @@ def test_run_decodes_multibyte_characters_split_across_frames(tmp_path, capsys):
     assert container.run(cast(Any, None)) is None
     assert capsys.readouterr().out == "out café\n"
     assert log_path.read_text() == "err café"
+
+
+def test_run_preserves_invalid_stderr_bytes(tmp_path):
+    log_path = tmp_path / "run.log"
+    container = make_streaming_container([(None, b"invalid \xff")], config=_FakeConfig(log_path))
+
+    assert container.run(cast(Any, None)) is None
+    assert log_path.read_text() == "invalid \\xff"
+
+
+def test_closing_stream_terminates_the_engine_container():
+    container = make_streaming_container([(b'{"sample": 1}\n', None), (b'{"sample": 2}\n', None)])
+    api = cast(_FakeExecAPI, cast(Any, container.client).api)
+    docker_container = cast(_FakeContainer, container.container)
+    iterator = container.run_iter(cast(Any, None))
+    assert next(iterator) == ({"sample": 1}, None)
+
+    iterator.close()
+
+    assert api.stream.closed
+    assert docker_container.removed
+    assert container.container is None
+    if hasattr(os, "getuid"):
+        assert [event[0] for event in docker_container.events] == ["exec_run", "remove"]
+
+
+def test_stream_parse_error_survives_container_removal_failure():
+    container = make_streaming_container([(b"not-json\n", None)])
+    docker_container = cast(_FakeContainer, container.container)
+    docker_container.remove_error = OSError("daemon unavailable")
+
+    with pytest.raises(RuntimeError, match="parse container output") as excinfo:
+        list(container.run_iter(cast(Any, None)))
+
+    assert any("Could not stop the abandoned" in note for note in excinfo.value.__notes__)
+    assert container.container is docker_container
 
 
 # ==================================
@@ -279,6 +353,31 @@ def test_run_preserves_previous_output_on_nonzero_exit(tmp_path):
         container.run(cast(Any, None))
     assert output_path.read_text() == "previous\n"
     assert not list(tmp_path.glob(".gerrytools-backup-*"))
+
+
+def test_run_aborts_container_and_restores_output_on_stream_failure(tmp_path):
+    output_path = tmp_path / "out.jsonl"
+    output_path.write_text("previous\n")
+
+    def engine_chunks():
+        output_path.write_text("partial\n")
+        yield (b"started\n", None)
+        raise RuntimeError("stream failed")
+
+    container = make_streaming_container(
+        engine_chunks(), config=_FakeConfig(tmp_path / "run.log", output_path)
+    )
+    api = cast(_FakeExecAPI, cast(Any, container.client).api)
+    docker_container = cast(_FakeContainer, container.container)
+
+    with pytest.raises(RuntimeError, match="stream failed"):
+        container.run(cast(Any, None))
+
+    assert api.stream.closed
+    assert docker_container.removed
+    assert container.container is None
+    assert output_path.read_text() == "previous\n"
+    assert (tmp_path / "out.jsonl.partial").read_text() == "partial\n"
 
 
 def test_run_checks_nonzero_exit_before_decoder_flush(tmp_path):
@@ -357,6 +456,7 @@ def test_run_rejects_empty_output_and_restores_previous_file(tmp_path):
     with pytest.raises(RuntimeError, match="nonempty.*out.jsonl"):
         container.run(cast(Any, None))
     assert output_path.read_text() == "previous\n"
+    assert (tmp_path / "out.jsonl.partial").read_text() == ""
     assert not list(tmp_path.glob(".gerrytools-backup-*"))
 
 
@@ -382,6 +482,29 @@ def test_run_raises_when_promised_sidecar_missing_after_zero_exit(tmp_path):
         container.run(cast(Any, None))
     assert output_path.read_text() == "old output\n"
     assert scores_path.read_text() == "old scores\n"
+    assert (tmp_path / "out.jsonl.partial").read_text() == "{}\n"
+
+
+def test_failed_first_run_preserves_partial_output(tmp_path):
+    output_path = tmp_path / "out.jsonl"
+
+    def engine_chunks():
+        output_path.write_text("partial\n")
+        yield (None, b"boom\n")
+
+    container = make_streaming_container(
+        engine_chunks(),
+        exit_code=2,
+        config=_FakeConfig(tmp_path / "run.log", output_path),
+    )
+
+    with pytest.raises(RuntimeError, match="exit code 2") as excinfo:
+        container.run(cast(Any, None))
+
+    partial = tmp_path / "out.jsonl.partial"
+    assert not output_path.exists()
+    assert partial.read_text() == "partial\n"
+    assert str(partial) in "\n".join(excinfo.value.__notes__)
 
 
 def test_failed_rerun_restores_previous_log(tmp_path):
@@ -497,6 +620,68 @@ def test_mcmc_run_with_updaters_streams_assignments_and_stderr(tmp_path, monkeyp
         (None, "engine warming up\n"),
         ({"sample": 1, "updaters": {"num_cut_edges": 2}}, None),
     ]
+
+
+def test_closing_updater_stream_terminates_the_engine_container(tmp_path, monkeypatch):
+    from gerrytools.mgrp import RecomRunInfo
+
+    graph = nx.cycle_graph(4)
+    container = make_updater_container(
+        tmp_path,
+        monkeypatch,
+        graph,
+        [
+            (b'{"assignment": [1, 1, 2, 2], "sample": 1}\n', None),
+            (b'{"assignment": [1, 2, 1, 2], "sample": 2}\n', None),
+        ],
+    )
+    docker_container = cast(_FakeContainer, container.container)
+    iterator = container.mcmc_run_with_updaters(
+        RecomRunInfo(
+            pop_col="TOTPOP",
+            assignment_col="CD",
+            variant="A",
+            updaters={"district_count": lambda partition: len(partition.parts)},
+        )
+    )
+    first, _ = next(iterator)
+    assert first is not None
+    assert first["sample"] == 1
+
+    iterator.close()
+
+    assert docker_container.removed
+    assert container.container is None
+
+
+def test_updater_error_survives_container_removal_failure(tmp_path, monkeypatch):
+    from gerrytools.mgrp import RecomRunInfo
+
+    def failing_updater(_partition):
+        raise ValueError("updater failed")
+
+    container = make_updater_container(
+        tmp_path,
+        monkeypatch,
+        nx.cycle_graph(4),
+        [(b'{"assignment": [1, 1, 2, 2], "sample": 1}\n', None)],
+    )
+    docker_container = cast(_FakeContainer, container.container)
+    docker_container.remove_error = OSError("daemon unavailable")
+    iterator = container.mcmc_run_with_updaters(
+        RecomRunInfo(
+            pop_col="TOTPOP",
+            assignment_col="CD",
+            variant="A",
+            updaters={"failure": failing_updater},
+        )
+    )
+
+    with pytest.raises(ValueError, match="updater failed") as excinfo:
+        list(iterator)
+
+    assert any("Could not stop the abandoned" in note for note in excinfo.value.__notes__)
+    assert container.container is docker_container
 
 
 @pytest.mark.parametrize(

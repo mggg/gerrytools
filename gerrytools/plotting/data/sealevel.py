@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from numbers import Integral, Real
-from typing import Sequence
+from typing import Any, Sequence, cast
 
 import numpy as np
 import pandas as pd
@@ -17,7 +17,7 @@ from gerrytools.plotting._rng import resolve_numpy_rng, spawn_child_seeds
 from gerrytools.plotting.data._categorical_distribution_base import CategoricalDistributionPlotBase
 from gerrytools.plotting.data.options import SeaLevelLineOptions
 from gerrytools.plotting.mpl.marker_options import PointMarkerOptions
-from gerrytools.plotting.utils import _replace_non_none
+from gerrytools.plotting.utils import UNSET, Unset, _replace_with_color_overrides
 from gerrytools.typing import CategoryKey, Color, LegendHandle
 
 logger = get_logger(__name__)
@@ -61,7 +61,7 @@ class SeaLevelPlot(CategoricalDistributionPlotBase):
             ax (matplotlib.axes.Axes | None, optional): Render onto an existing
                 matplotlib ``Axes`` instead of creating a fresh figure. Defaults to None.
             legend (bool | None, optional): Whether to include a legend in the plot.
-                ``None`` selects the class default (True). Defaults to None.
+                ``None`` selects the class default (False). Defaults to None.
             xlabel (str | None, optional): The label for the x-axis. Defaults to None.
             ylabel (str | None, optional): The label for the y-axis. Defaults to None.
             title (str | None, optional): The title of the plot. Defaults to None.
@@ -219,7 +219,8 @@ class SeaLevelPlot(CategoricalDistributionPlotBase):
 
         Args:
             scores (dict[str, int | float] | list[int | float] | pd.Series | pd.DataFrame):
-                Input scores. Lists require ``category_labels``; DataFrames require ``df_row_index``.
+                Input scores. Lists require ``category_labels``; DataFrames require
+                ``df_row_index``.
             category_labels (list[str] | None, optional): Labels for list input. Defaults to None.
             df_row_index (CategoryKey | None, optional): Row selector for DataFrame input.
                 Defaults to None.
@@ -271,15 +272,15 @@ class SeaLevelPlot(CategoricalDistributionPlotBase):
         df_row_index: CategoryKey | None = None,
         line_options: SeaLevelLineOptions | None = None,
         marker_options: PointMarkerOptions | None = None,
-        linecolor: Color | None = None,
+        linecolor: Color | None | Unset = UNSET,
         linealpha: float | None = None,
         linewidth: float | None = None,
         linestyle: str | None = None,
         marker: str | None = None,
-        markerfacecolor: Color | None = None,
+        markerfacecolor: Color | None | Unset = UNSET,
         markerfacealpha: float | None = None,
         markersize: float | None = None,
-        markeredgecolor: Color | None = None,
+        markeredgecolor: Color | None | Unset = UNSET,
         markeredgealpha: float | None = None,
         markeredgewidth: float | None = None,
         zorder: int | None = None,
@@ -306,20 +307,20 @@ class SeaLevelPlot(CategoricalDistributionPlotBase):
             marker_options (PointMarkerOptions | None, optional): Pre-built marker styling. Any
                 marker styling kwarg passed explicitly overrides the corresponding field. When
                 None, markers inherit the resolved line color. Defaults to None.
-            linecolor (Color, optional): The color of the line connecting the points.
-                Defaults to "black".
+            linecolor (Color | None, optional): The color of the line connecting the points. Pass
+                ``None`` for no line. Defaults to "black".
             linealpha (float | None, optional): The alpha transparency of the line.
                 Defaults to None.
             linewidth (float, optional): The width of the line. Defaults to 1.5.
             linestyle (str, optional): The style of the line. Defaults to "-".
             marker (str, optional): The marker style for the points. Defaults to "o".
-            markerfacecolor (Color | None, optional): The face color of the markers.
-                Defaults to None, which uses linecolor.
+            markerfacecolor (Color | None, optional): The face color of the markers. Pass ``None``
+                for no fill. When omitted, uses ``linecolor``.
             markerfacealpha (float | None, optional): The alpha transparency of the marker face.
                 Defaults to None, which uses linealpha.
             markersize (float, optional): The size of the markers. Defaults to 7.0.
-            markeredgecolor (Color | None, optional): The edge color of the markers.
-                Defaults to None, which uses markerfacecolor if defined and linecolor otherwise.
+            markeredgecolor (Color | None, optional): The edge color of the markers. Pass ``None``
+                for no edge. When omitted, uses ``markerfacecolor``.
             markeredgealpha (float | None, optional): The alpha transparency of the marker edge.
                 Defaults to None, which uses markerfacealpha if defined and linealpha otherwise.
             markeredgewidth (float, optional): The width of the marker edge. Defaults to 0.8.
@@ -334,12 +335,14 @@ class SeaLevelPlot(CategoricalDistributionPlotBase):
 
         Returns:
             None
+
         """
         scores_dict = self._convert_score_data_to_dictionary(scores, category_labels, df_row_index)
 
         line_base = line_options if line_options is not None else SeaLevelLineOptions()
-        line_style = _replace_non_none(
+        line_style = _replace_with_color_overrides(
             line_base,
+            ("linecolor", "linealpha"),
             linecolor=linecolor,
             linealpha=linealpha,
             linewidth=linewidth,
@@ -350,25 +353,35 @@ class SeaLevelPlot(CategoricalDistributionPlotBase):
         # When no marker options are given, markers inherit the resolved line color: the edge
         # follows the (possibly kwarg-overridden) face; a user-supplied marker_options is
         # honored verbatim, so an explicit black edge stays black.
+        default_markerfacecolor = (
+            line_style.linecolor if isinstance(markerfacecolor, Unset) else markerfacecolor
+        )
+        default_markerfacealpha = (
+            line_style.linealpha if markerfacealpha is None else markerfacealpha
+        )
+        default_markeredgecolor = (
+            default_markerfacecolor if isinstance(markeredgecolor, Unset) else markeredgecolor
+        )
+        default_markeredgealpha = (
+            default_markerfacealpha if markeredgealpha is None else markeredgealpha
+        )
         marker_base = (
             marker_options
             if marker_options is not None
             else PointMarkerOptions(
-                markerfacecolor=line_style.linecolor,
-                markerfacealpha=line_style.linealpha,
+                markerfacecolor=default_markerfacecolor,
+                markerfacealpha=default_markerfacealpha,
                 marker="o",
                 markersize=7.0,
-                markeredgecolor=(
-                    markerfacecolor if markerfacecolor is not None else line_style.linecolor
-                ),
-                markeredgealpha=(
-                    markerfacealpha if markerfacealpha is not None else line_style.linealpha
-                ),
+                markeredgecolor=default_markeredgecolor,
+                markeredgealpha=default_markeredgealpha,
                 markeredgewidth=0.8,
             )
         )
-        marker_style = _replace_non_none(
+        marker_style = _replace_with_color_overrides(
             marker_base,
+            ("markerfacecolor", "markerfacealpha"),
+            ("markeredgecolor", "markeredgealpha"),
             markerfacecolor=markerfacecolor,
             markerfacealpha=markerfacealpha,
             marker=marker,
@@ -458,7 +471,7 @@ class SeaLevelPlot(CategoricalDistributionPlotBase):
                 Line2D(
                     [0],
                     [0],
-                    linestyle=sealevel_data.style.linestyle,
+                    linestyle=cast("Any", sealevel_data.style.linestyle),
                     color=self._resolved_rgba(
                         sealevel_data.style.linecolor,
                         sealevel_data.style.linealpha,
@@ -494,6 +507,10 @@ class SeaLevelPlot(CategoricalDistributionPlotBase):
 
         Returns:
             None
+
+        Raises:
+            TypeError: If a numerator or denominator is not an integer.
+            ValueError: If bounds are inconsistent or ``denominator`` is not positive.
         """
         if not isinstance(denominator, Integral) or isinstance(denominator, (bool, np.bool_)):
             raise TypeError("denominator must be an integer.")

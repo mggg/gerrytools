@@ -33,12 +33,15 @@ class _GerrytoolsConsoleHandler(logging.StreamHandler):
 
 
 def get_logger(name: str | None = None) -> logging.Logger:
-    """
-    Get a logger namespaced under 'gerrytools'.
+    """Get a logger namespaced under ``gerrytools``.
 
-    If name is None -> 'gerrytools'
-    If name is 'gerrytools' or starts with 'gerrytools.' -> returned as-is
-    Else -> 'gerrytools.<name>'
+    Args:
+        name (str | None, optional): Logger name. An existing ``gerrytools`` namespace is
+            preserved; another name is prefixed with ``"gerrytools."``. Defaults to None, which
+            returns the package logger.
+
+    Returns:
+        logging.Logger: Requested package logger.
     """
     if name is None:
         return logging.getLogger(_GERRYTOOLS_LOGGER_NAME)
@@ -55,29 +58,32 @@ def configure_logging(
     datefmt: str = "%Y-%m-%d %H:%M:%S",
     force: bool = False,
 ) -> logging.Logger:
-    """
-    Configure gerrytools package logging. Call from apps/CLI/notebooks.
-    Safe to call multiple times.
+    """Configure package logging for an application, CLI, or notebook.
 
-    Parameters
-    ----------
-    level:
-        int or string like "INFO". If None, uses env var GERRYTOOLS_LOG_LEVEL
-        defaulting to INFO. Unknown level strings raise ValueError.
-    stream:
-        Where to write logs. Defaults to sys.stderr. Applied when the handler is first created.
-    fmt:
-        Standard logging message format. Applied when the handler is first created.
-    datefmt:
-        Standard logging date format. Applied when the handler is first created.
-    force:
-        If True, removes existing gerrytools handlers first.
+    This function is safe to call repeatedly.
 
-    Notes
-    -----
-    This helper installs a package-local console handler and disables propagation to the root
-    logger to avoid duplicate records. Applications that centralize logging through root handlers
-    should configure those handlers directly instead of calling this helper.
+    Args:
+        level (int | str | None, optional): Numeric level or standard level name. Defaults to the
+            ``GERRYTOOLS_LOG_LEVEL`` environment variable, or ``"INFO"`` when it is unset.
+        stream (TextIO | None, optional): Destination for a newly created handler. Defaults to
+            ``sys.stderr``.
+        fmt (str, optional): Format for a newly created handler. Defaults to the package's
+            timestamped console format.
+        datefmt (str, optional): Date format for a newly created handler. Defaults to
+            ``"%Y-%m-%d %H:%M:%S"``.
+        force (bool, optional): Whether to remove existing package handlers first. Defaults to
+            False.
+
+    Returns:
+        logging.Logger: Configured ``gerrytools`` package logger.
+
+    Raises:
+        ValueError: If a string ``level`` is not a recognized logging level.
+
+    Notes:
+        This helper installs a package-local console handler and disables propagation to the root
+        logger to avoid duplicate records. Applications that centralize logging through root
+        handlers should configure those handlers directly instead of calling this helper.
     """
     if level is None:
         level = os.getenv("GERRYTOOLS_LOG_LEVEL", "INFO")

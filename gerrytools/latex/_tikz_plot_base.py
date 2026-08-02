@@ -1,4 +1,4 @@
-"""Shared machinery for the TikZ plot classes (SeatsVotesPlot, PaintballPlot).
+"""Shared machinery for the TikZ plot classes (TikzSeatsVotesPlot, TikzPaintballPlot).
 
 One base class owns the document plumbing, the axis/scale setter surface, and the TikZ command
 builders, so the two plot dialects cannot drift. Colors follow one strategy: tokens classified by
@@ -60,7 +60,7 @@ class _GuideLine:
     """Validated guide line shared by the TikZ plot classes."""
 
     slope: float
-    linecolor: Color
+    linecolor: Color | None
     linewidth: float
     linestyle: str
     label: str | None = None
@@ -314,14 +314,14 @@ class _TikzPlotBase:
     #   COLOR MACHINERY
     # =====================
 
-    def _to_latex_color(self, color: Color) -> _TikzColorToken:
+    def _to_latex_color(self, color: Color | None) -> _TikzColorToken:
         """Convert a color value into an internal TikZ color token.
 
         No color name is registered on the document: HTML hex tokens are emitted inline, either
         via a ``\\color[HTML]{...}`` scope or an extended xcolor specification in option values.
 
         Args:
-            color (Color): Input color value.
+            color (Color | None): Input color value. None is transparent.
 
         Returns:
             _TikzColorToken: Classified color token.

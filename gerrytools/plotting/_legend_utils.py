@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from typing import Any, cast
 
 import matplotlib.pyplot as plt
 from matplotlib.backend_bases import RendererBase
@@ -41,7 +42,7 @@ def save_legend_handles(
         legend_ax.axis("off")
 
         opts: MplKwargs = legend_options.to_dict() | dict(legend_kwargs)
-        leg = legend_ax.legend(handles=handles, **opts)
+        leg = legend_ax.legend(handles=handles, **cast("Any", opts))
 
         legend_fig.subplots_adjust(0, 0, 1, 1)
 

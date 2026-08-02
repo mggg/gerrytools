@@ -40,8 +40,8 @@ def test_single_plan_and_prepared_schwartzberg_match_the_array_transform() -> No
     graph, frame, partition = resources()
     evaluator = (
         scoring.PlanEvaluator(graph, geometry=frame)
-        .add_metric(scoring.PolsbyPopper(name="polsby"))
-        .add_metric(scoring.Schwartzberg(name="schwartzberg"))
+        .add_metric(scoring.PolsbyPopper(result_name="polsby"))
+        .add_metric(scoring.Schwartzberg(result_name="schwartzberg"))
     )
 
     result = evaluator.evaluate(frame["district"])
@@ -51,10 +51,10 @@ def test_single_plan_and_prepared_schwartzberg_match_the_array_transform() -> No
     assert evaluator._engine_prepared[0].value_count == 2
     np.testing.assert_allclose(result["schwartzberg"], expected)
     np.testing.assert_allclose(scoring.schwartzberg(frame, "district"), expected)
-    np.testing.assert_allclose(scoring.schwartzberg(partition, frame), expected)
+    np.testing.assert_allclose(scoring.schwartzberg(partition, geometry=frame), expected)
 
 
-def test_standalone_schwartzberg_resolves_auto_to_geometry_without_graph_columns() -> None:
+def test_standalone_schwartzberg_uses_geometry_without_graph_columns() -> None:
     _, frame, _ = resources()
     bare_graph = nx.path_graph(4)  # no measurement columns, so "auto" must resolve to geometry
 
@@ -72,7 +72,7 @@ def test_standalone_schwartzberg_resolves_auto_to_geometry_without_graph_columns
     np.testing.assert_allclose(schwartzberg, formulas.schwartzberg(polsby))
 
 
-def test_standalone_schwartzberg_resolves_auto_like_standalone_polsby_popper() -> None:
+def test_standalone_schwartzberg_infers_source_like_standalone_polsby_popper() -> None:
     graph, frame, _ = resources()
     # Make graph-derived scores differ from geometry-derived ones so the resolution is pinned.
     nx.set_node_attributes(graph, {node: 0.5 for node in graph}, "area")
@@ -85,7 +85,7 @@ def test_standalone_schwartzberg_resolves_auto_like_standalone_polsby_popper() -
     polsby = standalone(scoring.PolsbyPopper())
 
     np.testing.assert_allclose(schwartzberg, formulas.schwartzberg(polsby))
-    assert not np.allclose(schwartzberg, standalone(scoring.Schwartzberg(source="graph")))
+    assert not np.allclose(schwartzberg, standalone(scoring.Schwartzberg(area_attr="area")))
 
 
 def test_standalone_graph_schwartzberg_registers_without_polsby_popper() -> None:
@@ -93,12 +93,12 @@ def test_standalone_graph_schwartzberg_registers_without_polsby_popper() -> None
 
     schwartzberg = (
         scoring.PlanEvaluator(graph)
-        .add_metric(scoring.Schwartzberg(source="graph"))
+        .add_metric(scoring.Schwartzberg())
         .evaluate(partition)["schwartzberg"]
     )
     polsby = (
         scoring.PlanEvaluator(graph)
-        .add_metric(scoring.PolsbyPopper(source="graph"))
+        .add_metric(scoring.PolsbyPopper())
         .evaluate(partition)["polsby_popper"]
     )
 
@@ -109,18 +109,71 @@ def test_graph_schwartzberg_uses_the_same_measurement_contract_as_polsby_popper(
     graph, _, partition = resources()
     polsby = scoring.polsby_popper(
         partition,
-        area="area",
-        perimeter="perimeter",
-        shared_perimeter="shared_perim",
+        area_attr="area",
+        perimeter_attr="perimeter",
+        shared_perimeter_attr="shared_perim",
     )
     actual = scoring.schwartzberg(
         partition,
-        area="area",
-        perimeter="perimeter",
-        shared_perimeter="shared_perim",
+        area_attr="area",
+        perimeter_attr="perimeter",
+        shared_perimeter_attr="shared_perim",
     )
 
     np.testing.assert_allclose(actual, formulas.schwartzberg(polsby))
+
+
+@pytest.mark.parametrize("metric_type", [scoring.PolsbyPopper, scoring.Schwartzberg])
+def test_geometry_compactness_ignores_inconsistent_graph_attributes(
+    metric_type: type[scoring.PolsbyPopper],
+) -> None:
+    graph = nx.Graph()
+    graph.add_node(0, area=0.01, perimeter=1.0)
+    graph.add_node(1, area=0.01, perimeter=1.0)
+    graph.add_edge(0, 1, shared_perim=1.1)
+    geometry = gpd.GeoDataFrame(
+        geometry=[box(0, 0, 1, 1), box(1, 0, 2, 1)],
+        crs="EPSG:3857",
+    )
+
+    evaluator = scoring.PlanEvaluator(graph, geometry=geometry).add_metric(metric_type())
+    result = cast(Series, evaluator.evaluate([0, 1])[evaluator.metrics[0]])
+
+    assert result.notna().all()
+
+
+@pytest.mark.parametrize("metric_type", [scoring.PolsbyPopper, scoring.Schwartzberg])
+def test_graph_compactness_reports_inconsistent_graph_attributes(
+    metric_type: type[scoring.PolsbyPopper],
+) -> None:
+    graph = nx.Graph()
+    graph.add_node(0, area=0.01, perimeter=1.0)
+    graph.add_node(1, area=0.01, perimeter=1.0)
+    graph.add_edge(0, 1, shared_perim=1.1)
+    evaluator = scoring.PlanEvaluator(graph).add_metric(metric_type(perimeter_attr="perimeter"))
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "graph perimeter attributes are inconsistent.*different geometries or CRSs.*"
+            "geometry-backed scoring"
+        ),
+    ):
+        evaluator.evaluate([0, 1])
+
+
+def test_graph_compactness_reports_missing_graph_attributes_even_with_geometry() -> None:
+    graph = nx.Graph([(0, 1)])
+    geometry = gpd.GeoDataFrame(
+        geometry=[box(0, 0, 1, 1), box(1, 0, 2, 1)],
+        crs="EPSG:3857",
+    )
+    evaluator = scoring.PlanEvaluator(graph, geometry=geometry).add_metric(
+        scoring.PolsbyPopper(area_attr="area")
+    )
+
+    with pytest.raises(ValueError, match="graph node 0 has no 'area' attribute"):
+        evaluator.evaluate([0, 1])
 
 
 @pytest.mark.parametrize("perimeter", [None, "perimeter"])
@@ -130,8 +183,8 @@ def test_graph_polsby_and_schwartzberg_share_boundary_or_total_measurements(
     graph, _, partition = resources()
     evaluator = (
         scoring.PlanEvaluator(graph)
-        .add_metric(scoring.PolsbyPopper(perimeter=perimeter))
-        .add_metric(scoring.Schwartzberg(perimeter=perimeter))
+        .add_metric(scoring.PolsbyPopper(perimeter_attr=perimeter))
+        .add_metric(scoring.Schwartzberg(perimeter_attr=perimeter))
     )
 
     result = evaluator.evaluate(partition)
@@ -150,8 +203,8 @@ def test_repeated_compactness_metrics_share_one_native_registration(
     graph, _, partition = resources()
     evaluator = (
         scoring.PlanEvaluator(graph)
-        .add_metric(metric_type(name="first"))
-        .add_metric(metric_type(name="second"))
+        .add_metric(metric_type(result_name="first"))
+        .add_metric(metric_type(result_name="second"))
     )
 
     result = evaluator.evaluate(partition)
@@ -166,8 +219,8 @@ def test_graph_total_mode_agrees_with_boundary_mode_and_hand_computed_values() -
     def graph_scores(perimeter: str | None) -> tuple[Series, Series]:
         result = (
             scoring.PlanEvaluator(graph)
-            .add_metric(scoring.PolsbyPopper(perimeter=perimeter))
-            .add_metric(scoring.Schwartzberg(perimeter=perimeter))
+            .add_metric(scoring.PolsbyPopper(perimeter_attr=perimeter))
+            .add_metric(scoring.Schwartzberg(perimeter_attr=perimeter))
             .evaluate([0, 1, 1, 1])
         )
         return cast(Series, result["polsby_popper"]), cast(Series, result["schwartzberg"])
@@ -214,8 +267,8 @@ def test_schwartzberg_streams_like_evaluate_many(tmp_path: Path, variant: Varian
 
     evaluator.evaluate_stream(source, output, batch_size=1)
 
-    schwartzberg = pq.read_table(output / "schwartzberg" / "scores.parquet").to_pydict()
-    polsby = pq.read_table(output / "polsby_popper" / "scores.parquet").to_pydict()
+    schwartzberg = pq.read_table(output / "schwartzberg__scores.parquet").to_pydict()
+    polsby = pq.read_table(output / "polsby_popper__scores.parquet").to_pydict()
     for district in range(2):
         np.testing.assert_allclose(
             schwartzberg[f"score__district_{district}"],

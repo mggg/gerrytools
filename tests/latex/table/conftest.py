@@ -22,7 +22,7 @@ def df():
     ]
     # fmt: on
     cols = [f"Column {i}" for i in range(1, 6)] + ["Names"]
-    return pd.DataFrame(matrix, columns=cols)  # type: ignore
+    return pd.DataFrame(matrix, columns=cols)
 
 
 @pytest.fixture

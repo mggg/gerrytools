@@ -169,6 +169,21 @@ class TestAddSeaLevelSet:
         mpl_dict = ms.to_mpl_settings_dict()
         assert mpl_dict["markerfacecolor"] == mpl_dict["markeredgecolor"]
 
+    def test_explicit_none_colors_remove_line_and_markers(self):
+        sl = SeaLevelPlot()
+        sl.add_dataset(
+            {"A": 0.5},
+            linecolor=None,
+            markerfacecolor=None,
+            markeredgecolor=None,
+        )
+
+        dataset = sl._sealevel_data_list[0]
+        assert dataset.style.linecolor == "none"
+        assert dataset.markersettings.markerfacecolor == "none"
+        assert dataset.markersettings.markeredgecolor == "none"
+        assert dataset.markersettings.markeredgewidth == 0.0
+
 
 # ==========================
 # == JITTER CONFIGURATION ==

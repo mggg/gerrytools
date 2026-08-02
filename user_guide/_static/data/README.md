@@ -74,15 +74,40 @@ blocks, so the assignments join exactly to the P1 population table.
 [cd118]: https://www.census.gov/geographies/mapping-files/2023/dec/rdo/118-congressional-district-bef.html
 [cd119]: https://www.census.gov/geographies/mapping-files/2025/dec/rdo/119-congressional-district-bef.html
 
-## `ga_congressional_ensemble.json`
+## `ga_congressional_ensemble_a.json` and `ga_congressional_ensemble_b.json`
 
-This file contains the 1,000-plan Georgia congressional demonstration ensemble used by the
-predecessor guides. Every record has a `step` value plus fourteen district-level `BVAP20` and
-`WVAP20` shares.
+These files contain two 1,000-plan Georgia congressional demonstration ensembles generated from
+the 2020 VTD graph in the V2 Districtr Georgia release package. Both ReCom chains start from the
+same generated seed, enforce a 2% population tolerance on `total_pop_20`, and include the seed as
+step zero. They use independent random streams.
 
-The original chain configuration, constraints, seed, burn-in, thinning choices, and generation code
-were not preserved, so the record order is not a validated chain trace. The file exists to
-demonstrate rank ordering, plot inputs, and builder behavior.
+Every record contains a `step` value; fourteen district-level `BVAP` and `WVAP` shares; and a
+`disproportionality` mapping with scores for thirteen statewide elections from 2016 through 2024.
+The election suite covers president, U.S. Senate, governor, lieutenant governor, attorney general,
+and secretary of state. The shares divide the corresponding population count by `total_vap_20`.
+Each score subtracts statewide two-party Democratic vote share from Democratic seat share, so
+positive values indicate a larger share of seats than votes and negative values indicate a
+smaller share.
+
+The runs are compact plotting fixtures, not validated ensembles for substantive analysis. They
+exist to demonstrate rank ordering, comparisons between datasets, and builder behavior.
+
+## `ga_congressional_disproportionality_100000.parquet`
+
+This file contains signed Democratic disproportionality scores for 100,000 positions in a Georgia
+congressional ReCom-B chain, including the seed at step zero. The chain was generated on the 2020
+VTD graph in the V2 Districtr Georgia release package with RustReCom 0.2.0, a 2% population
+tolerance on `total_pop_20`, RNG seed 2026080203, one thread, and batch size one. The starting
+assignment is a generated population-balanced seed.
+
+The `step` column runs from 0 through 99,999. The other thirteen columns contain scores for
+statewide elections from 2016 through 2024: `AG18`, `AG22`, `GOV18`, `GOV22`, `LTG18`, `LTG22`,
+`PRES16`, `PRES20`, `PRES24`, `SEN16`, `SEN20`, `SEN22`, and `SOS22`. Each score subtracts
+statewide two-party Democratic vote share from Democratic seat share. The scatter plot guide
+computes each plan's mean and variance across these columns.
+
+The Parquet file retains the scored chain positions needed by the tutorial, not the assignment
+vectors or the intermediate RustReCom JSONL output.
 
 ## `co_vtd_scoring_10000.bendl`
 

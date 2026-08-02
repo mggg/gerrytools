@@ -258,6 +258,8 @@ def test_post_construction_objective_assignment_is_validated_and_reaches_config(
         ("pop_tol", True),
         ("pop_tol", -0.05),
         ("rng_seed", True),
+        ("rng_seed", -1),
+        ("rng_seed", 2**64),
     ],
 )
 def test_optimizer_numeric_domains_rejected_at_construction(field, value):

@@ -73,13 +73,18 @@ class TestBandDataAndOptions:
         with pytest.raises(ValueError, match="finite"):
             BandOptions(linewidth=float("inf"))
 
-    def test_linecolor_defaults_to_bandcolor_when_none(self):
-        style = BandOptions(bandcolor="red", linecolor=None)
+    def test_omitted_linecolor_defaults_to_bandcolor(self):
+        style = BandOptions(bandcolor="red")
         assert style.linecolor == "#ff0000"
 
-    def test_linecolor_none_with_bandcolor_none_falls_back_to_grey(self):
-        style = BandOptions(bandcolor="none", linecolor=None)
+    def test_omitted_linecolor_with_no_bandcolor_falls_back_to_grey(self):
+        style = BandOptions(bandcolor="none")
         assert style.linecolor == "#cccccc"
+
+    def test_explicit_none_linecolor_removes_boundary(self):
+        style = BandOptions(bandcolor="red", linecolor=None, linewidth=2.0)
+        assert style.linecolor == "none"
+        assert style.linewidth == 0.0
 
     def test_linecolor_none_string_resets_linewidth_to_zero(self):
         style = BandOptions(linecolor="none", linewidth=2.0)

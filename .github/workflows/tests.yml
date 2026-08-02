@@ -2,6 +2,9 @@
 # opt-in job that builds the mgrp Docker image and runs the live engine tests.
 name: tests
 
+env:
+  PYTHONHASHSEED: "0"
+
 on:
   push:
     branches: [main]
@@ -20,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv run ruff check gerrytools tests user_guide/*.py user_guide/user
-      - run: uv run ruff check --select I --diff gerrytools tests
+      - run: uv run ruff check --select I --diff gerrytools tests user_guide/*.py user_guide/user
       - run: uv run ruff format --check gerrytools tests user_guide/*.py user_guide/user
       - run: uv run ty check gerrytools tests
       - run: uv run pyright gerrytools tests
@@ -28,14 +31,16 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.11", "3.14"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --locked
+      - run: uv run maturin develop --release --locked
       # The mgrp live tests skip themselves unless MGRP_TEST_IMAGE is set, so
       # this runs the full no-Docker suite.
       - run: uv run pytest tests/ -q
@@ -48,6 +53,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: uv sync --locked
+      - run: uv run maturin develop --release --locked
       - run: >-
           uv run pytest tests/ -q --cov=gerrytools --cov-branch
           --cov-report=term-missing --cov-fail-under=95
@@ -63,7 +69,9 @@ jobs:
       - run: >-
           sudo apt-get install -y --no-install-recommends
           poppler-utils texlive-latex-base texlive-latex-extra texlive-fonts-recommended
+          texlive-science
       - run: uv sync --locked
+      - run: uv run maturin develop --release --locked
       - run: >-
           uv run pytest --with-snapshot --with-latex -m "snapshot or latex" -q tests
         env:
@@ -98,6 +106,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: uv sync --locked
+      - run: uv run maturin develop --release --locked
       - name: Build the mgrp image
         run: docker build -t mgggdev/replicate:ci docker/
       - name: Run live engine tests

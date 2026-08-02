@@ -233,6 +233,13 @@ pub enum Error {
         /// Maximum permitted overlay residue.
         tolerance: f64,
     },
+    /// A population geometry is not covered by exactly one evaluator geometry.
+    PopulationGeometryOwnerCount {
+        /// Zero-based observation index.
+        observation: usize,
+        /// Number of evaluator geometries that cover the observation.
+        count: usize,
+    },
     /// Summing an owner's population weights produced an infinite or NaN total.
     NonFinitePopulationOwnerTotal {
         /// Owner node index.
@@ -486,6 +493,11 @@ impl Display for Error {
                 formatter,
                 "population observation {observation} extends {uncovered_area} area outside owner \
                  geometry {owner}; tolerance is {tolerance}"
+            ),
+            Self::PopulationGeometryOwnerCount { observation, count } => write!(
+                formatter,
+                "alternative population geometry {observation} must be covered by exactly one \
+                 evaluator geometry; found {count}"
             ),
             Self::NonFinitePopulationOwnerTotal { owner } => {
                 write!(

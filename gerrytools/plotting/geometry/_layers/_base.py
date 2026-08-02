@@ -105,7 +105,8 @@ class _GeoLayer(ABC):
             a mapping from data values to colors. Defaults to "Purples".
         missing_color (MplCompatibleColor | None): Color to use for missing data.
         facealpha (float | None): Alpha transparency for face colors. Default is None.
-        edgecolor (Color): Color for geometry edges. Default is "none".
+        edgecolor (Color | None): Color for geometry edges. None removes the edge.
+            Default is "none".
         edgealpha (float | None): Alpha transparency for edge colors. Default is None.
         edgewidth (float): Width of geometry edges. Default is 0.5.
         zorder (int): Z-order for rendering. Default is 1.
@@ -118,7 +119,7 @@ class _GeoLayer(ABC):
     colormap: GeoColorMap | None = "Purples"
     missing_color: MplCompatibleColor | None = "lightgrey"
     facealpha: float | None = None
-    edgecolor: Color = "none"
+    edgecolor: Color | None = "none"
     edgealpha: float | None = None
     edgewidth: float = 0.5
     zorder: int = 1

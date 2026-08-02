@@ -43,6 +43,12 @@ def convert_color_to_hexa_or_none(color: MplCompatibleColor | None) -> HexColor:
         color (MplCompatibleColor | None): The color input to convert. This can be a named color,
             a LaTeX color string, an RGB(A) tuple, or other formats supported
             by Matplotlib.
+
+    Returns:
+        HexColor: Lowercase ``#rrggbbaa`` color, or ``"none"`` for a transparent color.
+
+    Raises:
+        ValueError: If ``color`` is not a recognized color value.
     """
     return _Color.from_any(color, logger=gt_logger).to_hex8()
 
@@ -67,16 +73,19 @@ def resolve_color_and_alpha(
 
     Args:
         color (MplCompatibleColor | None): The color input to convert.
-        alpha (float | None): An optional explicit alpha value between 0.0 and 1.0.
+        alpha (float | None, optional): Explicit alpha value between 0.0 and 1.0. Defaults to None.
         allow_none (bool): Whether "none" is an acceptable color. Defaults to True.
-        field (str): The name of the field being processed, for error messages.
-        owner (str | None): An optional owner name for logging context.
-        logger (logging.Logger | None): An optional logger for debug messages
-            (both parse-failure diagnostics and alpha-override notes). Falls
-            back to this module's logger for parse diagnostics when None.
+        field (str, optional): Name of the field being processed. Defaults to ``"color"``.
+        owner (str | None, optional): Owner name for logging context. Defaults to None.
+        logger (logging.Logger | None, optional): Logger for parse-failure diagnostics and alpha
+            override notices. Defaults to None, which uses this module's logger for parse failures.
 
     Returns:
         ResolvedColor: A tuple of (hex6_or_none, resolved_alpha).
+
+    Raises:
+        TypeError: If an explicit alpha is not a real number.
+        ValueError: If the color is unknown, alpha is invalid, or ``allow_none`` rejects it.
     """
     resolved_color = _Color.from_any(color, logger=logger if logger is not None else gt_logger)
     # Validate before the "none" early return so a bad explicit alpha never passes silently.

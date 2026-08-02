@@ -236,6 +236,21 @@ class BoxPlot(CategoricalDistributionPlotBase):
 
         Toggle the per-group vertical guide lines with
         :meth:`display_group_separators` after construction.
+
+        Args:
+            figure_size (tuple[float, float] | None, optional): Figure size in inches. Defaults to
+                Matplotlib's setting.
+            dpi (int | None, optional): Figure resolution. Defaults to Matplotlib's setting.
+            ax (Axes | None, optional): Existing axes to draw on, or None to create them. Defaults
+                to None.
+            legend (bool | None, optional): Whether to draw a legend. None leaves existing axes
+                state unchanged. Defaults to None.
+            xlabel (str | None, optional): X-axis label. Defaults to None.
+            ylabel (str | None, optional): Y-axis label. Defaults to None.
+            title (str | None, optional): Axes title. Defaults to None.
+            width_scale (float, optional): Relative width of boxes within each slot. Defaults to
+                0.8.
+            group_width (float, optional): Width allocated to each category. Defaults to 0.7.
         """
         super().__init__(
             figure_size=figure_size,

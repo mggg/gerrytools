@@ -263,13 +263,21 @@ def _tract_cvap_rates(
         for tracts below the denominator threshold.
 
     Raises:
-        ValueError: If a tract CVAP estimate exceeds its containing VAP estimate.
+        ValueError: If a tract VAP or CVAP estimate is non-finite or negative, or a tract CVAP
+            estimate exceeds its containing VAP estimate.
     """
 
     rates = {}
     for race in race_categories:
         vap = tract_est[census_column_name(f"{race}_vap", source="acs5", year=acs_year)]
         cvap = tract_est[census_column_name(f"{race}_cvap", source="acs5", year=acs_year)]
+        invalid_value = ~vap.map(math.isfinite) | ~cvap.map(math.isfinite) | (vap < 0) | (cvap < 0)
+        if invalid_value.any():
+            geoid = invalid_value[invalid_value].index[0]
+            raise ValueError(
+                f"ACS {acs_year} {race} tract {geoid} VAP and CVAP estimates must be finite "
+                f"and nonnegative; found VAP {vap.loc[geoid]} and CVAP {cvap.loc[geoid]}."
+            )
         invalid = cvap > vap
         if invalid.any():
             geoid = invalid[invalid].index[0]

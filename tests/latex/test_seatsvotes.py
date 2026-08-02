@@ -8,7 +8,7 @@ import pytest
 from gerrytools.latex._tikz_plot_base import _TikzColorToken, _to_tikz_linestyle
 from gerrytools.latex.seatsvotes import (
     SeatsVotesOptions,
-    SeatsVotesPlot,
+    TikzSeatsVotesPlot,
     _SeatsVotesData,
     _SVPlotLine,
 )
@@ -152,10 +152,10 @@ class TestSeatsVotesLineAndOptions:
 # ===========================
 class TestSeatsVotesConstruction:
     def test_legend_is_disabled_by_default(self):
-        assert SeatsVotesPlot().legend is False
+        assert TikzSeatsVotesPlot().legend is False
 
     def test_initialization_sets_scale_and_tikz_package(self):
-        plot = SeatsVotesPlot(legend=True)
+        plot = TikzSeatsVotesPlot(legend=True)
         plot.set_scale(xscale=12, yscale=8)
 
         assert plot.options.xscale == 12.0
@@ -164,7 +164,7 @@ class TestSeatsVotesConstruction:
         assert plot.legend is True
 
     def test_add_seat_votes_data_uses_default_names_and_colors(self):
-        plot = SeatsVotesPlot()
+        plot = TikzSeatsVotesPlot()
         plot.add_election([0.4, 0.6])
 
         series = plot._sv_data_list[0]
@@ -173,27 +173,43 @@ class TestSeatsVotesConstruction:
         assert series.markercolor == plot.standard_marker_color
         assert series.marker_label == "Election Result"
 
+    def test_add_election_explicit_none_removes_curve_and_marker_colors(self):
+        plot = TikzSeatsVotesPlot()
+        plot.add_election([0.4, 0.6], linecolor=None, markercolor=None)
+
+        generated = str(plot)
+        assert generated.count("draw=none") >= 2
+
+    def test_none_standard_colors_remove_default_curve_and_marker(self):
+        plot = TikzSeatsVotesPlot()
+        plot.standard_election_color = None
+        plot.standard_marker_color = None
+        plot.add_election([0.4, 0.6])
+
+        generated = str(plot)
+        assert generated.count("draw=none") >= 2
+
     def test_add_seat_votes_data_requires_unit_interval_shares_without_totals(self):
-        plot = SeatsVotesPlot()
+        plot = TikzSeatsVotesPlot()
 
         with pytest.raises(ValueError, match="must be vote shares in \\[0, 1\\]"):
             plot.add_election([0.4, 1.2])
 
     def test_add_election_rejects_shape_mismatch(self):
         # Series are validated at add time, not first at render.
-        plot = SeatsVotesPlot()
+        plot = TikzSeatsVotesPlot()
 
         with pytest.raises(ValueError, match="must have the same shape"):
             plot.add_election([40, 60], [100])
 
     def test_add_election_rejects_nonpositive_total_votes(self):
-        plot = SeatsVotesPlot()
+        plot = TikzSeatsVotesPlot()
 
         with pytest.raises(ValueError, match="must be positive"):
             plot.add_election([40, 60], [100, 0])
 
     def test_add_efficiency_gap_line_and_basic_setters_update_plot_state(self):
-        plot = SeatsVotesPlot()
+        plot = TikzSeatsVotesPlot()
 
         plot.add_efficiency_gap_line()
         plot.set_label_fontsize(13.0)
@@ -207,7 +223,7 @@ class TestSeatsVotesConstruction:
         assert plot.options.linewidth == 2.25
 
     def test_set_limits_can_rescale_axes(self):
-        plot = SeatsVotesPlot()
+        plot = TikzSeatsVotesPlot()
 
         plot.set_xlim(0.25, 0.75, rescale=True)
         plot.set_ylim(0.1, 0.9, rescale=True)
@@ -218,7 +234,7 @@ class TestSeatsVotesConstruction:
         assert plot.options.yscale == pytest.approx(12.5)
 
     def test_clear_options_resets_defaults_and_crosshairs(self):
-        plot = SeatsVotesPlot()
+        plot = TikzSeatsVotesPlot()
         plot.set_scale(xscale=12, yscale=8)
         plot.set_fontsize(20)
         plot.set_xlim(0.2, 0.8)
@@ -238,7 +254,7 @@ class TestSeatsVotesConstruction:
         assert plot._display_line_legend is True
 
     def test_crosshair_settings_and_visibility_flags_can_be_toggled(self):
-        plot = SeatsVotesPlot(legend=True)
+        plot = TikzSeatsVotesPlot(legend=True)
         plot.update_crosshair_settings(
             x_width=0.1,
             y_width=0.2,
@@ -270,10 +286,10 @@ class TestSeatsVotesConstruction:
 # =======================
 class TestSeatsVotesInternalBuilders:
     def test_fontsize_command_uses_baseline_skip_plus_two_points(self):
-        assert SeatsVotesPlot._fontsize_command(16.0) == r"\fontsize{16.00}{18.00}\selectfont "
+        assert TikzSeatsVotesPlot._fontsize_command(16.0) == r"\fontsize{16.00}{18.00}\selectfont "
 
     def test_step_path_builds_expected_tikz_segments(self):
-        path = SeatsVotesPlot._step_path([0.0, 0.4, 0.6], [0.0, 0.5, 1.0])
+        path = TikzSeatsVotesPlot._step_path([0.0, 0.4, 0.6], [0.0, 0.5, 1.0])
 
         assert path == (
             "(0.0000, 0.0000) -- (0.0000, 0.5000) -- (0.4000, 0.5000) -- "
@@ -282,13 +298,13 @@ class TestSeatsVotesInternalBuilders:
 
     def test_step_path_rejects_empty_or_mismatched_vectors(self):
         with pytest.raises(ValueError, match="must have same length"):
-            SeatsVotesPlot._step_path([0.0], [0.0, 1.0])
+            TikzSeatsVotesPlot._step_path([0.0], [0.0, 1.0])
 
         with pytest.raises(ValueError, match="must not be empty"):
-            SeatsVotesPlot._step_path([], [])
+            TikzSeatsVotesPlot._step_path([], [])
 
     def test_legend_entry_helpers_deduplicate_curve_and_marker_entries(self):
-        plot = SeatsVotesPlot()
+        plot = TikzSeatsVotesPlot()
         plot.add_election(
             [0.4, 0.6],
             name="Election A",
@@ -308,7 +324,7 @@ class TestSeatsVotesInternalBuilders:
         assert plot._marker_legend_entries() == [("amber", "Result A")]
 
     def test_line_legend_entries_skip_unlabeled_lines(self):
-        plot = SeatsVotesPlot()
+        plot = TikzSeatsVotesPlot()
         plot.add_proportionality_line(name="Prop")
         plot.add_custom_line(
             slope=0.5,
@@ -320,7 +336,7 @@ class TestSeatsVotesInternalBuilders:
         assert plot._line_legend_entries() == [("gray", "dashed", "Prop")]
 
     def test_color_helpers_support_xcolor_html_and_none(self):
-        plot = SeatsVotesPlot()
+        plot = TikzSeatsVotesPlot()
 
         assert plot._to_latex_color("denim!20!amber") == _TikzColorToken(
             kind="xcolor",
@@ -336,14 +352,14 @@ class TestSeatsVotesInternalBuilders:
         )
 
         assert (
-            SeatsVotesPlot._color_prefix(_TikzColorToken(kind="html", value="AB12CD"))
+            TikzSeatsVotesPlot._color_prefix(_TikzColorToken(kind="html", value="AB12CD"))
             == r"\color[HTML]{AB12CD}"
         )
         assert (
-            SeatsVotesPlot._color_prefix(_TikzColorToken(kind="xcolor", value="denim"))
+            TikzSeatsVotesPlot._color_prefix(_TikzColorToken(kind="xcolor", value="denim"))
             == r"\color{denim}"
         )
-        assert SeatsVotesPlot._color_prefix(_TikzColorToken(kind="none", value="none")) == ""
+        assert TikzSeatsVotesPlot._color_prefix(_TikzColorToken(kind="none", value="none")) == ""
 
         assert plot._to_latex_color(None) == _TikzColorToken(  # type: ignore[arg-type]
             kind="none",
@@ -354,7 +370,7 @@ class TestSeatsVotesInternalBuilders:
         # Regression (C6): the legend used raw data-unit constants, so non-unit limits pushed
         # it out of proportion. With xlim (0, 2): x_start = 2 + 0.03*2 = 2.06, line length
         # 0.06*2 = 0.12, label offset 0.08*2 = 0.16.
-        plot = SeatsVotesPlot(legend=True)
+        plot = TikzSeatsVotesPlot(legend=True)
         plot.add_election([0.4, 0.6], name="Race")
         plot.set_xlim(0.0, 2.0)
 
@@ -369,14 +385,14 @@ class TestSeatsVotesInternalBuilders:
         command = r"\draw [line width=1.00pt] (0,0) -- (1,1);"
 
         assert (
-            SeatsVotesPlot._wrap_with_color_scope(
+            TikzSeatsVotesPlot._wrap_with_color_scope(
                 command,
                 _TikzColorToken(kind="xcolor", value="denim"),
             )
             == r"{\color{denim}\draw [line width=1.00pt] (0,0) -- (1,1);}"
         )
         assert (
-            SeatsVotesPlot._wrap_with_color_scope(
+            TikzSeatsVotesPlot._wrap_with_color_scope(
                 command,
                 _TikzColorToken(kind="none", value="none"),
             )
@@ -384,7 +400,7 @@ class TestSeatsVotesInternalBuilders:
         )
 
     def test_draw_fill_and_marker_commands_encode_none_and_html_colors(self):
-        plot = SeatsVotesPlot()
+        plot = TikzSeatsVotesPlot()
 
         assert plot._draw_path_command(
             path="(0.0, 0.0) -- (1.0, 1.0)",
@@ -434,7 +450,7 @@ class TestSeatsVotesLatexGeneration:
     def test_latex_seatsvotes_generates_tikz_with_escaped_labels_and_legend_entries(
         self,
     ):
-        plot = SeatsVotesPlot(
+        plot = TikzSeatsVotesPlot(
             legend=True,
             xlabel="Vote & Share",
             ylabel="Seat_Share",
@@ -487,7 +503,7 @@ class TestSeatsVotesLatexGeneration:
         assert plot.document.body_string == latex
 
     def test_latex_seatsvotes_can_hide_crosshairs_markers_and_line_legend(self):
-        plot = SeatsVotesPlot(legend=True)
+        plot = TikzSeatsVotesPlot(legend=True)
         plot.add_election(
             target_party_vote_shares=[0.48, 0.52, 0.61, 0.44],
             name="Shares",
@@ -511,7 +527,7 @@ class TestSeatsVotesLatexGeneration:
         assert "dashdotted" in latex
 
     def test_print_emits_raw_tikz_body(self, capsys):
-        plot = SeatsVotesPlot()
+        plot = TikzSeatsVotesPlot()
         plot.add_election([0.4, 0.6])
 
         plot.print()
@@ -527,7 +543,7 @@ class TestSeatsVotesLatexGeneration:
 # ==================
 class TestSeatsVotesExactOutput:
     def test_body_is_emitted_exactly(self):
-        plot = SeatsVotesPlot(legend=True, title="Title & Co", xlabel="Vote share")
+        plot = TikzSeatsVotesPlot(legend=True, title="Title & Co", xlabel="Vote share")
         plot.add_election([0.31, 0.62], name="Race")
         plot.add_proportionality_line()
 

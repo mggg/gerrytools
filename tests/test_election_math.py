@@ -24,8 +24,7 @@ from gerrytools._election_math import (
     seats_votes_curve_values,
 )
 
-# Deliberately asymmetric shares: not invariant under the (1 - v, 1 - s) reflection, so a
-# backend skipping the transform produces visibly different coordinates.
+# Deliberately asymmetric shares make swapped or complemented coordinate conventions visible.
 ASYMMETRIC_VOTESHARES = [0.31, 0.62, 0.62, 0.9]
 ASYMMETRIC_SEATSHARES = [0.25, 0.5, 0.75, 0.75]
 
@@ -118,10 +117,10 @@ class TestSharedFunctions:
         with pytest.raises(ValueError, match=message):
             normalize_paintball_data(voteshares, seats, total_seats)
 
-    def test_paintball_coordinates_reflects_at_full_precision(self):
+    def test_paintball_coordinates_are_direct_votes_seats_points(self):
         x_coords, y_coords = paintball_coordinates([0.31, 0.9], [0.25, 0.75])
-        assert x_coords == pytest.approx([0.69, 0.1])
-        assert y_coords == pytest.approx([0.75, 0.25])
+        assert x_coords == pytest.approx([0.31, 0.9])
+        assert y_coords == pytest.approx([0.25, 0.75])
 
     def test_horizontal_hull_tracks_min_and_max_x_per_y(self):
         vertices = horizontal_hull_vertices([(0.5, 0.5), (0.8, 0.5), (0.2, 0.5), (0.4, 0.9)])
@@ -170,7 +169,7 @@ class TestCrossBackendSeatsVotes:
 
 class TestCrossBackendPaintball:
     def _latex_plot(self):
-        from gerrytools.latex.paintball import PaintballPlot as LatexPaintballPlot
+        from gerrytools.latex.paintball import TikzPaintballPlot as LatexPaintballPlot
 
         return LatexPaintballPlot(
             vote_share_data=ASYMMETRIC_VOTESHARES,
@@ -185,8 +184,7 @@ class TestCrossBackendPaintball:
         return plot
 
     def test_point_coordinates_identical_across_backends(self):
-        # Regression: the latex points emitter used to emit raw (v, s) while the hull and the
-        # mpl backend emitted the reflected (1 - v, 1 - s).
+        # Both backends must use direct (vote share, seat share) coordinates.
         latex_points = [
             (float(x), float(y))
             for x, y in TIKZ_POINT_RE.findall(self._latex_plot()._paintball_points_str())
@@ -210,8 +208,7 @@ class TestCrossBackendPaintball:
         assert latex_hull == pytest.approx(mpl_hull)
 
     def test_latex_hull_bounds_the_emitted_points(self):
-        # Regression: with the un-reflected points, every asymmetric point fell outside the
-        # reflected hull.
+        # Every emitted point must lie within the horizontal hull for its seat share.
         plot = self._latex_plot()
         points = [
             (float(x), float(y)) for x, y in TIKZ_POINT_RE.findall(plot._paintball_points_str())

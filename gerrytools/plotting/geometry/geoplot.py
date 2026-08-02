@@ -14,7 +14,7 @@ from gerrytools.plotting._axes_backed import deferred_axis_update
 from gerrytools.plotting._figure_io import save_figure
 from gerrytools.plotting.geometry._labels import (
     LabelOptions,
-    _merge_style_arg,
+    _merge_label_style_arg,
     _queue_label_request,
 )
 from gerrytools.plotting.geometry._layers import (
@@ -54,8 +54,8 @@ def _colorbar_rect(
     ``aspect`` keeps the region's short-axis size.
 
     Args:
-        region (tuple[float, float, float, float]): Bounding region ``(x0, y0, width,
-            height)`` in figure coordinates.
+        region (tuple[float, float, float, float]): Bounding region
+            ``(x0, y0, width, height)`` in figure coordinates.
         fig_size_inches (tuple[float, float]): Figure ``(width, height)`` in inches.
         shrink (float | None): Long-axis scale factor; None means 1.0.
         aspect (float | None): Physical height-to-width ratio, or None.
@@ -99,7 +99,7 @@ class GeoPlot(GeoPlotBase):
     Attributes:
         gdf (GeoDataFrame): The base GeoDataFrame for the plot.
         fig (Figure): The Matplotlib Figure object.
-        target_crs: The target CRS for reprojecting geometries.
+        target_crs (CRSLike | None): The target CRS for reprojecting geometries.
         silent (bool): Whether to suppress informational output throughout the rendering process.
     """
 
@@ -145,6 +145,7 @@ class GeoPlot(GeoPlotBase):
         self._districting_plan_layers: list[_CategoricalColorLayer] = []
 
         self._colorbar_axes: list[Axes] = []
+        self._colorbar_histories: dict[Axes, list[Axes]] = {}
 
     @deferred_axis_update
     def add_choropleth_layer(
@@ -155,7 +156,7 @@ class GeoPlot(GeoPlotBase):
         colormap: str | Colormap = "Purples",
         missing_color: MplCompatibleColor | None = "lightgrey",
         facealpha: float | None = None,
-        edgecolor: Color = "none",
+        edgecolor: Color | None = "none",
         edgealpha: float | None = None,
         edgewidth: float = 0.5,
         vmin: float | None = None,
@@ -176,7 +177,8 @@ class GeoPlot(GeoPlotBase):
             missing_color (MplCompatibleColor | None): Color to use for missing data. Default is
                 "lightgrey".
             facealpha (float | None): Alpha transparency for face colors. Default is None.
-            edgecolor (Color): Color for geometry edges. Default is "none".
+            edgecolor (Color | None): Color for geometry edges. Pass ``None`` for no
+                edge. Default is "none".
             edgealpha (float | None): Alpha transparency for edge colors. Default is None.
             edgewidth (float): Width of geometry edges. Default is 0.5.
             vmin (float | None): Lower bound for color mapping range. Default is None which then
@@ -265,12 +267,12 @@ class GeoPlot(GeoPlotBase):
         geo_source: GeoDataFrame | None = None,
         dissolve: bool = False,
         show_labels: bool = False,
-        style: LabelStyle | str | None = None,
+        label_style: LabelStyle | str | None = None,
         label_options: LabelOptions | None = None,
         colormap: GeoColorMap | None = "districtr",
         missing_color: MplCompatibleColor | None = "lightgrey",
         facealpha: float | None = None,
-        edgecolor: Color = "none",
+        edgecolor: Color | None = "none",
         edgealpha: float | None = None,
         edgewidth: float = 0.5,
         zorder: int = 2,
@@ -283,12 +285,13 @@ class GeoPlot(GeoPlotBase):
                 the base gdf of the GeoPlotBase. Default is None.
             dissolve (bool): Whether to dissolve geometries by district. Default is False.
             show_labels (bool): Whether to show district labels. Default is False.
-            style (LabelStyle | str | None): Shorthand for ``label_options.style``: a
+            label_style (LabelStyle | str | None): Shorthand for
+                ``label_options.label_style``: a
                 ``LabelStyle`` or registered style name (e.g. ``"badge"``, ``"halo"``).
-                Mutually exclusive with a ``label_options`` that carries its own style.
+                Mutually exclusive with a ``label_options`` that carries its own label style.
                 Defaults to None.
             label_options (LabelOptions | None): Bundled label styling and placement options,
-                e.g. ``LabelOptions(style="halo")`` for the districtr-style numbers or
+                e.g. ``LabelOptions(label_style="halo")`` for the districtr-style numbers or
                 ``"badge"`` for wheat circles, plus per-label adjustments, font sizes, and
                 excluded district labels. Default is None.
             colormap (GeoColorMap | None): Color mapping specification. Can be a single color, a
@@ -300,7 +303,8 @@ class GeoPlot(GeoPlotBase):
             missing_color (MplCompatibleColor | None): Color to use for missing data. Default is
                 "lightgrey".
             facealpha (float | None): Alpha transparency for face colors. Default is None.
-            edgecolor (Color): Color for geometry edges. Default is "none".
+            edgecolor (Color | None): Color for geometry edges. Pass ``None`` for no
+                edge. Default is "none".
             edgealpha (float | None): Alpha transparency for edge colors. Default is None.
             edgewidth (float): Width of geometry edges. Default is 0.5.
             zorder (int): Z-order for rendering. Default is 2.
@@ -336,7 +340,7 @@ class GeoPlot(GeoPlotBase):
                 self._label_requests,
                 gdf=dissolved_plan_gdf,
                 label_column=plan_column,
-                options=_merge_style_arg(style, label_options),
+                options=_merge_label_style_arg(label_style, label_options),
                 # District labels display in normalized form: "01" and 1 both render as "1".
                 label_format_fn=_normalize_label_key,
                 zorder=zorder + 1,
@@ -398,9 +402,16 @@ class GeoPlot(GeoPlotBase):
         if ax is self._ax:
             self._clear_colorbars_and_reset_layout()
         else:
-            # Rebind is non-destructive, so forget colorbars on a figure no longer managed.
-            self._colorbar_axes = []
+            # Rebind is non-destructive. Keep inactive colorbars so revisiting their axes can
+            # replace them instead of adding another copy.
+            if self._colorbar_axes and (
+                self._figure_is_shared or (ax is not None and ax.figure is self.fig)
+            ):
+                self._colorbar_histories[self._ax] = self._colorbar_axes
+            self._colorbar_axes = self._colorbar_histories.pop(ax, []) if ax is not None else []
         super().bind_to_ax(ax)
+        if ax is None:
+            self._colorbar_histories.pop(self._ax, None)
 
     def _clear_colorbars_and_reset_layout(self) -> None:
         """Clear any existing colorbars and reset layout to default.
@@ -409,7 +420,8 @@ class GeoPlot(GeoPlotBase):
         to caller-owned axes, we share that figure and must not mutate its global layout.
         """
         for cax in list(self._colorbar_axes):
-            cax.remove()
+            if cax in self.fig.axes:
+                cax.remove()
         self._colorbar_axes = []
 
         # reset layout so we don't keep a shrunken main axes
@@ -431,7 +443,7 @@ class GeoPlot(GeoPlotBase):
         identically for the same options.
 
         Args:
-            colorbar: The matplotlib colorbar to style.
+            colorbar (Colorbar): The Matplotlib colorbar to style.
             cb_ax (Axes): The axes the colorbar occupies.
             cb_options (ColorbarOptions): The styling options to apply.
             label_text (str | None): The label to draw, or None for no label.
@@ -600,6 +612,9 @@ class GeoPlot(GeoPlotBase):
                 rectangle in figure coordinates ``(left, bottom, width, height)``,
                 overriding the shrink/aspect sizing. Defaults to None.
             **kwargs (object): Additional keyword arguments passed to ``Figure.savefig``.
+
+        Raises:
+            ValueError: If ``orientation`` is not ``"vertical"`` or ``"horizontal"``.
         """
         cb_options = options if options is not None else ColorbarOptions()
         orientation = orientation if orientation is not None else cb_options.orientation

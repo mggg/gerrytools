@@ -12,7 +12,8 @@ its own public ``save_legend`` (their signatures differ) over ``_save_legend_han
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Literal, Sequence
+from typing import TYPE_CHECKING, Any, Literal, Sequence, cast
+from weakref import ReferenceType, WeakKeyDictionary, ref
 
 from matplotlib.legend import Legend
 
@@ -39,16 +40,32 @@ class _LegendMixin:
 
     _legend_options: LegendOptions
 
-    # Identity of the legend gerrytools last placed on the current axes, or None. Kept
-    # separately from the managed-unit history because the store-and-claim setters
-    # (``legend = ...``, ``set_legend_options``) reset last-applied to the sentinel, which
-    # would otherwise lose the "did gerrytools place this legend?" answer.
-    _last_placed_legend: Legend | None = None
+    _placed_legends_by_axes: WeakKeyDictionary[Axes, ReferenceType[Legend]]
 
     if TYPE_CHECKING:
         fig: Figure
         _ax: Axes
         _axes_state: _ManagedAxesState
+
+    @property
+    def _last_placed_legend(self) -> Legend | None:
+        """Legend last placed by this plot on its current axes, if any."""
+        legends = getattr(self, "_placed_legends_by_axes", None)
+        legend_ref = None if legends is None else legends.get(self._ax)
+        return None if legend_ref is None else legend_ref()
+
+    @_last_placed_legend.setter
+    def _last_placed_legend(self, legend: Legend | None) -> None:
+        legends = getattr(self, "_placed_legends_by_axes", None)
+        if legends is None:
+            if legend is None:
+                return
+            legends = WeakKeyDictionary()
+            self._placed_legends_by_axes = legends
+        if legend is None:
+            legends.pop(self._ax, None)
+        else:
+            legends[self._ax] = ref(legend)
 
     @property
     def _legend_handles(self) -> list[LegendHandle]:
@@ -103,9 +120,9 @@ class _LegendMixin:
         Kwargs merge over the currently stored options (or over ``options`` when given), so
         repeated calls accumulate: a second call only changes the fields it names and keeps
         everything set earlier. Pass a full ``LegendOptions`` as ``options`` to reset.
-        Omitted kwargs inherit; for the fields where ``None`` is itself a meaningful value
-        (``bbox_to_anchor``, ``fontsize``, ``framealpha``, ``facecolor``, ``edgecolor``,
-        ``title``), an explicit ``None`` clears the field back to its matplotlib default.
+        Omitted kwargs inherit. For ``bbox_to_anchor``, ``fontsize``, ``framealpha``, and
+        ``title``, an explicit ``None`` clears the field back to its matplotlib default.
+        For ``facecolor`` and ``edgecolor``, an explicit ``None`` removes that color.
 
         Args:
             options (LegendOptions | None, optional): Pre-built options to start from,
@@ -116,16 +133,20 @@ class _LegendMixin:
                 or ``(x, y, width, height)``. ``None`` anchors at ``loc`` inside the axes.
                 The stored default is ``(1.01, 0.5)``.
             ncols (int | None, optional): Number of legend columns. Defaults to None.
-            fontsize (float | str | None, optional): Legend text size.
+            fontsize (float | str | None, optional): Legend text size. Omit to inherit; pass None
+                to use Matplotlib's default.
             frameon (bool | None, optional): Whether to draw the legend frame.
                 Defaults to None.
             fancybox (bool | None, optional): Whether to use a rounded frame.
                 Defaults to None.
             shadow (bool | None, optional): Whether to draw a shadow. Defaults to None.
-            framealpha (float | None, optional): Frame alpha override.
-            facecolor (Color | None, optional): Frame face color.
-            edgecolor (Color | None, optional): Frame edge color.
-            title (str | None, optional): Legend title.
+            framealpha (float | None, optional): Frame alpha override. Omit to inherit; pass None
+                to use Matplotlib's default.
+            facecolor (Color | None, optional): Frame face color. Pass ``None`` for no
+                fill.
+            edgecolor (Color | None, optional): Frame edge color. Pass ``None`` for no
+                edge.
+            title (str | None, optional): Legend title. Omit to inherit; pass None to clear it.
             alignment (Literal["center", "left", "right"] | None, optional): Legend content
                 alignment. Defaults to None.
             labelspacing (float | None, optional): Vertical spacing between entries.
@@ -255,5 +276,5 @@ class _LegendMixin:
             prior = self._ax.get_legend()
             if prior is not None:
                 prior.remove()
-        self._ax.legend(handles=handles, **self._legend_options.to_dict())
+        self._ax.legend(handles=handles, **cast("Any", self._legend_options.to_dict()))
         return self._ax.get_legend()

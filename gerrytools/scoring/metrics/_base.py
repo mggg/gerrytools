@@ -6,7 +6,7 @@ from collections.abc import Hashable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, Literal, TypeAlias
 
-from ..result import _Dtype
+from .._types import _Dtype, _ResultShape
 
 if TYPE_CHECKING:
     from gerrytools._scoring_engine import ScoringEngine
@@ -26,18 +26,14 @@ class _ResourceSpec:
     region_columns: frozenset[_ColumnResource] = frozenset()
     alignment: bool = False
     geometry: bool = False
-    rook: bool = False
-    population_surfaces: frozenset[tuple[bytes, ...]] = frozenset()
     fixed_values: frozenset[Hashable] = frozenset()
 
     def __post_init__(self) -> None:
         geometry_column = any(
             source == "geometry" for source, _ in self.node_columns | self.region_columns
         )
-        if geometry_column or self.geometry or self.rook or self.population_surfaces:
+        if geometry_column or self.geometry:
             object.__setattr__(self, "alignment", True)
-        if self.rook or self.population_surfaces:
-            object.__setattr__(self, "geometry", True)
         if self.edge_columns:
             object.__setattr__(self, "topology", True)
 
@@ -49,8 +45,6 @@ class _ResourceSpec:
             region_columns=self.region_columns | other.region_columns,
             alignment=self.alignment or other.alignment,
             geometry=self.geometry or other.geometry,
-            rook=self.rook or other.rook,
-            population_surfaces=self.population_surfaces | other.population_surfaces,
             fixed_values=self.fixed_values | other.fixed_values,
         )
 
@@ -63,15 +57,13 @@ class _ResourceSpec:
             and self.region_columns.issuperset(other.region_columns)
             and (self.alignment or not other.alignment)
             and (self.geometry or not other.geometry)
-            and (self.rook or not other.rook)
-            and self.population_surfaces.issuperset(other.population_surfaces)
             and self.fixed_values.issuperset(other.fixed_values)
         )
 
 
 @dataclass(frozen=True, slots=True)
 class _OutputSpec:
-    shape: Literal["district", "plan", "region"]
+    shape: _ResultShape
     columns: tuple[Hashable, ...]
     dtypes: tuple[_Dtype, ...]
     regions: tuple[Hashable, ...] = ()
@@ -80,7 +72,7 @@ class _OutputSpec:
     def __post_init__(self) -> None:
         if len(self.columns) != len(self.dtypes):
             raise ValueError("metric output columns and dtypes must have equal length")
-        if self.shape == "region":
+        if self.shape == _ResultShape.REGION:
             if self.region_name is None:
                 raise ValueError("region output requires a region axis name")
         elif self.regions or self.region_name is not None:
@@ -89,7 +81,7 @@ class _OutputSpec:
     @property
     def value_count(self) -> int:
         """Number of flat engine columns represented by this output."""
-        if self.shape == "region":
+        if self.shape == _ResultShape.REGION:
             return len(self.columns) * len(self.regions)
         return len(self.columns)
 
@@ -98,12 +90,12 @@ class _OutputSpec:
 class _MetricBase:
     """Implementation-sharing base for the concrete metric descriptors in this module.
 
-    ``name`` changes only the public result key. It does not affect equality so differently named
-    registrations can still share prepared engine work.
+    ``result_name`` changes only the public result key. It does not affect equality so differently
+    named registrations can still share prepared engine work.
     """
 
     _kind: ClassVar[str]
-    name: str | None = field(default=None, compare=False)
+    result_name: str | None = field(default=None, compare=False)
 
     def _default_name(self) -> str:
         return self._kind
@@ -146,11 +138,11 @@ class _MetricBase:
         raise NotImplementedError
 
 
-def _keys(values: tuple[str, ...], metric: str) -> tuple[str, ...]:
+def _keys(values: tuple[str, ...], metric: str, kind: str = "column") -> tuple[str, ...]:
     if not values or any(not isinstance(value, str) or not value for value in values):
-        raise ValueError(f"{metric} requires at least one nonempty string key")
+        raise ValueError(f"{metric} requires at least one nonempty string {kind}")
     if len(set(values)) != len(values):
-        raise ValueError(f"{metric} keys cannot repeat")
+        raise ValueError(f"{metric} {kind}s cannot repeat")
     return values
 
 
@@ -162,9 +154,9 @@ def _merged_keys(left: tuple[str, ...], right: tuple[str, ...]) -> tuple[str, ..
 class _KeyedMetric(_MetricBase):
     keys: tuple[str, ...]
 
-    def __init__(self, *keys: str, name: str | None = None) -> None:
-        object.__setattr__(self, "name", name)
-        object.__setattr__(self, "keys", _keys(keys, type(self).__name__))
+    def __init__(self, *columns: str, result_name: str | None = None) -> None:
+        object.__setattr__(self, "result_name", result_name)
+        object.__setattr__(self, "keys", _keys(columns, type(self).__name__))
 
     def _column_indices(self, available: tuple[Hashable, ...]) -> tuple[int, ...]:
         return tuple(available.index(key) for key in self.keys)

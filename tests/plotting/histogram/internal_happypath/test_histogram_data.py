@@ -61,7 +61,9 @@ class TestAddHistogram:
     def test_auto_name_for_histogram(self):
         h = Histogram()
         h.add_dataset([1, 2, 3])
-        assert h._hist_data_dict["overlay"][0].name == "Overlay histogram 1"
+        h.add_dataset([1, 2, 3], histtype="stack")
+        assert h._hist_data_dict["overlay"][0].name == "Histogram 1"
+        assert h._hist_data_dict["stack"][0].name == "Histogram 2"
 
     def test_explicit_name_for_histogram(self):
         h = Histogram()

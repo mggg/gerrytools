@@ -32,6 +32,7 @@ pub(crate) enum PairedKind {
     EfficiencyGap,
     SimplifiedEfficiencyGap,
     MeanMedian,
+    Disproportionality,
     PartisanBias(TurnoutModel),
     PartisanGini(TurnoutModel),
 }
@@ -119,6 +120,7 @@ impl SharedTallyMetric {
             "efficiency_gap" => PairedKind::EfficiencyGap,
             "simplified_efficiency_gap" => PairedKind::SimplifiedEfficiencyGap,
             "mean_median" => PairedKind::MeanMedian,
+            "disproportionality" => PairedKind::Disproportionality,
             "partisan_bias" => PairedKind::PartisanBias(TurnoutModel::parse(turnout_model)?),
             "partisan_gini" => PairedKind::PartisanGini(TurnoutModel::parse(turnout_model)?),
             _ => {
@@ -229,6 +231,7 @@ impl SharedTallyMetric {
                 PairedKind::EfficiencyGap => "efficiency_gap",
                 PairedKind::SimplifiedEfficiencyGap => "simplified_efficiency_gap",
                 PairedKind::MeanMedian => "mean_median",
+                PairedKind::Disproportionality => "disproportionality",
                 PairedKind::PartisanBias(_) => "partisan_bias",
                 PairedKind::PartisanGini(_) => "partisan_gini",
             },
@@ -504,6 +507,16 @@ fn score_paired(
                 shares[middle]
             };
             plan_score(tally, median - mean)
+        }
+        PairedKind::Disproportionality => {
+            let seat_share = party
+                .iter()
+                .zip(opposition)
+                .filter(|(party, opposition)| party > opposition)
+                .count() as f64
+                / party.len() as f64;
+            let vote_share = overall_vote_share(party, opposition);
+            plan_score(tally, seat_share - vote_share)
         }
         PairedKind::PartisanBias(turnout_model) => {
             let shares = vote_shares(party, opposition);

@@ -14,10 +14,12 @@ from gerrytools.colors import resolve_color_and_alpha
 from gerrytools.plotting.data import (
     ArrowPlacement,
     ArrowTextStyle,
+    LabelArrowOptions,
+    LabelArrowStyle,
     ScatterPlot,
     TextArrowStyle,
 )
-from gerrytools.plotting.mpl.label_text_options import LabelBoxOptions, LabelFontOptions
+from gerrytools.plotting.mpl.label_text_options import LabelBoxOptions, LabelFontOptions, LabelStyle
 
 
 def _simple_scatter() -> ScatterPlot:
@@ -208,20 +210,22 @@ def test_add_label_arrow_draws_arrow_and_label_box():
         arrowtip=(0.8, 0.2),
         direction="right",
         text="Toward POV",
-        label_font_options=LabelFontOptions(
-            fontcolor="black",
-            fontsize=8,
-            outlinecolor="white",
-            outlinewidth=0.5,
+        text_options=LabelStyle(
+            font=LabelFontOptions(
+                fontcolor="black",
+                fontsize=8,
+                outlinecolor="white",
+                outlinewidth=0.5,
+            ),
+            box=LabelBoxOptions(
+                enabled=True,
+                boxstyle="round4",
+                facecolor="white",
+                edgecolor="black",
+                edgewidth=0.6,
+            ),
         ),
-        label_box_options=LabelBoxOptions(
-            enabled=True,
-            boxstyle="round4",
-            facecolor="white",
-            edgecolor="black",
-            edgewidth=0.6,
-        ),
-        arrowplacement=ArrowPlacement(tail_length=0.25),
+        arrow_options=LabelArrowOptions(placement=ArrowPlacement(tail_length=0.25)),
     )
 
     ax = plot.ax
@@ -231,6 +235,26 @@ def test_add_label_arrow_draws_arrow_and_label_box():
     label_text = next((t for t in ax.texts if t.get_text() == "Toward POV"), None)
     assert label_text is not None
     assert label_text.get_bbox_patch() is not None
+
+
+def test_label_arrow_outline_preserves_embedded_color_alpha():
+    plot = _simple_scatter()
+    plot.add_label_arrow(
+        arrowtip=(0.8, 0.2),
+        direction="right",
+        text="Translucent outline",
+        text_options=LabelStyle(
+            font=LabelFontOptions(
+                outlinecolor="#ff000040",
+                outlinewidth=1.0,
+            )
+        ),
+    )
+
+    text = next(item for item in plot.ax.texts if item.get_text() == "Translucent outline")
+    stroke = text.get_path_effects()[0]
+    foreground = getattr(stroke, "_gc")["foreground"]
+    assert foreground == pytest.approx((1.0, 0.0, 0.0, 0.25), abs=1 / 255)
 
 
 def test_add_label_arrow_applies_label_padding_away_from_tail():
@@ -243,7 +267,7 @@ def test_add_label_arrow_applies_label_padding_away_from_tail():
         arrowtip=(0.8, 0.2),
         direction="right",
         text="Padded",
-        arrowplacement=placement,
+        arrow_options=LabelArrowOptions(placement=placement),
     )
 
     ax = plot.ax
@@ -279,8 +303,10 @@ def test_add_label_arrow_arrow_length_overrides_tail_length():
         arrowtip=(0.8, 0.2),
         direction="right",
         text="LengthOverride",
-        arrow_length=30.0,
-        arrowplacement=ArrowPlacement(tail_length=0.1, label_padding=0.0),
+        arrow_options=LabelArrowOptions(
+            arrow_length=30.0,
+            placement=ArrowPlacement(tail_length=0.1, label_padding=0.0),
+        ),
     )
 
     ax = plot.ax
@@ -302,9 +328,11 @@ def test_add_label_arrow_arrow_length_100_is_full_axes_height_for_vertical_arrow
     plot.add_label_arrow(
         arrowtip=(0.6, 0.8),
         direction="up",
-        arrow_length=100.0,
-        arrowplacement=ArrowPlacement(
-            label_padding=0.0,
+        arrow_options=LabelArrowOptions(
+            arrow_length=100.0,
+            placement=ArrowPlacement(
+                label_padding=0.0,
+            ),
         ),
     )
 
@@ -331,8 +359,10 @@ def test_add_label_arrow_rejects_arrow_length_with_explicit_arrowtail():
             arrowtip=(0.8, 0.2),
             direction="right",
             text="Invalid",
-            arrow_length=0.3,
-            arrowplacement=ArrowPlacement(arrowtail=(0.1, 0.2)),
+            arrow_options=LabelArrowOptions(
+                arrow_length=0.3,
+                placement=ArrowPlacement(arrowtail=(0.1, 0.2)),
+            ),
         )
 
 
@@ -343,7 +373,7 @@ def test_add_label_arrow_rejects_arrow_length_outside_valid_range():
             arrowtip=(0.8, 0.2),
             direction="right",
             text="Invalid",
-            arrow_length=120.0,
+            arrow_options=LabelArrowOptions(arrow_length=120.0),
         )
 
 
@@ -502,7 +532,7 @@ class TestLabelArrowRendererBranches:
             arrowtip=(0.8, 0.5),
             direction="right",
             text="TailTest",
-            arrowplacement=ArrowPlacement(arrowtail=(0.3, 0.5)),
+            arrow_options=LabelArrowOptions(placement=ArrowPlacement(arrowtail=(0.3, 0.5))),
         )
         ax = plot.ax
         label_text = next((t for t in ax.texts if t.get_text() == "TailTest"), None)
@@ -514,14 +544,12 @@ class TestLabelArrowRendererBranches:
 
     def test_arrowedgecolor_none_disables_label_arrow_outline(self):
         """arrowedgecolor='none' renders the arrow patch with a fully transparent edge."""
-        from gerrytools.plotting.data._gerryplot_dataclasses import LabelArrowStyle as _LAS
-
         plot = _simple_scatter()
         plot.add_label_arrow(
             arrowtip=(0.8, 0.5),
             direction="right",
             text="NoneOutlineLabel",
-            arrowstyle=_LAS(arrowedgecolor="none"),
+            arrow_options=LabelArrowOptions(style=LabelArrowStyle(arrowedgecolor="none")),
         )
         ax = plot.ax
         label_text = next((t for t in ax.texts if t.get_text() == "NoneOutlineLabel"), None)
@@ -547,3 +575,38 @@ class TestLabelArrowRendererBranches:
         lx, ly = label_text.get_position()
         assert abs(float(lx) - 0.2) <= 1e-9
         assert abs(float(ly) - 0.7) <= 1e-9
+
+
+def test_top_level_none_removes_text_arrow_fill_and_edge():
+    plot = _simple_scatter()
+    plot.add_text_arrow(
+        arrowtip=(0.8, 0.5),
+        direction="right",
+        text="Transparent arrow",
+        arrowfacecolor=None,
+        arrowedgecolor=None,
+    )
+
+    arrow_text = _visible_text_by_content(plot.ax, "Transparent arrow")
+    assert arrow_text is not None
+    patch = arrow_text.get_bbox_patch()
+    assert patch is not None
+    assert mcolors.to_rgba(patch.get_facecolor())[3] == 0.0
+    assert mcolors.to_rgba(patch.get_edgecolor())[3] == 0.0
+
+
+def test_top_level_none_removes_axis_label_arrow_fill_and_text_color():
+    plot = _simple_scatter()
+    plot.add_axis_label_arrow(
+        "x",
+        "Transparent label",
+        arrowfacecolor=None,
+        fontcolor=None,
+    )
+
+    label_text = next(text for text in plot.ax.texts if text.get_text() == "Transparent label")
+    assert mcolors.to_rgba(label_text.get_color())[3] == 0.0
+    annotation = _label_arrow_annotation(plot.ax)
+    assert isinstance(annotation, Annotation)
+    assert annotation.arrow_patch is not None
+    assert mcolors.to_rgba(annotation.arrow_patch.get_facecolor())[3] == 0.0

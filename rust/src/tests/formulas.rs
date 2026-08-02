@@ -81,6 +81,13 @@ fn mean_median_averages_the_middle_shares_for_even_district_counts() {
 }
 
 #[test]
+fn disproportionality_uses_aggregate_vote_share() {
+    let value = paired("disproportionality", "equal", &[90.0, 1.0], &[10.0, 9.0]);
+    let expected = 0.5 - 91.0 / 110.0;
+    assert!((value - expected).abs() < 1e-12, "got {value}");
+}
+
+#[test]
 fn partisan_bias_awards_half_seats_within_the_tie_tolerance() {
     // Mirrors the Python-pinned tolerance cases: offsets sum to zero, so the equal-turnout
     // reference share is exactly 0.5 and each offset is compared against the 1e-9 tolerance.

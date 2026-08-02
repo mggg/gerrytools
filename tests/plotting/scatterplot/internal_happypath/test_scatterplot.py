@@ -105,7 +105,24 @@ class TestAddScatter:
         sp.add_series(x=[1.0], y=[2.0], markeredgecolor="red")
         sd = sp._scatter_data_list[0]
         assert sd.marker_options.markeredgecolor != "none"
+        assert sd.marker_options.markeredgealpha == 1.0
         assert sd.marker_options.markeredgewidth == 0.8
+
+    def test_explicit_none_colors_remove_fill_and_edge(self):
+        sp = ScatterPlot()
+        sp.add_series(
+            x=[1.0],
+            y=[2.0],
+            markerfacecolor=None,
+            markeredgecolor=None,
+        )
+
+        marker = sp._scatter_data_list[0].marker_options
+        assert marker.markerfacecolor == "none"
+        assert marker.markerfacealpha == 0.0
+        assert marker.markeredgecolor == "none"
+        assert marker.markeredgealpha == 0.0
+        assert marker.markeredgewidth == 0.0
 
     def test_explicit_zero_markeredgewidth_keeps_edge_hidden(self):
         sp = ScatterPlot()
@@ -140,6 +157,39 @@ class TestAddPoint:
         sp.add_point(0.0, 0.0, name="Origin")
         sp.add_point(1.0, 1.0, name="Corner")
         assert len(sp._scatter_data_list) == 2
+
+    def test_markeredgecolor_alone_makes_edge_visible(self):
+        sp = ScatterPlot()
+        sp.add_point(0.5, 0.5, name="Center", markeredgecolor="black")
+
+        marker = sp._scatter_data_list[0].marker_options
+        assert marker.markeredgecolor != "none"
+        assert marker.markeredgealpha == 1.0
+        assert marker.markeredgewidth == 0.8
+
+    def test_explicit_zero_markeredgewidth_keeps_edge_hidden(self):
+        sp = ScatterPlot()
+        sp.add_point(
+            0.5,
+            0.5,
+            name="Center",
+            markeredgecolor="black",
+            markeredgewidth=0,
+        )
+
+        assert sp._scatter_data_list[0].marker_options.markeredgewidth == 0
+
+    def test_explicit_zero_markeredgealpha_keeps_edge_transparent(self):
+        sp = ScatterPlot()
+        sp.add_point(
+            0.5,
+            0.5,
+            name="Center",
+            markeredgecolor="black",
+            markeredgealpha=0,
+        )
+
+        assert sp._scatter_data_list[0].marker_options.markeredgealpha == 0
 
 
 # =======================

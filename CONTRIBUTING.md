@@ -88,6 +88,7 @@ Preferred `task` commands:
 task all-checks           # format-check, lint, typecheck, and the Rust checks
 task format
 task lint
+task lint -- --fix
 task typecheck
 task test
 task test -- <pytest cli args>

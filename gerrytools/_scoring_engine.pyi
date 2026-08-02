@@ -1,8 +1,17 @@
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
+from .scoring._types import _StreamRunOptions
+
 DEBUG_ASSERTIONS: bool
 MAX_DISTRICTS: int
+
+class PreparedGeometry:
+    """Private decoded geometry resource shared by evaluator metric engines."""
+
+    def __init__(self, rows: Sequence[bytes]) -> None: ...
+
+def _prepare_geometry(rows: Sequence[bytes]) -> PreparedGeometry: ...
 
 class ScoringEngine:
     """Prepared metric scorer backed by the Rust extension.
@@ -42,24 +51,23 @@ class ScoringEngine:
         opposition: list[int],
         points_within: float,
     ) -> None: ...
-    def add_reock(self, rows: Sequence[bytes]) -> None: ...
+    def add_reock(self, geometry: PreparedGeometry) -> None: ...
     def add_population_polygon(
         self,
-        rows: Sequence[bytes],
+        geometry: PreparedGeometry,
         population_rows: Sequence[bytes],
         weights: list[float],
-        owners: list[int],
     ) -> None: ...
     def add_population_polygon_aligned(
         self,
-        rows: Sequence[bytes],
+        geometry: PreparedGeometry,
         weights: list[float],
     ) -> None: ...
-    def add_convex_hull_ratio(self, rows: Sequence[bytes]) -> None: ...
-    def add_state_clipped_convex_hull_ratio(self, rows: Sequence[bytes], state: bytes) -> None: ...
-    def add_polsby_popper_geometry(
-        self, rows: Sequence[bytes], edges: list[tuple[int, int]]
+    def add_convex_hull_ratio(self, geometry: PreparedGeometry) -> None: ...
+    def add_state_clipped_convex_hull_ratio(
+        self, geometry: PreparedGeometry, state: bytes
     ) -> None: ...
+    def add_polsby_popper_geometry(self, geometry: PreparedGeometry) -> None: ...
     def add_polsby_popper_graph_total(
         self,
         areas: list[float],
@@ -74,9 +82,7 @@ class ScoringEngine:
         edges: list[tuple[int, int]],
         shared_perimeters: list[float],
     ) -> None: ...
-    def add_schwartzberg_geometry(
-        self, rows: Sequence[bytes], edges: list[tuple[int, int]]
-    ) -> None: ...
+    def add_schwartzberg_geometry(self, geometry: PreparedGeometry) -> None: ...
     def add_schwartzberg_graph_total(
         self,
         areas: list[float],
@@ -91,9 +97,7 @@ class ScoringEngine:
         edges: list[tuple[int, int]],
         shared_perimeters: list[float],
     ) -> None: ...
-    def add_area_perimeter_metrics_geometry(
-        self, rows: Sequence[bytes], edges: list[tuple[int, int]]
-    ) -> None: ...
+    def add_area_perimeter_metrics_geometry(self, geometry: PreparedGeometry) -> None: ...
     def add_area_perimeter_metrics_graph_total(
         self,
         areas: list[float],
@@ -138,6 +142,6 @@ class ScoringEngine:
         source_path: Path,
         output_path: Path,
         metadata_json: str,
-        stream_options: tuple[int | None, int, bool, Callable[[int], object] | None],
+        stream_options: _StreamRunOptions,
         projections: list[tuple[int, list[int]]],
     ) -> None: ...

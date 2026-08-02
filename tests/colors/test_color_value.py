@@ -190,7 +190,7 @@ class TestColorFromAnyValidationErrors:
 
     def test_unknown_value_type_raises(self):
         with pytest.raises(ValueError, match="Unknown color value"):
-            _Color.from_any(object())  # type: ignore[arg-type]
+            _Color.from_any(object())  # type: ignore
 
 
 # ===========================
@@ -242,4 +242,4 @@ class TestColorValueSemantics:
     def test_color_is_immutable(self):
         opaque_red = _Color(hex6="#ff0000", alpha=1.0)
         with pytest.raises(AttributeError):
-            opaque_red.hex6 = "#000000"  # type: ignore[misc]
+            opaque_red.hex6 = "#000000"  # type: ignore

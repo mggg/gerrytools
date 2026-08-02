@@ -7,6 +7,7 @@ _coerce_to_1d_float_array, _coerce_values_and_weights.
 
 import os
 import tempfile
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -412,20 +413,25 @@ class TestCoerceValuesAndWeights:
 
 
 class TestShowFigure:
-    def test_show_figure_non_gui_saves_file(self, tmp_path):
+    def test_show_figure_non_gui_saves_without_clobbering_hint(self, tmp_path, capsys):
         import matplotlib.pyplot as plt
 
         from gerrytools.plotting._figure_io import show_figure
 
         fig, _ax = plt.subplots()
-        out_path = str(tmp_path / "out.png")
+        out_path = tmp_path / "out.png"
+        out_path.write_bytes(b"keep me")
         try:
-            show_figure(fig, non_gui_filename=out_path, non_gui_prefix="Test")
-            assert (tmp_path / "out.png").exists()
+            show_figure(fig, non_gui_filename=str(out_path), non_gui_prefix="Test")
+            saved = Path(capsys.readouterr().out.strip().rsplit("saved to ", 1)[1])
+            assert saved.exists()
+            assert saved != out_path
+            assert out_path.read_bytes() == b"keep me"
+            saved.unlink()
         finally:
             plt.close(fig)
 
-    def test_show_figure_non_pyplot_figure_falls_back_to_save(self, monkeypatch, tmp_path):
+    def test_show_figure_non_pyplot_figure_falls_back_to_save(self, monkeypatch, tmp_path, capsys):
         # GUI backend active but the figure has no pyplot number: fall back to saving
         # rather than raising AttributeError on ``fig.number``.
         import matplotlib
@@ -438,7 +444,9 @@ class TestShowFigure:
         fig.add_subplot(111)
         out_path = str(tmp_path / "no_number.png")
         show_figure(fig, non_gui_filename=out_path, non_gui_prefix="Test")
-        assert (tmp_path / "no_number.png").exists()
+        saved = Path(capsys.readouterr().out.strip().rsplit("saved to ", 1)[1])
+        assert saved.exists()
+        saved.unlink()
 
 
 class TestBackendGuiClassification:

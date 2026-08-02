@@ -183,6 +183,8 @@ def test_smc_pop_bounds_require_nonnegative_integers(pop_bounds):
         ("pop_temper", float("inf")),
         ("final_infl", float("nan")),
         ("rng_seed", True),
+        ("rng_seed", -(2**31)),
+        ("rng_seed", 2**31),
     ],
 )
 def test_smc_numeric_domains_rejected_at_construction(field, value):
@@ -202,11 +204,18 @@ def test_smc_numeric_domains_rejected_at_construction(field, value):
         ("pop_dev", float("inf")),
         ("gamma", float("nan")),
         ("rng_seed", True),
+        ("rng_seed", -1),
+        ("rng_seed", 2**63),
     ],
 )
 def test_forest_numeric_domains_rejected_at_construction(field, value):
     with pytest.raises(ValueError, match=field):
         base_forest_info(**{field: value})
+
+
+def test_engine_specific_seed_bounds_are_accepted():
+    assert base_forest_info(rng_seed=2**63 - 1).rng_seed == 2**63 - 1
+    assert base_smc_info(rng_seed=-(2**31 - 1)).rng_seed == -(2**31 - 1)
 
 
 @pytest.mark.parametrize(

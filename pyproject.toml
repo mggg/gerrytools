@@ -1,10 +1,10 @@
 [build-system]
-requires = ["maturin>=1.9,<2"]
+requires = ["maturin>=1.14.1,<2"]
 build-backend = "maturin"
 
 [project]
 name = "gerrytools"
-version = "2.0.0"
+version = "2.0.0rc1"
 description = "Tools for processing and visualizing districting plans."
 readme = "README.md"
 authors = [
@@ -12,77 +12,85 @@ authors = [
 ]
 requires-python = ">=3.11"
 license = "BSD-3-Clause"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3 :: Only",
+]
 
 dependencies = [
   # Working with graphs and ensembles
-  "networkx>=3.5.0",
+  "networkx>=3.6.1",
   "gerrychain @ git+https://github.com/mggg/GerryChain.git@dbce5dfedda7bf6258cfd47feed38ad34d693a7c",
   "binary-ensemble==2.0.0",
   # Data manipulation
-  "pandas>=2.3.2",
-  "scipy>=1.16.1",
-  "numpy>=2.3.2",
-  "pyarrow>=22.0.0",
+  "pandas>=3.0.5",
+  "scipy>=1.17.1",
+  "numpy>=2.4.6",
+  "pyarrow>=25.0.0",
   # Geospatial libraries
-  "geopandas>=1.1.1",
-  "pyproj>=3.6",
-  "Shapely>=2.0.0",
+  "geopandas>=1.1.4",
+  "pyogrio>=0.13.0; python_version >= '3.14'",
+  "pyproj>=3.7.2",
+  "Shapely>=2.1.2",
   # Visualization
-  "matplotlib>=3.10.6",
+  "matplotlib>=3.11.1",
   "seaborn>=0.13.2",
   # Census
   "us>=3.2.0",
-  "httpx>=0.28.0",
-  "frozendict>=2.4.0",
-  "tqdm>=4.67.0",
+  "httpx>=0.28.1",
+  "frozendict>=2.4.7",
+  "tqdm>=4.70.0",
   # Misc
   "joblib>=1.5.3",
 ]
 
 [dependency-groups]
 dev = [
-  "docker>=7.1.0",
-  "hypothesis>=6.0",
-  "ipykernel>=6.30.1",
-  "ipywidgets>=8.1.7",
-  "pillow>=11.0",
-  "pytest>=8.4.2",
-  "pytest-cov>=6.3.0",
+  "docker>=7.2.0",
+  "hypothesis>=6.165.0",
+  "ipykernel>=7.3.0",
+  "ipywidgets>=8.1.8",
+  "pillow>=12.3.0",
+  "pytest>=9.1.1",
+  "pytest-cov>=7.1.0",
   "pytest-timeout>=2.4.0",
-  "pre-commit>=4.3.0",
-  "ruff>=0.14.9",
-  "ty>=0.0.3",
+  "pre-commit>=4.6.1",
+  "maturin>=1.14.1,<2",
+  "ruff>=0.16.1",
+  "ty>=0.0.65",
   "pyright>=1.1.411",
 ]
 docs-exec = [
-  "ipykernel>=6.30.1",
+  "ipykernel>=7.3.0",
   "jupyter-cache>=1.0.1",
-  "maup>=2.0.3",  # not imported by the package; taught in the geometry notebook
-  "nbclient>=0.10.0",
-  "nbformat>=5.10.0",
-  "pytest>=8.4.2",
+  "nbclient>=0.11.0",
+  "nbformat>=5.10.4",
+  "pytest>=9.1.1",
 ]
 tex = [
-    "pymupdf>=1.26.6",
-    "pypdfium2>=5.1.0",
-    "pyqt6>=6.10.0",
-    "pyside6>=6.10.1",
+    "pymupdf>=1.28.0",
+    "pypdfium2>=5.12.1",
+    "pyqt6>=6.11.0",
+    "pyside6>=6.11.1",
 ]
 
 [project.optional-dependencies]
 mgrp = [
-    "docker>=7.1.0",
+    "docker>=7.2.0",
 ]
 # Renders the hosted docs; an extra (not a dependency group) so Read the Docs can install it
 # via extra_requirements.
 docs = [
-  "furo>=2024.8.6",
-  "maup>=2.0.3",
+  "furo>=2025.12.19",
   "myst-nb>=1.4.0",
-  "sphinx>=8.2.3",
-  "sphinx-autobuild>=2024.10.3",
+  "sphinx>=9.0.4",
+  "sphinx-autobuild>=2025.8.25",
   "sphinx-copybutton>=0.5.2",
-  "sphinx-design>=0.6.1",
+  "sphinx-design>=0.7.0",
 ]
 
 [tool.uv]
@@ -141,3 +149,4 @@ features = ["python"]
 manifest-path = "rust/Cargo.toml"
 module-name = "gerrytools._scoring_engine"
 python-source = "."
+include = [{ path = "LICENSE", format = "sdist" }]

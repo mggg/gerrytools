@@ -449,6 +449,35 @@ fn scoring_a_district_is_independent_of_what_ran_through_the_scratch_before_it()
 }
 
 #[test]
+fn scoring_is_bit_identical_when_only_the_district_label_changes() {
+    let mut seed = 0x771e_1abe_u64;
+    for case in 0..150_usize {
+        let units = (0..4)
+            .map(|offset| {
+                UnitHull::new(
+                    1.0,
+                    translated(
+                        &generated_cloud(&mut seed, 3 + (case + offset) % 15),
+                        6e6,
+                        5e6,
+                    ),
+                )
+            })
+            .collect();
+        let metric = PreparedReock::new(units).unwrap();
+        let nodes = [0_usize, 1, 2, 3];
+        let mut scratch = metric.scratch(false);
+        let first = metric.score_district(&nodes, 4.0, 1, &mut scratch).unwrap();
+        let relabeled = metric.score_district(&nodes, 4.0, 7, &mut scratch).unwrap();
+
+        assert_eq!(
+            first, relabeled,
+            "case {case}: changing only the district label changed the score"
+        );
+    }
+}
+
+#[test]
 fn incremental_scores_are_bit_identical_to_full_recomputation() {
     // Exact equality pins canonical membership and area ordering across update histories.
     let units = (0..12)

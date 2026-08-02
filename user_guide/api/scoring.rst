@@ -34,6 +34,15 @@ Row alignment is prepared when an authoritative column is first requested. Repro
 geometry validation occur only when a geometry-backed metric is evaluated, so ``crs`` has no
 effect on an evaluator that uses only ordinary columns.
 
+Saved evaluation runs
+---------------------
+
+``evaluate_stream`` creates a score directory when it does not exist. When the directory is an
+existing ``EvaluationRun``, score names not already present are added automatically. A matching
+name raises ``FileExistsError`` unless ``update=True``; with that flag, only matching names are
+replaced. The caller is responsible for using the same assignment stream. See :doc:`the BENDL
+scoring guide <../user/scoring/bendl>` for a complete saved-run example and the physical file layout.
+
 .. automodule:: gerrytools.scoring
    :members:
    :imported-members:

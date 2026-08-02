@@ -9,7 +9,7 @@ use ben::io::bundle::BendlWriter;
 use ben::io::writer::{BenStreamWriter, XzEncodeOptions};
 use geo::{polygon, MultiPolygon};
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 fn plans() -> Vec<Vec<u16>> {
@@ -24,6 +24,23 @@ fn plans() -> Vec<Vec<u16>> {
         third.clone(),
         third,
     ]
+}
+
+fn output_name(path: &Path) -> String {
+    path.file_name().unwrap().to_string_lossy().to_string()
+}
+
+fn flat_output(path: &Path, metric: &str) -> PathBuf {
+    path.join(format!("{metric}__{}.parquet", output_name(path)))
+}
+
+fn grouped_output(path: &Path, metric: &str, key: &str) -> PathBuf {
+    path.join(metric)
+        .join(format!("{key}__{}.parquet", output_name(path)))
+}
+
+fn output_manifest(path: &Path) -> PathBuf {
+    path.join(format!("manifest__{}.json", output_name(path)))
 }
 
 fn county_tally_metadata() -> MetricMetadata {
@@ -268,6 +285,17 @@ fn score_with_batch(
         )
         .unwrap();
     (summary, rows)
+}
+
+#[test]
+fn oversized_batch_size_does_not_preallocate_the_requested_capacity() {
+    let input = TempPath::new("ben");
+    write_ben(input.path(), BenVariant::Standard);
+
+    let (summary, rows) = score_with_batch(input.path(), None, usize::MAX);
+
+    assert_eq!(summary.samples, plans().len() as u64);
+    assert_eq!(rows.len(), plans().len());
 }
 
 #[test]
@@ -948,12 +976,12 @@ fn scorer_writes_a_metadata_checked_atomic_run() {
 
     assert_eq!(summary.samples, 6);
     assert_eq!(summary.accepted, 6);
-    assert!(output.path().join("manifest.json").is_file());
-    assert!(output.path().join("population/scores.parquet").is_file());
-    assert!(output.path().join("cut_edges/scores.parquet").is_file());
-    assert!(output.path().join("region_splits/scores.parquet").is_file());
-    assert!(output.path().join("region_pieces/scores.parquet").is_file());
-    assert!(output.path().join("county_totals/scores.parquet").is_file());
+    assert!(output_manifest(output.path()).is_file());
+    assert!(grouped_output(output.path(), "population", "total_tallies").is_file());
+    assert!(flat_output(output.path(), "cut_edges").is_file());
+    assert!(flat_output(output.path(), "region_splits").is_file());
+    assert!(flat_output(output.path(), "region_pieces").is_file());
+    assert!(grouped_output(output.path(), "county_totals", "count_tallies_by_region").is_file());
 
     let bad_output = TempPath::new("bad-run");
     let bad_metadata = RunMetadata::new(
@@ -1093,7 +1121,7 @@ fn run_metadata_subkeys_must_match_the_registered_order() {
             metadata_for(vec!["pop".into(), "vap".into()]),
         )
         .unwrap();
-    assert!(output.path().join("population/scores.parquet").is_file());
+    assert!(grouped_output(output.path(), "population", "pop_tallies").is_file());
 }
 
 fn batch_scorer_metrics() -> (PreparedTally, PreparedCutEdges, PreparedRegion) {

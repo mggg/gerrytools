@@ -7,6 +7,7 @@ existing plot later; geometry plots use only that explicit binding path.
 from __future__ import annotations
 
 import inspect
+from typing import cast
 
 import matplotlib
 
@@ -16,6 +17,7 @@ import warnings  # noqa: E402
 
 import matplotlib.pyplot as plt  # noqa: E402
 import pytest  # noqa: E402
+from matplotlib.figure import SubFigure  # noqa: E402
 
 from gerrytools.plotting import DotDensityPlot, GeoPlot, Histogram  # noqa: E402
 from gerrytools.plotting.geometry.geoplotbase import GeoPlotBase  # noqa: E402
@@ -37,6 +39,19 @@ class TestAxConstructorParameter:
         fig, user_ax = plt.subplots(figsize=(4, 4))
         plot = Histogram(ax=user_ax)
         assert plot.fig is fig
+
+    def test_subfigure_axes_use_root_figure_for_save(self, tmp_path):
+        fig = plt.figure()
+        subfigure = cast("SubFigure", fig.subfigures(1, 1))
+        user_ax = subfigure.subplots()
+        plot = Histogram(ax=user_ax)
+        plot.add_dataset([1.0, 2.0, 3.0])
+
+        output = tmp_path / "subfigure.png"
+        plot.save(str(output))
+
+        assert plot.fig is fig
+        assert output.exists()
 
     def test_no_ax_creates_fresh_figure(self):
         plot = Histogram()
@@ -359,6 +374,17 @@ class TestFigureLifecycle:
         assert len(plot.ax.patches) == expected
         plot.bind_to_ax(ax)
         assert len(plot.ax.patches) == expected
+
+    def test_rebinding_back_to_previous_axes_replaces_managed_artists(self):
+        _, ax_a = plt.subplots()
+        _, ax_b = plt.subplots()
+        plot = Histogram(ax=ax_a)
+        plot.add_dataset([1.0, 2.0, 3.0])
+        expected = len(plot.ax.patches)
+
+        for target in (ax_b, ax_a, ax_b, ax_a):
+            plot.bind_to_ax(target)
+            assert len(target.patches) == expected
 
     def test_rebinding_to_current_axes_keeps_managed_limits_reactive(self):
         _, ax = plt.subplots()

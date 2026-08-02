@@ -10,7 +10,9 @@ missing key raises before any request is issued. Register at
 https://api.census.gov/data/key_signup.html.
 """
 
+import logging
 import os
+import re
 import time
 from email.utils import parsedate_to_datetime
 from typing import cast
@@ -22,6 +24,8 @@ import us
 from gerrytools.logging import get_logger
 
 logger = get_logger(__name__)
+
+_KEY_IN_URL = re.compile(r"([?&]key=)[^&\s'\"]+", re.IGNORECASE)
 
 # Shared request timeout for every Census API call.
 REQUEST_TIMEOUT = httpx.Timeout(120)
@@ -60,6 +64,69 @@ def _redacted_url(url: httpx.URL | str) -> str:
     if "key" in url.params:
         url = url.copy_set_param("key", "REDACTED")
     return str(url)
+
+
+def _redacted_request(request: httpx.Request) -> httpx.Request:
+    """Copy request metadata without retaining a Census credential."""
+    return httpx.Request(
+        request.method,
+        _redacted_url(request.url),
+        headers=request.headers,
+        extensions=request.extensions,
+    )
+
+
+def _redacted_response(response: httpx.Response, key: str) -> httpx.Response:
+    """Copy an error response without retaining an echoed Census credential."""
+    redacted_headers = [
+        (name, _KEY_IN_URL.sub(r"\1REDACTED", value.replace(key, "REDACTED")))
+        for name, value in response.headers.multi_items()
+        if name.casefold() not in {"content-encoding", "content-length"}
+    ]
+    return httpx.Response(
+        response.status_code,
+        headers=redacted_headers,
+        content=response.content.replace(key.encode(), b"REDACTED"),
+        request=_redacted_request(response.request),
+        history=[_redacted_response(item, key) for item in response.history],
+    )
+
+
+def _redacted_log_arg(value: object) -> object:
+    if isinstance(value, httpx.URL):
+        return _redacted_url(value)
+    if isinstance(value, str) and "key=" in value.casefold():
+        return _KEY_IN_URL.sub(r"\1REDACTED", value)
+    return value
+
+
+def _is_census_log_arg(value: object) -> bool:
+    if not isinstance(value, (httpx.URL, str)):
+        return False
+    try:
+        return httpx.URL(value).host == "api.census.gov"
+    except httpx.InvalidURL:
+        return False
+
+
+class _CensusKeyFilter(logging.Filter):
+    """Redact Census keys before httpx request records reach any handler."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.args, tuple) and any(
+            _is_census_log_arg(value) for value in record.args
+        ):
+            record.args = tuple(_redacted_log_arg(value) for value in record.args)
+        elif isinstance(record.args, dict) and any(
+            _is_census_log_arg(value) for value in record.args.values()
+        ):
+            record.args = {key: _redacted_log_arg(value) for key, value in record.args.items()}
+        return True
+
+
+_httpx_logger = logging.getLogger("httpx")
+if not any(isinstance(log_filter, _CensusKeyFilter) for log_filter in _httpx_logger.filters):
+    _httpx_logger.addFilter(_CensusKeyFilter())
 
 
 def _retry_delay_seconds(response: httpx.Response, attempt: int) -> float:
@@ -102,6 +169,8 @@ def _get_with_retries(client: httpx.Client, base_url: str, params: dict) -> http
             response = client.get(base_url, params=params)
         except httpx.TransportError as error:
             if attempt == MAX_REQUEST_ATTEMPTS:
+                if error.request is not None:
+                    error.request = _redacted_request(error.request)
                 raise
             delay = RETRY_BASE_DELAY_SECONDS * 2 ** (attempt - 1)
             logger.warning(
@@ -254,6 +323,7 @@ def _census_get(
         else:
             body = response.text.strip().replace(key, "REDACTED")
             detail = f" Response: {body[:200]}" if body else ""
+        response = _redacted_response(response, key)
         raise httpx.HTTPStatusError(
             f"HTTP status {response.status_code} {response.reason_phrase} for url "
             f"'{_redacted_url(response.request.url)}'.{detail}",

@@ -39,8 +39,10 @@ def census_column_name(
 
     Args:
         name (str): Semantic base column name.
-        source (str | None): Census product, such as ``"acs5"`` or ``"acs1"``.
-        year (int | None): Four-digit data vintage. The final two digits are appended.
+        source (str | None, optional): Census product, such as ``"acs5"`` or ``"acs1"``.
+            Defaults to None, which appends no product suffix.
+        year (int | None, optional): Four-digit data vintage. The final two digits are appended.
+            Defaults to None, which appends no vintage suffix.
 
     Returns:
         str: Lowercase column name, such as ``"total_pop_acs5_23"``.
@@ -127,15 +129,19 @@ class PLTableInfo:
     vintage to public column names.
 
     Attributes:
-        table_name (str): Human-readable name for the logical PL table.
+        table_name (str): Human-readable name for the logical PL table. Defaults to ``""``.
         variable_to_short_name (frozendict): Mapping from a raw Census variable to its semantic
-            base column name.
+            base column name. Defaults to an empty mapping.
         api_table_code (str | None): The Census API group code this table can be fetched with via
             ``get=group(...)`` (e.g. ``"P1"``). None for tables that combine multiple API groups
             and therefore cannot be fetched with a single group request.
         year (int | None): Decennial PL vintage whose raw variable names this table carries.
             Required: raw variable spellings differ across vintages (2010 ``P001001`` vs 2020
-            ``P1_001N``), so getters use it to reject cross-vintage requests upfront.
+            ``P1_001N``), so getters use it to reject cross-vintage requests upfront. Defaults to
+            None, which is rejected unless a subclass supplies a preset.
+
+    Raises:
+        ValueError: If no decennial vintage is supplied.
     """
 
     table_name: str = ""
@@ -162,6 +168,9 @@ class PLTableInfo:
     def construct_short_names(self, year: int | None = None) -> tuple[str, ...]:
         """Return semantic local column names, optionally suffixed by vintage.
 
+        Args:
+            year (int | None, optional): Census vintage appended to names. Defaults to None.
+
         Returns:
             tuple[str, ...]: Local column names paired 1:1 with ``construct_variable_names``.
         """
@@ -170,6 +179,9 @@ class PLTableInfo:
 
     def construct_rename_map(self, year: int | None = None) -> dict[str, str]:
         """Return the raw-variable-to-semantic-column rename mapping.
+
+        Args:
+            year (int | None, optional): Census vintage appended to names. Defaults to None.
 
         Returns:
             dict[str, str]: Mapping suitable for ``DataFrame.rename``.
@@ -205,9 +217,13 @@ class PLBlockVAPTableInfo(PLTableInfo):
     Attributes:
         table_name (str): ``"PLBlockVAP"`` by default.
         year (int | None): ``2020`` by default; the derived P3/P4 mapping uses 2020 spellings.
-        race_categories (tuple[str, ...]): Race categories this table covers.
+        race_categories (tuple[str, ...]): Race categories this table covers. Defaults to
+            ``RACE_CATEGORIES``.
         variable_to_short_name (frozendict): Maps the derived P3/P4 variables to their semantic
             VAP names.
+
+    Raises:
+        ValueError: If a race category is unknown.
     """
 
     table_name: str = "PLBlockVAP"
@@ -248,20 +264,28 @@ class ACSTableInfo:
     per-race sum" derivation does not fit, as is the case for ``ACSHispByRaceTableInfo``.
 
     Attributes:
-        table_name (str): Semantic measure name for the logical ACS table.
+        table_name (str): Semantic measure name for the logical ACS table. Defaults to the
+            concrete table class's preset, or ``""`` on this base class.
         base_table_strings (tuple[str, ...]): Census base table code used (e.g. ``("B05003",)``).
             At most one entry: condensed output names do not carry the base table, so a second
-            base table would collide with the first. Use one info object per base table.
+            base table would collide with the first. Defaults to the concrete class's preset, or
+            an empty tuple on this base class.
         table_indices (tuple[int, ...]): Numeric indices within each base table that correspond to
-            the variables this table cares about.
+            the variables this table cares about. Defaults to the concrete class's preset, or an
+            empty tuple on this base class.
         groups_tup (tuple[str, ...]): Single-letter Census group suffixes (e.g. ``""`` for all
-            races, ``"A"`` for White alone) that this table requests.
+            races, ``"A"`` for White alone) that this table requests. Defaults to the concrete
+            class's preset, or an empty tuple on this base class.
         index_to_name_dict (frozendict): Mapping from a Census index to the descriptive suffix
-            appended to the long column name (e.g. ``{8: "male", 19: "female"}`` for VAP).
+            appended to the long column name. Defaults to the concrete class's preset, or an empty
+            mapping on this base class.
         table_to_group_dict (frozendict): Class attribute; semantic name for each Census
             group-suffix letter.
         suffix_to_abbrev_dict (frozendict): Class attribute; Census variable suffixes
             (``"E"``, ``"M"``) mapped to their short forms.
+
+    Raises:
+        ValueError: If table codes, indices, groups, or semantic names are invalid.
     """
 
     table_name: str = ""
@@ -388,6 +412,9 @@ class ACSNamedTableInfo(ACSTableInfo):
     ``index_to_name_dict`` is the source of truth: ``table_indices`` is derived from (or
     validated against) its keys, and ``groups_tup`` is pinned to the ungrouped spelling
     ``("",)``, since named tables query only plain ``{table}_{index}`` variables.
+
+    Raises:
+        ValueError: If configured indices or groups conflict with ``index_to_name_dict``.
     """
 
     def __post_init__(self) -> None:
@@ -416,9 +443,12 @@ class ACSNamedTableInfo(ACSTableInfo):
         """Map raw ACS variables to named statistic columns.
 
         Args:
-            suffix (str): ACS statistic suffix, normally ``"E"`` or ``"M"``.
-            year (int | None): Census vintage appended to semantic names.
-            source_suffix (str | None): Optional source token appended before the year.
+            suffix (str, optional): ACS statistic suffix, normally ``"E"`` or ``"M"``. Defaults
+                to ``"E"``.
+            year (int | None, optional): Census vintage appended to semantic names. Defaults to
+                None, which appends no vintage.
+            source_suffix (str | None, optional): Source token appended before the year. Defaults
+                to None, which appends no source token.
 
         Returns:
             dict[str, str]: Raw ACS variable names mapped to semantic output names.

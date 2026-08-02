@@ -634,11 +634,9 @@ class _TableBase:
 
         data_group_cells = sum(bool(columns) for columns in self._options.groups_to_cols.values())
         group_cells = data_group_cells + int(self._options.include_index)
+        index_omitted = self._options.include_index and len(colspecs) == data_group_cells
 
-        if self._options.include_index and len(colspecs) == data_group_cells:
-            colspecs, vrules, extras = _parse_tabular_preamble("c" + fmt)
-
-        if len(colspecs) != group_cells:
+        if len(colspecs) + int(index_omitted) != group_cells:
             index_note = (
                 " A format one cell short is accepted as the data-group format and receives "
                 "a leading centered index cell."
@@ -653,15 +651,21 @@ class _TableBase:
         self._register_colspec_packages(colspecs, extras)
         parsed = TablePreamble.parsed(colspecs, vrules, extras)
         if self._options.include_index:
-            self._options.group_index = IndexColumn(
-                parsed.alignments[0],
-                parsed.boundaries[0],
-                parsed.boundaries[1],
-            )
-            parsed = TablePreamble(
-                parsed.alignments[1:],
-                (TableBoundary(), *parsed.boundaries[2:]),
-            )
+            if index_omitted:
+                index = self._options.index_column
+                leading = parsed.boundaries[0]
+                right = TableBoundary() if leading != TableBoundary() else index.right
+                self._options.group_index = IndexColumn("c", index.left, right)
+            else:
+                self._options.group_index = IndexColumn(
+                    parsed.alignments[0],
+                    parsed.boundaries[0],
+                    parsed.boundaries[1],
+                )
+                parsed = TablePreamble(
+                    parsed.alignments[1:],
+                    (TableBoundary(), *parsed.boundaries[2:]),
+                )
         else:
             self._options.group_index = None
         self._options.group_preamble = parsed
@@ -693,8 +697,8 @@ class _TableBase:
                 labels.
 
         Raises:
-            ValueError: If group_align is invalid or if columns in groups_to_columns
-                do not exist in the DataFrame.
+            ValueError: If columns in groups_to_columns do not exist in the DataFrame or appear
+                in multiple groups.
         """
         df_cols = list(self.df.columns)
 

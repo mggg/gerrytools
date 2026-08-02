@@ -68,7 +68,7 @@ def test_optimal_relabeling_rejects_incomplete_or_invalid_matrices(overlap) -> N
 
 def test_optimal_relabeling_requires_a_dataframe() -> None:
     with pytest.raises(TypeError, match="must be a DataFrame"):
-        optimal_relabeling([[1.0]])  # type: ignore[arg-type]
+        optimal_relabeling([[1.0]])  # type: ignore
 
 
 def test_population_dispersion_uses_direct_label_comparison() -> None:

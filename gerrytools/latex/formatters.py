@@ -510,6 +510,9 @@ def diverging_gradient_formatter(
 
     Returns:
         CellWrapper: Formatter that applies gradient coloring to numeric cells.
+
+    Raises:
+        ValueError: If bounds, precision, a command name, or command-based colors are invalid.
     """
     if command_name is not None:
         if not all(isinstance(c, str) for c in (color_lo, color_mid, color_hi)):

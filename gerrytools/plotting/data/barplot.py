@@ -72,11 +72,14 @@ class BarPlot(CategoricalDistributionPlotBase):
         """Initialize a BarPlot.
 
         Args:
-            figure_size (tuple[float, float] | None, optional): Figure size in inches.
-            dpi (int | None, optional): Figure resolution in dots per inch.
+            figure_size (tuple[float, float] | None, optional): Figure size in inches. Defaults to
+                Matplotlib's setting.
+            dpi (int | None, optional): Figure resolution in dots per inch. Defaults to
+                Matplotlib's setting.
             ax (matplotlib.axes.Axes | None, optional): Render onto an existing Axes
                 instead of creating a fresh figure. Defaults to None.
-            legend (bool, optional): Whether to include a legend. Defaults to False.
+            legend (bool | None, optional): Whether to include a legend. None leaves existing axes
+                state unchanged. Defaults to None.
             xlabel (str | None, optional): X-axis label text. Defaults to None.
             ylabel (str | None, optional): Y-axis label text. Defaults to None.
             title (str | None, optional): Plot title text. Defaults to None.

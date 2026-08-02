@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
+from typing import Any, cast
 
 from matplotlib.axes import Axes
 from matplotlib.lines import Line2D
@@ -29,7 +30,7 @@ class _SlopeLine:
 
     Attributes:
         slope (float): The slope of the line.
-        linecolor (Color): The color of the line.
+        linecolor (Color | None): The color of the line. None makes it transparent.
         linewidth (float): The width of the line.
         linestyle (str): The style of the line.
         linealpha (float | None): Optional alpha override for the line color.
@@ -38,7 +39,7 @@ class _SlopeLine:
     """
 
     slope: float
-    linecolor: Color
+    linecolor: Color | None
     linewidth: float
     linestyle: str
     linealpha: float | None = None
@@ -140,7 +141,7 @@ class _UnitSquarePlotBase(GerryPlotBase):
         *,
         x_width: float | None = None,
         y_width: float | None = None,
-        color: Color = "lightgrey",
+        color: Color | None = "lightgrey",
         alpha: float = 1.0,
     ) -> None:
         """Add crosshairs centered at (0.5, 0.5) to the plot.
@@ -150,8 +151,8 @@ class _UnitSquarePlotBase(GerryPlotBase):
                 units. Defaults to 0.02 for ``SeatsVotesPlot`` and 0.007 for ``PaintballPlot``.
             y_width (float | None, optional): The width of the horizontal crosshair band in data
                 units. Defaults like ``x_width``.
-            color (Color, optional): The color of the crosshair bands.
-                Defaults to "lightgrey".
+            color (Color | None, optional): The color of the crosshair bands. Pass
+                ``None`` for transparent bands. Defaults to "lightgrey".
             alpha (float, optional): The alpha transparency of the crosshair bands. Defaults to 1.0.
         """
         self._crosshair_style = _CrosshairStyle(
@@ -188,7 +189,11 @@ class _UnitSquarePlotBase(GerryPlotBase):
 
     @deferred_axis_update
     def display_additional_lines_in_legend(self, enabled: bool) -> None:
-        """Set whether named guide lines appear in the legend."""
+        """Set whether named guide lines appear in the legend.
+
+        Args:
+            enabled (bool): Whether named guide lines appear in the legend.
+        """
         self._display_line_legend = enabled
 
     # =================
@@ -199,7 +204,7 @@ class _UnitSquarePlotBase(GerryPlotBase):
         self,
         slopes: Iterable[float],
         *,
-        linecolor: Color,
+        linecolor: Color | None,
         linealpha: float | None,
         linestyle: str,
         linewidth: float,
@@ -236,7 +241,7 @@ class _UnitSquarePlotBase(GerryPlotBase):
         self,
         slope: float,
         *,
-        linecolor: Color,
+        linecolor: Color | None,
         linealpha: float | None,
         linestyle: str,
         linewidth: float,
@@ -260,7 +265,7 @@ class _UnitSquarePlotBase(GerryPlotBase):
         self,
         slope: float,
         *,
-        linecolor: Color = "black",
+        linecolor: Color | None = "black",
         linealpha: float | None = None,
         linestyle: str = "-",
         linewidth: float = 1.0,
@@ -274,7 +279,8 @@ class _UnitSquarePlotBase(GerryPlotBase):
 
         Args:
             slope (float): The slope of the line.
-            linecolor (Color, optional): The color of the line. Defaults to "black".
+            linecolor (Color | None, optional): The color of the line. Pass ``None``
+                for a transparent line. Defaults to "black".
             linealpha (float | None, optional): The alpha transparency of the line.
                 Defaults to None.
             linestyle (str, optional): The style of the line. Defaults to "-".
@@ -298,7 +304,7 @@ class _UnitSquarePlotBase(GerryPlotBase):
     def add_proportionality_line(
         self,
         *,
-        linecolor: Color = "grey",
+        linecolor: Color | None = "grey",
         linealpha: float | None = None,
         linestyle: str = "--",
         linewidth: float = 2.0,
@@ -308,7 +314,8 @@ class _UnitSquarePlotBase(GerryPlotBase):
         """Add a proportionality line (y = x through the center) to the plot.
 
         Args:
-            linecolor (Color, optional): The color of the line. Defaults to "grey".
+            linecolor (Color | None, optional): The color of the line. Pass ``None``
+                for a transparent line. Defaults to "grey".
             linealpha (float | None, optional): The alpha transparency of the line.
                 Defaults to None.
             linestyle (str, optional): The style of the line. Defaults to "--".
@@ -331,7 +338,7 @@ class _UnitSquarePlotBase(GerryPlotBase):
     def add_efficiency_gap_line(
         self,
         *,
-        linecolor: Color = "grey",
+        linecolor: Color | None = "grey",
         linealpha: float | None = None,
         linestyle: str = "-",
         linewidth: float = 2.0,
@@ -341,7 +348,8 @@ class _UnitSquarePlotBase(GerryPlotBase):
         """Add an Efficiency Gap line (y = 2x - 0.5) to the plot.
 
         Args:
-            linecolor (Color, optional): The color of the line. Defaults to "grey".
+            linecolor (Color | None, optional): The color of the line. Pass ``None``
+                for a transparent line. Defaults to "grey".
             linealpha (float | None, optional): The alpha transparency of the line.
                 Defaults to None.
             linestyle (str, optional): The style of the line. Defaults to "-".
@@ -400,11 +408,11 @@ class _UnitSquarePlotBase(GerryPlotBase):
         Returns:
             list[LegendHandle]: A list of legend handles for the named guide lines.
         """
-        return [
+        handles: list[LegendHandle] = [
             Line2D(
                 [0],
                 [0],
-                linestyle=line.linestyle,
+                linestyle=cast("Any", line.linestyle),
                 marker="",
                 label=line.label,
                 color=self._resolved_rgba(
@@ -417,6 +425,7 @@ class _UnitSquarePlotBase(GerryPlotBase):
             for group in self._named_lines.values()
             for line in group.lines[:1]
         ]
+        return handles
 
     @property
     def _legend_handles(self) -> list[LegendHandle]:

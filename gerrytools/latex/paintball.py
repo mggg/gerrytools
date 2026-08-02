@@ -33,23 +33,23 @@ class PaintballOptions(_ValidatedOptions):
 
     Attributes:
         markersize (float): The size of the markers in points.
-        markercolor (Color): The color of the markers.
+        markercolor (Color | None): The color of the markers. None removes the fill.
         markeralpha (float): The opacity of the markers (0.0 to 1.0).
-        markeredgecolor (Color): The color of the marker edges.
+        markeredgecolor (Color | None): The color of the marker edges. None removes the edge.
         markeredgewidth (float): The width of the marker edges in points.
         markeredgealpha (float): The opacity of the marker edges (0.0 to 1.0).
-        hullcolor (Color | None): The fill color of the convex hull; None (the default) inherits
-            ``markercolor`` when the hull is rendered.
+        hullcolor (Color | None | Unset): The fill color of the convex hull. An omitted value
+            inherits ``markercolor``; None removes the fill.
         hullalpha (float | None): The opacity of the hull fill (0.0 to 1.0); None (the default)
             inherits ``markeralpha``.
-        hulledgecolor (Color | None): The color of the hull edge; None (the default) inherits
-            ``markeredgecolor``.
+        hulledgecolor (Color | None | Unset): The color of the hull edge. An omitted value
+            inherits ``markeredgecolor``; None removes the edge.
         hulledgewidth (float | None): The width of the hull edge in points; None inherits
             ``markeredgewidth``. Defaults to 2.0 (an explicit override, not the inherited
             marker edge width).
         hulledgealpha (float | None): The opacity of the hull edge (0.0 to 1.0); None (the
             default) inherits ``markeredgealpha``.
-        crosshair_color (Color): The color of the crosshair lines.
+        crosshair_color (Color | None): The color of the crosshair lines. None removes them.
         crosshair_width (float): The width of the crosshair lines.
         xlim (tuple[float, float]): The x-axis limits.
         ylim (tuple[float, float]): The y-axis limits.
@@ -58,17 +58,17 @@ class PaintballOptions(_ValidatedOptions):
     """
 
     markersize: float = 8
-    markercolor: Color = "cadmiumgreen"
+    markercolor: Color | None = "cadmiumgreen"
     markeralpha: float = 0.8
-    markeredgecolor: Color = "cadmiumgreen"
+    markeredgecolor: Color | None = "cadmiumgreen"
     markeredgewidth: float = 0.5
     markeredgealpha: float = 1.0
-    hullcolor: Color | None = None
+    hullcolor: Color | None | Unset = UNSET
     hullalpha: float | None = None
-    hulledgecolor: Color | None = None
+    hulledgecolor: Color | None | Unset = UNSET
     hulledgewidth: float | None = 2.0
     hulledgealpha: float | None = None
-    crosshair_color: Color = "gray!50"
+    crosshair_color: Color | None = "gray!50"
     crosshair_width: float = 5.0
     xlim: tuple[float, float] = (0.0, 1.0)
     ylim: tuple[float, float] = (0, 1)
@@ -96,12 +96,12 @@ class PaintballOptions(_ValidatedOptions):
     }
 
 
-class PaintballPlot(_TikzPlotBase):
+class TikzPaintballPlot(_TikzPlotBase):
     """Class for generating paintball plots in TikZ/LaTeX.
 
-    The paintball plot is defined in vote-share / seat-share coordinates in the unit square. Vote
-    shares are expected in [0, 1]. Seat data is either interpreted as shares in [0, 1] or normalized
-    from seat counts using ``total_seats``. Guide lines are added with
+    The paintball plot places vote share on x and seat share on y in the unit square. Vote shares
+    are expected in [0, 1]. Seat data is either interpreted as shares in [0, 1] or normalized from
+    seat counts using ``total_seats``. Guide lines are added with
     :meth:`add_efficiency_gap_line`, :meth:`add_proportionality_line`, or
     :meth:`add_lines_with_slope`.
     """
@@ -217,7 +217,7 @@ class PaintballPlot(_TikzPlotBase):
     def add_lines_with_slope(
         self,
         slopes: Iterable[float],
-        linecolor: Color = "black",
+        linecolor: Color | None = "black",
         linewidth: float = 1.0,
         linestyle: str = "solid",
         *,
@@ -227,9 +227,11 @@ class PaintballPlot(_TikzPlotBase):
 
         Args:
             slopes (Iterable[float]): The slopes of the lines to be added.
-            linecolor (Color, optional): The color of the lines. Defaults to "black".
+            linecolor (Color | None, optional): The color of the lines. Pass None for
+                transparent lines. Defaults to "black".
             linewidth (float, optional): The width of the lines. Defaults to 1.0
-            linestyle (str, optional): The style of the lines (Matplotlib token or TikZ style). Defaults to "solid".
+            linestyle (str, optional): The style of the lines (Matplotlib token or TikZ style).
+                Defaults to "solid".
             name (str | None, optional): An optional name for the line. If provided,
                 the line can be referenced later by this name. Defaults to None.
         """
@@ -245,7 +247,7 @@ class PaintballPlot(_TikzPlotBase):
     def add_efficiency_gap_line(
         self,
         *,
-        linecolor: Color = "gray",
+        linecolor: Color | None = "gray",
         linewidth: float = 1.0,
         linestyle: str = "solid",
         name: str = "efficiency_gap",
@@ -253,9 +255,11 @@ class PaintballPlot(_TikzPlotBase):
         """Add the standard efficiency-gap guide line (slope 2 through (0.5, 0.5)).
 
         Args:
-            linecolor (Color, optional): Line color. Defaults to "gray".
+            linecolor (Color | None, optional): Line color. Pass None for a transparent
+                line. Defaults to "gray".
             linewidth (float, optional): Line width. Defaults to 1.0.
-            linestyle (str, optional): Line style (Matplotlib token or TikZ style). Defaults to "solid".
+            linestyle (str, optional): Line style (Matplotlib token or TikZ style). Defaults to
+                "solid".
             name (str, optional): Name the line is stored under. Defaults to "efficiency_gap".
         """
         self.add_lines_with_slope(
@@ -265,7 +269,7 @@ class PaintballPlot(_TikzPlotBase):
     def add_proportionality_line(
         self,
         *,
-        linecolor: Color = "gray",
+        linecolor: Color | None = "gray",
         linewidth: float = 1.0,
         linestyle: str = "dashed",
         name: str = "proportionality",
@@ -273,9 +277,11 @@ class PaintballPlot(_TikzPlotBase):
         """Add the standard proportionality guide line (slope 1 through (0.5, 0.5)).
 
         Args:
-            linecolor (Color, optional): Line color. Defaults to "gray".
+            linecolor (Color | None, optional): Line color. Pass None for a transparent
+                line. Defaults to "gray".
             linewidth (float, optional): Line width. Defaults to 1.0.
-            linestyle (str, optional): Line style (Matplotlib token or TikZ style). Defaults to "dashed".
+            linestyle (str, optional): Line style (Matplotlib token or TikZ style). Defaults to
+                "dashed".
             name (str, optional): Name the line is stored under. Defaults to "proportionality".
         """
         self.add_lines_with_slope(
@@ -290,11 +296,11 @@ class PaintballPlot(_TikzPlotBase):
     #   OPTION SETTERS
     # ==================
 
-    def set_crosshair_options(self, color: Color, width: float) -> None:
+    def set_crosshair_options(self, color: Color | None, width: float) -> None:
         """Sets the crosshair options for the paintball plot.
 
         Args:
-            color (Color): The color of the crosshair.
+            color (Color | None): The color of the crosshair. None removes it.
             width (float): The width of the crosshair lines.
         """
         self.options.crosshair_color = color
@@ -303,9 +309,9 @@ class PaintballPlot(_TikzPlotBase):
     def set_marker_options(
         self,
         size: float | None = None,
-        color: Color | None = None,
+        color: Color | None | Unset = UNSET,
         alpha: float | None = None,
-        edgecolor: Color | None = None,
+        edgecolor: Color | None | Unset = UNSET,
         edgewidth: float | None = None,
         edgealpha: float | None = None,
     ) -> None:
@@ -314,12 +320,12 @@ class PaintballPlot(_TikzPlotBase):
         Args:
             size (float | None, optional): The size of the markers in points. If None, the size is
                 not changed from the previous setting. Defaults to None.
-            color (Color | None, optional): The color of the markers. If None, the color is not
-                changed from the previous setting. Defaults to None.
+            color (Color | None | Unset, optional): The color of the markers. None removes
+                the fill; omission retains the current color. Defaults to UNSET.
             alpha (float | None, optional): The opacity of the markers (0.0 to 1.0). If None, the
                 opacity is not changed from the previous setting. Defaults to None.
-            edgecolor (Color | None, optional): The edge color of the markers. If None, the edge
-                color is not changed from the previous setting. Defaults to None.
+            edgecolor (Color | None | Unset, optional): The edge color of the markers. None
+                removes the edge; omission retains the current color. Defaults to UNSET.
             edgewidth (float | None, optional): The edge width of the markers. If None, the edge
                 width is not changed from the previous setting. Defaults to None.
             edgealpha (float | None, optional): The edge opacity of the markers (0.0 to 1.0). If
@@ -327,11 +333,11 @@ class PaintballPlot(_TikzPlotBase):
         """
         if size is not None:
             self.options.markersize = size
-        if color is not None:
+        if not isinstance(color, Unset):
             self.options.markercolor = color
         if alpha is not None:
             self.options.markeralpha = alpha
-        if edgecolor is not None:
+        if not isinstance(edgecolor, Unset):
             self.options.markeredgecolor = edgecolor
         if edgewidth is not None:
             self.options.markeredgewidth = edgewidth
@@ -348,18 +354,17 @@ class PaintballPlot(_TikzPlotBase):
     ) -> None:
         """Sets the hull options for the paintball plot.
 
-        A hull option stored as ``None`` inherits the corresponding marker option when the hull is
-        rendered (``hullcolor`` from ``markercolor``, ``hulledgewidth`` from ``markeredgewidth``,
-        and so on). Omitting a keyword leaves its current setting unchanged; passing ``None``
-        explicitly restores the marker inheritance.
+        Omitted keywords leave the current setting unchanged. For colors, passing ``None``
+        removes the fill or edge. Alpha and width retain their existing behavior: passing
+        ``None`` restores inheritance from the corresponding marker option.
 
         Args:
-            color (Color | None | Unset): The fill color of the hull; None inherits
-                ``markercolor``. Defaults to UNSET (leave unchanged).
+            color (Color | None | Unset): The fill color of the hull; None removes the fill.
+                Defaults to UNSET (leave unchanged).
             alpha (float | None | Unset): The opacity of the hull fill (0.0 to 1.0); None inherits
                 ``markeralpha``. Defaults to UNSET (leave unchanged).
-            edgecolor (Color | None | Unset): The edge color of the hull; None inherits
-                ``markeredgecolor``. Defaults to UNSET (leave unchanged).
+            edgecolor (Color | None | Unset): The edge color of the hull; None removes the
+                edge. Defaults to UNSET (leave unchanged).
             edgewidth (float | None | Unset): The edge width of the hull in points; None inherits
                 ``markeredgewidth``. Defaults to UNSET (leave unchanged).
             edgealpha (float | None | Unset): The edge opacity of the hull (0.0 to 1.0); None
@@ -423,9 +428,9 @@ class PaintballPlot(_TikzPlotBase):
 
         # Use marker settings as defaults only when hull options are unset.
         fillcolor = (
-            self.options.hullcolor
-            if self.options.hullcolor is not None
-            else self.options.markercolor
+            self.options.markercolor
+            if isinstance(self.options.hullcolor, Unset)
+            else self.options.hullcolor
         )
         fillalpha = (
             self.options.hullalpha
@@ -433,9 +438,9 @@ class PaintballPlot(_TikzPlotBase):
             else self.options.markeralpha
         )
         linecolor = (
-            self.options.hulledgecolor
-            if self.options.hulledgecolor is not None
-            else self.options.markeredgecolor
+            self.options.markeredgecolor
+            if isinstance(self.options.hulledgecolor, Unset)
+            else self.options.hulledgecolor
         )
         linewidth = (
             self.options.hulledgewidth
@@ -465,8 +470,8 @@ class PaintballPlot(_TikzPlotBase):
         """Generate complete TikZ content for the paintball plot.
 
         Args:
-            hull (bool, optional): Whether to draw the horizontal hull of the paintball points rather
-                than the individual points. Defaults to False.
+            hull (bool, optional): Whether to draw the horizontal hull of the paintball points
+                rather than the individual points. Defaults to False.
 
         Returns:
             str: Complete TikZ picture source.

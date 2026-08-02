@@ -100,6 +100,10 @@ def districtr(N: int) -> list[HexColor]:
     Returns:
         list[HexColor]: A list of ``N`` hex color strings from the districtr
         palette.
+
+    Raises:
+        ValueError: If ``N`` is negative.
+        RuntimeError: If the requested number of distinct colors cannot be generated.
     """
 
     if N < 0:

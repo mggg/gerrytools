@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Sequence
 
 import numpy as np
@@ -8,10 +8,46 @@ from gerrytools.logging import get_logger
 from gerrytools.plotting.data.gerryplot import GerryPlotBase
 from gerrytools.plotting.data.options import DEFAULT_EDGE_WIDTH, _needs_default_edge_width
 from gerrytools.plotting.mpl.marker_options import PointMarkerOptions, _marker_legend_handle
-from gerrytools.plotting.utils import _replace_non_none
+from gerrytools.plotting.utils import UNSET, Unset, _replace_with_color_overrides
 from gerrytools.typing import Color, LegendHandle
 
 logger = get_logger(__name__)
+
+
+def _merged_marker_options(
+    base: PointMarkerOptions,
+    *,
+    markerfacecolor: Color | None | Unset,
+    markerfacealpha: float | None,
+    marker: str | None,
+    markersize: float | None,
+    markeredgecolor: Color | None | Unset,
+    markeredgealpha: float | None,
+    markeredgewidth: float | None,
+    zorder: int | None,
+    edgewidth_given: bool,
+) -> PointMarkerOptions:
+    """Merge marker kwargs into a base style, preserving color/alpha pairing."""
+    resolved = _replace_with_color_overrides(
+        base,
+        ("markerfacecolor", "markerfacealpha"),
+        ("markeredgecolor", "markeredgealpha"),
+        markerfacecolor=markerfacecolor,
+        markerfacealpha=markerfacealpha,
+        marker=marker,
+        markersize=markersize,
+        markeredgecolor=markeredgecolor,
+        markeredgealpha=markeredgealpha,
+        markeredgewidth=markeredgewidth,
+        zorder=zorder,
+    )
+    if _needs_default_edge_width(
+        edgewidth_given=edgewidth_given,
+        resolved_edgewidth=resolved.markeredgewidth,
+        resolved_edgecolor=resolved.markeredgecolor,
+    ):
+        resolved = replace(resolved, markeredgewidth=DEFAULT_EDGE_WIDTH)
+    return resolved
 
 
 @dataclass(slots=True, frozen=True)
@@ -55,7 +91,7 @@ class ScatterPlot(GerryPlotBase):
             ax (matplotlib.axes.Axes | None, optional): Render onto an existing
                 matplotlib ``Axes`` instead of creating a fresh figure. Defaults to None.
             legend (bool | None, optional): Whether to include a legend in the plot.
-                ``None`` selects the class default (True). Defaults to None.
+                ``None`` selects the class default (False). Defaults to None.
             xlabel (str | None, optional): The label for the x-axis. Defaults to None.
             ylabel (str | None, optional): The label for the y-axis. Defaults to None.
             title (str | None, optional): The title of the plot. Defaults to None.
@@ -80,11 +116,11 @@ class ScatterPlot(GerryPlotBase):
         *,
         xy_pairs: list[tuple[float, float]] | None = None,
         marker_options: PointMarkerOptions | None = None,
-        markerfacecolor: Color | None = None,
+        markerfacecolor: Color | None | Unset = UNSET,
         markerfacealpha: float | None = None,
         marker: str | None = None,
         markersize: float | None = None,
-        markeredgecolor: Color | None = None,
+        markeredgecolor: Color | None | Unset = UNSET,
         markeredgealpha: float | None = None,
         markeredgewidth: float | None = None,
         zorder: int | None = None,
@@ -99,17 +135,20 @@ class ScatterPlot(GerryPlotBase):
             name (str | None, optional): Legend name for the point series. Defaults to None.
             marker_options (PointMarkerOptions | None, optional): Base marker styling. Explicit
                 keyword arguments override matching fields. Defaults to None.
-            markerfacecolor (Color, optional): The face color of the markers. Defaults to "#b0b0b0"
-                which is a medium gray.
+            markerfacecolor (Color | None, optional): The face color of the markers. Pass ``None``
+                for no fill. Defaults to "#b0b0b0", a medium gray.
             markerfacealpha (float | None, optional): The alpha value for the marker face color.
                 Defaults to None.
             marker (str, optional): The marker style. Defaults to "o".
             markersize (float, optional): The size of the markers. Defaults to 6.0.
-            markeredgecolor (Color | None, optional): The edge color of the markers. Defaults to
-                None.
+            markeredgecolor (Color | None, optional): The edge color of the markers. Pass ``None``
+                for no edge. With the default style, setting a visible color also selects a
+                visible edge width.
             markeredgealpha (float | None, optional): The alpha value for the marker edge color.
-                Defaults to None.
-            markeredgewidth (float, optional): The width of the marker edges. Defaults to 0.0.
+                Defaults to the opacity from the base style or selected color.
+            markeredgewidth (float | None, optional): The width of the marker edges. With the
+                default style, a visible edge color uses 0.8 when the width is omitted; 0
+                explicitly hides the edge. Defaults to None.
             zorder (int, optional): The z-order of the markers. Defaults to 1.
 
         Raises:
@@ -137,25 +176,18 @@ class ScatterPlot(GerryPlotBase):
                 zorder=1,
             )
         )
-        resolved_marker_options = _replace_non_none(
+        resolved_marker_options = _merged_marker_options(
             base,
-            marker=marker,
-            markersize=markersize,
             markerfacecolor=markerfacecolor,
             markerfacealpha=markerfacealpha,
+            marker=marker,
+            markersize=markersize,
             markeredgecolor=markeredgecolor,
             markeredgealpha=markeredgealpha,
             markeredgewidth=markeredgewidth,
             zorder=zorder,
+            edgewidth_given=markeredgewidth is not None or marker_options is not None,
         )
-        if _needs_default_edge_width(
-            edgewidth_given=markeredgewidth is not None,
-            resolved_edgewidth=resolved_marker_options.markeredgewidth,
-            resolved_edgecolor=resolved_marker_options.markeredgecolor,
-        ):
-            resolved_marker_options = _replace_non_none(
-                resolved_marker_options, markeredgewidth=DEFAULT_EDGE_WIDTH
-            )
 
         pointset_data = _ScatterData(
             x=np.array(x),
@@ -173,11 +205,11 @@ class ScatterPlot(GerryPlotBase):
         name: str,
         *,
         marker_options: PointMarkerOptions | None = None,
-        markerfacecolor: Color | None = None,
+        markerfacecolor: Color | None | Unset = UNSET,
         markerfacealpha: float | None = None,
         marker: str | None = None,
         markersize: float | None = None,
-        markeredgecolor: Color | None = None,
+        markeredgecolor: Color | None | Unset = UNSET,
         markeredgealpha: float | None = None,
         markeredgewidth: float | None = None,
         zorder: int | None = None,
@@ -190,16 +222,20 @@ class ScatterPlot(GerryPlotBase):
             name (str): Legend name for the point.
             marker_options (PointMarkerOptions | None, optional): Base marker styling. Explicit
                 keyword arguments override matching fields. Defaults to None.
-            markerfacecolor (Color, optional): The face color of the marker. Defaults to "denim".
+            markerfacecolor (Color | None, optional): The face color of the marker. Pass ``None``
+                for no fill. Defaults to "denim".
             markerfacealpha (float | None, optional): The alpha value for the marker face color.
                 Defaults to None.
             marker (str, optional): The marker style. Defaults to "o".
             markersize (float, optional): The size of the marker. Defaults to 6.0.
-            markeredgecolor (Color | None, optional): The edge color of the marker. Defaults to
-                None.
+            markeredgecolor (Color | None, optional): The edge color of the marker. Pass ``None``
+                for no edge. With the default style, setting a visible color also selects a
+                visible edge width.
             markeredgealpha (float | None, optional): The alpha value for the marker edge color.
-                Defaults to None.
-            markeredgewidth (float, optional): The width of the marker edge. Defaults to 0.0.
+                Defaults to the opacity from the base style or selected color.
+            markeredgewidth (float | None, optional): The width of the marker edge. With the
+                default style, a visible edge color uses 0.8 when the width is omitted; 0
+                explicitly hides the edge. Defaults to None.
             zorder (int, optional): The z-order of the marker. Defaults to 1.
         """
         # Default for a single labelled point: solid denim fill (distinct from
@@ -215,11 +251,8 @@ class ScatterPlot(GerryPlotBase):
                 zorder=1,
             )
         )
-        self.add_series(
-            x=[x],
-            y=[y],
-            name=name,
-            marker_options=base,
+        resolved_marker_options = _merged_marker_options(
+            base,
             markerfacecolor=markerfacecolor,
             markerfacealpha=markerfacealpha,
             marker=marker,
@@ -228,6 +261,13 @@ class ScatterPlot(GerryPlotBase):
             markeredgealpha=markeredgealpha,
             markeredgewidth=markeredgewidth,
             zorder=zorder,
+            edgewidth_given=markeredgewidth is not None or marker_options is not None,
+        )
+        self.add_series(
+            x=[x],
+            y=[y],
+            name=name,
+            marker_options=resolved_marker_options,
         )
 
     def _draw_points(self) -> None:

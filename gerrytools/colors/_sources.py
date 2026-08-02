@@ -90,6 +90,10 @@ class NamedColorSource:
     ``which_color_source``. The ``mapping`` is a dict from color names to hex strings (already
     normalized — no matplotlib named-color references). A lowercased index is built once at
     construction so per-call case-insensitive lookup is free.
+
+    Attributes:
+        name (str): Source name included in diagnostic provenance.
+        mapping (Mapping[str, str]): Color names mapped to normalized hex strings.
     """
 
     name: str
@@ -209,6 +213,9 @@ def get_all_supported_colors_dict() -> dict[str, Color]:
     Composed by walking the registry in *reverse* precedence order so that higher-precedence sources
     overwrite lower-precedence ones — the resulting dict's value for any key matches what
     ``get_named_color`` would return for that key.
+
+    Returns:
+        dict[str, Color]: Copy of every supported name mapped to its resolved color.
     """
     composed: dict[str, Color] = {}
     for source in reversed(_REGISTRY):

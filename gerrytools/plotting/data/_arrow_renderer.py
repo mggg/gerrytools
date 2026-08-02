@@ -590,7 +590,7 @@ class _AnnotationArrowRenderer:
         if arrow.label_font_options is not None:
             text_effects = self._stroke_outline_effects(
                 arrow.label_font_options.outlinecolor,
-                1.0,
+                None,
                 arrow.label_font_options.outlinewidth,
                 field="annotation_arrow_label_outlinecolor",
             )

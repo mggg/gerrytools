@@ -58,7 +58,7 @@ class TestNamedColorSourceLookup:
     def test_named_color_source_is_frozen(self):
         source = NamedColorSource(name="example", mapping={"foo": "#abcdef"})
         with pytest.raises((AttributeError, TypeError)):
-            source.name = "renamed"  # type: ignore[misc]
+            source.name = "renamed"  # type: ignore
 
 
 # ============================

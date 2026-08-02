@@ -5,7 +5,7 @@ palette: tokens drawn from that brand accent family (orange and amber warms agai
 and teal cools) rather than a stock theme's unrelated hues.
 
 ``HarborBlushLightStyle`` / ``HarborBlushDarkStyle`` are the pair for the "blush-blue"
-palette, mirroring its page hierarchy: ocean-blue keywords (#0099cc in dark, the logo cyan)
+palette, mirroring its page hierarchy: ocean-blue keywords (#0077aa in dark, the logo cyan)
 with MGGG-maroon functions and classes, strings in a deep green, numbers and True/False/None
 in the logo-indigo and amber families, exceptions in vermilion, on rose surfaces that
 conf.py binds to the palette's sidebar mix at build time.
@@ -121,17 +121,17 @@ class HarborBlushDarkStyle(Style):
     styles = {
         Token: "#f0eeea",
         Comment: "italic #9d9284",
-        Comment.Preproc: "noitalic #0099cc",
-        Keyword: "bold #0099cc",
+        Comment.Preproc: "noitalic #008ab8",
+        Keyword: "bold #008ab8",
         Keyword.Type: "nobold #c68e35",
         Keyword.Constant: "bold #e86d2e",
         Operator: "#bfb5a6",
-        Operator.Word: "bold #0099cc",
+        Operator.Word: "bold #008ab8",
         Name.Builtin: "bold #cc4b4b",
         Name.Function: "bold #cc4b4b",
         Name.Class: "bold #cc4b4b",
         Name.Namespace: "bold #cc4b4b",
-        Name.Exception: "bold #dfb900",
+        Name.Exception: "bold #c8a219",
         Name.Variable: "#f0eeea",
         Name.Constant: "#c68e35",
         Name.Decorator: "#cc4b4b",
@@ -139,10 +139,10 @@ class HarborBlushDarkStyle(Style):
         Name.Tag: "bold #3fa868",
         String: "bold #3fa868",
         String.Doc: "italic #9d9284",
-        String.Escape: "bold #0099cc",
+        String.Escape: "bold #008ab8",
         Number: "bold #8d87d0",
         Generic.Heading: "bold #f0eeea",
-        Generic.Subheading: "bold #0099cc",
+        Generic.Subheading: "bold #008ab8",
         Generic.Deleted: "#e86d2e",
         Generic.Inserted: "#3fa868",
         Generic.Error: "#e86d2e",

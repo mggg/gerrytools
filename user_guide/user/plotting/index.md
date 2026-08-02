@@ -6,7 +6,7 @@ substantive example, explains what the result shows, and then introduces its mai
 ::::{grid} 1 1 2 2
 :gutter: 3
 
-:::{grid-item-card} {octicon}`light-bulb` Overview and concepts
+:::{grid-item-card} {octicon}`light-bulb` Overview
 :link: overview
 :link-type: doc
 
@@ -47,7 +47,7 @@ Signatures and option objects for every public plotting class and function.
 :hidden:
 :maxdepth: 1
 
-Overview and concepts <overview>
+Overview <overview>
 Statistical plots <statistical/index>
 Geographic plots <geographic/index>
 Interacting with Matplotlib <composition>

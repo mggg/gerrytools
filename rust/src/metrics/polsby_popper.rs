@@ -61,6 +61,31 @@ impl PreparedPolsbyPopper {
                 shared_perimeters[edge]
             )));
         }
+        let mut shared_by_node = vec![0.0; node_count];
+        for (edge_index, &(u, v)) in edges.iter().enumerate() {
+            let shared = shared_perimeters[edge_index];
+            shared_by_node[u as usize] += shared;
+            shared_by_node[v as usize] += shared;
+        }
+        if let Some(node) = shared_by_node
+            .iter()
+            .enumerate()
+            .position(|(node, &shared)| {
+                shared - total_perimeter_values[node]
+                    > total_perimeter_values[node] * RATIO_SCORE_EPS
+            })
+        {
+            return Err(Error::InvalidInput(format!(
+                concat!(
+                    "graph perimeter attributes are inconsistent: unit {} has total perimeter ",
+                    "{}, but the shared perimeters of all graph edges connected to it sum to {}; ",
+                    "the attributes may have been measured from different geometries or CRSs. ",
+                    "Recompute every graph perimeter attribute from the same geometry in the ",
+                    "same projected CRS, or use geometry-backed scoring"
+                ),
+                node, total_perimeter_values[node], shared_by_node[node]
+            )));
+        }
 
         Ok(Self {
             node_count,
@@ -85,6 +110,18 @@ impl PreparedPolsbyPopper {
             node_count,
         )?;
         validate_topology(node_count, &edges, &shared_perimeters)?;
+        if boundary_perimeters.iter().any(|value| !value.is_finite()) {
+            return Err(Error::NonFinitePolsbyPopperInput);
+        }
+        if let Some(node) = boundary_perimeters
+            .iter()
+            .position(|&perimeter| perimeter < 0.0)
+        {
+            return Err(Error::InvalidInput(format!(
+                "unit {node} has negative boundary perimeter {}",
+                boundary_perimeters[node]
+            )));
+        }
 
         let mut total_perimeter_values = boundary_perimeters;
         for (edge_index, &(u, v)) in edges.iter().enumerate() {

@@ -5,10 +5,9 @@ from pathlib import Path
 
 import nbformat
 
-# Kernel metadata a local Jupyter session stamps onto a notebook. It must match what
-# user_guide/_refresh_notebooks.py normalizes to before caching, or the docs build recomputes a
-# different cache key, misses the pre-built cache, and re-executes the notebook in a CWD without
-# the sample data (which fails on CI). Keeping the committed metadata pinned here avoids that.
+# Kernel metadata a local Jupyter session stamps onto a notebook. Pinning it keeps notebook diffs
+# independent of the developer's environment; the cache builder separately preserves this source
+# metadata so its cache key remains a match.
 NORMALIZED_KERNELSPEC = {
     "display_name": "Python 3",
     "language": "python",

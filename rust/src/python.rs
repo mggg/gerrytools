@@ -1,10 +1,10 @@
 use crate::{
     AssignmentSource, DistrictTable, Error, MetricRef, MetricScore, PlanScore, PlanTable,
-    PreparedAreaPerimeterMetrics, PreparedConvexHullRatio, PreparedCutEdges, PreparedMetric,
-    PreparedPolsbyPopper, PreparedPopulationPolygon, PreparedRegion, PreparedRegionTally,
-    PreparedReock, PreparedSchwartzberg, PreparedStateClippedConvexHullRatio, PreparedTally,
-    PreparedUnitHulls, RunMetadata, RunWriter, Scorer, SharedTallyMetric, StreamOptions,
-    UnitHullCache,
+    PreparedAreaPerimeterMetrics, PreparedConvexHullRatio, PreparedCutEdges,
+    PreparedGeometry as RustPreparedGeometry, PreparedMetric, PreparedPolsbyPopper,
+    PreparedPopulationPolygon, PreparedRegion, PreparedRegionTally, PreparedReock,
+    PreparedSchwartzberg, PreparedStateClippedConvexHullRatio, PreparedTally, RunMetadata,
+    RunWriter, Scorer, SharedTallyMetric, StreamOptions,
 };
 use pyo3::exceptions::{
     PyFileExistsError, PyFileNotFoundError, PyOSError, PyPermissionError, PyValueError,
@@ -16,6 +16,16 @@ use std::sync::Arc;
 
 type MetricRows = (Vec<u16>, Vec<Vec<Vec<f64>>>, Option<(u64, u64)>);
 const PROGRESS_BATCH_SIZE: usize = 256;
+
+#[derive(FromPyObject)]
+#[pyo3(from_item_all)]
+struct PythonStreamOptions {
+    bendl_node_order_json: Option<String>,
+    max_samples: Option<u64>,
+    batch_size: usize,
+    track_uniqueness: bool,
+    progress: Option<Py<PyAny>>,
+}
 
 enum BackendMetric {
     Independent(PreparedMetric),
@@ -187,23 +197,44 @@ fn run_error(error: Error) -> PyErr {
     }
 }
 
+#[pyclass(module = "gerrytools._scoring_engine", frozen)]
+struct PreparedGeometry {
+    inner: Arc<RustPreparedGeometry>,
+}
+
+#[pymethods]
+impl PreparedGeometry {
+    #[new]
+    fn new(py: Python<'_>, rows: Vec<Vec<u8>>) -> PyResult<Self> {
+        let inner = py
+            .detach(|| RustPreparedGeometry::from_wkb(&rows))
+            .map(Arc::new)
+            .map_err(value_error)?;
+        Ok(Self { inner })
+    }
+}
+
+#[pyfunction]
+fn _prepare_geometry(py: Python<'_>, rows: Vec<Vec<u8>>) -> PyResult<PreparedGeometry> {
+    let inner = py
+        .detach(|| RustPreparedGeometry::from_validated_wkb(&rows))
+        .map(Arc::new)
+        .map_err(value_error)?;
+    Ok(PreparedGeometry { inner })
+}
+
 #[pyclass(module = "gerrytools._scoring_engine")]
 struct ScoringEngine {
     metrics: Vec<BackendMetric>,
     tally_bank: Option<PreparedTally>,
-    unit_hulls: UnitHullCache,
 }
 
 impl ScoringEngine {
-    /// Decode `rows` into shared unit hulls once; later geometry metrics must pass identical
-    /// rows, which the cache verifies with a fingerprint before reusing the decoded hulls.
-    fn prepare_unit_hulls(
-        &mut self,
+    fn prepared_geometry(
         py: Python<'_>,
-        rows: &[Vec<u8>],
-    ) -> PyResult<Arc<PreparedUnitHulls>> {
-        let cache = &mut self.unit_hulls;
-        py.detach(|| cache.get_or_decode(rows)).map_err(value_error)
+        geometry: &Py<PreparedGeometry>,
+    ) -> Arc<RustPreparedGeometry> {
+        Arc::clone(&geometry.borrow(py).inner)
     }
 
     fn scorer(&self) -> crate::Result<Scorer<'_>> {
@@ -216,6 +247,12 @@ impl ScoringEngine {
         }
         Ok(scorer)
     }
+
+    fn add_independent(&mut self, metric: crate::Result<PreparedMetric>) -> PyResult<()> {
+        self.metrics
+            .push(BackendMetric::Independent(metric.map_err(value_error)?));
+        Ok(())
+    }
 }
 
 #[pymethods]
@@ -225,7 +262,6 @@ impl ScoringEngine {
         Self {
             metrics: Vec::new(),
             tally_bank: None,
-            unit_hulls: UnitHullCache::new(),
         }
     }
 
@@ -303,8 +339,10 @@ impl ScoringEngine {
         Ok(())
     }
 
-    fn add_reock(&mut self, py: Python<'_>, rows: Vec<Vec<u8>>) -> PyResult<()> {
-        let metric = PreparedReock::from_unit_hulls(self.prepare_unit_hulls(py, &rows)?);
+    fn add_reock(&mut self, py: Python<'_>, geometry: Py<PreparedGeometry>) -> PyResult<()> {
+        let geometry = Self::prepared_geometry(py, &geometry);
+        let hulls = py.detach(|| geometry.unit_hulls()).map_err(value_error)?;
+        let metric = PreparedReock::from_unit_hulls(hulls);
         self.metrics
             .push(BackendMetric::Independent(PreparedMetric::Reock(metric)));
         Ok(())
@@ -313,20 +351,17 @@ impl ScoringEngine {
     fn add_population_polygon(
         &mut self,
         py: Python<'_>,
-        rows: Vec<Vec<u8>>,
+        geometry: Py<PreparedGeometry>,
         population_rows: Vec<Vec<u8>>,
         weights: Vec<f64>,
-        owners: Vec<usize>,
     ) -> PyResult<()> {
-        let unit_hulls = self.prepare_unit_hulls(py, &rows)?;
+        let geometry = Self::prepared_geometry(py, &geometry);
         let metric = py
             .detach(|| {
-                PreparedPopulationPolygon::from_unit_hulls_and_wkb(
-                    unit_hulls,
-                    &rows,
+                PreparedPopulationPolygon::from_prepared_geometry(
+                    geometry,
                     &population_rows,
                     weights,
-                    owners,
                 )
             })
             .map_err(value_error)?;
@@ -339,16 +374,12 @@ impl ScoringEngine {
     fn add_population_polygon_aligned(
         &mut self,
         py: Python<'_>,
-        rows: Vec<Vec<u8>>,
+        geometry: Py<PreparedGeometry>,
         weights: Vec<f64>,
     ) -> PyResult<()> {
-        let unit_hulls = self.prepare_unit_hulls(py, &rows)?;
+        let geometry = Self::prepared_geometry(py, &geometry);
         let metric = py
-            .detach(|| {
-                PreparedPopulationPolygon::from_aligned_unit_hulls_and_wkb(
-                    unit_hulls, &rows, weights,
-                )
-            })
+            .detach(|| PreparedPopulationPolygon::from_aligned_prepared_geometry(geometry, weights))
             .map_err(value_error)?;
         self.metrics.push(BackendMetric::Independent(
             PreparedMetric::PopulationPolygon(metric),
@@ -356,8 +387,14 @@ impl ScoringEngine {
         Ok(())
     }
 
-    fn add_convex_hull_ratio(&mut self, py: Python<'_>, rows: Vec<Vec<u8>>) -> PyResult<()> {
-        let metric = PreparedConvexHullRatio::from_unit_hulls(self.prepare_unit_hulls(py, &rows)?);
+    fn add_convex_hull_ratio(
+        &mut self,
+        py: Python<'_>,
+        geometry: Py<PreparedGeometry>,
+    ) -> PyResult<()> {
+        let geometry = Self::prepared_geometry(py, &geometry);
+        let hulls = py.detach(|| geometry.unit_hulls()).map_err(value_error)?;
+        let metric = PreparedConvexHullRatio::from_unit_hulls(hulls);
         self.metrics
             .push(BackendMetric::Independent(PreparedMetric::ConvexHullRatio(
                 metric,
@@ -368,14 +405,14 @@ impl ScoringEngine {
     fn add_state_clipped_convex_hull_ratio(
         &mut self,
         py: Python<'_>,
-        rows: Vec<Vec<u8>>,
+        geometry: Py<PreparedGeometry>,
         state: Vec<u8>,
     ) -> PyResult<()> {
-        let unit_hulls = self.prepare_unit_hulls(py, &rows)?;
+        let geometry = Self::prepared_geometry(py, &geometry);
         let metric = py
             .detach(|| {
-                PreparedStateClippedConvexHullRatio::from_unit_hulls_and_wkb(
-                    unit_hulls, &rows, &state,
+                PreparedStateClippedConvexHullRatio::from_prepared_geometry_and_wkb(
+                    &geometry, &state,
                 )
             })
             .map_err(value_error)?;
@@ -388,17 +425,21 @@ impl ScoringEngine {
     fn add_polsby_popper_geometry(
         &mut self,
         py: Python<'_>,
-        rows: Vec<Vec<u8>>,
-        edges: Vec<(u32, u32)>,
+        geometry: Py<PreparedGeometry>,
     ) -> PyResult<()> {
-        let metric = py
-            .detach(|| PreparedPolsbyPopper::from_wkb(&rows, edges))
-            .map_err(value_error)?;
-        self.metrics
-            .push(BackendMetric::Independent(PreparedMetric::PolsbyPopper(
-                metric,
-            )));
-        Ok(())
+        let geometry = Self::prepared_geometry(py, &geometry);
+        self.add_independent(
+            py.detach(|| {
+                let (edges, shared) = geometry.rook_measurements()?.inputs();
+                PreparedPolsbyPopper::new(
+                    geometry.area_values(),
+                    geometry.perimeter_values(),
+                    edges,
+                    shared,
+                )
+            })
+            .map(PreparedMetric::PolsbyPopper),
+        )
     }
 
     fn add_polsby_popper_graph_total(
@@ -408,13 +449,10 @@ impl ScoringEngine {
         edges: Vec<(u32, u32)>,
         shared_perimeters: Vec<f64>,
     ) -> PyResult<()> {
-        let metric = PreparedPolsbyPopper::new(areas, total_perimeters, edges, shared_perimeters)
-            .map_err(value_error)?;
-        self.metrics
-            .push(BackendMetric::Independent(PreparedMetric::PolsbyPopper(
-                metric,
-            )));
-        Ok(())
+        self.add_independent(
+            PreparedPolsbyPopper::new(areas, total_perimeters, edges, shared_perimeters)
+                .map(PreparedMetric::PolsbyPopper),
+        )
     }
 
     fn add_polsby_popper_graph_boundary(
@@ -424,34 +462,35 @@ impl ScoringEngine {
         edges: Vec<(u32, u32)>,
         shared_perimeters: Vec<f64>,
     ) -> PyResult<()> {
-        let metric = PreparedPolsbyPopper::from_boundary_perimeters(
-            areas,
-            boundary_perimeters,
-            edges,
-            shared_perimeters,
+        self.add_independent(
+            PreparedPolsbyPopper::from_boundary_perimeters(
+                areas,
+                boundary_perimeters,
+                edges,
+                shared_perimeters,
+            )
+            .map(PreparedMetric::PolsbyPopper),
         )
-        .map_err(value_error)?;
-        self.metrics
-            .push(BackendMetric::Independent(PreparedMetric::PolsbyPopper(
-                metric,
-            )));
-        Ok(())
     }
 
     fn add_schwartzberg_geometry(
         &mut self,
         py: Python<'_>,
-        rows: Vec<Vec<u8>>,
-        edges: Vec<(u32, u32)>,
+        geometry: Py<PreparedGeometry>,
     ) -> PyResult<()> {
-        let metric = py
-            .detach(|| PreparedSchwartzberg::from_wkb(&rows, edges))
-            .map_err(value_error)?;
-        self.metrics
-            .push(BackendMetric::Independent(PreparedMetric::Schwartzberg(
-                metric,
-            )));
-        Ok(())
+        let geometry = Self::prepared_geometry(py, &geometry);
+        self.add_independent(
+            py.detach(|| {
+                let (edges, shared) = geometry.rook_measurements()?.inputs();
+                PreparedSchwartzberg::new(
+                    geometry.area_values(),
+                    geometry.perimeter_values(),
+                    edges,
+                    shared,
+                )
+            })
+            .map(PreparedMetric::Schwartzberg),
+        )
     }
 
     fn add_schwartzberg_graph_total(
@@ -461,13 +500,10 @@ impl ScoringEngine {
         edges: Vec<(u32, u32)>,
         shared_perimeters: Vec<f64>,
     ) -> PyResult<()> {
-        let metric = PreparedSchwartzberg::new(areas, total_perimeters, edges, shared_perimeters)
-            .map_err(value_error)?;
-        self.metrics
-            .push(BackendMetric::Independent(PreparedMetric::Schwartzberg(
-                metric,
-            )));
-        Ok(())
+        self.add_independent(
+            PreparedSchwartzberg::new(areas, total_perimeters, edges, shared_perimeters)
+                .map(PreparedMetric::Schwartzberg),
+        )
     }
 
     fn add_schwartzberg_graph_boundary(
@@ -477,33 +513,35 @@ impl ScoringEngine {
         edges: Vec<(u32, u32)>,
         shared_perimeters: Vec<f64>,
     ) -> PyResult<()> {
-        let metric = PreparedSchwartzberg::from_boundary_perimeters(
-            areas,
-            boundary_perimeters,
-            edges,
-            shared_perimeters,
+        self.add_independent(
+            PreparedSchwartzberg::from_boundary_perimeters(
+                areas,
+                boundary_perimeters,
+                edges,
+                shared_perimeters,
+            )
+            .map(PreparedMetric::Schwartzberg),
         )
-        .map_err(value_error)?;
-        self.metrics
-            .push(BackendMetric::Independent(PreparedMetric::Schwartzberg(
-                metric,
-            )));
-        Ok(())
     }
 
     fn add_area_perimeter_metrics_geometry(
         &mut self,
         py: Python<'_>,
-        rows: Vec<Vec<u8>>,
-        edges: Vec<(u32, u32)>,
+        geometry: Py<PreparedGeometry>,
     ) -> PyResult<()> {
-        let metric = py
-            .detach(|| PreparedAreaPerimeterMetrics::from_wkb(&rows, edges))
-            .map_err(value_error)?;
-        self.metrics.push(BackendMetric::Independent(
-            PreparedMetric::AreaPerimeterMetrics(metric),
-        ));
-        Ok(())
+        let geometry = Self::prepared_geometry(py, &geometry);
+        self.add_independent(
+            py.detach(|| {
+                let (edges, shared) = geometry.rook_measurements()?.inputs();
+                PreparedAreaPerimeterMetrics::new(
+                    geometry.area_values(),
+                    geometry.perimeter_values(),
+                    edges,
+                    shared,
+                )
+            })
+            .map(PreparedMetric::AreaPerimeterMetrics),
+        )
     }
 
     fn add_area_perimeter_metrics_graph_total(
@@ -513,13 +551,10 @@ impl ScoringEngine {
         edges: Vec<(u32, u32)>,
         shared_perimeters: Vec<f64>,
     ) -> PyResult<()> {
-        let metric =
+        self.add_independent(
             PreparedAreaPerimeterMetrics::new(areas, total_perimeters, edges, shared_perimeters)
-                .map_err(value_error)?;
-        self.metrics.push(BackendMetric::Independent(
-            PreparedMetric::AreaPerimeterMetrics(metric),
-        ));
-        Ok(())
+                .map(PreparedMetric::AreaPerimeterMetrics),
+        )
     }
 
     fn add_area_perimeter_metrics_graph_boundary(
@@ -529,17 +564,15 @@ impl ScoringEngine {
         edges: Vec<(u32, u32)>,
         shared_perimeters: Vec<f64>,
     ) -> PyResult<()> {
-        let metric = PreparedAreaPerimeterMetrics::from_boundary_perimeters(
-            areas,
-            boundary_perimeters,
-            edges,
-            shared_perimeters,
+        self.add_independent(
+            PreparedAreaPerimeterMetrics::from_boundary_perimeters(
+                areas,
+                boundary_perimeters,
+                edges,
+                shared_perimeters,
+            )
+            .map(PreparedMetric::AreaPerimeterMetrics),
         )
-        .map_err(value_error)?;
-        self.metrics.push(BackendMetric::Independent(
-            PreparedMetric::AreaPerimeterMetrics(metric),
-        ));
-        Ok(())
     }
 
     fn add_cut_edges(
@@ -651,16 +684,23 @@ impl ScoringEngine {
         Ok((district_ids.unwrap_or_default(), rows, uniqueness))
     }
 
+    /// Score a BEN-family stream into an atomic result directory.
     fn score_run(
         &self,
         py: Python<'_>,
         source_path: PathBuf,
         output_path: PathBuf,
         metadata_json: &str,
-        stream_options: (Option<u64>, usize, bool, Option<Py<PyAny>>),
+        stream_options: PythonStreamOptions,
         projections: Vec<(usize, Vec<usize>)>,
     ) -> PyResult<()> {
-        let (max_samples, batch_size, track_uniqueness, progress) = stream_options;
+        let PythonStreamOptions {
+            bendl_node_order_json,
+            max_samples,
+            batch_size,
+            track_uniqueness,
+            progress,
+        } = stream_options;
         let metadata: RunMetadata = serde_json::from_str(metadata_json)
             .map_err(|error| PyValueError::new_err(format!("invalid run metadata: {error}")))?;
         validate_projections(&self.metrics, &metadata, &projections).map_err(value_error)?;
@@ -668,6 +708,17 @@ impl ScoringEngine {
         let mut progress_error = None;
         let result = py.detach(|| {
             let source = AssignmentSource::open(source_path)?;
+            source.validate_bundle_graph_node_order(bendl_node_order_json.as_deref())?;
+            if let Some(total) = source.declared_sample_count() {
+                let total = u64::try_from(total)
+                    .map_err(|_| Error::InvalidInput("BENDL sample count is too large".into()))?;
+                notify_progress(
+                    &progress,
+                    0,
+                    Some(max_samples.map_or(total, |limit| limit.min(total))),
+                    &mut progress_error,
+                )?;
+            }
             let scorer = self.scorer()?;
             let mut writer = RunWriter::new(output_path, metadata)?;
             let mut pending_samples = 0_u64;
@@ -695,7 +746,7 @@ impl ScoringEngine {
                         pending_samples += repetitions;
                         pending_frames += 1;
                         if pending_frames >= batch_size {
-                            notify_progress(&progress, pending_samples, &mut progress_error)?;
+                            notify_progress(&progress, pending_samples, None, &mut progress_error)?;
                             pending_samples = 0;
                             pending_frames = 0;
                         }
@@ -703,7 +754,7 @@ impl ScoringEngine {
                     Ok(())
                 },
             )?;
-            notify_progress(&progress, pending_samples, &mut progress_error)?;
+            notify_progress(&progress, pending_samples, None, &mut progress_error)?;
             writer.finish(summary)?;
             Ok(())
         });
@@ -717,13 +768,14 @@ impl ScoringEngine {
 fn notify_progress(
     progress: &Option<Py<PyAny>>,
     amount: u64,
+    total: Option<u64>,
     progress_error: &mut Option<PyErr>,
 ) -> crate::Result<()> {
-    if amount == 0 {
+    if amount == 0 && total.is_none() {
         return Ok(());
     }
     if let Some(callback) = progress {
-        if let Err(error) = Python::attach(|py| callback.call1(py, (amount,))) {
+        if let Err(error) = Python::attach(|py| callback.call1(py, (amount, total))) {
             let message = format!("progress callback failed: {error}");
             *progress_error = Some(error);
             return Err(Error::InvalidInput(message));
@@ -736,6 +788,8 @@ fn notify_progress(
 fn _scoring_engine(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add("DEBUG_ASSERTIONS", cfg!(debug_assertions))?;
     module.add("MAX_DISTRICTS", crate::scoring::district::MAX_DISTRICTS)?;
+    module.add_function(wrap_pyfunction!(_prepare_geometry, module)?)?;
+    module.add_class::<PreparedGeometry>()?;
     module.add_class::<ScoringEngine>()?;
     Ok(())
 }

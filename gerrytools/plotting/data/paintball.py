@@ -12,16 +12,18 @@ from gerrytools._election_math import (
 )
 from gerrytools.plotting._axes_backed import deferred_axis_update
 from gerrytools.plotting.data._unit_square_base import _UnitSquarePlotBase
-from gerrytools.plotting.data.options import _PaintballHullStyle
+from gerrytools.plotting.data.options import _needs_default_edge_width, _PaintballHullStyle
 from gerrytools.plotting.mpl.marker_options import PointMarkerOptions, _marker_legend_handle
-from gerrytools.plotting.utils import _replace_non_none
+from gerrytools.plotting.utils import UNSET, Unset, _replace_with_color_overrides
 from gerrytools.typing import Color, LegendHandle
 
 
 class PaintballPlot(_UnitSquarePlotBase):
-    """A class for creating paintball plots in Matplotlib."""
+    """A Matplotlib paintball plot with vote share on x and seat share on y."""
 
     _crosshair_default_width = 0.007
+    _marker_default_edgewidth = 0.5
+    _hull_default_edgewidth = 2.0
 
     def __init__(
         self,
@@ -131,7 +133,7 @@ class PaintballPlot(_UnitSquarePlotBase):
         self,
         slopes: Iterable[float],
         *,
-        linecolor: Color = "black",
+        linecolor: Color | None = "black",
         linewidth: float = 1.0,
         linestyle: str = "-",
         linealpha: float | None = None,
@@ -142,7 +144,8 @@ class PaintballPlot(_UnitSquarePlotBase):
 
         Args:
             slopes (Iterable[float]): Slopes for lines constrained to pass through (0.5, 0.5).
-            linecolor (Color, optional): Line color. Defaults to "black".
+            linecolor (Color | None, optional): Line color. Pass ``None`` for a
+                transparent line. Defaults to "black".
             linealpha (float | None, optional): Line alpha override. Defaults to None.
             linewidth (float, optional): Line width. Defaults to 1.0.
             linestyle (str, optional): Matplotlib line style string. Defaults to "-".
@@ -166,16 +169,20 @@ class PaintballPlot(_UnitSquarePlotBase):
     # ==================
     @deferred_axis_update
     def display_hull(self, enabled: bool) -> None:
-        """Set whether builds render the horizontal hull instead of the point cloud."""
+        """Set whether builds render the horizontal hull instead of the point cloud.
+
+        Args:
+            enabled (bool): Whether to display the hull.
+        """
         self._draw_hull = bool(enabled)
 
     @deferred_axis_update
     def set_marker_options(
         self,
         size: float | None = None,
-        color: Color | None = None,
+        color: Color | None | Unset = UNSET,
         alpha: float | None = None,
-        edgecolor: Color | None = None,
+        edgecolor: Color | None | Unset = UNSET,
         edgewidth: float | None = None,
         edgealpha: float | None = None,
         *,
@@ -185,15 +192,21 @@ class PaintballPlot(_UnitSquarePlotBase):
 
         Args:
             size (float | None, optional): Marker size in points. Defaults to None.
-            color (Color | None, optional): Marker face color. Defaults to None.
+            color (Color | None, optional): Marker face color. Pass ``None`` for no fill; omission
+                keeps the current color.
             alpha (float | None, optional): Marker face alpha in [0, 1]. Defaults to None.
-            edgecolor (Color | None, optional): Marker edge color. Defaults to None.
-            edgewidth (float | None, optional): Marker edge width. Defaults to None.
+            edgecolor (Color | None, optional): Marker edge color. Pass ``None`` for no edge;
+                omission keeps the current color.
+            edgewidth (float | None, optional): Marker edge width. When a visible edge color is
+                selected after the edge has been removed, omission restores the default width.
+                Pass ``0`` explicitly to keep the edge hidden. Defaults to None.
             edgealpha (float | None, optional): Marker edge alpha in [0, 1]. Defaults to None.
             marker (str | None, optional): Matplotlib marker style string. Defaults to None.
         """
-        self._marker_options = _replace_non_none(
+        marker_options = _replace_with_color_overrides(
             self._marker_options,
+            ("markerfacecolor", "markerfacealpha"),
+            ("markeredgecolor", "markeredgealpha"),
             markersize=size,
             markerfacecolor=color,
             markerfacealpha=alpha,
@@ -202,43 +215,71 @@ class PaintballPlot(_UnitSquarePlotBase):
             markeredgealpha=edgealpha,
             marker=marker,
         )
+        if _needs_default_edge_width(
+            edgewidth_given=edgewidth is not None,
+            resolved_edgewidth=marker_options.markeredgewidth,
+            resolved_edgecolor=(
+                marker_options.markeredgecolor if not isinstance(edgecolor, Unset) else None
+            ),
+        ):
+            marker_options = _replace_with_color_overrides(
+                marker_options,
+                markeredgewidth=self._marker_default_edgewidth,
+            )
+        self._marker_options = marker_options
 
     @deferred_axis_update
     def set_hull_options(
         self,
-        color: Color | None = None,
+        color: Color | None | Unset = UNSET,
         alpha: float | None = None,
-        edgecolor: Color | None = None,
+        edgecolor: Color | None | Unset = UNSET,
         edgewidth: float | None = None,
         edgealpha: float | None = None,
     ) -> None:
         """Set horizontal-hull display options.
 
         Args:
-            color (Color | None, optional): Hull fill color. Defaults to None.
+            color (Color | None, optional): Hull fill color. Pass ``None`` for no fill; omission
+                keeps the current setting.
             alpha (float | None, optional): Hull fill alpha in [0, 1]. Defaults to None.
-            edgecolor (Color | None, optional): Hull edge color. Defaults to None.
-            edgewidth (float | None, optional): Hull edge width. Defaults to None.
+            edgecolor (Color | None, optional): Hull edge color. Pass ``None`` for no edge;
+                omission keeps the current setting.
+            edgewidth (float | None, optional): Hull edge width. When a visible edge color is
+                selected after the edge has been removed, omission restores the default width.
+                Pass ``0`` explicitly to keep the edge hidden. Defaults to None.
             edgealpha (float | None, optional): Hull edge alpha in [0, 1]. Defaults to None.
         """
-        self._hull_style = _replace_non_none(
+        hull_style = _replace_with_color_overrides(
             self._hull_style,
+            ("facecolor", "facealpha"),
+            ("edgecolor", "edgealpha"),
             facecolor=color,
             facealpha=alpha,
             edgecolor=edgecolor,
             edgewidth=edgewidth,
             edgealpha=edgealpha,
         )
+        if _needs_default_edge_width(
+            edgewidth_given=edgewidth is not None,
+            resolved_edgewidth=hull_style.edgewidth,
+            resolved_edgecolor=hull_style.edgecolor if not isinstance(edgecolor, Unset) else None,
+        ):
+            hull_style = _replace_with_color_overrides(
+                hull_style,
+                edgewidth=self._hull_default_edgewidth,
+            )
+        self._hull_style = hull_style
 
     # =================
     #   DRAW HELPERS
     # =================
     def _paintball_coordinates(self) -> tuple[list[float], list[float]]:
-        """Return transformed paintball coordinates in the unit square."""
+        """Return direct ``(vote share, seat share)`` coordinates."""
         return paintball_coordinates(self._voteshare_data, self._seatshare_data)
 
     def _horizontal_hull_vertices(self) -> list[tuple[float, float]]:
-        """Compute the horizontal hull vertices for the transformed paintball points."""
+        """Compute the horizontal hull vertices for the paintball points."""
         x_coordinates, y_coordinates = self._paintball_coordinates()
         return horizontal_hull_vertices(zip(x_coordinates, y_coordinates))
 

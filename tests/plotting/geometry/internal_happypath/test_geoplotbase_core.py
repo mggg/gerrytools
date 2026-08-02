@@ -307,7 +307,7 @@ class TestLabelStyles:
         plot.add_label_layer(
             points_geoseries=gpd.GeoSeries(points, crs=testing_gdf.crs),
             labels=["7", "14"],
-            label_options=LabelOptions(style="badge"),
+            label_options=LabelOptions(label_style="badge"),
         )
         # The style rides on one marker layer and resolves the box per label at render.
         layer = plot._marker_layers[-1]
@@ -322,7 +322,7 @@ class TestLabelStyles:
         assert set(pads) == {"7", "14"}
         assert pads["7"] > pads["14"]
 
-    def test_unknown_style_raises(self, testing_gdf):
+    def test_unknown_label_style_raises(self, testing_gdf):
         from gerrytools.plotting.geometry.geoplot import GeoPlot
 
         plot = GeoPlot(testing_gdf, silent=True)
@@ -330,10 +330,10 @@ class TestLabelStyles:
             plot.add_label_layer(
                 latlon_list=[(33.0, -84.0)],
                 labels=["1"],
-                label_options=LabelOptions(style="nope"),
+                label_options=LabelOptions(label_style="nope"),
             )
 
-    def test_style_conflicts_with_explicit_options(self, testing_gdf):
+    def test_label_style_conflicts_with_explicit_options(self, testing_gdf):
         from gerrytools.plotting.geometry.geoplot import GeoPlot
         from gerrytools.plotting.mpl.label_text_options import LabelFontOptions
 
@@ -342,7 +342,7 @@ class TestLabelStyles:
             plot.add_label_layer(
                 latlon_list=[(33.0, -84.0)],
                 labels=["1"],
-                label_options=LabelOptions(style="badge", font_options=LabelFontOptions()),
+                label_options=LabelOptions(label_style="badge", font_options=LabelFontOptions()),
             )
 
 
@@ -356,12 +356,12 @@ class TestAllLabelStyles:
         points = gpd.GeoSeries(
             testing_gdf.geometry.representative_point().iloc[:2], crs=testing_gdf.crs
         )
-        for style_name in LABEL_STYLES:
+        for label_style_name in LABEL_STYLES:
             plot = GeoPlot(testing_gdf, silent=True)
             plot.add_label_layer(
                 points_geoseries=points,
                 labels=["1", "12"],
-                label_options=LabelOptions(style=style_name),
+                label_options=LabelOptions(label_style=label_style_name),
             )
             assert plot.ax is not None
 
@@ -372,9 +372,12 @@ class TestLabelStyleOnLayers:
 
         plot = GeoPlot(testing_gdf, silent=True)
         plot.add_districting_plan_layer(
-            "district", dissolve=True, show_labels=True, label_options=LabelOptions(style="halo")
+            "district",
+            dissolve=True,
+            show_labels=True,
+            label_options=LabelOptions(label_style="halo"),
         )
-        assert plot._label_requests[-1].options.style is not None
+        assert plot._label_requests[-1].options.label_style is not None
         assert plot.ax is not None
 
     def test_outline_layer_accepts_label_style(self, testing_gdf):
@@ -385,9 +388,9 @@ class TestLabelStyleOnLayers:
             geo_source=testing_gdf,
             dissolve_column="district",
             show_labels=True,
-            label_options=LabelOptions(style="ink"),
+            label_options=LabelOptions(label_style="ink"),
         )
-        assert plot._label_requests[-1].options.style is not None
+        assert plot._label_requests[-1].options.label_style is not None
         assert plot.ax is not None
 
     def test_marker_layer_accepts_label_style(self, testing_gdf):
@@ -398,7 +401,7 @@ class TestLabelStyleOnLayers:
             latlon_list=[(33.0, -84.0)],
             input_crs="EPSG:4326",
             labels=["Atlanta"],
-            label_options=LabelOptions(style="tag"),
+            label_options=LabelOptions(label_style="tag"),
         )
         assert plot._marker_layers[-1].label_style is not None
         assert plot.ax is not None
@@ -408,7 +411,7 @@ class TestLabelStyleOnLayers:
 
         font = LabelFontOptions()
         with pytest.raises(ValueError, match="not both"):
-            LabelOptions(style="halo", font_options=font)
+            LabelOptions(label_style="halo", font_options=font)
 
     def test_with_font_tweak_applies(self, testing_gdf):
         from gerrytools.plotting import LABEL_STYLES
@@ -419,7 +422,7 @@ class TestLabelStyleOnLayers:
             latlon_list=[(33.0, -84.0)],
             input_crs="EPSG:4326",
             labels=["x"],
-            label_options=LabelOptions(style=LABEL_STYLES["badge"].with_font(fontsize=12)),
+            label_options=LabelOptions(label_style=LABEL_STYLES["badge"].with_font(fontsize=12)),
         )
         applied_style = plot._marker_layers[-1].label_style
         assert applied_style is not None
@@ -435,7 +438,7 @@ class TestLabelAdjustmentsAndFontsize:
         plot.add_label_layer(
             points_geoseries=gpd.GeoSeries(point, crs=testing_gdf.crs),
             labels=["7"],
-            label_options=LabelOptions(style="badge", adjustments={"7": (2.0, -1.5)}),
+            label_options=LabelOptions(label_style="badge", adjustments={"7": (2.0, -1.5)}),
         )
         plot.ax.figure.canvas.draw()
         text = next(t for t in plot.ax.texts if t.get_text() == "7")
@@ -451,7 +454,7 @@ class TestLabelAdjustmentsAndFontsize:
         plot.add_label_layer(
             points_geoseries=gpd.GeoSeries(points, crs=testing_gdf.crs),
             labels=["7", "14"],
-            label_options=LabelOptions(style="badge", fontsize={7: 4}),
+            label_options=LabelOptions(label_style="badge", fontsize={7: 4}),
         )
         plot.ax.figure.canvas.draw()
         sizes = {t.get_text(): t.get_fontsize() for t in plot.ax.texts}
@@ -464,7 +467,9 @@ class TestLabelAdjustmentsAndFontsize:
             "district",
             dissolve=True,
             show_labels=True,
-            label_options=LabelOptions(style="badge", adjustments={0: (3.0, 0.0)}, fontsize={1: 5}),
+            label_options=LabelOptions(
+                label_style="badge", adjustments={0: (3.0, 0.0)}, fontsize={1: 5}
+            ),
         )
         plot.ax.figure.canvas.draw()
         sizes = {t.get_text(): t.get_fontsize() for t in plot.ax.texts}
@@ -476,7 +481,7 @@ class TestLabelAdjustmentsAndFontsize:
         plot.add_outline_layer(
             dissolve_column="district",
             show_labels=True,
-            label_options=LabelOptions(style="badge", fontsize=5),
+            label_options=LabelOptions(label_style="badge", fontsize=5),
         )
         plot.ax.figure.canvas.draw()
         sizes = {t.get_fontsize() for t in plot.ax.texts}
@@ -602,8 +607,8 @@ class TestTargetCrsSetter:
         assert rendered_x_max() > 1e5  # meters: layers were reprojected on rebuild
 
 
-class TestStyleShorthand:
-    """The top-level ``style=`` kwarg is shorthand for ``label_options.style``."""
+class TestLabelStyleShorthand:
+    """The top-level ``label_style=`` kwarg mirrors ``label_options.label_style``."""
 
     def _points(self, testing_gdf):
         import geopandas as gpd
@@ -611,49 +616,53 @@ class TestStyleShorthand:
         points = testing_gdf.geometry.representative_point().iloc[:2]
         return gpd.GeoSeries(points, crs=testing_gdf.crs)
 
-    def test_label_layer_style_kwarg_matches_label_options_form(self, testing_gdf):
+    def test_label_style_kwarg_matches_label_options_form(self, testing_gdf):
         from gerrytools.plotting.mpl.label_text_options import resolve_label_style
 
         shorthand = GeoPlot(testing_gdf, silent=True)
         shorthand.add_label_layer(
-            points_geoseries=self._points(testing_gdf), labels=["1", "2"], style="badge"
+            points_geoseries=self._points(testing_gdf),
+            labels=["1", "2"],
+            label_style="badge",
         )
         bundled = GeoPlot(testing_gdf, silent=True)
         bundled.add_label_layer(
             points_geoseries=self._points(testing_gdf),
             labels=["1", "2"],
-            label_options=LabelOptions(style="badge"),
+            label_options=LabelOptions(label_style="badge"),
         )
         assert shorthand._marker_layers[-1].label_style == resolve_label_style("badge")
         assert shorthand._marker_layers[-1].label_style == bundled._marker_layers[-1].label_style
 
-    def test_style_kwarg_merges_into_styleless_label_options(self, testing_gdf):
+    def test_label_style_kwarg_merges_into_options_without_style(self, testing_gdf):
         plot = GeoPlot(testing_gdf, silent=True)
         plot.add_label_layer(
             points_geoseries=self._points(testing_gdf),
             labels=["01", "2"],
-            style="halo",
+            label_style="halo",
             label_options=LabelOptions(exclude=[1]),
         )
         layer = plot._marker_layers[-1]
         assert list(layer.labels or []) == ["2"]
         assert layer.label_style is not None
 
-    def test_style_kwarg_conflicts_with_label_options_style(self, testing_gdf):
+    def test_label_style_kwarg_conflicts_with_bundled_label_style(self, testing_gdf):
         plot = GeoPlot(testing_gdf, silent=True)
         with pytest.raises(ValueError, match="not both"):
             plot.add_label_layer(
                 points_geoseries=self._points(testing_gdf),
                 labels=["1", "2"],
-                style="badge",
-                label_options=LabelOptions(style="halo"),
+                label_style="badge",
+                label_options=LabelOptions(label_style="halo"),
             )
 
-    def test_districting_plan_layer_accepts_style_kwarg(self, testing_gdf):
+    def test_districting_plan_layer_accepts_label_style_kwarg(self, testing_gdf):
         from gerrytools.plotting.mpl.label_text_options import resolve_label_style
 
         plot = GeoPlot(testing_gdf, silent=True)
-        plot.add_districting_plan_layer("district", dissolve=True, show_labels=True, style="badge")
+        plot.add_districting_plan_layer(
+            "district", dissolve=True, show_labels=True, label_style="badge"
+        )
         request = plot._label_requests[-1]
-        assert request.options.resolved_style == resolve_label_style("badge")
+        assert request.options.resolved_label_style == resolve_label_style("badge")
         assert request.dissolved

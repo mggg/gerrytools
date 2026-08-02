@@ -20,6 +20,7 @@ import math
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal, cast
+from weakref import WeakKeyDictionary
 
 import matplotlib.colors as mcolors
 import numpy as np
@@ -52,6 +53,15 @@ Unit = Literal[
     "axis_visibility",
     "aspect",
 ]
+
+
+def _recompute_data_limits(ax: Axes) -> None:
+    """Recompute limits, including collections that Matplotlib's ``relim`` skips."""
+    ax.relim()
+    for collection in ax.collections:
+        bounds = collection.get_datalim(ax.transData)
+        ax.update_datalim(bounds.get_points())
+
 
 # Internal sentinel marking "gerrytools claimed the unit but has not yet
 # recorded a concrete applied value." Never escapes to user code; never
@@ -522,6 +532,7 @@ class _ManagedAxesState:
 
     def __init__(self) -> None:
         self._units: dict[Unit, _UnitState] = {unit: _UnitState() for unit in _ALL_UNITS}
+        self._axes_histories: WeakKeyDictionary[Axes, dict[Unit, _UnitState]] = WeakKeyDictionary()
 
     # -- initialization & rebind ------------------------------------------------
 
@@ -570,6 +581,25 @@ class _ManagedAxesState:
             if state.ownership in ("external", "gerrytools_default"):
                 state.ownership = "unclaimed"
             state.last_applied = _NO_LAST_APPLIED
+
+    def remember_axes(self, ax: Axes) -> None:
+        """Save this plot's ownership history for an axes it is leaving."""
+        self._axes_histories[ax] = {
+            unit: dataclasses.replace(state) for unit, state in self._units.items()
+        }
+
+    def restore_axes(self, ax: Axes) -> None:
+        """Restore prior history for ``ax``, while carrying current explicit claims."""
+        explicit: set[Unit] = {
+            unit for unit, state in self._units.items() if state.ownership == "gerrytools_explicit"
+        }
+        cached = self._axes_histories.get(ax)
+        if cached is None:
+            self.reset_history()
+        else:
+            self._units = {unit: dataclasses.replace(state) for unit, state in cached.items()}
+        for unit in explicit:
+            self._units[unit] = _UnitState("gerrytools_explicit", _NO_LAST_APPLIED)
 
     # -- snapshot & external detection ------------------------------------------
 

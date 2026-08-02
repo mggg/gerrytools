@@ -24,11 +24,17 @@ from gerrytools.scoring import (
     Tally,
     TallyByRegion,
 )
+from gerrytools.scoring.single_plan._base import _expect
 
 
 def test_single_plan_namespace_owns_convenience_functions() -> None:
     assert scoring.single_plan.tally is scoring.tally
     assert scoring.single_plan.polsby_popper is scoring.polsby_popper
+
+
+def test_single_plan_result_boundary_rejects_unexpected_type() -> None:
+    with pytest.raises(RuntimeError, match="returned Series; expected float or int"):
+        _expect((float, int), pd.Series([1.0]))
 
 
 def resources() -> tuple[nx.Graph, gpd.GeoDataFrame, Partition]:
@@ -74,7 +80,7 @@ def expected_partition(
     evaluator = PlanEvaluator(
         graph,
         geometry=geometry,
-        node_column="node" if geometry is not None else None,
+        node_id_column="node" if geometry is not None else None,
     )
     result = evaluator.add_metric(metric).evaluate(partition)
     return result[result.metrics[0]]
@@ -108,28 +114,32 @@ def test_partition_single_plan_functions_match_plan_evaluator() -> None:
                 partition,
                 columns=("population", "vap"),
                 geometry=units,
-                node_column="node",
+                node_id_column="node",
             ),
             Tally("population", "vap"),
             True,
         ),
         (
             scoring.polsby_popper(partition),
-            PolsbyPopper(source="graph"),
+            PolsbyPopper(),
             False,
         ),
         (
-            scoring.polsby_popper(partition, units, node_column="node"),
+            scoring.polsby_popper(
+                partition,
+                geometry=units,
+                node_id_column="node",
+            ),
             PolsbyPopper(),
             True,
         ),
         (
-            scoring.reock(partition, geometry=units, node_column="node"),
+            scoring.reock(partition, geometry=units, node_id_column="node"),
             Reock(),
             True,
         ),
         (
-            scoring.convex_hull_ratio(partition, geometry=units, node_column="node"),
+            scoring.convex_hull_ratio(partition, geometry=units, node_id_column="node"),
             ConvexHullRatio(),
             True,
         ),
@@ -138,7 +148,7 @@ def test_partition_single_plan_functions_match_plan_evaluator() -> None:
                 partition,
                 state_geometry=state,
                 geometry=units,
-                node_column="node",
+                node_id_column="node",
             ),
             StateClippedConvexHullRatio(state),
             True,
@@ -148,22 +158,22 @@ def test_partition_single_plan_functions_match_plan_evaluator() -> None:
                 partition,
                 population_col="population",
                 geometry=units,
-                node_column="node",
+                node_id_column="node",
             ),
             PopulationPolygon("population"),
             True,
         ),
         (
-            scoring.cut_edges(partition, weight="weight"),
+            scoring.cut_edges(partition, weight_attr="weight"),
             CutEdges("weight"),
             False,
         ),
         (
             scoring.region_splits(
                 partition,
-                regions=("region",),
+                region_attrs=("region",),
                 geometry=units,
-                node_column="node",
+                node_id_column="node",
             ),
             RegionSplits("region"),
             True,
@@ -171,9 +181,9 @@ def test_partition_single_plan_functions_match_plan_evaluator() -> None:
         (
             scoring.region_pieces(
                 partition,
-                regions="region",
+                region_attrs="region",
                 geometry=units,
-                node_column="node",
+                node_id_column="node",
             ),
             RegionPieces("region"),
             True,
@@ -181,9 +191,9 @@ def test_partition_single_plan_functions_match_plan_evaluator() -> None:
         (
             scoring.region_parts(
                 partition,
-                regions="region",
+                region_attrs="region",
                 geometry=units,
-                node_column="node",
+                node_id_column="node",
             ),
             RegionParts("region"),
             True,
@@ -191,11 +201,11 @@ def test_partition_single_plan_functions_match_plan_evaluator() -> None:
         (
             scoring.tally_by_region(
                 partition,
-                region="region",
+                region_attr="region",
                 columns={"population": "population"},
                 include_count=True,
                 geometry=units,
-                node_column="node",
+                node_id_column="node",
             ),
             TallyByRegion(
                 "region",
@@ -240,18 +250,18 @@ def test_geodataframe_single_plan_functions_match_plan_evaluator() -> None:
             PopulationPolygon("population"),
         ),
         (
-            scoring.region_splits(frame, "district", regions="region"),
+            scoring.region_splits(frame, "district", region_attrs="region"),
             RegionSplits("region"),
         ),
         (
-            scoring.region_pieces(frame, "district", regions="region"),
+            scoring.region_pieces(frame, "district", region_attrs="region"),
             RegionPieces("region"),
         ),
         (
             scoring.tally_by_region(
                 frame,
                 "district",
-                region="region",
+                region_attr="region",
                 columns={"population": "population"},
                 include_count=True,
             ),
@@ -302,9 +312,9 @@ def test_single_plan_graph_sources_and_topology_requirements() -> None:
     frame = cast(gpd.GeoDataFrame, units.set_index("node"))
     assignment = {"a": "north", "b": "north", "c": "south", "d": "south"}
 
-    assert scoring.cut_edges(graph, assignment, weight="weight") == scoring.cut_edges(
+    assert scoring.cut_edges(graph, assignment, weight_attr="weight") == scoring.cut_edges(
         partition,
-        weight="weight",
+        weight_attr="weight",
     )
     assert_same(
         scoring.polsby_popper(graph, assignment),
@@ -313,24 +323,29 @@ def test_single_plan_graph_sources_and_topology_requirements() -> None:
     assert scoring.region_parts(
         graph,
         assignment,
-        regions="region",
+        region_attrs="region",
         geometry=units,
-        node_column="node",
+        node_id_column="node",
     ) == scoring.region_parts(
         partition,
-        regions="region",
+        region_attrs="region",
         geometry=units,
-        node_column="node",
+        node_id_column="node",
     )
     assert_same(
-        scoring.tally(graph, assignment, columns="population", geometry=units, node_column="node"),
-        scoring.tally(partition, columns="population", geometry=units, node_column="node"),
+        scoring.tally(
+            graph, assignment, columns="population", geometry=units, node_id_column="node"
+        ),
+        scoring.tally(partition, columns="population", geometry=units, node_id_column="node"),
     )
 
     with pytest.raises(TypeError, match="requires a GerryChain Partition or graph"):
-        scoring.cut_edges(frame)  # type: ignore[arg-type]
+        scoring.cut_edges(frame)  # type: ignore
     with pytest.raises(TypeError, match="requires a GerryChain Partition or graph"):
-        scoring.region_parts(frame, regions="region")  # type: ignore[arg-type]
+        scoring.region_parts(
+            frame,  # type: ignore
+            region_attrs="region",
+        )
     with pytest.raises(TypeError, match="graph source requires an assignment"):
         scoring.tally(graph, columns="population")
     with pytest.raises(TypeError, match="cannot be a GeoDataFrame column"):
@@ -340,7 +355,10 @@ def test_single_plan_graph_sources_and_topology_requirements() -> None:
     with pytest.raises(TypeError, match="supplies its own assignment"):
         scoring.reock(partition, [0, 0, 1, 1], geometry=units)
     with pytest.raises(TypeError, match="source must"):
-        scoring.tally(object(), columns="population")  # type: ignore[arg-type]
+        scoring.tally(
+            object(),  # type: ignore
+            columns="population",
+        )
 
 
 def test_single_plan_sources_reject_ambiguous_argument_shapes() -> None:
@@ -349,19 +367,19 @@ def test_single_plan_sources_reject_ambiguous_argument_shapes() -> None:
 
     with pytest.raises(TypeError, match="GeoDataFrame source requires an assignment"):
         scoring.tally(frame, columns="population")
-    with pytest.raises(ValueError, match="node_column and crs require geometry"):
-        scoring.tally(partition, columns="population", node_column="node")
+    with pytest.raises(ValueError, match="node_id_column and target_crs require geometry"):
+        scoring.tally(partition, columns="population", node_id_column="node")
     with pytest.raises(TypeError, match="already a GeoDataFrame"):
         scoring.tally(frame, "district", columns="population", geometry=units)
-    with pytest.raises(TypeError, match="node_column applies only"):
-        scoring.tally(frame, "district", columns="population", node_column="node")
-    with pytest.raises(TypeError, match="second Partition argument must be a GeoDataFrame"):
+    with pytest.raises(TypeError, match="node_id_column applies only"):
+        scoring.tally(frame, "district", columns="population", node_id_column="node")
+    with pytest.raises(TypeError, match="supplies its own assignment"):
         scoring.polsby_popper(partition, [0, 0, 1, 1])
-    with pytest.raises(TypeError, match="positionally or by keyword"):
+    with pytest.raises(TypeError, match="district labels, not a GeoDataFrame"):
         scoring.polsby_popper(partition, units, geometry=units)
-    with pytest.raises(TypeError, match="graph source requires district labels"):
+    with pytest.raises(TypeError, match="district labels, not a GeoDataFrame"):
         scoring.polsby_popper(graph, units)
-    with pytest.raises(TypeError, match="GeoDataFrame source requires district labels"):
+    with pytest.raises(TypeError, match="district labels, not a GeoDataFrame"):
         scoring.polsby_popper(frame, units)
 
 
@@ -370,7 +388,7 @@ def test_partition_assignment_uses_original_labels_and_caches_graph_check() -> N
     reordered = nx.Graph()
     reordered.add_nodes_from(sorted(graph.nodes(data=True)))
     reordered.add_edges_from(graph.edges(data=True))
-    evaluator = PlanEvaluator(reordered, geometry=units, node_column="node").add_metric(
+    evaluator = PlanEvaluator(reordered, geometry=units, node_id_column="node").add_metric(
         Tally("population")
     )
 
@@ -397,7 +415,7 @@ def test_partition_assignment_uses_original_labels_and_caches_graph_check() -> N
 
 def test_partition_graph_cache_does_not_retain_independent_graphs() -> None:
     graph, units, _ = resources()
-    evaluator = PlanEvaluator(graph, geometry=units, node_column="node").add_metric(
+    evaluator = PlanEvaluator(graph, geometry=units, node_id_column="node").add_metric(
         Tally("population")
     )
 
@@ -431,26 +449,26 @@ def test_plan_evaluator_series_assignment_uses_index_labels() -> None:
 
 def test_geometry_is_authoritative_but_graph_polsby_uses_graph_measurements() -> None:
     graph, units, partition = resources()
-    evaluator = PlanEvaluator(graph, geometry=units, node_column="node")
+    evaluator = PlanEvaluator(graph, geometry=units, node_id_column="node")
     population = evaluator.add_metric(Tally("population")).evaluate(partition)["population"]
     assert isinstance(population, pd.Series)
     assert population.sum() == 100
 
     with pytest.raises(ValueError, match="geometry row .* has no 'graph_only'"):
-        PlanEvaluator(graph, geometry=units, node_column="node").add_metric(
+        PlanEvaluator(graph, geometry=units, node_id_column="node").add_metric(
             Tally("graph_only")
         ).evaluate([0, 0, 1, 1])
 
-    graph_values = PlanEvaluator(graph, geometry=units, node_column="node").add_metric(
-        PolsbyPopper(source="graph")
+    graph_values = PlanEvaluator(graph, geometry=units, node_id_column="node").add_metric(
+        PolsbyPopper(area_attr="area")
     )
-    auto_graph_values = PlanEvaluator(graph, geometry=units, node_column="node").add_metric(
-        PolsbyPopper(area="area")
+    inferred_graph_values = PlanEvaluator(graph, geometry=units, node_id_column="node").add_metric(
+        PolsbyPopper(area_attr="area")
     )
     without_geometry = PlanEvaluator(graph).add_metric(PolsbyPopper())
     assert_same(
         graph_values.evaluate(partition)["polsby_popper"],
-        auto_graph_values.evaluate(partition)["polsby_popper"],
+        inferred_graph_values.evaluate(partition)["polsby_popper"],
     )
     assert_same(
         graph_values.evaluate(partition)["polsby_popper"],
@@ -462,14 +480,14 @@ def test_geometry_is_authoritative_but_graph_polsby_uses_graph_measurements() ->
 def test_compactness_wrapper_graph_columns_override_available_geometry(metric) -> None:
     graph, units, _ = resources()
     assignment = {"a": "north", "b": "north", "c": "south", "d": "south"}
-    expected = PlanEvaluator(graph).add_metric(PolsbyPopper(area="area")).evaluate(assignment)
+    expected = PlanEvaluator(graph).add_metric(PolsbyPopper(area_attr="area")).evaluate(assignment)
 
     actual = metric(
         graph,
         assignment,
         geometry=units,
-        node_column="node",
-        area="area",
+        node_id_column="node",
+        area_attr="area",
     )
 
     expected_values = cast(pd.Series, expected["polsby_popper"])
@@ -478,7 +496,7 @@ def test_compactness_wrapper_graph_columns_override_available_geometry(metric) -
     assert_same(actual, expected_values)
 
 
-def test_geometry_polsby_uses_cached_rook_edges_instead_of_caller_edges() -> None:
+def test_geometry_polsby_derives_rook_edges_and_reuses_native_geometry() -> None:
     frame = gpd.GeoDataFrame(
         {"district": ["A", "A", "B"]},
         geometry=[
@@ -500,14 +518,20 @@ def test_geometry_polsby_uses_cached_rook_edges_instead_of_caller_edges() -> Non
 
     assert_same(wrong_values, correct_values)
     assert wrong_evaluator._resources is not None
-    assert wrong_evaluator._resources.rook_edges == ((0, 2), (1, 2))
-    assert wrong_evaluator._resources.rook_edges is wrong_evaluator._resources.rook_edges
+    assert wrong_evaluator._resources.geometry is not None
+    native = wrong_evaluator._resources.geometry.native
+
+    wrong_evaluator.add_metric(Reock()).evaluate(assignment)
+
+    assert wrong_evaluator._resources is not None
+    assert wrong_evaluator._resources.geometry is not None
+    assert wrong_evaluator._resources.geometry.native is native
 
 
 def test_validated_geometry_snapshot_excludes_unrequested_columns() -> None:
     graph, units, assignment = resources()
     units["unused"] = ["discard"] * len(units)
-    evaluator = PlanEvaluator(graph, geometry=units, node_column="node").add_metric(Reock())
+    evaluator = PlanEvaluator(graph, geometry=units, node_id_column="node").add_metric(Reock())
 
     evaluator.evaluate(assignment)
 
@@ -519,7 +543,7 @@ def test_validated_geometry_snapshot_excludes_unrequested_columns() -> None:
 def test_geometry_can_be_nonprojected_until_geometry_is_requested() -> None:
     graph, units, _ = resources()
     geographic = units.to_crs("EPSG:4326")
-    evaluator = PlanEvaluator(graph, geometry=geographic, node_column="node").add_metric(
+    evaluator = PlanEvaluator(graph, geometry=geographic, node_id_column="node").add_metric(
         Tally("population")
     )
     assert isinstance(evaluator.evaluate([0, 0, 1, 1])["population"], pd.Series)
@@ -530,8 +554,8 @@ def test_geometry_can_be_nonprojected_until_geometry_is_requested() -> None:
     reprojected = PlanEvaluator(
         graph,
         geometry=geographic,
-        node_column="node",
-        crs="EPSG:5070",
+        node_id_column="node",
+        target_crs="EPSG:5070",
     ).add_metric(Tally("population"))
     assert_same(
         reprojected.evaluate([0, 0, 1, 1])["population"],
@@ -541,14 +565,14 @@ def test_geometry_can_be_nonprojected_until_geometry_is_requested() -> None:
     assert reprojected._resources.geometry is None
 
     with pytest.raises(ValueError, match="projected CRS"):
-        PlanEvaluator(graph, geometry=geographic, node_column="node").add_metric(Reock()).evaluate(
-            [0, 0, 1, 1]
-        )
+        PlanEvaluator(graph, geometry=geographic, node_id_column="node").add_metric(
+            Reock()
+        ).evaluate([0, 0, 1, 1])
 
 
 def test_active_geometry_column_is_reserved_for_geometry_backed_metrics() -> None:
     graph, units, _ = resources()
-    evaluator = PlanEvaluator(graph, geometry=units, node_column="node").add_metric(
+    evaluator = PlanEvaluator(graph, geometry=units, node_id_column="node").add_metric(
         RegionSplits(str(units.geometry.name))
     )
 
@@ -563,7 +587,7 @@ def test_add_geometry_must_precede_metric_registration_without_mutating_evaluato
     evaluator = PlanEvaluator(graph).add_metric(Tally("population"))
 
     with pytest.raises(RuntimeError, match="before the first metric"):
-        evaluator.add_geometry(units, node_column="node")
+        evaluator.add_geometry(units, node_id_column="node")
 
     values = evaluator.evaluate([0, 0, 1, 1])["population"]
     assert isinstance(values, pd.Series)
@@ -573,24 +597,24 @@ def test_add_geometry_must_precede_metric_registration_without_mutating_evaluato
 def test_add_geometry_validates_identifiers_and_snapshots_values() -> None:
     graph, units, _ = resources()
 
-    with pytest.raises(ValueError, match="does not contain node column"):
-        PlanEvaluator(graph, geometry=units, node_column="missing").add_metric(
+    with pytest.raises(ValueError, match="does not contain node ID column"):
+        PlanEvaluator(graph, geometry=units, node_id_column="missing").add_metric(
             Tally("population")
         ).evaluate([0, 0, 1, 1])
     with pytest.raises(ValueError, match="must exactly match graph nodes"):
         PlanEvaluator(
             graph,
             geometry=cast(gpd.GeoDataFrame, units.iloc[:-1]),
-            node_column="node",
+            node_id_column="node",
         ).add_metric(Tally("population")).evaluate([0, 0, 1, 1])
     duplicated = units.copy()
     duplicated.loc[duplicated.index[-1], "node"] = "d"
     with pytest.raises(ValueError, match="must be unique"):
-        PlanEvaluator(graph, geometry=duplicated, node_column="node").add_metric(
+        PlanEvaluator(graph, geometry=duplicated, node_id_column="node").add_metric(
             Tally("population")
         ).evaluate([0, 0, 1, 1])
 
-    evaluator = PlanEvaluator(graph, geometry=units, node_column="node").add_metric(
+    evaluator = PlanEvaluator(graph, geometry=units, node_id_column="node").add_metric(
         Tally("population")
     )
     units["population"] = 0
@@ -603,7 +627,7 @@ def test_add_geometry_validates_identifiers_and_snapshots_values() -> None:
     assert cached.sum() == 0
 
     with pytest.raises(RuntimeError, match="already been added"):
-        PlanEvaluator(graph, geometry=units, node_column="node").add_geometry(
+        PlanEvaluator(graph, geometry=units, node_id_column="node").add_geometry(
             units,
-            node_column="node",
+            node_id_column="node",
         )

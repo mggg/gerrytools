@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Any, Sequence, cast
 
 import numpy as np
 from matplotlib.axes import Axes
@@ -15,7 +15,13 @@ from gerrytools.plotting.data.options import (
     SeatsVotesMarkerOptions,
     _needs_default_edge_width,
 )
-from gerrytools.plotting.utils import _replace_non_none, _validated_nonneg_finite
+from gerrytools.plotting.utils import (
+    UNSET,
+    Unset,
+    _replace_non_none,
+    _replace_with_color_overrides,
+    _validated_nonneg_finite,
+)
 from gerrytools.typing import Color, LegendHandle
 
 
@@ -36,8 +42,8 @@ class _SeatsVotesData:
         line_style (SeatsVotesLineOptions): Styling for the seats-votes curve. ``None`` width
             inherits the plot-level default.
         marker_style (SeatsVotesMarkerOptions): Styling for the election-result marker. ``None``
-            size inherits the plot-level default; ``None`` edge color/alpha fall back to the
-            marker face at render time.
+            size inherits the plot-level default; an unset edge color falls back to the marker
+            face at render time.
         marker_label (str): The label for the marker in the legend.
     """
 
@@ -75,7 +81,8 @@ class _SeatsVotesData:
     def resolved_markeredgecolor(self) -> Color | None:
         """Return marker edge color, defaulting to marker face color."""
         edgecolor = self.marker_style.markeredgecolor
-        return self.marker_style.markerfacecolor if edgecolor is None else edgecolor
+        facecolor = self.marker_style.resolved_markerfacecolor()
+        return facecolor if isinstance(edgecolor, Unset) else edgecolor
 
     def resolved_markeredgealpha(self) -> float | None:
         """Return marker edge alpha, defaulting to marker face alpha."""
@@ -116,7 +123,7 @@ class SeatsVotesPlot(_UnitSquarePlotBase):
             ax (matplotlib.axes.Axes | None, optional): Render onto an existing
                 matplotlib ``Axes`` instead of creating a fresh figure. Defaults to None.
             legend (bool, optional): Whether to include a legend in the plot.
-                Defaults to True.
+                Defaults to False.
             xlabel (str | None, optional): The label for the x-axis. Defaults to None.
             ylabel (str | None, optional): The label for the y-axis. Defaults to None.
             title (str | None, optional): The title of the plot. Defaults to None.
@@ -134,8 +141,8 @@ class SeatsVotesPlot(_UnitSquarePlotBase):
         self._sv_data_list: list[_SeatsVotesData] = []
 
         self._display_election_markers = True
-        self.standard_marker_color: Color = "#daa520"
-        self.standard_election_color: Color = "#006400"
+        self.standard_marker_color: Color | None = "#daa520"
+        self.standard_election_color: Color | None = "#006400"
 
         self._linewidth = 2.5
         self._markersize = 8.0
@@ -173,16 +180,16 @@ class SeatsVotesPlot(_UnitSquarePlotBase):
         *,
         line_options: SeatsVotesLineOptions | None = None,
         marker_options: SeatsVotesMarkerOptions | None = None,
-        linecolor: Color | None = None,
+        linecolor: Color | None | Unset = UNSET,
         linealpha: float | None = None,
         linestyle: str | None = None,
         linewidth: float | None = None,
         zorder: int | None = None,
-        markerfacecolor: Color | None = None,
+        markerfacecolor: Color | None | Unset = UNSET,
         markerfacealpha: float | None = None,
         marker: str | None = None,
         markersize: float | None = None,
-        markeredgecolor: Color | None = None,
+        markeredgecolor: Color | None | Unset = UNSET,
         markeredgealpha: float | None = None,
         markeredgewidth: float | None = None,
         marker_zorder: int | None = None,
@@ -194,37 +201,36 @@ class SeatsVotesPlot(_UnitSquarePlotBase):
             target_party_vote_shares (Sequence[int | float] | NDArray): A sequence or array of vote
                 counts or vote shares for the party of interest in each district. When
                 ``total_votes`` is omitted, values must be shares between 0 and 1.
-            total_votes (Sequence[int | float] | NDArray, optional): A sequence or array of
-                total vote counts or shares in each district. If None, then `target_party_vote_shares`
-                is assumed to
-                be vote shares (values between 0 and 1) and total vote share is assumed to be 1.0
-                for all districts. If provided, must be the same shape as `target_party_vote_shares`.
-                Defaults to None.
+            total_votes (Sequence[int | float] | NDArray, optional): A sequence or array of total
+                vote counts or shares in each district. If None, ``target_party_vote_shares`` is
+                assumed to contain vote shares between 0 and 1, and total vote share is assumed to
+                be 1.0 for all districts. If provided, it must have the same shape as
+                ``target_party_vote_shares``. Defaults to None.
             name (str | None, optional): The name of the election/series, used for labeling the
                 seats-votes curve in the legend. Defaults to None.
             line_options (SeatsVotesLineOptions | None, optional): Base curve styling. Explicit
                 line keyword arguments override matching fields. Defaults to None.
             marker_options (SeatsVotesMarkerOptions | None, optional): Base result-marker styling.
                 Explicit marker keyword arguments override matching fields. Defaults to None.
-            linecolor (Color | None, optional): The color of the seats-votes curve. Defaults to
-                None, which uses ``self.standard_election_color``.
+            linecolor (Color | None, optional): The curve color. Pass ``None`` for no line. When
+                omitted, uses ``self.standard_election_color``.
             linealpha (float | None, optional): The alpha transparency for the seats-votes curve.
                 Defaults to None.
             linestyle (str, optional): The line style for the seats-votes curve. Defaults to "-".
             linewidth (float | None, optional): The line width for this seats-votes curve.
                 Defaults to None, which uses ``self.linewidth``.
             zorder (int, optional): The z-order of the seats-votes curve. Defaults to 1.
-            markerfacecolor (Color | None, optional): The color of the
-                overall marker point. Defaults to None, which uses ``self.standard_marker_color``.
-                Markers are controlled by ``display_election_markers(enabled)``.
+            markerfacecolor (Color | None, optional): Overall marker fill. Pass ``None`` for no
+                fill. When omitted, uses ``self.standard_marker_color``. Markers are controlled by
+                ``display_election_markers(enabled)``.
             markerfacealpha (float | None, optional): The alpha transparency of the marker face.
                 Defaults to None.
             marker (str, optional): The marker style for the election-result marker.
                 Defaults to "o".
             markersize (float | None, optional): Marker size for this data set.
                 Defaults to None, which uses ``self.markersize``.
-            markeredgecolor (Color | None, optional): Marker edge color. Defaults to None, which
-                uses markerfacecolor.
+            markeredgecolor (Color | None, optional): Marker edge color. Pass ``None`` for no edge.
+                When omitted, uses ``markerfacecolor``.
             markeredgealpha (float | None, optional): Marker edge alpha. Defaults to None, which
                 uses markerfacealpha.
             markeredgewidth (float, optional): Marker edge width. Defaults to None (unset): when a
@@ -267,23 +273,30 @@ class SeatsVotesPlot(_UnitSquarePlotBase):
             raise ValueError("target_party_vote_shares cannot exceed total_votes.")
         seats_votes_curve_values(vote_share_array, total_votes_array)
 
-        # Explicit kwargs override the options objects; None-valued option colors inherit
-        # the plot-level standard colors.
+        # Explicit kwargs override the options objects; unset option colors inherit the
+        # plot-level standard colors.
         line_base = line_options if line_options is not None else SeatsVotesLineOptions()
-        line_style = _replace_non_none(
+        line_style = _replace_with_color_overrides(
             line_base,
+            ("linecolor", "linealpha"),
             linecolor=linecolor,
             linealpha=linealpha,
             linestyle=linestyle,
             linewidth=linewidth,
             zorder=zorder,
         )
-        if line_style.linecolor is None:
-            line_style = _replace_non_none(line_style, linecolor=self.standard_election_color)
+        if isinstance(line_style.linecolor, Unset):
+            line_style = _replace_with_color_overrides(
+                line_style,
+                ("linecolor", "linealpha"),
+                linecolor=self.standard_election_color,
+            )
 
         marker_base = marker_options if marker_options is not None else SeatsVotesMarkerOptions()
-        marker_style = _replace_non_none(
+        marker_style = _replace_with_color_overrides(
             marker_base,
+            ("markerfacecolor", "markerfacealpha"),
+            ("markeredgecolor", "markeredgealpha"),
             markerfacecolor=markerfacecolor,
             markerfacealpha=markerfacealpha,
             marker=marker,
@@ -293,14 +306,24 @@ class SeatsVotesPlot(_UnitSquarePlotBase):
             markeredgewidth=markeredgewidth,
             marker_zorder=marker_zorder,
         )
-        if marker_style.markerfacecolor is None:
-            marker_style = _replace_non_none(
-                marker_style, markerfacecolor=self.standard_marker_color
+        if isinstance(marker_style.markerfacecolor, Unset):
+            marker_style = _replace_with_color_overrides(
+                marker_style,
+                ("markerfacecolor", "markerfacealpha"),
+                markerfacecolor=self.standard_marker_color,
             )
+        resolved_edgecolor: Color | None = (
+            marker_style.resolved_markerfacecolor()
+            if isinstance(marker_style.markeredgecolor, Unset)
+            else marker_style.markeredgecolor
+        )
+        edgecolor_was_selected = not isinstance(markeredgecolor, Unset) or (
+            marker_options is not None and not isinstance(marker_options.markeredgecolor, Unset)
+        )
         if _needs_default_edge_width(
-            edgewidth_given=markeredgewidth is not None,
+            edgewidth_given=not marker_style._markeredgewidth_defaulted,
             resolved_edgewidth=marker_style.markeredgewidth,
-            resolved_edgecolor=marker_style.markeredgecolor,
+            resolved_edgecolor=resolved_edgecolor if edgecolor_was_selected else None,
         ):
             marker_style = _replace_non_none(marker_style, markeredgewidth=DEFAULT_EDGE_WIDTH)
 
@@ -318,7 +341,11 @@ class SeatsVotesPlot(_UnitSquarePlotBase):
 
     @deferred_axis_update
     def display_election_markers(self, enabled: bool) -> None:
-        """Set whether overall election-result markers are displayed."""
+        """Set whether overall election-result markers are displayed.
+
+        Args:
+            enabled (bool): Whether to display the markers.
+        """
         self._display_election_markers = enabled
 
     def _draw_seats_votes_curves(self) -> None:
@@ -332,7 +359,7 @@ class SeatsVotesPlot(_UnitSquarePlotBase):
                 seat_shares,
                 where="pre",
                 color=self._resolved_rgba(
-                    sv_series.line_style.linecolor,
+                    sv_series.line_style.resolved_linecolor(),
                     alpha=sv_series.line_style.linealpha,
                     field="linecolor",
                 ),
@@ -356,7 +383,7 @@ class SeatsVotesPlot(_UnitSquarePlotBase):
                 marker=marker_style.marker,
                 linestyle="",
                 markerfacecolor=self._resolved_rgba(
-                    marker_style.markerfacecolor,
+                    marker_style.resolved_markerfacecolor(),
                     alpha=marker_style.markerfacealpha,
                     field="markerfacecolor",
                 ),
@@ -392,15 +419,15 @@ class SeatsVotesPlot(_UnitSquarePlotBase):
         curve_entries = dict.fromkeys(
             (sdata.line_style, sdata.name) for sdata in self._sv_data_list
         )
-        return [
+        handles: list[LegendHandle] = [
             Line2D(
                 [0],
                 [0],
-                linestyle=line_style.linestyle,
+                linestyle=cast("Any", line_style.linestyle),
                 marker="",
                 label=name,
                 color=self._resolved_rgba(
-                    line_style.linecolor,
+                    line_style.resolved_linecolor(),
                     alpha=line_style.linealpha,
                     field="linecolor",
                 ),
@@ -410,6 +437,7 @@ class SeatsVotesPlot(_UnitSquarePlotBase):
             )
             for line_style, name in curve_entries
         ]
+        return handles
 
     def _get_sv_marker_legend_handles(self) -> list[LegendHandle]:
         """Generate legend handles for election-result markers.
@@ -423,8 +451,8 @@ class SeatsVotesPlot(_UnitSquarePlotBase):
         handles: list[LegendHandle] = []
         for marker_style, marker_label in marker_entries:
             edgecolor = (
-                marker_style.markerfacecolor
-                if marker_style.markeredgecolor is None
+                marker_style.resolved_markerfacecolor()
+                if isinstance(marker_style.markeredgecolor, Unset)
                 else marker_style.markeredgecolor
             )
             edgealpha = (
@@ -440,7 +468,7 @@ class SeatsVotesPlot(_UnitSquarePlotBase):
                     label=marker_label,
                     marker=marker_style.marker,
                     markerfacecolor=self._resolved_rgba(
-                        marker_style.markerfacecolor,
+                        marker_style.resolved_markerfacecolor(),
                         alpha=marker_style.markerfacealpha,
                         field="markerfacecolor",
                     ),

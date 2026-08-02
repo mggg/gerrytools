@@ -129,7 +129,7 @@ class TestManagedTitle:
         plot.bind_to_ax(ax)
 
         assert ax.get_title(loc="left") == "Georgia"
-        assert ax._left_title.get_fontsize() == 18
+        assert getattr(ax, "_left_title").get_fontsize() == 18
 
     def test_omitted_title_preserves_external_title(self, testing_gdf):
         _, ax = plt.subplots()

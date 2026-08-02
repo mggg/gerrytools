@@ -427,6 +427,41 @@ def test_notebook_cache_matches_source_content(tmp_path: Path) -> None:
     assert not refresh.notebook_is_cached(path, cache)
 
 
+def test_notebook_execution_preserves_source_metadata(tmp_path: Path, monkeypatch) -> None:
+    path = tmp_path / "example.ipynb"
+    spec = spec_from_file_location("refresh_notebooks", DOCS / "_refresh_notebooks.py")
+    assert spec is not None and spec.loader is not None
+    refresh = module_from_spec(spec)
+    spec.loader.exec_module(refresh)
+
+    source = refresh.nbformat.v4.new_notebook(
+        cells=[refresh.nbformat.v4.new_code_cell("print(1)")],
+        metadata={
+            "kernelspec": {"display_name": ".venv", "language": "python", "name": "python3"},
+            "language_info": {"name": "python", "version": "3.13.0"},
+        },
+    )
+    refresh.nbformat.write(source, path)
+
+    def fake_execute(client):
+        client.nb.metadata["language_info"]["version"] = "3.11.0"
+        client.nb.cells[0].execution_count = 1
+        client.nb.cells[0].outputs = [refresh.nbformat.v4.new_output("stream", text="1\n")]
+        return client.nb
+
+    monkeypatch.setattr(refresh.NotebookClient, "execute", fake_execute)
+
+    executed = refresh.execute(path)
+    cache = refresh.get_cache(str(tmp_path / "cache"))
+    cache.cache_notebook_bundle(
+        refresh.CacheBundleIn(executed, str(path)),
+        check_validity=False,
+    )
+
+    assert executed.metadata == source.metadata
+    assert refresh.notebook_is_cached(path, cache)
+
+
 # ---------------------------------------------------------------------------
 # Extractor unit tests
 # ---------------------------------------------------------------------------

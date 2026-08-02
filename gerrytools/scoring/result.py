@@ -7,13 +7,11 @@ import inspect
 import json
 import numbers
 import os
-import re
 import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
-from contextlib import contextmanager
-from dataclasses import dataclass
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
-from typing import BinaryIO, Literal, TypeAlias, cast
+from typing import BinaryIO, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -21,94 +19,44 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from numpy.typing import NDArray
 
-_Dtype: TypeAlias = Literal["bool", "float", "int"]
-_Shape = Literal["district", "plan", "region"]
+from ._manifest import find_manifest_path as _find_manifest_path
+from ._manifest import parse_manifest as _parse_manifest
+from ._types import (
+    EvaluationSummary,
+    _Dtype,
+    _EvaluationValue,
+    _MetricResult,
+    _ResultShape,
+    _RunMetric,
+    _RunTable,
+)
+
 _ReadOperation = Literal["frames", "raw", "read"]
 _PANDAS_DTYPES = {"bool": "bool", "float": "float64", "int": "int64"}
 _DTYPE_WIDTHS = {"bool": 1, "float": 8, "int": 8}
-_EvaluationValue: TypeAlias = bool | float | int | pd.Series | pd.DataFrame
 _PREFIX_COLUMNS = ("sample_offset", "repetitions", "accepted_index")
-_RESULT_NAME = re.compile(r"[A-Za-z0-9_.-]+")
 _WARNING_BYTES = 2 * 1024**3
 _ERROR_BYTES = 8 * 1024**3
 _FOOTER_EXPANSION = 16
 
 
 class EvaluationMemoryError(MemoryError):
-    """A result read rejected before its predicted peak exceeds the safety limit."""
+    """A result read rejected before its predicted peak exceeds the safety limit.
+
+    Args:
+        message (str): Human-readable error description.
+        estimated_bytes (int): Predicted peak memory use in bytes.
+        limit_bytes (int): Configured safety limit in bytes.
+
+    Attributes:
+        estimated_bytes (int): Predicted peak memory use in bytes.
+        limit_bytes (int): Configured safety limit in bytes.
+    """
 
     def __init__(self, message: str, estimated_bytes: int, limit_bytes: int) -> None:
         super().__init__(message)
         self.estimated_bytes = estimated_bytes
         self.limit_bytes = limit_bytes
-
-
-def is_valid_metric_name(name: object) -> bool:
-    """Whether ``name`` is safe as a metric instance and output path component."""
-    return (
-        isinstance(name, str)
-        and name not in {".", ".."}
-        and name.casefold() != "manifest.json"
-        and _RESULT_NAME.fullmatch(name) is not None
-    )
-
-
-@dataclass(frozen=True, slots=True)
-class EvaluationSummary:
-    """Counts produced by a batch or streaming evaluation.
-
-    ``samples`` is the number of plan occurrences and includes streaming frame repetitions.
-    ``accepted`` is the number of result rows; it equals ``samples`` for batch evaluation. Unique
-    counts ignore district labels and are ``None`` when tracking was not requested.
-    """
-
-    samples: int
-    accepted: int
-    unique_plans: int | None = None
-    unique_districts: int | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class _MetricResult:
-    """One logical result in batched canonical axis order."""
-
-    values: NDArray[np.float64]
-    shape: _Shape
-    columns: tuple[Hashable, ...]
-    districts: tuple[Hashable, ...]
-    dtypes: tuple[_Dtype, ...]
-    regions: tuple[Hashable, ...] = ()
-    region_name: str | None = None
-
-    def __post_init__(self) -> None:
-        if self.shape == "region":
-            expected = (len(self.columns), len(self.regions), len(self.districts))
-            valid = (
-                self.region_name is not None
-                and self.values.ndim == 4
-                and self.values.shape[1:] == expected
-            )
-        elif self.region_name is not None or self.regions:
-            valid = False
-        elif self.shape == "district":
-            expected = (len(self.columns), len(self.districts))
-            valid = self.values.ndim == 3 and self.values.shape[1:] == expected
-        else:
-            valid = (
-                not self.districts
-                and self.values.ndim == 2
-                and self.values.shape[1] == len(self.columns)
-            )
-        if not valid or len(self.dtypes) != len(self.columns):
-            raise ValueError("metric result values and axis metadata do not agree")
-        base_array = self.values
-        while True:
-            parent = base_array.base
-            if not isinstance(parent, np.ndarray):
-                break
-            base_array = parent
-        base_array.setflags(write=False)
-        self.values.setflags(write=False)
 
 
 def _index(values: Iterable[Hashable], name: str) -> pd.Index:
@@ -169,13 +117,33 @@ class _Evaluation(Mapping[str, _EvaluationValue]):
         return len(self._results)
 
     def array(self, name: str) -> NDArray[np.float64]:
-        """Return an immutable array ordered like the axes of ``result[name]``."""
+        """Return an immutable array ordered like the axes of ``result[name]``.
+
+        Args:
+            name (str): Registered metric name.
+
+        Returns:
+            NDArray[np.float64]: Metric values in canonical sample, metric, region, and district
+            axis order, with axes omitted when they do not apply.
+
+        Raises:
+            KeyError: If ``name`` is not present in the result.
+        """
         values = _metric(self._results, name).values
         return (values[0] if self._single else values).view()
 
 
 class PlanEvalResult(_Evaluation):
-    """Semantic metric values for one plan."""
+    """Read-only semantic metric values for one plan.
+
+    Instances are normally returned by :meth:`PlanEvaluator.evaluate`.
+
+    Args:
+        results (Mapping[str, _MetricResult]): Internal metric results produced by the evaluator.
+
+    Raises:
+        ValueError: If a metric contains anything other than one result row.
+    """
 
     _single = True
 
@@ -188,7 +156,7 @@ class PlanEvalResult(_Evaluation):
         result = _metric(self._results, name)
         values = result.values[0]
         columns = _index(result.columns, "metric")
-        if result.shape == "region":
+        if result.shape == _ResultShape.REGION:
             assert result.region_name is not None
             regions = _index(result.regions, result.region_name)
             districts = _index(result.districts, "district")
@@ -204,7 +172,7 @@ class PlanEvalResult(_Evaluation):
             dtypes: Iterable[_Dtype] = (dtype for dtype in result.dtypes for _ in result.districts)
             return _cast_columns(frame, result_columns, dtypes)
 
-        if result.shape == "plan":
+        if result.shape == _ResultShape.PLAN:
             if len(result.columns) == 1:
                 return _scalar(values[0], result.dtypes[0])
             typed_values = [
@@ -225,7 +193,20 @@ class PlanEvalResult(_Evaluation):
 
 
 class EnsembleEvalResult(_Evaluation):
-    """Semantic metric values for an ordered collection of plans."""
+    """Read-only semantic metric values for an ordered collection of plans.
+
+    Instances are normally returned by :meth:`PlanEvaluator.evaluate_many`.
+
+    Args:
+        results (Mapping[str, _MetricResult]): Internal metric results produced by the evaluator.
+        sample_ids (Iterable[Hashable] | None, optional): Unique labels for result rows. Defaults
+            to a zero-based range.
+        summary (EvaluationSummary | None, optional): Batch counts, or None to derive them from the
+            result rows. Defaults to None.
+
+    Raises:
+        ValueError: If metrics have inconsistent row counts or sample labels are invalid.
+    """
 
     _single = False
 
@@ -235,8 +216,26 @@ class EnsembleEvalResult(_Evaluation):
         sample_ids: Iterable[Hashable] | None = None,
         *,
         summary: EvaluationSummary | None = None,
-        _sample_name: str = "sample",
-        _sample_index: pd.Index | None = None,
+    ) -> None:
+        self._initialize(results, sample_ids, summary, sample_index=None)
+
+    @classmethod
+    def _from_index(
+        cls,
+        results: Mapping[str, _MetricResult],
+        sample_index: pd.Index,
+    ) -> EnsembleEvalResult:
+        result = cls.__new__(cls)
+        result._initialize(results, None, None, sample_index=sample_index)
+        return result
+
+    def _initialize(
+        self,
+        results: Mapping[str, _MetricResult],
+        sample_ids: Iterable[Hashable] | None,
+        summary: EvaluationSummary | None,
+        *,
+        sample_index: pd.Index | None,
     ) -> None:
         row_counts = {len(result.values) for result in results.values()}
         if not row_counts:
@@ -249,28 +248,29 @@ class EnsembleEvalResult(_Evaluation):
         elif summary.samples != count or summary.accepted != count:
             raise ValueError("batch evaluation summary must match its number of plans")
         self.summary = summary
-        if _sample_index is not None:
-            if sample_ids is not None or len(_sample_index) != count:
-                raise ValueError("private sample index must match the result rows")
-            self._samples = _sample_index
+        if sample_index is not None:
+            if sample_ids is not None or len(sample_index) != count:
+                raise ValueError("sample index must match the result rows")
+            self._samples = sample_index
         elif sample_ids is None:
-            self._samples = pd.RangeIndex(count, name=_sample_name)
+            self._samples = pd.RangeIndex(count, name="sample")
         else:
-            self._samples = _index(sample_ids, _sample_name)
+            self._samples = _index(sample_ids, "sample")
             if len(self._samples) != count:
                 raise ValueError(f"sample_ids has {len(self._samples)} values; expected {count}")
             try:
-                has_duplicates = self._samples.has_duplicates
+                for sample_id in self._samples:
+                    hash(sample_id)
             except TypeError:
                 raise ValueError("sample_ids must contain unique hashable values") from None
-            if has_duplicates:
+            if self._samples.has_duplicates:
                 raise ValueError("sample_ids must contain unique hashable values")
         super().__init__(results)
 
     def __getitem__(self, name: str) -> _EvaluationValue:
         result = _metric(self._results, name)
         values = result.values
-        if result.shape == "region":
+        if result.shape == _ResultShape.REGION:
             assert result.region_name is not None
             regions = _index(result.regions, result.region_name)
             districts = _index(result.districts, "district")
@@ -290,7 +290,7 @@ class EnsembleEvalResult(_Evaluation):
             dtypes: Iterable[_Dtype] = (dtype for dtype in result.dtypes for _ in result.districts)
             return _cast_columns(frame, columns, dtypes)
 
-        if result.shape == "plan":
+        if result.shape == _ResultShape.PLAN:
             if len(result.columns) == 1:
                 return pd.Series(
                     _writable(values[:, 0]),
@@ -319,22 +319,20 @@ class EnsembleEvalResult(_Evaluation):
         return _cast_columns(frame, columns, dtypes)
 
 
-@dataclass(frozen=True, slots=True)
-class _RunMetric:
-    name: str
-    shape: _Shape
-    table: Path
-    subkeys: tuple[str, ...]
-    columns: tuple[str, ...]
-    dtypes: tuple[_Dtype, ...]
-    table_size: int
-    table_sha256: str
-    regions: tuple[Hashable, ...] = ()
-    region_name: str | None = None
-
-
 class EvaluationRun:
-    """A completed streamed scoring run that can reconstruct logical metric results."""
+    """Read a completed streamed scoring run and reconstruct logical metric results.
+
+    Use :meth:`open` to validate a published run directory before reading its metrics.
+
+    Direct construction accepts already validated internal metadata; callers should normally use
+    :meth:`open`.
+
+    Args:
+        path (Path): Evaluation run directory.
+        summary (EvaluationSummary): Validated run counts.
+        districts (tuple[int, ...]): District labels in stored column order.
+        metrics (tuple[_RunMetric, ...]): Validated internal metric metadata.
+    """
 
     def __init__(
         self,
@@ -351,9 +349,20 @@ class EvaluationRun:
 
     @classmethod
     def open(cls, path: str | os.PathLike[str]) -> "EvaluationRun":
-        """Open and validate a successfully published evaluation run."""
+        """Open and validate a successfully published evaluation run.
+
+        Args:
+            path (str | os.PathLike[str]): Evaluation run directory.
+
+        Returns:
+            EvaluationRun: Validated lazy reader for the run.
+
+        Raises:
+            OSError: If the manifest or metric files cannot be read.
+            ValueError: If the manifest or run layout is malformed or inconsistent.
+        """
         run_path = Path(path)
-        manifest_path = run_path / "manifest.json"
+        manifest_path = _find_manifest_path(run_path)
         try:
             with manifest_path.open() as file:
                 manifest = json.load(file)
@@ -386,7 +395,23 @@ class EvaluationRun:
         return frames.copy()
 
     def raw(self, name: str, *, allow_large: bool = False) -> pd.DataFrame:
-        """Read one metric's physical Parquet table."""
+        """Read one metric's physical Parquet table.
+
+        Args:
+            name (str): Registered metric name.
+            allow_large (bool, optional): Whether to permit an eager read above the memory safety
+                limit. Defaults to False.
+
+        Returns:
+            pd.DataFrame: Physical rows, including frame metadata and stored metric columns.
+
+        Raises:
+            EvaluationMemoryError: If the estimated eager read is too large and ``allow_large`` is
+                False.
+            KeyError: If ``name`` is not a metric in this run.
+            TypeError: If ``allow_large`` is not a Boolean.
+            ValueError: If the stored table is malformed or inconsistent with the manifest.
+        """
         _validate_bool(allow_large, "allow_large")
         metric = _run_metric(self._metric_metadata, name)
         table = _read_eager_table(
@@ -406,7 +431,25 @@ class EvaluationRun:
         expand_repetitions: bool = False,
         allow_large: bool = False,
     ) -> _EvaluationValue:
-        """Read one logical metric, optionally expanding repeated stream frames."""
+        """Read one logical metric, optionally expanding repeated stream frames.
+
+        Args:
+            name (str): Registered metric name.
+            expand_repetitions (bool, optional): Whether to repeat accepted values by each frame's
+                repetition count. Defaults to False.
+            allow_large (bool, optional): Whether to permit an eager read above the memory safety
+                limit. Defaults to False.
+
+        Returns:
+            pd.Series | pd.DataFrame: Values in the metric's logical result shape.
+
+        Raises:
+            EvaluationMemoryError: If the estimated eager read is too large and ``allow_large`` is
+                False.
+            KeyError: If ``name`` is not a metric in this run.
+            TypeError: If a Boolean option has an incompatible type.
+            ValueError: If the stored table is malformed or inconsistent with the manifest.
+        """
         _validate_bool(expand_repetitions, "expand_repetitions")
         _validate_bool(allow_large, "allow_large")
         metric = _run_metric(self._metric_metadata, name)
@@ -440,27 +483,41 @@ class EvaluationRun:
         batch_size: int = 1_024,
         allow_large: bool = False,
     ) -> Iterator[pd.DataFrame]:
-        """Yield bounded physical-table batches for one metric."""
+        """Yield bounded physical-table batches for one metric.
+
+        Args:
+            name (str): Registered metric name.
+            batch_size (int, optional): Maximum physical rows per batch. Defaults to 1,024.
+            allow_large (bool, optional): Whether one batch may exceed the memory safety limit.
+                Defaults to False.
+
+        Yields:
+            pd.DataFrame: Physical rows with frame metadata and stored metric columns.
+
+        Raises:
+            EvaluationMemoryError: If one batch is too large and ``allow_large`` is False.
+            KeyError: If ``name`` is not a metric in this run.
+            TypeError: If ``allow_large`` is not a Boolean.
+            ValueError: If ``batch_size`` or the stored table is invalid.
+        """
         batch_size = _validate_batch_options(batch_size, allow_large)
         metric = _run_metric(self._metric_metadata, name)
         expected_offset = 0
         expected_accepted = 0
-        with _open_metric_reader(
+        with _open_metric_readers(
             metric,
             self.summary,
             self._districts,
             "raw",
             allow_large=allow_large,
             batch_size=batch_size,
-        ) as parquet:
-            columns = list(_PREFIX_COLUMNS) + _value_columns(metric, self._districts)
-            for record_batch in parquet.iter_batches(
-                batch_size=batch_size,
-                columns=columns,
-                use_threads=False,
+        ) as readers:
+            for table in _iter_physical_batches(
+                metric,
+                readers,
+                self._districts,
+                batch_size,
             ):
-                table = record_batch.to_pandas(use_threads=False)
-                del record_batch
                 _, expected_offset, expected_accepted = _validated_frame_batch(
                     table,
                     expected_offset,
@@ -482,26 +539,40 @@ class EvaluationRun:
         batch_size: int = 1_024,
         allow_large: bool = False,
     ) -> Iterator[pd.DataFrame]:
-        """Yield bounded accepted-frame batches without populating the eager cache."""
+        """Yield bounded accepted-frame batches without populating the eager cache.
+
+        Args:
+            batch_size (int, optional): Maximum accepted frames per batch. Defaults to 1,024.
+            allow_large (bool, optional): Whether one batch may exceed the memory safety limit.
+                Defaults to False.
+
+        Yields:
+            pd.DataFrame: Accepted frame metadata indexed by accepted-frame number.
+
+        Raises:
+            EvaluationMemoryError: If one batch is too large and ``allow_large`` is False.
+            TypeError: If ``allow_large`` is not a Boolean.
+            ValueError: If ``batch_size`` or the stored frame table is invalid.
+        """
         batch_size = _validate_batch_options(batch_size, allow_large)
         metric = next(iter(self._metric_metadata.values()))
         expected_offset = 0
         expected_accepted = 0
-        with _open_metric_reader(
+        with _open_metric_readers(
             metric,
             self.summary,
             self._districts,
             "frames",
             allow_large=allow_large,
             batch_size=batch_size,
-        ) as parquet:
-            for record_batch in parquet.iter_batches(
-                batch_size=batch_size,
-                columns=list(_PREFIX_COLUMNS),
-                use_threads=False,
+        ) as readers:
+            for table in _iter_physical_batches(
+                metric,
+                readers,
+                self._districts,
+                batch_size,
+                frames_only=True,
             ):
-                table = record_batch.to_pandas(use_threads=False)
-                del record_batch
                 output, expected_offset, expected_accepted = _validated_frame_batch(
                     table,
                     expected_offset,
@@ -522,14 +593,32 @@ class EvaluationRun:
         expand_repetitions: bool = False,
         allow_large: bool = False,
     ) -> Iterator[_EvaluationValue]:
-        """Yield bounded semantic batches for one metric."""
+        """Yield bounded semantic batches for one metric.
+
+        Args:
+            name (str): Registered metric name.
+            batch_size (int, optional): Maximum logical rows per batch. Defaults to 1,024.
+            expand_repetitions (bool, optional): Whether to repeat accepted values by each frame's
+                repetition count. Defaults to False.
+            allow_large (bool, optional): Whether one batch may exceed the memory safety limit.
+                Defaults to False.
+
+        Yields:
+            pd.Series | pd.DataFrame: Values in the metric's logical result shape.
+
+        Raises:
+            EvaluationMemoryError: If one batch is too large and ``allow_large`` is False.
+            KeyError: If ``name`` is not a metric in this run.
+            TypeError: If a Boolean option has an incompatible type.
+            ValueError: If ``batch_size`` or the stored table is invalid.
+        """
         batch_size = _validate_batch_options(batch_size, allow_large)
         _validate_bool(expand_repetitions, "expand_repetitions")
         metric = _run_metric(self._metric_metadata, name)
         expected_offset = 0
         expected_accepted = 0
         sample_start = 0
-        with _open_metric_reader(
+        with _open_metric_readers(
             metric,
             self.summary,
             self._districts,
@@ -537,15 +626,13 @@ class EvaluationRun:
             expand_repetitions=expand_repetitions,
             allow_large=allow_large,
             batch_size=batch_size,
-        ) as parquet:
-            columns = list(_PREFIX_COLUMNS) + _value_columns(metric, self._districts)
-            for record_batch in parquet.iter_batches(
-                batch_size=batch_size,
-                columns=columns,
-                use_threads=False,
+        ) as readers:
+            for table in _iter_physical_batches(
+                metric,
+                readers,
+                self._districts,
+                batch_size,
             ):
-                table = record_batch.to_pandas(use_threads=False)
-                del record_batch
                 accepted_start = expected_accepted
                 _, expected_offset, expected_accepted = _validated_frame_batch(
                     table,
@@ -624,19 +711,29 @@ def _read_eager_table(
     expand_repetitions: bool = False,
     allow_large: bool,
 ) -> pd.DataFrame:
-    with _open_metric_reader(
+    with _open_metric_readers(
         metric,
         summary,
         districts,
         operation,
         expand_repetitions=expand_repetitions,
         allow_large=allow_large,
-    ) as parquet:
-        return parquet.read(columns=columns, use_threads=False).to_pandas(use_threads=False)
+    ) as readers:
+        if columns is not None:
+            parquet = readers[0][1]
+            return parquet.read(columns=columns, use_threads=False).to_pandas(use_threads=False)
+        tables = [
+            parquet.read(
+                columns=list(_PREFIX_COLUMNS) + _table_value_columns(metric, table, districts),
+                use_threads=False,
+            ).to_pandas(use_threads=False)
+            for table, parquet in readers
+        ]
+        return _combine_physical_tables(metric, tables)
 
 
 @contextmanager
-def _open_metric_reader(
+def _open_metric_readers(
     metric: _RunMetric,
     summary: EvaluationSummary,
     districts: tuple[int, ...],
@@ -645,8 +742,14 @@ def _open_metric_reader(
     expand_repetitions: bool = False,
     allow_large: bool,
     batch_size: int | None = None,
-) -> Iterator[pq.ParquetFile]:
-    with _verified_metric_file(metric) as (file, footer_length):
+) -> Iterator[list[tuple[_RunTable, pq.ParquetFile]]]:
+    selected = metric.tables[:1] if operation == "frames" else metric.tables
+    with ExitStack() as stack:
+        verified = [
+            (table, *stack.enter_context(_verified_metric_file(metric, table)))
+            for table in selected
+        ]
+        footer_length = sum(footer for _, _, footer in verified)
         estimate = _estimate_memory(
             metric,
             summary,
@@ -677,11 +780,17 @@ def _open_metric_reader(
             iterator=batch_size is not None,
             can_reduce_batch=minimum < _ERROR_BYTES <= estimate,
         )
-        parquet = _validated_parquet_file(file, metric, summary, districts)
+        readers = [
+            (table, _validated_parquet_file(file, metric, table, summary, districts))
+            for table, file, _ in verified
+        ]
         if batch_size is not None:
-            metadata = parquet.metadata
             largest_row_group = max(
-                (metadata.row_group(index).num_rows for index in range(metadata.num_row_groups)),
+                (
+                    parquet.metadata.row_group(index).num_rows
+                    for _, parquet in readers
+                    for index in range(parquet.metadata.num_row_groups)
+                ),
                 default=0,
             )
             batch_rows = min(summary.accepted, batch_size)
@@ -716,17 +825,20 @@ def _open_metric_reader(
                 can_reduce_batch=minimum < _ERROR_BYTES <= estimate,
                 warned=warned,
             )
-        yield parquet
+        yield readers
 
 
 @contextmanager
-def _verified_metric_file(metric: _RunMetric) -> Iterator[tuple[BinaryIO, int]]:
-    with metric.table.open("rb") as file:
+def _verified_metric_file(
+    metric: _RunMetric,
+    table: _RunTable,
+) -> Iterator[tuple[BinaryIO, int]]:
+    with table.path.open("rb") as file:
         size = os.fstat(file.fileno()).st_size
-        if size != metric.table_size:
+        if size != table.size:
             raise ValueError(f"metric {metric.name!r} table failed its integrity check")
         digest = hashlib.file_digest(file, "sha256").hexdigest()
-        if digest != metric.table_sha256:
+        if digest != table.sha256:
             raise ValueError(f"metric {metric.name!r} table failed its integrity check")
         if size < 12:
             raise ValueError(f"metric {metric.name!r} has an invalid Parquet footer")
@@ -744,6 +856,7 @@ def _verified_metric_file(metric: _RunMetric) -> Iterator[tuple[BinaryIO, int]]:
 def _validated_parquet_file(
     file: BinaryIO,
     metric: _RunMetric,
+    table: _RunTable,
     summary: EvaluationSummary,
     districts: tuple[int, ...],
 ) -> pq.ParquetFile:
@@ -751,7 +864,11 @@ def _validated_parquet_file(
     if parquet.metadata.num_rows != summary.accepted:
         raise ValueError(f"metric {metric.name!r} Parquet row count disagrees with its manifest")
     schema = parquet.schema_arrow
-    expected_count = len(_PREFIX_COLUMNS) + _value_column_count(metric, districts)
+    expected_count = len(_PREFIX_COLUMNS) + _value_column_count(
+        metric,
+        districts,
+        table.subkeys,
+    )
     if len(schema) != expected_count:
         raise ValueError(f"metric {metric.name!r} Parquet columns disagree with its manifest")
     prefix_types = (pa.uint64(), pa.uint16(), pa.uint64())
@@ -761,7 +878,10 @@ def _validated_parquet_file(
             raise ValueError(f"metric {metric.name!r} Parquet columns disagree with its manifest")
         if field.type != dtype:
             raise ValueError(f"metric {metric.name!r} Parquet physical dtypes are unsupported")
-    for index, name in enumerate(_value_column_names(metric, districts), len(_PREFIX_COLUMNS)):
+    for index, name in enumerate(
+        _value_column_names(metric, districts, table.subkeys),
+        len(_PREFIX_COLUMNS),
+    ):
         field = schema.field(index)
         if field.name != name:
             raise ValueError(f"metric {metric.name!r} Parquet columns disagree with its manifest")
@@ -773,11 +893,13 @@ def _validated_parquet_file(
 def _value_column_names(
     metric: _RunMetric,
     districts: tuple[int, ...],
+    subkeys: tuple[str, ...] | None = None,
 ) -> Iterator[str]:
-    if metric.shape == "plan":
-        yield from metric.subkeys
+    subkeys = metric.subkeys if subkeys is None else subkeys
+    if metric.shape == _ResultShape.PLAN:
+        yield from subkeys
         return
-    for subkey in metric.subkeys:
+    for subkey in subkeys:
         for district in districts:
             yield f"{subkey}__district_{district}"
 
@@ -786,8 +908,75 @@ def _value_columns(metric: _RunMetric, districts: tuple[int, ...]) -> list[str]:
     return list(_value_column_names(metric, districts))
 
 
-def _value_column_count(metric: _RunMetric, districts: tuple[int, ...]) -> int:
-    return len(metric.subkeys) if metric.shape == "plan" else len(metric.subkeys) * len(districts)
+def _table_value_columns(
+    metric: _RunMetric,
+    table: _RunTable,
+    districts: tuple[int, ...],
+) -> list[str]:
+    return list(_value_column_names(metric, districts, table.subkeys))
+
+
+def _value_column_count(
+    metric: _RunMetric,
+    districts: tuple[int, ...],
+    subkeys: tuple[str, ...] | None = None,
+) -> int:
+    subkeys = metric.subkeys if subkeys is None else subkeys
+    return len(subkeys) if metric.shape == _ResultShape.PLAN else len(subkeys) * len(districts)
+
+
+def _combine_physical_tables(metric: _RunMetric, tables: list[pd.DataFrame]) -> pd.DataFrame:
+    first = tables[0]
+    prefix = first.loc[:, list(_PREFIX_COLUMNS)]
+    values = [first.iloc[:, len(_PREFIX_COLUMNS) :]]
+    for table in tables[1:]:
+        if not table.loc[:, list(_PREFIX_COLUMNS)].equals(prefix):
+            raise ValueError(
+                f"metric {metric.name!r} frame columns disagree across physical tables"
+            )
+        values.append(table.iloc[:, len(_PREFIX_COLUMNS) :])
+    return pd.concat([prefix, *values], axis="columns")
+
+
+def _iter_physical_batches(
+    metric: _RunMetric,
+    readers: list[tuple[_RunTable, pq.ParquetFile]],
+    districts: tuple[int, ...],
+    batch_size: int,
+    *,
+    frames_only: bool = False,
+) -> Iterator[pd.DataFrame]:
+    iterators = [
+        parquet.iter_batches(
+            batch_size=batch_size,
+            columns=(
+                list(_PREFIX_COLUMNS)
+                if frames_only
+                else list(_PREFIX_COLUMNS) + _table_value_columns(metric, table, districts)
+            ),
+            use_threads=False,
+        )
+        for table, parquet in readers
+    ]
+    while True:
+        batches = []
+        ended = 0
+        for iterator in iterators:
+            try:
+                batches.append(next(iterator))
+            except StopIteration:
+                ended += 1
+        if ended:
+            if ended != len(iterators):
+                raise ValueError(
+                    f"metric {metric.name!r} physical tables have inconsistent batches"
+                )
+            return
+        tables = [batch.to_pandas(use_threads=False) for batch in batches]
+        output = tables[0] if frames_only else _combine_physical_tables(metric, tables)
+        del batches, tables
+        yield output
+        del output
 
 
 def _estimate_memory(
@@ -813,8 +1002,9 @@ def _estimate_memory(
         else accepted_rows
     )
     value_columns = _value_column_count(metric, districts)
-    physical = physical_rows * (18 + 8 * value_columns)
-    prefix_physical = physical_rows * 18
+    table_count = 1 if operation == "frames" else len(metric.tables)
+    physical = physical_rows * (18 * table_count + 8 * value_columns)
+    prefix_physical = physical_rows * 18 * table_count
     accepted_float = accepted_rows * 8 * value_columns
     logical_float = logical_rows * 8 * value_columns
     logical_final = logical_rows * _logical_width(metric, districts)
@@ -847,9 +1037,9 @@ def _estimate_memory(
 
 def _logical_width(metric: _RunMetric, districts: tuple[int, ...]) -> int:
     multiplier = 1
-    if metric.shape == "district":
+    if metric.shape == _ResultShape.DISTRICT:
         multiplier = len(districts)
-    elif metric.shape == "region":
+    elif metric.shape == _ResultShape.REGION:
         multiplier = len(districts) * len(metric.regions)
     return multiplier * sum(_DTYPE_WIDTHS[dtype] for dtype in metric.dtypes)
 
@@ -860,9 +1050,11 @@ def _semantic_index_bytes(
     rows: int,
 ) -> int:
     columns = (
-        len(metric.columns) if metric.shape == "plan" else len(metric.columns) * len(districts)
+        len(metric.columns)
+        if metric.shape == _ResultShape.PLAN
+        else len(metric.columns) * len(districts)
     )
-    if metric.shape == "region":
+    if metric.shape == _ResultShape.REGION:
         return 16 * (rows * len(metric.regions) + columns)
     return 16 * columns
 
@@ -937,14 +1129,14 @@ def _semantic_value(
     index: pd.Index,
 ) -> _EvaluationValue:
     row_count = len(flat_values)
-    if metric.shape == "region":
+    if metric.shape == _ResultShape.REGION:
         values = flat_values.reshape(
             row_count,
             len(metric.columns),
             len(metric.regions),
             len(districts),
         )
-    elif metric.shape == "district":
+    elif metric.shape == _ResultShape.DISTRICT:
         values = flat_values.reshape(row_count, len(metric.columns), len(districts))
     else:
         values = flat_values.reshape(row_count, len(metric.columns))
@@ -952,12 +1144,12 @@ def _semantic_value(
         values,
         metric.shape,
         metric.columns,
-        districts if metric.shape != "plan" else (),
+        districts if metric.shape != _ResultShape.PLAN else (),
         metric.dtypes,
         metric.regions,
         metric.region_name,
     )
-    return EnsembleEvalResult({name: result}, _sample_index=index)[name]
+    return EnsembleEvalResult._from_index({name: result}, index)[name]
 
 
 def _validate_bool(value: object, name: str) -> None:
@@ -1047,197 +1239,6 @@ def _validate_iterator_totals(
         raise ValueError("evaluation table row count disagrees with the manifest summary")
     if sample_offset != summary.samples:
         raise ValueError("evaluation table sample offsets disagree with repetitions")
-
-
-def _parse_manifest(
-    path: Path,
-    manifest: object,
-) -> tuple[EvaluationSummary, tuple[int, ...], tuple[_RunMetric, ...]]:
-    if not isinstance(manifest, dict):
-        raise ValueError("evaluation manifest must be an object")
-    data = cast("dict[str, object]", manifest)
-    format_version = data.get("format_version")
-    if isinstance(format_version, bool) or format_version != 1:
-        raise ValueError("evaluation manifest must use format version 1")
-    summary_data = data.get("summary")
-    if not isinstance(summary_data, dict):
-        raise ValueError("evaluation manifest requires a summary")
-    summary_data = cast("dict[str, object]", summary_data)
-    samples = _nonnegative_int(summary_data.get("samples"), "summary.samples")
-    accepted = _nonnegative_int(summary_data.get("accepted"), "summary.accepted")
-    if accepted > samples:
-        raise ValueError("evaluation manifest accepted frames cannot exceed samples")
-    has_unique_plans = "unique_plans" in summary_data
-    has_unique_districts = "unique_districts" in summary_data
-    if has_unique_plans != has_unique_districts:
-        raise ValueError("evaluation manifest unique plan and district counts must appear together")
-    unique_plans = (
-        _nonnegative_int(summary_data["unique_plans"], "summary.unique_plans")
-        if has_unique_plans
-        else None
-    )
-    unique_districts = (
-        _nonnegative_int(summary_data["unique_districts"], "summary.unique_districts")
-        if has_unique_districts
-        else None
-    )
-
-    prefix = data.get("prefix_columns")
-    expected_prefix = [
-        {"name": "sample_offset", "dtype": "uint64"},
-        {"name": "repetitions", "dtype": "uint16"},
-        {"name": "accepted_index", "dtype": "uint64"},
-    ]
-    if prefix != expected_prefix:
-        raise ValueError("evaluation manifest has unsupported prefix columns")
-
-    district_data = data.get("district_ids")
-    if not isinstance(district_data, list):
-        raise ValueError("evaluation manifest requires district_ids")
-    districts = tuple(_nonnegative_int(value, "district id") for value in district_data)
-    if len(set(districts)) != len(districts):
-        raise ValueError("evaluation manifest district_ids must be unique")
-    if unique_plans is None:
-        pass
-    elif accepted == 0:
-        if unique_plans != 0 or unique_districts != 0:
-            raise ValueError("an empty evaluation run cannot contain unique plans or districts")
-    else:
-        if not 1 <= unique_plans <= accepted:
-            raise ValueError(
-                "evaluation manifest unique plans must be between one and accepted frames"
-            )
-        assert unique_districts is not None
-        if not len(districts) <= unique_districts <= accepted * len(districts):
-            raise ValueError("evaluation manifest unique district count is inconsistent")
-    summary = EvaluationSummary(samples, accepted, unique_plans, unique_districts)
-
-    metric_data = data.get("metrics")
-    if not isinstance(metric_data, list) or not metric_data:
-        raise ValueError("evaluation manifest requires at least one metric")
-    metrics = tuple(_parse_run_metric(path, value) for value in metric_data)
-    names = [metric.name for metric in metrics]
-    if len(set(names)) != len(names):
-        raise ValueError("evaluation manifest metric names must be unique")
-    return summary, districts, metrics
-
-
-def _parse_run_metric(path: Path, value: object) -> _RunMetric:
-    if not isinstance(value, dict):
-        raise ValueError("evaluation manifest metric entries must be objects")
-    data = cast("dict[str, object]", value)
-    name = data.get("instance")
-    if not is_valid_metric_name(name):
-        raise ValueError("evaluation manifest contains an invalid metric name")
-    assert isinstance(name, str)
-    shape_value = data.get("shape")
-    if shape_value not in {"district", "plan", "region"}:
-        raise ValueError(f"metric {name!r} has an unsupported shape")
-    shape = cast("_Shape", shape_value)
-    table_name = data.get("table")
-    expected_table = f"{name}/scores.parquet"
-    if table_name != expected_table:
-        raise ValueError(f"metric {name!r} has an unsafe or unsupported table path")
-    table = path / expected_table
-    if not table.is_file():
-        raise FileNotFoundError(f"metric {name!r} table does not exist: {table}")
-    table_size = _nonnegative_int(data.get("table_size"), f"metric {name!r} table size")
-    table_sha256 = data.get("table_sha256")
-    if not isinstance(table_sha256, str) or re.fullmatch(r"[0-9a-f]{64}", table_sha256) is None:
-        raise ValueError(f"metric {name!r} requires a valid table SHA-256 digest")
-
-    subkeys = _string_tuple(data.get("subkeys"), f"metric {name!r} subkeys")
-    axes = data.get("axes")
-    regions: tuple[Hashable, ...] = ()
-    region_name: str | None = None
-    if shape == "region":
-        if not isinstance(axes, dict):
-            raise ValueError(f"region metric {name!r} requires axis metadata")
-        axes = cast("dict[str, object]", axes)
-        columns = _string_tuple(axes.get("metric"), f"metric {name!r} axis")
-        region = axes.get("region")
-        if not isinstance(region, dict):
-            raise ValueError(f"region metric {name!r} requires a region axis")
-        region = cast("dict[str, object]", region)
-        region_name_value = region.get("name")
-        if not isinstance(region_name_value, str) or not region_name_value:
-            raise ValueError(f"region metric {name!r} requires a region-axis name")
-        region_name = region_name_value
-        labels = region.get("labels")
-        if not isinstance(labels, list):
-            raise ValueError(f"region metric {name!r} requires region labels")
-        regions = tuple(_region_label(label, name) for label in labels)
-        if len(set(regions)) != len(regions):
-            raise ValueError(f"region metric {name!r} has duplicate region labels")
-        expected_subkeys = tuple(
-            f"{column}__region_{region_index}"
-            for column in columns
-            for region_index in range(len(regions))
-        )
-        if subkeys != expected_subkeys:
-            raise ValueError(f"region metric {name!r} subkeys disagree with its axes")
-    else:
-        if not isinstance(axes, dict):
-            raise ValueError(f"metric {name!r} requires axis metadata")
-        axes = cast("dict[str, object]", axes)
-        if axes.get("region") is not None:
-            raise ValueError(f"non-region metric {name!r} cannot define region axes")
-        columns = _string_tuple(axes.get("metric"), f"metric {name!r} axis")
-        if not subkeys or columns != subkeys:
-            raise ValueError(f"metric {name!r} axis values disagree with its subkeys")
-
-    dtypes = _dtype_tuple(data.get("dtypes"), name, len(columns))
-    return _RunMetric(
-        name,
-        shape,
-        table,
-        subkeys,
-        columns,
-        dtypes,
-        table_size,
-        table_sha256,
-        regions,
-        region_name,
-    )
-
-
-def _string_tuple(value: object, label: str) -> tuple[str, ...]:
-    if (
-        not isinstance(value, list)
-        or any(not isinstance(item, str) or not item for item in value)
-        or len(set(value)) != len(value)
-    ):
-        raise ValueError(f"{label} must contain unique nonempty strings")
-    return cast("tuple[str, ...]", tuple(value))
-
-
-def _dtype_tuple(value: object, name: str, count: int) -> tuple[_Dtype, ...]:
-    if (
-        not isinstance(value, list)
-        or len(value) != count
-        or any(dtype not in _PANDAS_DTYPES for dtype in value)
-    ):
-        raise ValueError(f"metric {name!r} has invalid logical dtypes")
-    return cast("tuple[_Dtype, ...]", tuple(value))
-
-
-def _region_label(value: object, name: str) -> Hashable:
-    if not isinstance(value, dict) or set(value) != {"kind", "value"}:
-        raise ValueError(f"region metric {name!r} has an invalid region label")
-    data = cast("dict[str, object]", value)
-    kind = data["kind"]
-    label = data["value"]
-    if kind == "str" and isinstance(label, str):
-        return label
-    if kind == "int" and isinstance(label, int) and not isinstance(label, bool):
-        return label
-    raise ValueError(f"region metric {name!r} has an invalid region label")
-
-
-def _nonnegative_int(value: object, label: str) -> int:
-    if not isinstance(value, numbers.Integral) or isinstance(value, (bool, np.bool_)) or value < 0:
-        raise ValueError(f"evaluation manifest {label} must be a nonnegative integer")
-    return int(value)
 
 
 def _validated_frames(table: pd.DataFrame, summary: EvaluationSummary) -> pd.DataFrame:

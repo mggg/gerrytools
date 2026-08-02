@@ -10,6 +10,7 @@ reviewable.
 """
 
 import argparse
+import copy
 import re
 import shutil
 import sys
@@ -27,13 +28,7 @@ CACHE = DOCS / "_build" / ".jupyter_cache"
 
 
 def normalize(nb: nbformat.NotebookNode) -> None:
-    """Strip metadata and output noise that varies between runs or machines."""
-    nb.metadata.pop("language_info", None)
-    nb.metadata["kernelspec"] = {
-        "display_name": "Python 3",
-        "language": "python",
-        "name": "python3",
-    }
+    """Strip cell metadata and output noise that varies between runs or machines."""
     for cell in nb.cells:
         cell.metadata.pop("execution", None)
         merged: list[nbformat.NotebookNode] = []
@@ -62,6 +57,7 @@ def normalize(nb: nbformat.NotebookNode) -> None:
 
 def execute(path: Path) -> nbformat.NotebookNode:
     nb = nbformat.read(path, as_version=4)
+    source_metadata = copy.deepcopy(nb.metadata)
     nb.metadata.pop("widgets", None)
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -76,6 +72,9 @@ def execute(path: Path) -> nbformat.NotebookNode:
         )
         client.execute()
     normalize(nb)
+    # jupyter-cache hashes notebook metadata as well as cell sources. Preserve the source metadata
+    # so the pre-built entry matches the output-free notebook Sphinx later opens.
+    nb.metadata = source_metadata
     return nb
 
 

@@ -1,9 +1,11 @@
 use crate::{Error, Result};
 use ben::format::banners::has_known_banner_prefix;
-use ben::io::bundle::format::BENDL_MAGIC;
+use ben::io::bundle::format::{ASSET_TYPE_GRAPH, BENDL_MAGIC};
 use ben::io::bundle::{BendlReader, ExactLen};
 use ben::io::reader::{BenStreamFrameReader, BenStreamReader, BenWireFormat};
 use ben::BenVariant;
+use serde::Deserialize;
+use serde_json::Value;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
@@ -42,9 +44,19 @@ enum SourceKind {
         offset: u64,
         len: u64,
         wire: BenWireFormat,
-        #[cfg(test)]
         sample_count: usize,
     },
+}
+
+#[derive(Deserialize)]
+struct EmbeddedGraph {
+    #[serde(default)]
+    nodes: Vec<EmbeddedNode>,
+}
+
+#[derive(Deserialize)]
+struct EmbeddedNode {
+    id: Value,
 }
 
 struct PassGuard {
@@ -108,8 +120,45 @@ impl AssignmentSource {
         Ok(self.open_reader()?.variant())
     }
 
-    #[cfg(test)]
-    fn declared_sample_count(&self) -> Option<usize> {
+    /// Verify every BENDL asset and compare its embedded graph against evaluator node order.
+    ///
+    /// This reads through clones of the descriptor retained by `AssignmentSource`, so validation
+    /// and scoring cannot be separated by a path replacement.
+    pub fn validate_bundle_graph_node_order(&self, expected_json: Option<&str>) -> Result<()> {
+        let SourceKind::Bundle { .. } = &self.kind else {
+            return Ok(());
+        };
+        let mut reader = BendlReader::open(clone_at(&self.file, 0)?)
+            .map_err(|error| Error::InvalidInput(error.to_string()))?;
+        reader
+            .verify_all_asset_checksums()
+            .map_err(|error| Error::InvalidInput(error.to_string()))?;
+        let Some(entry) = reader.find_asset_by_type(ASSET_TYPE_GRAPH).cloned() else {
+            return Ok(());
+        };
+        let expected_json = expected_json.ok_or_else(|| {
+            Error::InvalidInput(
+                "BENDL graph node labels must be JSON-compatible for evaluator alignment".into(),
+            )
+        })?;
+        let expected: Vec<Value> = serde_json::from_str(expected_json).map_err(|error| {
+            Error::InvalidInput(format!("invalid evaluator node order: {error}"))
+        })?;
+        let graph: EmbeddedGraph = serde_json::from_slice(
+            &reader
+                .asset_bytes(&entry)
+                .map_err(|error| Error::InvalidInput(error.to_string()))?,
+        )
+        .map_err(|error| Error::InvalidInput(format!("invalid embedded BENDL graph: {error}")))?;
+        if graph.nodes.into_iter().map(|node| node.id).ne(expected) {
+            return Err(Error::InvalidInput(
+                "BENDL graph node order must exactly match evaluator node order".into(),
+            ));
+        }
+        Ok(())
+    }
+
+    pub(crate) fn declared_sample_count(&self) -> Option<usize> {
         match &self.kind {
             SourceKind::File { .. } => None,
             SourceKind::Bundle { sample_count, .. } => Some(*sample_count),
@@ -188,7 +237,6 @@ impl AssignmentSource {
             offset,
             len,
             wire,
-            #[cfg(test)]
             sample_count,
         })
     }
@@ -216,6 +264,11 @@ fn sniff(path: &Path, file: &mut File) -> Result<InputKind> {
 
     if bytes.starts_with(&BENDL_MAGIC) {
         Ok(InputKind::Bundle)
+    } else if bytes.starts_with(b"BENDL") {
+        Err(Error::InvalidInput(format!(
+            "unrecognized BENDL version magic {:?}",
+            &bytes[..bytes.len().min(BENDL_MAGIC.len())]
+        )))
     } else if has_known_banner_prefix(bytes) {
         Ok(InputKind::Ben)
     } else if bytes.starts_with(&XZ_MAGIC) {
