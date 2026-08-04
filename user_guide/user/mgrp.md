@@ -67,10 +67,10 @@ configuration. Two materially different runs therefore do not silently share the
 output path. `run()` returns the primary output path; `expected_files()` also reports metadata,
 tally, assignment, or optimizer-score sidecars produced by that runner.
 
-The detailed tutorials use placeholder paths such as `data/dual_graph.json`. Replace those paths
-and column names with the project's inputs. The configuration examples execute without Docker;
-the sampling calls are displayed but not executed. Run them locally once Docker and the input data
-are available.
+The detailed tutorials use the small `data/mgrp_7x7.json` graph and
+`data/mgrp_12x12.gpkg` map shipped with the documentation. Their sampling calls are displayed
+rather than executed during the documentation build, but can be copied into a notebook and run
+once Docker is available. Replace the tutorial paths and column names when moving to project data.
 
 ## Related
 

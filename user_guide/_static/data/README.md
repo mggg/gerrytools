@@ -45,6 +45,15 @@ Election columns are counts, not percentages. The source assignment and election
 retained for teaching aggregation and plotting; they are not the current Georgia districts,
 precincts, or election record.
 
+## `mgrp_7x7.json` and `mgrp_12x12.gpkg`
+
+These compact synthetic maps make the MGRP tutorials runnable without downloading project data.
+`mgrp_7x7.json` is a 49-node grid dual graph with population, initial district, county, and
+precinct attributes. It supports both the Rust ReCom and hierarchical Forest examples.
+`mgrp_12x12.gpkg` is a 144-feature grid with population-group, county, VTD, and initial-district
+columns for the Sequential Monte Carlo examples. The live engine tests run against these same
+files, so the tutorial inputs stay aligned with the pinned Docker image.
+
 ## `ga_congressional_plans.csv.gz` and `ga_congressional_plans.gpkg`
 
 These files support the geometry guide's comparison of Georgia's 2021 and 2023 congressional

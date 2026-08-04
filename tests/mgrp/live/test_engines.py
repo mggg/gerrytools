@@ -23,7 +23,7 @@ from gerrytools.mgrp import (
 )
 
 pytestmark = pytest.mark.mgrp_live
-FIXTURES = Path(__file__).parents[2] / "fixtures"
+FIXTURES = Path(__file__).parents[3] / "user_guide" / "_static" / "data"
 
 
 def metadata_path(output_path):
@@ -251,7 +251,7 @@ def test_forest_config_transport_and_provenance(mgrp_image, tmp_path):
 
 
 def test_smc_config_transport_and_provenance(mgrp_image, tmp_path):
-    geopackage = FIXTURES / "testing_12x12.gpkg"
+    geopackage = FIXTURES / "mgrp_12x12.gpkg"
     runner = SMCRunnerConfig(
         str(geopackage),
         output_folder=str(tmp_path / "output"),

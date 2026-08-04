@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+from importlib import import_module
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -240,7 +241,9 @@ def _show_png_qt(
         RuntimeError: If ``PyQt6`` is unavailable or the PNG cannot be loaded.
     """
     try:
-        from PyQt6 import QtCore, QtGui, QtWidgets  # type: ignore
+        QtCore = import_module("PyQt6.QtCore")
+        QtGui = import_module("PyQt6.QtGui")
+        QtWidgets = import_module("PyQt6.QtWidgets")
     except ImportError as exc:
         raise RuntimeError(
             "PyQt6 is required for non-Jupyter preview. Install PyQt6 or use save_png/save_pdf."
