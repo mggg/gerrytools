@@ -240,7 +240,7 @@ def _show_png_qt(
         RuntimeError: If ``PyQt6`` is unavailable or the PNG cannot be loaded.
     """
     try:
-        from PyQt6 import QtCore, QtGui, QtWidgets
+        from PyQt6 import QtCore, QtGui, QtWidgets  # type: ignore
     except ImportError as exc:
         raise RuntimeError(
             "PyQt6 is required for non-Jupyter preview. Install PyQt6 or use save_png/save_pdf."
