@@ -1,38 +1,284 @@
-from dataclasses import dataclass, field
-import os
-import json
+import copy
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from dataclasses import dataclass, field, replace
 from pathlib import Path
-from .. import RunnerConfig
-from typing import Callable, Dict
+from typing import Literal, NotRequired, TypedDict, cast, get_args, overload
+
+from ..constraints import ConstraintsLike, ConstraintSpec, constraint_specs
+from ..objectives import ObjectiveSpec, validate_objective_spec
+from ..run_config import (
+    check_boolean,
+    check_finite_nonnegative,
+    check_finite_number,
+    check_nonempty_string,
+    check_positive_int,
+    check_rng_seed,
+    check_string_list,
+    check_unit_interval,
+)
+from ..run_container import (
+    RunInfo,
+    RunnerConfig,
+    _resolve_output_name,
+    _validate_output_file_name,
+)
+
+ChainVariant = Literal[
+    "A",
+    "B",
+    "C",
+    "D",
+    "R",
+    "AW",
+    "BW",
+    "cut-edges-mst",
+    "district-pairs-mst",
+    "cut-edges-ust",
+    "district-pairs-ust",
+    "reversible",
+    "cut-edges-region-aware",
+    "district-pairs-region-aware",
+]
+"""A chain proposal variant: a letter code or its rustrecom spelling (normalized to the letter)."""
+
+OptimizerVariant = Literal[
+    "A",
+    "B",
+    "C",
+    "D",
+    "cut-edges-mst",
+    "district-pairs-mst",
+    "cut-edges-ust",
+    "district-pairs-ust",
+]
+"""An optimizer proposal variant; the optimizers support neither reversible nor the region-aware
+spellings (region-aware sampling comes from supplying ``region_weights`` with A or B)."""
+
+Writer = Literal[
+    "tsv",
+    "jsonl",
+    "pcompress",
+    "jsonl-full",
+    "assignments",
+    "canonicalized-assignments",
+    "canonical",
+    "ben",
+    "bendl",
+]
+"""A rustrecom output writer name."""
+
+AcceptRule = Literal["fixed", "linear", "exponential"]
+"""A tilted-run acceptance rule for worsening proposals."""
+
+# Letter codes are the established shorthand; the long names match the rustrecom CLI.
+VARIANT_TO_RUSTRECOM = {
+    "A": "cut-edges-mst",
+    "B": "district-pairs-mst",
+    "C": "cut-edges-ust",
+    "D": "district-pairs-ust",
+    "R": "reversible",
+    "AW": "cut-edges-region-aware",
+    "BW": "district-pairs-region-aware",
+}
+RUSTRECOM_TO_VARIANT = {name: letter for letter, name in VARIANT_TO_RUSTRECOM.items()}
+
+WRITERS: tuple[str, ...] = get_args(Writer)
+
+
+def _checked_chain_variant(variant: str) -> ChainVariant:
+    """Normalize a chain variant to its letter code, rejecting unknown spellings.
+
+    Applied at construction and again at config build, so a post-construction ``variant``
+    assignment cannot bypass validation.
+    """
+    normalized = RUSTRECOM_TO_VARIANT.get(variant, variant)
+    if normalized not in VARIANT_TO_RUSTRECOM:
+        raise ValueError(
+            f"Unknown variant {variant!r}. Choose one of A, B, C, D, "
+            "R (reversible), AW (cut edges region aware), BW (district pairs "
+            f"region aware), or the rustrecom names: {', '.join(RUSTRECOM_TO_VARIANT)}."
+        )
+    return cast(ChainVariant, normalized)
+
+
+def _checked_optimizer_variant(variant: str) -> OptimizerVariant:
+    """Normalize an optimizer variant to its letter code, rejecting unknown spellings.
+
+    Applied at construction and again at config build, so a post-construction ``variant``
+    assignment cannot bypass validation.
+    """
+    normalized = RUSTRECOM_TO_VARIANT.get(variant, variant)
+    if normalized not in OPTIMIZER_VARIANTS:
+        raise ValueError(
+            f"Unknown optimizer variant {variant!r}. Choose one of A, B, C, D "
+            "(region-aware sampling comes from supplying 'region_weights' with A or B), "
+            f"or the rustrecom names: "
+            f"{', '.join(VARIANT_TO_RUSTRECOM[letter] for letter in OPTIMIZER_VARIANTS)}."
+        )
+    return cast(OptimizerVariant, normalized)
+
+
+def _checked_writer(writer: str) -> Writer:
+    """Reject unknown writers, at construction and again at config build."""
+    if writer not in WRITERS:
+        raise ValueError(f"Unknown writer {writer!r}. Choose one of: {', '.join(WRITERS)}.")
+    return cast(Writer, writer)
+
+
+class RecomChainConfig(TypedDict):
+    """Validated rustrecom chain configuration sent to the container.
+
+    Attributes:
+        version (Literal[1]): Native configuration schema version.
+        command (str): Rustrecom subcommand, currently ``"chain"``.
+        graph_json (str): Container path to the dual-graph JSON file.
+        n_steps (int): Number of chain steps.
+        tol (float): Permitted relative population deviation.
+        pop_col (str): Node column containing districting population.
+        assignment_col (str): Node column containing the initial assignment.
+        rng_seed (int): Random-number-generator seed.
+        variant (str): Native rustrecom proposal-variant name.
+        target_pop (int | None): Explicit ideal district population, or None to derive it.
+        balance_ub (int): Reversible-variant balance upper bound.
+        n_threads (int): Number of proposal-generation threads.
+        batch_size (int): Number of proposals generated per batch.
+        writer (Writer): Chain-record output format.
+        sum_cols (list[str]): Node columns to aggregate in JSON outputs.
+        region_weights (dict[str, float]): Edge surcharges keyed by region column.
+        edge_weight_keys (list[str]): Edge columns added to spanning-tree weights.
+        cut_edges_count (bool): Whether to include the cut-edge count in output.
+        output_file (str | None): Container output path, or None to write to stdout.
+        bendl_graph_order (str): Graph ordering used before BENDL encoding.
+        show_progress (bool): Whether rustrecom writes progress to stderr.
+        constraint (ConstraintSpec, optional): Validated rustrecom constraint.
+    """
+
+    version: Literal[1]
+    command: str
+    graph_json: str
+    n_steps: int
+    tol: float
+    pop_col: str
+    assignment_col: str
+    rng_seed: int
+    variant: str
+    target_pop: int | None
+    balance_ub: int
+    n_threads: int
+    batch_size: int
+    writer: Writer
+    sum_cols: list[str]
+    region_weights: dict[str, float]
+    edge_weight_keys: list[str]
+    cut_edges_count: bool
+    output_file: str | None
+    bendl_graph_order: str
+    show_progress: bool
+    constraint: NotRequired[ConstraintSpec]
+
+
+class OptimizerConfig(TypedDict):
+    """Validated rustrecom optimizer configuration sent to the container.
+
+    Attributes:
+        version (Literal[1]): Native configuration schema version.
+        command (str): Optimizer subcommand, ``"short-bursts"`` or ``"tilted"``.
+        graph_json (str): Container path to the dual-graph JSON file.
+        n_steps (int): Total number of proposals.
+        tol (float): Permitted relative population deviation.
+        pop_col (str): Node column containing districting population.
+        assignment_col (str): Node column containing the initial assignment.
+        rng_seed (int): Random-number-generator seed.
+        objective (ObjectiveSpec): Validated objective driving the optimizer.
+        maximize (bool): Whether larger objective values are preferred.
+        n_threads (int): Number of proposal-generation threads.
+        variant (str): Native rustrecom proposal-variant name.
+        writer (Writer): Chain-record output format.
+        sum_cols (list[str]): Node columns aggregated over districts.
+        partial_sum_cols (list[str]): Sum columns whose missing node values count as zero.
+        region_weights (dict[str, float]): Edge surcharges keyed by region column.
+        edge_weight_keys (list[str]): Edge columns added to spanning-tree weights.
+        output_file (str): Container path for chain records.
+        scores_output_file (str): Container path for optimizer scores.
+        show_progress (bool): Whether rustrecom writes progress to stderr.
+        write_improved_scores_only (bool): Whether to record only new global-best scores.
+        burst_length (int, optional): Accepted steps per short burst.
+        accept_rule (AcceptRule, optional): Tilted-run rule for worsening proposals.
+        accept_worse_prob (float, optional): Fixed-rule probability of accepting a worse proposal.
+        acceptance_beta (float, optional): Linear or exponential tilt strength.
+    """
+
+    version: Literal[1]
+    command: str
+    graph_json: str
+    n_steps: int
+    tol: float
+    pop_col: str
+    assignment_col: str
+    rng_seed: int
+    objective: ObjectiveSpec
+    maximize: bool
+    n_threads: int
+    variant: str
+    writer: Writer
+    sum_cols: list[str]
+    partial_sum_cols: list[str]
+    region_weights: dict[str, float]
+    edge_weight_keys: list[str]
+    output_file: str
+    scores_output_file: str
+    show_progress: bool
+    write_improved_scores_only: bool
+    burst_length: NotRequired[int]
+    accept_rule: NotRequired[AcceptRule]
+    accept_worse_prob: NotRequired[float]
+    acceptance_beta: NotRequired[float]
+
+
+RustRecomConfig = RecomChainConfig | OptimizerConfig
 
 
 @dataclass
-class RecomRunInfo:
-    """
-    Represents all of the settings that can be passed to the frcw
-    Rust code.
+class RecomRunInfo(RunInfo):
+    """Represents all of the settings that can be passed to the rustrecom Rust code.
+
+    The settings are validated on construction, so mistakes (an unknown variant, region-aware
+    variants without region weights, etc.) raise immediately rather than after the Docker container
+    has started.
+
+    Raises:
+        ValueError: If a setting or constraint is invalid.
     """
 
     pop_col: str
     """The name of the column in the dual graph JSON file that contains the population data."""
     assignment_col: str
     """The name of the column in the dual graph JSON file that contains the assignment data."""
-    variant: str
-    """The variant of the recom algorithm to be used. Options are A, B, C, D, R, AW, BW."""
-    balance_ub: float = 0
-    """The balance upper bound to be used in the frcw code. Only used in (R)eversible mode"""
+    variant: ChainVariant
+    """The variant of the recom algorithm to be used. Options are A, B, C, D, R, AW, BW,
+        or the equivalent rustrecom names (cut-edges-mst, district-pairs-mst, cut-edges-ust,
+        district-pairs-ust, reversible, cut-edges-region-aware,
+        district-pairs-region-aware)."""
+    balance_ub: int = 0
+    """The balance upper bound to be used in the rustrecom code. Only used in (R)eversible mode.
+        The engine contract is an unsigned 32-bit integer (``pub balance_ub: u32``). Defaults to
+        0."""
     n_steps: int = 10
-    """The number of steps that the frcw code should run for."""
+    """The number of steps that the rustrecom code should run for. Defaults to 10."""
     pop_tol: float = 0.05
-    """The population tolerance to be used in the recom code."""
+    """The population tolerance to be used in the recom code. Defaults to 0.05."""
+    target_pop: int | None = None
+    """The target district population. When None, rustrecom derives it as
+        total population / number of districts."""
     n_threads: int = 1
-    """The number of threads to be used to generate proposals for the frcw code."""
+    """The number of proposal threads. Defaults to 1."""
     batch_size: int = 1
-    """The batch size to be used in the frcw code."""
-    writer: str = "canonical"
-    """The type of writer that should be used to write the output of the frcw code. Options 
+    """The proposal batch size. Defaults to 1."""
+    writer: Writer = "canonical"
+    """The type of writer that should be used to write the output of the rustrecom code. Options
     are:
-        
+
     - tsv
     - jsonl
     - pcompress
@@ -41,31 +287,454 @@ class RecomRunInfo:
     - canonicalized-assignments
     - canonical
     - ben
+    - bendl (self-describing single file: graph + metadata + BEN stream)
+
+    Defaults to ``"canonical"``.
     """
-    sum_cols: list = field(default_factory=list)
-    """The columns that should be summed in the output of the frcw code. This will only
-        be shown if the writer is set to jsonl or jsonl-full."""
-    region_weights: dict = field(default_factory=dict)
+    sum_cols: list[str] = field(default_factory=list)
+    """The columns that should be summed in the output of the rustrecom code. This will only
+        be shown if the writer is set to jsonl or jsonl-full. Defaults to an empty list."""
+    region_weights: dict[str, float] = field(default_factory=dict)
     """A dictionary of surcharges to be added to edges between regions. This is only used
-        in the AW and BW variants of the frcw code."""
-    # cut_edges_count: bool = False
-    # spanning_tree_counts: bool = False
+        in the AW and BW variants of the rustrecom code. Defaults to an empty mapping."""
+    edge_weight_keys: list[str] = field(default_factory=list)
+    """Per-edge attribute columns added to edge weights in MST / region-aware
+        spanning-tree sampling (A, B, AW, BW variants). Defaults to an empty list."""
+    constraint: ConstraintsLike = None
+    """A constraint for the run: either a Constraints builder (see
+        gerrytools.mgrp.Constraints) or a raw spec dict passed to rustrecom as inline
+        JSON. rustrecom currently accepts a single constraint per run, e.g.::
+
+            Constraints().district_share_floor(
+                numerator_col="BVAP", denominator_cols=["VAP"], threshold=0.4
+            )
+
+        Defaults to None.
+    """
+    cut_edges_count: bool = False
+    """If true, rustrecom outputs the cut-edge count at each step. Defaults to False."""
+    bendl_graph_order: str = "none"
+    """Graph reordering applied before the chain runs, for better BENDL stream
+        compression. Only valid with the bendl writer. Options are 'none', 'rcm',
+        'mlc', or 'key:<attr>'. Defaults to ``"none"``."""
+    show_progress: bool = False
+    """If true, rustrecom renders a progress bar on stderr. Note that the runner captures
+        stderr into the log file, so this mostly pollutes logs; useful with force_print. Defaults
+        to False."""
     rng_seed: int = 42
-    """The random number generator seed to be used in the frcw code."""
+    """The random number generator seed used by rustrecom. Defaults to 42."""
     force_print: bool = False
-    """If true, the output of the frcw code will be printed to the console instead of 
-        being written to a file."""
-    updaters: Dict[str, Callable] = field(default_factory=dict)
-    """A dictionary of updaters that should be used when running the chain using the 
-        mcmc_run_with_updaters method."""
+    """If true, the output of the rustrecom code will be printed to the console instead of
+        being written to a file. Defaults to False."""
+    updaters: dict[str, Callable] = field(default_factory=dict)
+    """A dictionary of updaters that should be used when running the chain using the
+        mcmc_run_with_updaters method. Defaults to an empty mapping."""
+
+    @property
+    def resolved_constraint(self) -> ConstraintSpec | None:
+        """Return the normalized constraint spec derived from ``constraint``, if any.
+
+        Raises:
+            ValueError: If more than one constraint is supplied or a specification is invalid.
+        """
+        specs = constraint_specs(self.constraint, "recom")
+        if len(specs) > 1:
+            raise ValueError(
+                f"rustrecom accepts a single constraint per run; got {len(specs)} constraint specs."
+            )
+        return specs[0] if specs else None
+
+    def stem(self) -> str:
+        """Return the human-readable stem derived from the run's headline settings.
+
+        Returns:
+            str: Stem containing the variant, assignment column, seed, and step count.
+        """
+        return f"Recom{self.variant}_{self.assignment_col}_{self.rng_seed}_{self.n_steps}"
+
+    def output_name(self, stem: str | None = None) -> str | None:
+        """The name of the run's output file, or None when it prints to stdout.
+
+        Args:
+            stem (str | None, optional): Stem to build the name from. Defaults to :meth:`stem`.
+
+        Returns:
+            str | None: Output file name, or None when output is printed to standard output.
+        """
+        if self.force_print:
+            return None
+        return _resolve_output_name(stem or self.stem(), self.writer)
+
+    def scores_name(self, stem: str | None = None) -> str | None:
+        """Return None because chain runs produce no scores CSV.
+
+        Args:
+            stem (str | None, optional): Ignored output stem. Defaults to None.
+
+        Returns:
+            None: Chain runs do not produce a scores file.
+        """
+        return None
+
+    def __post_init__(self):
+        self.validate()
+
+    def validate(self) -> None:
+        """Validate current settings before construction or config emission.
+
+        Raises:
+            TypeError: If ``balance_ub`` is not an integer.
+            ValueError: If a setting is outside the range or combinations accepted by rustrecom.
+        """
+        # Normalize the rustrecom long names to their letter codes so downstream
+        # naming (output files, logs) is consistent.
+        self.variant = _checked_chain_variant(self.variant)
+        self.writer = _checked_writer(self.writer)
+        check_nonempty_string("pop_col", self.pop_col)
+        check_nonempty_string("assignment_col", self.assignment_col)
+        _validate_output_file_name(self.assignment_col, field="assignment_col")
+        check_string_list("sum_cols", self.sum_cols)
+        check_string_list("edge_weight_keys", self.edge_weight_keys)
+        if isinstance(self.balance_ub, bool) or not isinstance(self.balance_ub, int):
+            raise TypeError("balance_ub must be an integer.")
+        if not 0 <= self.balance_ub <= 2**32 - 1:
+            raise ValueError("balance_ub must be between 0 and 2**32 - 1.")
+        check_positive_int("n_steps", self.n_steps)
+        check_positive_int("n_threads", self.n_threads)
+        check_positive_int("batch_size", self.batch_size)
+        check_finite_nonnegative("pop_tol", self.pop_tol)
+        check_rng_seed("rng_seed", self.rng_seed, minimum=0, maximum=2**64 - 1)
+        check_boolean("cut_edges_count", self.cut_edges_count)
+        check_boolean("show_progress", self.show_progress)
+        check_boolean("force_print", self.force_print)
+        if self.target_pop is not None:
+            check_positive_int("target_pop", self.target_pop)
+        if self.variant == "R" and self.balance_ub <= 0:
+            raise ValueError("The reversible variant ('R') requires balance_ub > 0.")
+        if self.variant in ("AW", "BW") and not self.region_weights:
+            raise ValueError(
+                f"variant={self.variant!r} requires 'region_weights' to be specified, "
+                "e.g. region_weights={'COUNTY': 2.0}."
+            )
+        if not isinstance(self.region_weights, dict):
+            raise ValueError(
+                f"region_weights must be a dictionary, but found {self.region_weights!r}."
+            )
+        for region, weight in self.region_weights.items():
+            check_nonempty_string("region_weights key", region)
+            check_finite_number(f"region_weights[{region!r}]", weight)
+        if self.edge_weight_keys and self.variant not in ("A", "B", "AW", "BW"):
+            raise ValueError(
+                "The 'edge_weight_keys' option is only valid with the MST "
+                "and region-aware variants (A, B, AW, BW)."
+            )
+        order = self.bendl_graph_order
+        known_order = order in ("none", "rcm", "mlc") or (
+            isinstance(order, str) and order.startswith("key:") and len(order) > len("key:")
+        )
+        if not known_order:
+            raise ValueError(
+                f"Unknown bendl_graph_order {order!r}. Choose 'none', 'rcm', 'mlc', "
+                "or 'key:<attr>' with a nonempty node-attribute name."
+            )
+        if self.bendl_graph_order != "none" and self.writer != "bendl":
+            raise ValueError("The 'bendl_graph_order' option is only valid with the bendl writer.")
+        self.validate_force_print(self.writer, self.force_print)
+        # Eager validation; the property recomputes from the live ``constraint`` on access.
+        _ = self.resolved_constraint
 
 
-# Should probably change the default log folder to /dev/null/
-class RecomRunnerConfig(RunnerConfig):
+# The optimizer CLIs accept only the four base variants; region-aware sampling is reached by
+# supplying region_weights on A or B, and reversible is not supported by the optimizers at all.
+OPTIMIZER_VARIANTS = ("A", "B", "C", "D")
+
+
+@dataclass(kw_only=True)
+class OptimizerRunInfoBase(RunInfo, ABC):
+    """Settings shared by the ``short-bursts`` and ``tilted`` optimizer runs.
+
+    All fields are keyword-only; construct the concrete run infos with named arguments.
+
+    Raises:
+        ValueError: If a shared optimizer setting or objective is invalid.
+    """
+
+    pop_col: str
+    """The name of the column in the dual graph JSON file that contains the population data."""
+    assignment_col: str
+    """The name of the column in the dual graph JSON file that contains the assignment data."""
+    objective: ObjectiveSpec
+    """The objective spec driving the optimizer. Build one with
+        :class:`~gerrytools.mgrp.Objective`, e.g.
+        ``Objective.gingles_partial(threshold=0.5, min_pop="BVAP", total_pop="VAP")``, or pass
+        the equivalent raw dict."""
+    n_steps: int = 10
+    """The total number of proposals to generate. Defaults to 10."""
+    pop_tol: float = 0.05
+    """The population tolerance used when drawing districts. Defaults to 0.05."""
+    maximize: bool = True
+    """If True, maximize the objective; if False, minimize it. Defaults to True."""
+    variant: OptimizerVariant = "B"
+    """The proposal variant: A, B, C, or D, or an equivalent name. Defaults to ``"B"``."""
+    n_threads: int = 1
+    """The number of threads used to generate proposals. Defaults to 1."""
+    writer: Writer = "canonical"
+    """The chain-record writer. Same options as RecomRunInfo.writer. Defaults to ``"canonical"``."""
+    sum_cols: list[str] = field(default_factory=list)
+    """Additional columns to sum over districts. Defaults to an empty list."""
+    partial_sum_cols: list[str] = field(default_factory=list)
+    """Sum columns that may be missing on some nodes. Defaults to an empty list."""
+    region_weights: dict[str, float] = field(default_factory=dict)
+    """Edge surcharges between regions. Defaults to an empty mapping."""
+    edge_weight_keys: list[str] = field(default_factory=list)
+    """Per-edge attributes added to edge weights. Defaults to an empty list."""
+    write_improved_scores_only: bool = False
+    """Whether to record only globally improving scores. Defaults to False."""
+    show_progress: bool = False
+    """Whether to render a progress bar on stderr. Defaults to False."""
+    rng_seed: int = 42
+    """The random number generator seed. Defaults to 42."""
+    output_file_name: str | None = None
+    """Override for the output file name; derived from the run settings when None."""
+
+    @property
+    def resolved_objective(self) -> ObjectiveSpec:
+        """The validated objective spec derived from the current ``objective``."""
+        return validate_objective_spec(self.objective)
+
+    @abstractmethod
+    def stem(self) -> str:
+        """Return the human-readable stem derived from the run's headline settings.
+
+        Returns:
+            str: File-name stem for the optimizer run.
+        """
+
+    def output_name(self, stem: str | None = None) -> str:
+        """The name of the run's output file.
+
+        Args:
+            stem (str | None, optional): Stem to build the name from. Defaults to :meth:`stem`.
+                Ignored when ``output_file_name`` overrides the name entirely.
+
+        Returns:
+            str: Optimizer output file name.
+        """
+        return _resolve_output_name(stem or self.stem(), self.writer, self.output_file_name)
+
+    def scores_name(self, stem: str | None = None) -> str:
+        """The name of the per-step/per-burst scores CSV the run produces.
+
+        Args:
+            stem (str | None, optional): Stem to build the name from. Defaults to :meth:`stem`.
+
+        Returns:
+            str: Scores CSV file name.
+        """
+        output_stem = Path(self.output_name(stem)).stem
+        return f"{output_stem}_scores.csv"
+
+    def __post_init__(self):
+        self.validate()
+
+    def validate(self) -> None:
+        """Validate current shared optimizer settings.
+
+        Raises:
+            ValueError: If a setting is outside the range or combinations accepted by rustrecom.
+        """
+        self.variant = _checked_optimizer_variant(self.variant)
+        self.writer = _checked_writer(self.writer)
+        check_nonempty_string("pop_col", self.pop_col)
+        check_nonempty_string("assignment_col", self.assignment_col)
+        _validate_output_file_name(self.assignment_col, field="assignment_col")
+        check_string_list("sum_cols", self.sum_cols)
+        check_string_list("partial_sum_cols", self.partial_sum_cols)
+        check_string_list("edge_weight_keys", self.edge_weight_keys)
+        if self.edge_weight_keys and self.variant not in ("A", "B"):
+            raise ValueError(
+                "The 'edge_weight_keys' option is only valid with the MST variants (A, B)."
+            )
+        if not isinstance(self.region_weights, dict):
+            raise ValueError(
+                f"region_weights must be a dictionary, but found {self.region_weights!r}."
+            )
+        for region, weight in self.region_weights.items():
+            check_nonempty_string("region_weights key", region)
+            check_finite_number(f"region_weights[{region!r}]", weight)
+        if self.output_file_name is not None:
+            _validate_output_file_name(self.output_file_name)
+        check_positive_int("n_steps", self.n_steps)
+        check_positive_int("n_threads", self.n_threads)
+        check_finite_nonnegative("pop_tol", self.pop_tol)
+        check_rng_seed("rng_seed", self.rng_seed, minimum=0, maximum=2**64 - 1)
+        check_boolean("maximize", self.maximize)
+        check_boolean("write_improved_scores_only", self.write_improved_scores_only)
+        check_boolean("show_progress", self.show_progress)
+        # Eager validation; the property recomputes from the live ``objective`` on access.
+        _ = self.resolved_objective
+
+
+@dataclass(kw_only=True)
+class ShortBurstsRunInfo(OptimizerRunInfoBase):
+    """
+    Represents the settings for a ``rustrecom short-bursts`` optimizer run.
+
+    Short bursts (Cannon et al. 2020, `arXiv:2011.02288 <https://arxiv.org/abs/2011.02288>`_) is
+    an MCMC-with-restart heuristic: the chain accepts every valid proposal, and after every
+    ``burst_length`` accepted steps it snaps back to the best-scoring plan seen during the burst
+    (including the burst's starting plan) and begins a new burst from there. Short bursts therefore
+    explore aggressively within a burst while ratcheting toward better scores across bursts. The
+    score being chased is the ``objective`` spec, built with :class:`~gerrytools.mgrp.Objective`
+    (see that class for the catalog of available objectives), and the direction is set by
+    ``maximize``.
+
+    The run writes two files: the chain records under the usual output-naming scheme
+    (``SB<variant>_<assignment_col>_<seed>_<steps>_<burst>_<config hash>``), and a
+    ``*_scores.csv`` next to it with one row per burst (step number, overall score, and
+    per-district scores where the objective provides them). The settings are validated on
+    construction, so mistakes raise before the Docker container starts. All settings are
+    keyword-only; the shared optimizer settings (columns, objective, variant, writer, and output
+    controls) are common to both optimizer run infos.
+
+    Raises:
+        ValueError: If ``burst_length`` or a shared optimizer setting is invalid.
+    """
+
+    burst_length: int
+    """The number of accepted steps per short burst."""
+
+    def stem(self) -> str:
+        """Return the human-readable stem derived from the run's headline settings.
+
+        Returns:
+            str: Stem containing the variant, assignment column, seed, steps, and burst length.
+        """
+        return (
+            f"SB{self.variant}_{self.assignment_col}"
+            f"_{self.rng_seed}_{self.n_steps}_{self.burst_length}"
+        )
+
+    def validate(self) -> None:
+        """Validate current short-bursts settings.
+
+        Raises:
+            ValueError: If ``burst_length`` or a shared optimizer setting is invalid.
+        """
+        check_positive_int("burst_length", self.burst_length)
+        super().validate()
+
+
+@dataclass(kw_only=True)
+class TiltedRunInfo(OptimizerRunInfoBase):
+    """
+    Represents the settings for a ``rustrecom tilted`` optimizer run.
+
+    A tilted run is a single continuous chain that always accepts proposals improving the
+    objective score and accepts worsening proposals with a probability set by ``accept_rule``:
+
+    - ``"fixed"``: accept with constant probability ``accept_worse_prob``, independent of how
+      much worse the proposal is. ``0.0`` is pure hill-climbing, ``1.0`` a random walk. This
+      matches GerryChain's ``SingleMetricOptimizer.tilted_run()``.
+    - ``"linear"`` (default): accept with probability ``max(0, 1 - beta * score_loss)`` using
+      ``acceptance_beta`` (default 1.0), so small losses are usually tolerated and large ones
+      rejected.
+    - ``"exponential"``: accept with probability ``exp(beta * delta)`` where ``delta <= 0`` is
+      the signed score change, i.e. a Metropolis-style rule; larger ``acceptance_beta`` makes the
+      chain pickier, ``0`` reduces to a random walk.
+
+    Unlike short bursts, the chain never resets to a best-so-far plan, which makes it useful for
+    exploring the neighborhood of good plans rather than converging hard. The score being chased
+    is the ``objective`` spec, built with :class:`~gerrytools.mgrp.Objective` (see that class for
+    the catalog of available objectives), and the direction is set by ``maximize``.
+
+    The run writes two files: the chain records under the usual output-naming scheme
+    (``Tilted<variant>_<rule>_<assignment_col>_<seed>_<steps>_<config hash>``), and a
+    ``*_scores.csv`` next to it with one row per step. The settings are validated on construction,
+    so mistakes raise before the Docker container starts. All settings are keyword-only; the shared
+    optimizer settings (columns, objective, variant, writer, and output controls) are common to both
+    optimizer run infos.
+
+    Raises:
+        ValueError: If an acceptance-rule option or shared optimizer setting is invalid.
+    """
+
+    accept_rule: AcceptRule = "linear"
+    """Acceptance rule for worsening proposals. Defaults to ``"linear"``."""
+    accept_worse_prob: float | None = None
+    """Acceptance probability for worsening proposals; required by (and only valid
+        with) the 'fixed' rule. Defaults to None."""
+    acceptance_beta: float | None = None
+    """Tilt strength for the 'linear' and 'exponential' rules; defaults to 1.0 engine-side."""
+
+    def stem(self) -> str:
+        """Return the human-readable stem derived from the run's headline settings.
+
+        Returns:
+            str: Stem containing the variant, acceptance rule, assignment column, seed, and steps.
+        """
+        return (
+            f"Tilted{self.variant}_{self.accept_rule}_{self.assignment_col}"
+            f"_{self.rng_seed}_{self.n_steps}"
+        )
+
+    def validate(self) -> None:
+        """Validate current tilted-run settings.
+
+        Raises:
+            ValueError: If the acceptance-rule options or shared optimizer settings are invalid.
+        """
+        if self.accept_rule not in ("fixed", "linear", "exponential"):
+            raise ValueError(
+                f"Unknown accept_rule {self.accept_rule!r}. Choose one of "
+                "'fixed', 'linear', or 'exponential'."
+            )
+        if self.accept_rule == "fixed":
+            if self.accept_worse_prob is None:
+                raise ValueError("accept_rule='fixed' requires accept_worse_prob.")
+            if self.acceptance_beta is not None:
+                raise ValueError(
+                    "acceptance_beta is only valid with the 'linear' and 'exponential' rules."
+                )
+        elif self.accept_worse_prob is not None:
+            raise ValueError("accept_worse_prob is only valid with the 'fixed' rule.")
+        if self.accept_worse_prob is not None:
+            check_unit_interval("accept_worse_prob", self.accept_worse_prob)
+        if self.acceptance_beta is not None:
+            check_finite_nonnegative("acceptance_beta", self.acceptance_beta)
+        super().validate()
+
+
+OptimizerRunInfo = ShortBurstsRunInfo | TiltedRunInfo
+RustRecomRunInfo = RecomRunInfo | ShortBurstsRunInfo | TiltedRunInfo
+
+# Canonical rustrecom CLI subcommand for each run-info type. Keyed by exact type so instance
+# data can never shadow the token interpolated into the sh -c command template.
+RUN_INFO_SUBCOMMANDS: dict[type[RunInfo], str] = {
+    RecomRunInfo: "chain",
+    ShortBurstsRunInfo: "short-bursts",
+    TiltedRunInfo: "tilted",
+}
+
+
+def _subcommand(run_info: RustRecomRunInfo) -> str:
+    """The fixed CLI subcommand for ``run_info``'s exact type."""
+    try:
+        return RUN_INFO_SUBCOMMANDS[type(run_info)]
+    except KeyError:
+        raise TypeError(
+            f"No rustrecom subcommand for {type(run_info).__name__}; expected exactly "
+            "RecomRunInfo, ShortBurstsRunInfo, or TiltedRunInfo."
+        ) from None
+
+
+class RecomRunnerConfig(RunnerConfig[RustRecomRunInfo]):
     """
     Represents the configuration for a RunContainer which is used to run the
-    frcw code on a given dual graph within the docker container.
+    rustrecom code on a given dual graph within the docker container.
     """
+
+    run_info_type = (RecomRunInfo, ShortBurstsRunInfo, TiltedRunInfo)
 
     def __init__(
         self,
@@ -78,134 +747,208 @@ class RecomRunnerConfig(RunnerConfig):
 
         Args:
             json_file_path (str): The path to the dual graph JSON file that should be
-                used in frcw.
+                used in rustrecom.
             output_folder (str): The directory where the output files should be
                 written to. Defaults to "./output".
             log_folder (str): The directory where the log files should be written
                     to. Defaults to "./logs".
         """
-        self.json_dir = Path(json_file_path).parent
-        self.json_name = Path(json_file_path).name
-        json_name_without_extension = os.path.splitext(self.json_name)[0]
-        self.output_folder = os.path.join(output_folder, json_name_without_extension)
-        self.log_folder = os.path.abspath(log_folder)
+        super().__init__("recom", json_file_path, output_folder, log_folder)
 
-        self.variant_dict = {
-            "A": "cut-edges-rmst",
-            "B": "district-pairs-rmst",
-            "C": "cut-edges-ust",
-            "D": "district-pairs-ust",
-            "R": "reversible",
-            "AW": "cut-edges-region-aware",
-            "BW": "district-pairs-region-aware",
-        }
+    def run_command(self, run_info: RustRecomRunInfo) -> list:
+        """Return the command for a rustrecom run.
 
-    def configure_vols_and_name(self):
-        """
-        Configures the volumes and name of the container that will be used to run the
-        frcw code.
-        """
-        current_directory = os.getcwd()
-
-        volumes = {
-            current_directory: {"bind": "/home/recom/runner", "mode": "rw"},
-            os.path.abspath(self.json_dir): {
-                "bind": "/home/recom/shapefiles",
-                "mode": "rw",
-            },
-            os.path.abspath(self.output_folder): {
-                "bind": f"/home/recom/output/{self.json_name[:-5]}",
-                "mode": "rw",
-            },
-        }
-
-        return {
-            "name": f"recom_runner",
-            "volumes": volumes,
-        }
-
-    def run_command(self, run_info: RecomRunInfo):
-        """
-        Construcs the command that will be used to run the frcw code in the docker
-        container
+        The template is static per run-info type: the subcommand token comes from
+        ``RUN_INFO_SUBCOMMANDS``, keyed by exact run-info type, never from instance
+        data (see ``RunnerConfig._shell_command`` for the config-as-``$1``
+        transport). ``--overwrite-output`` is an output-lifecycle flag rather than
+        a sampler value; the CLI accepts it alongside ``--config`` and it preserves
+        the clobbering behavior of the shell redirects this template replaced.
 
         Args:
-            run_info (RecomRunInfo): The information that will be passed to the frcw code.
+            run_info (RustRecomRunInfo): Chain or optimizer run settings.
 
         Returns:
-            List[str]: The command that will be passed to docker.exec_create to run frcw.
+            list: Shell command arguments for the container.
+
+        Raises:
+            TypeError: If ``run_info`` is not one of the supported concrete run-info types.
         """
+        self._check_run_info(run_info)
+        template = (
+            ". /root/.cargo/env; /usr/bin/time -v rustrecom "
+            f'{_subcommand(run_info)} --config "$1" --overwrite-output'
+        )
+        return self._shell_command(template, self.run_config(run_info), argv0="rustrecom")
 
-        rust_cmd = ". /root/.cargo/env; /usr/bin/time -v frcw"
+    @overload
+    def run_config(self, run_info: RecomRunInfo) -> RecomChainConfig: ...
 
-        # Process the Run data
-        rust_cmd += " --graph-json /home/recom/shapefiles/" + self.json_name
-        rust_cmd += " --rng-seed " + str(run_info.rng_seed)
-        rust_cmd += " --pop-col " + str(run_info.pop_col)
-        rust_cmd += " --assignment-col " + str(run_info.assignment_col)
-        rust_cmd += " --n-steps " + str(run_info.n_steps)
-        rust_cmd += " --tol " + str(run_info.pop_tol)
-        rust_cmd += " --n-threads " + str(run_info.n_threads)
-        rust_cmd += " --batch-size " + str(run_info.batch_size)
-        rust_cmd += " --writer " + str(run_info.writer)
-        if run_info.variant not in ["A", "B", "C", "D", "R", "AW", "VW"]:
-            raise ValueError(
-                "Please choose one of the acceptable recom methods: A, "
-                "B, C, D, R (reversible), AW (cut edges region aware), "
-                "or BW (district pairs region aware)"
+    @overload
+    def run_config(self, run_info: OptimizerRunInfo) -> OptimizerConfig: ...
+
+    def run_config(self, run_info: RustRecomRunInfo) -> RustRecomConfig:
+        """Return the complete effective configuration for a ReCom run.
+
+        Unlike the Forest and SMC runners, which use gerrytools' own engine
+        envelope, this emits rustrecom's native chain config: a flat document
+        whose fields mirror the ``rustrecom chain`` CLI arguments, with a
+        ``version``/``command`` envelope. Every field is written explicitly
+        (rather than relying on the CLI's defaults) so the stored provenance
+        is self-contained. The letter variant codes are gerrytools shorthand,
+        so they translate to the CLI spellings here.
+
+        Args:
+            run_info (RustRecomRunInfo): Chain or optimizer run settings.
+
+        Returns:
+            RustRecomConfig: Independent native rustrecom configuration.
+
+        Raises:
+            TypeError: If ``run_info`` is not one of the supported concrete run-info types.
+            ValueError: If its settings are invalid.
+        """
+        self._check_run_info(run_info)
+        return self._config_document(run_info, self.file_stem(run_info))
+
+    def _base_config(self, run_info: RustRecomRunInfo) -> RustRecomConfig:
+        """The config document with hash-free names, hashed into :meth:`file_stem`."""
+        return self._config_document(run_info, self._stem(run_info))
+
+    def _config_document(self, run_info: RustRecomRunInfo, stem: str) -> RustRecomConfig:
+        """The independent effective config, with file names built from ``stem``."""
+        if not isinstance(run_info, RecomRunInfo):
+            return copy.deepcopy(self._optimizer_config(run_info, stem))
+        output_name = run_info.output_name(stem)
+        output = None if output_name is None else f"{self.container_output_dir}/{output_name}"
+        constraint = run_info.resolved_constraint
+        config = RecomChainConfig(
+            version=1,
+            command=_subcommand(run_info),
+            graph_json=self.container_graph_path,
+            n_steps=run_info.n_steps,
+            tol=run_info.pop_tol,
+            pop_col=run_info.pop_col,
+            assignment_col=run_info.assignment_col,
+            rng_seed=run_info.rng_seed,
+            # Rechecked so post-construction assignments cannot bypass __post_init__.
+            variant=VARIANT_TO_RUSTRECOM[_checked_chain_variant(run_info.variant)],
+            target_pop=run_info.target_pop,
+            balance_ub=run_info.balance_ub,
+            n_threads=run_info.n_threads,
+            batch_size=run_info.batch_size,
+            writer=_checked_writer(run_info.writer),
+            sum_cols=run_info.sum_cols,
+            region_weights=run_info.region_weights,
+            edge_weight_keys=run_info.edge_weight_keys,
+            cut_edges_count=run_info.cut_edges_count,
+            output_file=output,
+            bendl_graph_order=run_info.bendl_graph_order,
+            show_progress=run_info.show_progress,
+        )
+        if constraint:
+            config["constraint"] = constraint
+        return copy.deepcopy(config)
+
+    def _optimizer_config(self, run_info: OptimizerRunInfo, stem: str) -> OptimizerConfig:
+        """The native config document for a short-bursts or tilted run."""
+        config = OptimizerConfig(
+            version=1,
+            command=_subcommand(run_info),
+            graph_json=self.container_graph_path,
+            n_steps=run_info.n_steps,
+            tol=run_info.pop_tol,
+            pop_col=run_info.pop_col,
+            assignment_col=run_info.assignment_col,
+            rng_seed=run_info.rng_seed,
+            objective=run_info.resolved_objective,
+            maximize=run_info.maximize,
+            n_threads=run_info.n_threads,
+            # Rechecked so post-construction assignments cannot bypass __post_init__.
+            variant=VARIANT_TO_RUSTRECOM[_checked_optimizer_variant(run_info.variant)],
+            writer=_checked_writer(run_info.writer),
+            sum_cols=run_info.sum_cols,
+            partial_sum_cols=run_info.partial_sum_cols,
+            region_weights=run_info.region_weights,
+            edge_weight_keys=run_info.edge_weight_keys,
+            output_file=f"{self.container_output_dir}/{run_info.output_name(stem)}",
+            scores_output_file=f"{self.container_output_dir}/{run_info.scores_name(stem)}",
+            show_progress=run_info.show_progress,
+            write_improved_scores_only=run_info.write_improved_scores_only,
+        )
+        if isinstance(run_info, ShortBurstsRunInfo):
+            config["burst_length"] = run_info.burst_length
+        else:
+            config["accept_rule"] = run_info.accept_rule
+            if run_info.accept_worse_prob is not None:
+                config["accept_worse_prob"] = run_info.accept_worse_prob
+            if run_info.acceptance_beta is not None:
+                config["acceptance_beta"] = run_info.acceptance_beta
+        return config
+
+    def _stem(self, run_info: RustRecomRunInfo) -> str:
+        """The human-readable stem derived from the run's headline settings."""
+        return run_info.stem()
+
+    def _output_name(self, run_info: RustRecomRunInfo) -> str | None:
+        """
+        The name of the file the run will produce, or None when the output is
+        printed to stdout instead.
+        """
+        return run_info.output_name(self.file_stem(run_info))
+
+    def scores_file(self, run_info: RustRecomRunInfo) -> str | None:
+        """Return the optimizer's scores CSV path, or None for a chain run.
+
+        Args:
+            run_info (RustRecomRunInfo): Chain or optimizer run settings.
+
+        Returns:
+            str | None: Host scores CSV path, or None for a chain run.
+        """
+        scores_name = run_info.scores_name(self.file_stem(run_info))
+        return None if scores_name is None else str(self.output_folder / scores_name)
+
+    def expected_files(self, run_info: RustRecomRunInfo) -> list[str]:
+        """Return outputs, adding sidecar provenance when the primary output lacks it.
+
+        Args:
+            run_info (RustRecomRunInfo): Chain or optimizer run settings.
+
+        Returns:
+            list[str]: Primary output plus applicable provenance and scores sidecars.
+        """
+        expected = super().expected_files(run_info)
+        inline_provenance = isinstance(run_info, RecomRunInfo) and run_info.writer in (
+            "jsonl",
+            "jsonl-full",
+        )
+        if expected and run_info.writer != "bendl" and not inline_provenance:
+            expected.append(self._sidecar_file(expected[0], "metadata.jsonl"))
+        scores_file = self.scores_file(run_info)
+        if scores_file is not None:
+            expected.append(scores_file)
+        return expected
+
+    def canonical_stdout_command(self, run_info: RustRecomRunInfo) -> list:
+        """Return the chain command with canonical assignment output forced to stdout.
+
+        Args:
+            run_info (RustRecomRunInfo): Chain run settings.
+
+        Returns:
+            list: Shell command arguments for the container.
+
+        Raises:
+            TypeError: If ``run_info`` describes an optimizer rather than a chain.
+        """
+        if not isinstance(run_info, RecomRunInfo):
+            raise TypeError("Canonical stdout runs require a RecomRunInfo, not an optimizer run.")
+        return self.run_command(
+            replace(
+                run_info,
+                writer="canonical",
+                force_print=True,
+                bendl_graph_order="none",
             )
-        else:
-            rust_cmd += " --variant " + self.variant_dict[str(run_info.variant)]
-            if str(run_info.variant) == "R":
-                rust_cmd += " --balance-ub " + str(run_info.balance_ub)
-        if run_info.sum_cols:
-            rust_cmd += " --sum-cols " + " ".join(run_info.sum_cols)
-
-        if run_info.variant in ["AW", "BW"]:
-            if run_info.region_weights:
-                rust_cmd += " --region-weights '"
-                json_string = json.dumps(run_info.region_weights)
-                json_string = json_string.replace(",", " ,")
-                rust_cmd += json_string
-                rust_cmd += "'"
-            else:
-                raise NameError(
-                    f"Run info for option variant={run_info.variant} "
-                    f"requires additional option 'region_wieghts'"
-                    f"to be specified"
-                )
-
-        # TODO: Double check to frcw code to make sure that
-        # these are being computed correctly
-        # if run_info.cut_edges_count:
-        #     rust_cmd += " --cut-edges-count"
-        # if run_info.spanning_tree_counts:
-        #     rust_cmd += " --st-counts"
-
-        if run_info.force_print == True:
-            pass
-        elif run_info.writer == "pcompress":
-            rust_cmd += f" > /home/recom/output/{self.json_name[:-5]}/Recom{run_info.variant}_{run_info.assignment_col}_{run_info.rng_seed}_{run_info.n_steps}_pcompress.chain"
-        elif run_info.writer == "assignments":
-            rust_cmd += f" > /home/recom/output/{self.json_name[:-5]}/Recom{run_info.variant}_{run_info.assignment_col}_{run_info.rng_seed}_{run_info.n_steps}.assignments"
-        elif run_info.writer == "tsv":
-            rust_cmd += f" > /home/recom/output/{self.json_name[:-5]}/Recom{run_info.variant}_{run_info.assignment_col}_{run_info.rng_seed}_{run_info.n_steps}.tsv"
-        elif run_info.writer == "ben":
-            rust_cmd += f" > /home/recom/output/{self.json_name[:-5]}/Recom{run_info.variant}_{run_info.assignment_col}_{run_info.rng_seed}_{run_info.n_steps}.jsonl.ben"
-        else:
-            rust_cmd += f" > /home/recom/output/{self.json_name[:-5]}/Recom{run_info.variant}_{run_info.assignment_col}_{run_info.rng_seed}_{run_info.n_steps}.jsonl"
-
-        return ["sh", "-c", rust_cmd]
-
-    def log_file(self, run_info: RecomRunInfo):
-        """
-        Constructs the name of the log file that will be written to when the
-        frcw code is run. This is used to store teh output of stderr in the event
-        that the code crashes.
-        """
-        log_file_dir = self.log_folder + f"/{self.json_name[:-5]}"
-        log_file_name = f"Recom{run_info.variant}_{run_info.assignment_col}_{run_info.rng_seed}_{run_info.n_steps}.log"
-
-        os.makedirs(log_file_dir, exist_ok=True)
-
-        return f"{log_file_dir}/{log_file_name}"
+        )

@@ -5,15 +5,25 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.12"
+    # The package builds from source with the maturin backend, so RTD needs cargo.
+    rust: "1.86"
+  jobs:
+    post_install:
+      - >-
+        python user_guide/_refresh_notebooks.py
+        $(find user_guide/user -name '*.ipynb' ! -path '*/mgrp/*')
 
 python:
   install:
     - method: pip
       path: .
       extra_requirements:
+        - mgrp
         - docs
 
-# Build documentation in the "docs/" directory with Sphinx
 sphinx:
   builder: dirhtml
-  configuration: docs/source/conf.py
+  configuration: user_guide/conf.py
+
+formats:
+  - pdf

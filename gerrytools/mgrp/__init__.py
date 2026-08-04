@@ -1,21 +1,38 @@
-from .run_container import RunContainer, RunnerConfig
-from .runners.recom import RecomRunnerConfig, RecomRunInfo
-from .runners.forest import ForestRunnerConfig, ForestRunInfo
-from .runners.smc import SMCRunnerConfig, SMCMapInfo, SMCRedistInfo
-import warnings
-
-# There is a bug in the docker SDK package that causes this error to be thrown
-# a lot
-warnings.filterwarnings(action="ignore", message="unclosed", category=ResourceWarning)
-
+try:
+    from .run_container import RunContainer, RunInfo, RunnerConfig, SupportsUpdaters
+except ModuleNotFoundError as e:
+    if e.name and e.name.split(".")[0] == "docker":
+        raise ModuleNotFoundError(
+            "gerrytools.mgrp requires the docker SDK, which is an optional "
+            "dependency. Install it with: pip install 'gerrytools[mgrp]'"
+        ) from e
+    raise
+from .constraints import Constraints
+from .objectives import Objective
+from .runners.forest import ForestRunInfo, ForestRunnerConfig
+from .runners.recom import (
+    OptimizerRunInfoBase,
+    RecomRunInfo,
+    RecomRunnerConfig,
+    ShortBurstsRunInfo,
+    TiltedRunInfo,
+)
+from .runners.smc import SMCRunInfo, SMCRunnerConfig
 
 __all__ = [
+    "Constraints",
+    "Objective",
     "RecomRunnerConfig",
     "RecomRunInfo",
+    "OptimizerRunInfoBase",
+    "ShortBurstsRunInfo",
+    "TiltedRunInfo",
     "ForestRunnerConfig",
     "ForestRunInfo",
     "SMCRunnerConfig",
-    "SMCMapInfo",
-    "SMCRedistInfo",
+    "SMCRunInfo",
     "RunContainer",
+    "RunnerConfig",
+    "RunInfo",
+    "SupportsUpdaters",
 ]

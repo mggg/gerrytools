@@ -3,7 +3,9 @@ __pycache__/
 *.egg-info/
 .vscode/
 .coverage*
-.circleci
+.hypothesis/
+.pytest_cache/
+.ruff_cache/
 
 # Ignore large testing files.
 tests/test-reports/*
@@ -11,24 +13,38 @@ tests/test-reports/*
 tests/*.ipynb
 
 # Python virtual environment files.
-.venv
+.venv*
 .docs_venv
+
+user_guide/_build/
+user_guide/_generated/
+user_guide/jupyter_execute/
 
 
 # Other dev stuff
 .envrc
+.env
 dev_files
-uv.lock
 
 # Ignore the build directory and the dist directory
 # created by the build process.
 /build
 dist
-docs/build
-docs/build/**
+user_guide/build
+user_guide/build/**
 dev
-tutorials/test_*
+plans/
 
 
 # Readthedocs
 _build
+
+
+# Build artifacts
+target/
+*.so
+
+
+/data
+/stats
+/user_guide/user/scoring/stats

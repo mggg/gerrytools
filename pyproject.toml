@@ -1,68 +1,152 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin>=1.14.1,<2"]
+build-backend = "maturin"
 
 [project]
 name = "gerrytools"
-version = "1.2.1"
+version = "2.0.0rc1"
 description = "Tools for processing and visualizing districting plans."
 readme = "README.md"
 authors = [
-  { name = "MGGG Redistricting Lab", email = "engineering@mggg.org" },
+  { name = "Data and Democracy Research Initiative", email = "code@mggg.org" },
 ]
 requires-python = ">=3.11"
-license = { text = "MIT" } 
-
-dependencies = [
-  "pandas>=2.3.2",
-  "scipy>=1.16.1",
-  "networkx>=3.5.0",
-  "geopandas>=1.1.1",
-  "Shapely>=2.0.0",
-  "matplotlib>=3.10.6",
-  "gerrychain>=0.3.2",
-  "sortedcontainers",
-  "jsonlines>=4.0.0",
-  "imageio>=2.37.0",
-  "us>=3.2.0",
-  "pydantic>=2.11.7",
-  "censusdata>=1.15.post1",
-  "seaborn>=0.13.2",
-  "numpy>=2.3.2",
-  "maup>=2.0.3",
-  "gurobipy>=12.0.3",
-  "opencv-python-headless>=4.11.0.86",
+license = "BSD-3-Clause"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3 :: Only",
 ]
 
-[tool.setuptools]
-packages = ["gerrytools"]
-include-package-data = true
-
+dependencies = [
+  # Working with graphs and ensembles
+  "networkx>=3.6.1",
+  "gerrychain>=1.0.0",
+  "binary-ensemble==2.0.0",
+  # Data manipulation
+  "pandas>=3.0.5",
+  "scipy>=1.17.1",
+  "numpy>=2.4.6",
+  "pyarrow>=25.0.0",
+  # Geospatial libraries
+  "geopandas>=1.1.4",
+  "pyogrio>=0.13.0; python_version >= '3.14'",
+  "pyproj>=3.7.2",
+  "Shapely>=2.1.2",
+  # Visualization
+  "matplotlib>=3.11.1",
+  "seaborn>=0.13.2",
+  # Census
+  "us>=3.2.0",
+  "httpx>=0.28.1",
+  "frozendict>=2.4.7",
+  "tqdm>=4.70.0",
+  # Misc
+  "joblib>=1.5.3",
+]
 
 [dependency-groups]
 dev = [
-  "pdoc3>=0.11.6",
-  "flake8>=7.3.0",
-  "pytest>=8.4.2",
-  "autopep8>=2.3.2",
-  "pytest-cov>=6.3.0",
-  "black>=25.1.0",
-  "isort>=6.0.1",
-  "myst-parser>=4.0.1",
-  "sphinx>=8.2.3",
-  "sphinx-copybutton>=0.5.2",
-  "sphinx-rtd-theme>=3.0.2",
-  "ipykernel>=6.30.1",
-  "ipywidgets>=8.1.7",
+  "docker>=7.2.0",
+  "hypothesis>=6.165.0",
+  "ipykernel>=7.3.0",
+  "ipywidgets>=8.1.8",
+  "pillow>=12.3.0",
+  "pytest>=9.1.1",
+  "pytest-cov>=7.1.0",
+  "pytest-timeout>=2.4.0",
+  "pre-commit>=4.6.1",
+  "maturin>=1.14.1,<2",
+  "ruff>=0.16.1",
+  "ty>=0.0.66",
+  "pyright>=1.1.411",
 ]
-mgrp = [
-    "docker>=7.1.0",
+docs-exec = [
+  "ipykernel>=7.3.0",
+  "jupyter-cache>=1.0.1",
+  "nbclient>=0.11.0",
+  "nbformat>=5.10.4",
+  "pytest>=9.1.1",
+]
+tex = [
+    "pymupdf>=1.28.0",
+    "pypdfium2>=5.12.1",
+    "pyqt6>=6.11.0",
+    "pyside6>=6.11.1",
 ]
 
 [project.optional-dependencies]
-docs = [
-  "myst-parser>=4.0.1",
-  "sphinx>=8.2.3",
-  "sphinx-copybutton>=0.5.2",
-  "sphinx-rtd-theme>=3.0.2",
+mgrp = [
+    "docker>=7.2.0",
 ]
+# Renders the hosted docs; an extra (not a dependency group) so Read the Docs can install it
+# via extra_requirements.
+docs = [
+  "furo>=2025.12.19",
+  "myst-nb>=1.4.0",
+  "sphinx>=9.0.4",
+  "sphinx-autobuild>=2025.8.25",
+  "sphinx-copybutton>=0.5.2",
+  "sphinx-design>=0.7.0",
+]
+
+[tool.uv]
+default-groups = ["dev", "docs-exec"]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = [
+  "dev_files"
+]
+
+[tool.ruff.lint]
+select = ["E", "W", "F"]
+ignore = [
+    "E501",  # line length handled by Ruff's formatter
+    "E203",  # formatter-compatible whitespace before ':'
+    "E731",  # do not assign lambda expression
+    "F541",  # f-string is missing placeholders
+]
+task-tags = ["TODO", "FIXME", "XXX", "HACK", "NOTE", "FIX", "BUG"]
+
+[tool.ruff.lint.pycodestyle]
+ignore-overlong-task-comments = true
+
+[tool.ty]
+
+[tool.ty.src]
+include = ["gerrytools", "tests"]
+
+[tool.ty.terminal]
+output-format = "concise"
+# error-on-warning = true  # optional: fail CI on warnings too
+
+[tool.ty.environment]
+python-version = "3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--strict-markers"]
+markers = [
+  "latex: marks tests that require LaTeX installation and are included with '--with-latex'",
+  "snapshot: marks snapshot/image-regression tests and are included with '--with-snapshot'",
+  "mgrp_live: marks live mgrp Docker tests gated by MGRP_TEST_IMAGE",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["gerrytools"]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+
+[tool.maturin]
+features = ["python"]
+manifest-path = "rust/Cargo.toml"
+module-name = "gerrytools._scoring_engine"
+python-source = "."
+include = [{ path = "LICENSE", format = "sdist" }]

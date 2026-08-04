@@ -1,0 +1,401 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: "3"
+
+vars:
+  PYTHON_VERSION: "3.11"
+  VENV_DIR: ".venv"
+  PKG: "gerrytools"
+  TEST_PATHS: "tests"
+  DOCS_DIR: "user_guide"
+  DOCKER_IMAGE: "mgggdev/replicate"
+
+dotenv:
+  - .env
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task: help
+
+  help:
+    desc: List available tasks
+    silent: true
+    cmds:
+      - task --list-all
+
+  ensure-uv-linux: &ensure-uv-unix
+    desc: Install uv if not already available
+    internal: true
+    silent: true
+    status:
+      - command -v uv
+    cmds:
+      - curl -LsSf https://astral.sh/uv/install.sh | sh
+
+  ensure-uv-darwin: *ensure-uv-unix
+
+  ensure-uv-windows:
+    internal: true
+    silent: true
+    status:
+      - where uv
+    cmds:
+      - powershell -ExecutionPolicy ByPass -Command "irm https://astral.sh/uv/install.ps1 | iex"
+
+  sync:
+    desc: Sync the development environment
+    internal: true
+    silent: true
+    deps: ["ensure-uv-{{OS}}"]
+    env:
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/{{.VENV_DIR}}"
+    cmds:
+      - uv python install {{.PYTHON_VERSION}}
+      - >-
+        uv --managed-python sync --locked --all-groups --all-extras
+        --python {{.PYTHON_VERSION}}
+
+  lock:
+    desc: Generate a lockfile without installing dependencies
+    silent: true
+    deps: ["ensure-uv-{{OS}}"]
+    env:
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/{{.VENV_DIR}}"
+    cmds:
+      - uv lock
+
+  upgrade-deps:
+    desc: Upgrade dependencies and regenerate the lockfile
+    silent: true
+    deps: ["ensure-uv-{{OS}}"]
+    env:
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/{{.VENV_DIR}}"
+    cmds:
+      - uv python install {{.PYTHON_VERSION}}
+      - >-
+        uv --managed-python sync --upgrade --all-groups --all-extras
+        --python {{.PYTHON_VERSION}}
+
+  setup:
+    desc: Set up the development environment
+    silent: true
+    cmds:
+      - task: sync
+      - |
+        hooks_path="$(git config --local --get core.hooksPath || true)"
+        default_hooks_path="$(git rev-parse --absolute-git-dir)/hooks"
+        if [ "$hooks_path" = ".git/hooks" ] || [ "$hooks_path" = "$default_hooks_path" ]; then
+          git config --local --unset-all core.hooksPath
+        fi
+      - uv run pre-commit install
+
+  build:
+    desc: Build and install the native extension in the development environment
+    silent: true
+    cmds:
+      - uv run maturin develop --release --locked
+
+  build-dist:
+    desc: Build a wheel and source distribution in the local dist directory
+    silent: true
+    cmds:
+      - uv run maturin build --release --locked --out dist
+      - uv run maturin sdist --manifest-path rust/Cargo.toml --out dist
+
+  format:
+    desc: Format the codebase using Ruff
+    silent: true
+    cmds:
+      - >-
+        uv run ruff check --select I --fix
+        {{.PKG}} {{.TEST_PATHS}} {{.DOCS_DIR}}/*.py {{.DOCS_DIR}}/user
+      - uv run ruff format {{.PKG}} {{.TEST_PATHS}} {{.DOCS_DIR}}/*.py {{.DOCS_DIR}}/user
+
+  format-check:
+    desc: Check code formatting using Ruff
+    silent: true
+    cmds:
+      - >-
+        uv run ruff check --select I --diff
+        {{.PKG}} {{.TEST_PATHS}} {{.DOCS_DIR}}/*.py {{.DOCS_DIR}}/user
+      - uv run ruff format --check {{.PKG}} {{.TEST_PATHS}} {{.DOCS_DIR}}/*.py {{.DOCS_DIR}}/user
+
+  lint:
+    desc: Lint the codebase using Ruff (`task lint -- --fix` to apply fixes)
+    silent: true
+    cmds:
+      - >-
+        uv run ruff check {{.CLI_ARGS}}
+        {{.PKG}} {{.TEST_PATHS}} {{.DOCS_DIR}}/*.py {{.DOCS_DIR}}/user
+
+  typecheck:
+    desc: Run type checks using Ty and Pyright
+    aliases: [type-check]
+    silent: true
+    cmds:
+      - uv run ty check {{.PKG}} {{.TEST_PATHS}}
+      - uv run pyright {{.PKG}} {{.TEST_PATHS}}
+
+  rust-check:
+    desc: Check Rust formatting and linting
+    silent: true
+    cmds:
+      - cargo fmt --manifest-path rust/Cargo.toml -- --check
+      - cargo clippy --manifest-path rust/Cargo.toml --all-targets --all-features -- -D warnings
+
+  test-rust:
+    desc: Run Rust tests
+    silent: true
+    cmds:
+      - uv run cargo test --manifest-path rust/Cargo.toml --locked --all-features
+
+  coverage-rust:
+    desc: Run Rust tests with the CI coverage threshold
+    silent: true
+    cmds:
+      - >-
+        cargo llvm-cov --manifest-path rust/Cargo.toml --locked
+        --fail-under-lines 85
+
+  all-checks:
+    desc: Run Python and Rust formatting, linting, and type checking
+    silent: true
+    cmds:
+      - task: format-check
+      - task: lint
+      - task: typecheck
+      - task: rust-check
+
+  check:
+    desc: Run formatting and lint checks
+    silent: true
+    cmds:
+      - task: format-check
+      - task: lint
+
+  pytest:
+    internal: true
+    silent: true
+    env:
+      PYTHONHASHSEED: "0"
+      TERM: xterm
+    cmds:
+      - task: sync
+      - task: build
+      - uv run pytest -v {{.PYTEST_ARGS}}
+
+  test:
+    desc: Run tests using pytest (`task test -- tests/foo` to scope the run)
+    silent: true
+    cmds:
+      - task: pytest
+        vars:
+          PYTEST_ARGS: "{{.CLI_ARGS | default .TEST_PATHS}}"
+
+  test:*:
+    desc: Run tests in a specific path (`task test:tests/foo`)
+    silent: true
+    vars:
+      TEST_PATH: "{{index .MATCH 0}}"
+    cmds:
+      - task: pytest
+        vars:
+          PYTEST_ARGS: "{{.TEST_PATH}}"
+
+  test-mgrp-live:
+    desc: Run live mgrp tests against MGRP_TEST_IMAGE
+    silent: true
+    preconditions:
+      - sh: test -n "$MGRP_TEST_IMAGE"
+        msg: "Set MGRP_TEST_IMAGE to a locally available image tag"
+    cmds:
+      - task: pytest
+        vars:
+          PYTEST_ARGS: "-m mgrp_live tests/mgrp/live"
+
+  coverage:
+    desc: Run tests with coverage reporting
+    silent: true
+    cmds:
+      - task: pytest
+        vars:
+          PYTEST_ARGS: >-
+            {{.CLI_ARGS | default .TEST_PATHS}} --cov={{.PKG}}
+            --cov-branch --cov-report=term-missing
+
+  snapshots:
+    desc: Update plotting image snapshots
+    silent: true
+    env:
+      PYTHONHASHSEED: "0"
+      UPDATE_SNAPSHOTS: "1"
+    cmds:
+      - task: sync
+      - uv run pytest --with-snapshot -m snapshot -v tests
+
+  snapshots-verify:
+    desc: Verify plotting image snapshots against the committed baselines
+    silent: true
+    env:
+      PYTHONHASHSEED: "0"
+      # Override any UPDATE_SNAPSHOTS leaked from the shell or .env; "0" is not truthy.
+      UPDATE_SNAPSHOTS: "0"
+    cmds:
+      - task: sync
+      - uv run pytest --with-snapshot -m snapshot -v tests
+
+  snapshots-latex:
+    desc: Update LaTeX image snapshots (requires a local LaTeX toolchain)
+    silent: true
+    env:
+      PYTHONHASHSEED: "0"
+      UPDATE_SNAPSHOTS: "1"
+    cmds:
+      - task: sync
+      - uv run pytest --with-latex -m latex -v tests
+
+  snapshots-latex-verify:
+    desc: Verify LaTeX image snapshots against the committed baselines
+    silent: true
+    env:
+      PYTHONHASHSEED: "0"
+      # Override any UPDATE_SNAPSHOTS leaked from the shell or .env; "0" is not truthy.
+      UPDATE_SNAPSHOTS: "0"
+    cmds:
+      - task: sync
+      - uv run pytest --with-latex -m latex -v tests
+
+  precommit:
+    desc: Install and run pre-commit hooks
+    silent: true
+    cmds:
+      - task: sync
+      - uv run pre-commit install
+      - uv run pre-commit run
+
+  docs:
+    desc: Build the documentation with warnings treated as errors
+    silent: true
+    cmds:
+      - task: docs-cache-notebooks
+      - >-
+        uv run --no-default-groups --extra docs --group docs-exec --extra mgrp
+        sphinx-build -E -a -W --keep-going -b dirhtml {{.DOCS_DIR}} {{.DOCS_DIR}}/_build
+
+  docs-serve:
+    desc: Serve the documentation locally with live reload
+    silent: true
+    cmds:
+      - task: docs-cache-notebooks
+      - >-
+        uv run --no-default-groups --extra docs --group docs-exec --extra mgrp
+        sphinx-autobuild -a -b dirhtml {{.DOCS_DIR}} {{.DOCS_DIR}}/_build
+
+  docs-test:
+    desc: Execute every Python example in the prose documentation
+    silent: true
+    cmds:
+      - >-
+        uv run --no-default-groups --extra docs --group docs-exec --extra mgrp
+        pytest -v tests/test_docs_snippets.py
+
+  docs-linkcheck:
+    desc: Check external links in the documentation
+    silent: true
+    cmds:
+      - task: docs-cache-notebooks
+      - >-
+        uv run --no-default-groups --extra docs --group docs-exec --extra mgrp
+        sphinx-build -E -a -W --keep-going -b linkcheck
+        {{.DOCS_DIR}} {{.DOCS_DIR}}/_build/linkcheck
+
+  docs-cache-notebooks:
+    desc: Execute notebooks into the ignored MyST-NB cache (`FRESH=1` forces execution)
+    silent: true
+    vars:
+      CACHE_FLAG: '{{if eq .FRESH "1"}}--force{{end}}'
+    cmds:
+      - >-
+        uv run --no-default-groups --extra docs --group docs-exec --extra mgrp
+        python {{.DOCS_DIR}}/_refresh_notebooks.py {{.CACHE_FLAG}} {{.CLI_ARGS}}
+
+  clean:
+    desc: Clean build artifacts
+    silent: true
+    cmds:
+      - task: clean-{{OS}}
+
+  clean-linux:
+    internal: true
+    silent: true
+    cmds: &clean-unix
+      - >-
+        rm -rf dist build {{.DOCS_DIR}}/_build "{{.VENV_DIR}}"
+        .pytest_cache .mypy_cache .ruff_cache
+      - find . -type d -name "*.egg-info" -exec rm -rf {} +
+      - find . -type d -name "__pycache__" -exec rm -rf {} +
+      - find . -type d -name ".ipynb_checkpoints" -exec rm -rf {} +
+      - find . -type f -name "*.pyc" -delete
+
+  clean-darwin:
+    internal: true
+    silent: true
+    cmds: *clean-unix
+
+  docker-build:
+    desc: Build the mgrp Docker image for the host platform (`task docker-build -- <tag>`)
+    silent: true
+    dir: docker
+    vars:
+      TAG: '{{.CLI_ARGS | default "dev"}}'
+    cmds:
+      - docker build -t {{.DOCKER_IMAGE}}:{{.TAG}} .
+      - echo "Built {{.DOCKER_IMAGE}}:{{.TAG}}"
+
+  docker-builder:
+    desc: Create the Buildx builder used for multi-platform releases
+    internal: true
+    silent: true
+    preconditions:
+      - sh: docker buildx version
+        msg: "Install the Docker Buildx plugin before publishing an image"
+    status:
+      - docker buildx inspect gerrytools-multiarch
+    cmds:
+      - docker buildx create --name gerrytools-multiarch --driver docker-container
+
+  docker-push:
+    desc: Build and push the amd64/arm64 mgrp image (`task docker-push -- <tag>`)
+    silent: true
+    dir: docker
+    vars:
+      TAG: "{{.CLI_ARGS}}"
+    preconditions:
+      - sh: test -n "{{.CLI_ARGS}}"
+        msg: "Provide an explicit tag to publish, e.g. `task docker-push -- v2.0.1`"
+    cmds:
+      - task: docker-builder
+      - docker buildx inspect gerrytools-multiarch --bootstrap
+      - >-
+        docker buildx build --builder gerrytools-multiarch
+        --platform linux/amd64,linux/arm64
+        --tag {{.DOCKER_IMAGE}}:{{.TAG}} --push .
+      - docker buildx imagetools inspect {{.DOCKER_IMAGE}}:{{.TAG}}
+
+  clean-windows:
+    internal: true
+    silent: true
+    cmds:
+      - cmd /c "if exist dist rmdir /s /q dist"
+      - cmd /c "if exist build rmdir /s /q build"
+      - cmd /c "if exist user_guide\\_build rmdir /s /q user_guide\\_build"
+      - cmd /c "if exist {{.VENV_DIR}} rmdir /s /q {{.VENV_DIR}}"
+      - cmd /c "if exist .pytest_cache rmdir /s /q .pytest_cache"
+      - cmd /c "if exist .mypy_cache rmdir /s /q .mypy_cache"
+      - cmd /c "if exist .ruff_cache rmdir /s /q .ruff_cache"
+      - powershell -NoProfile -Command "Get-ChildItem -Path . -Filter *.egg-info -Directory -Recurse | Remove-Item -Recurse -Force"
+      - powershell -NoProfile -Command "Get-ChildItem -Path . -Directory -Filter __pycache__ -Recurse | Remove-Item -Recurse -Force"
+      - powershell -NoProfile -Command "Get-ChildItem -Path . -Directory -Filter .ipynb_checkpoints -Recurse | Remove-Item -Recurse -Force"
+      - powershell -NoProfile -Command "Get-ChildItem -Path . -Filter *.pyc -File -Recurse | Remove-Item -Force"

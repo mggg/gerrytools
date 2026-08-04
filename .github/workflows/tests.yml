@@ -1,0 +1,115 @@
+# CI for gerrytools: lint + the no-Docker test suite on every push/PR, and an
+# opt-in job that builds the mgrp Docker image and runs the live engine tests.
+name: tests
+
+env:
+  PYTHONHASHSEED: "0"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      live_mgrp:
+        description: "Build the mgrp Docker image and run the live engine tests"
+        type: boolean
+        default: false
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run ruff check gerrytools tests user_guide/*.py user_guide/user
+      - run: uv run ruff check --select I --diff gerrytools tests user_guide/*.py user_guide/user
+      - run: uv run ruff format --check gerrytools tests user_guide/*.py user_guide/user
+      - run: uv run ty check gerrytools tests
+      - run: uv run pyright gerrytools tests
+
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: uv sync --locked
+      - run: uv run maturin develop --release --locked
+      # The mgrp live tests skip themselves unless MGRP_TEST_IMAGE is set, so
+      # this runs the full no-Docker suite.
+      - run: uv run pytest tests/ -q
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - run: uv sync --locked
+      - run: uv run maturin develop --release --locked
+      - run: >-
+          uv run pytest tests/ -q --cov=gerrytools --cov-branch
+          --cov-report=term-missing --cov-fail-under=95
+
+  snapshots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - run: sudo apt-get update
+      - run: >-
+          sudo apt-get install -y --no-install-recommends
+          poppler-utils texlive-latex-base texlive-latex-extra texlive-fonts-recommended
+          texlive-science
+      - run: uv sync --locked
+      - run: uv run maturin develop --release --locked
+      - run: >-
+          uv run pytest --with-snapshot --with-latex -m "snapshot or latex" -q tests
+        env:
+          UPDATE_SNAPSHOTS: "0"
+
+  scoring-engine-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, llvm-tools-preview, rustfmt
+      - run: cargo fmt --manifest-path rust/Cargo.toml -- --check
+      - run: >-
+          cargo clippy --manifest-path rust/Cargo.toml
+          --all-targets --all-features -- -D warnings
+      - run: cargo test --manifest-path rust/Cargo.toml --locked --all-features
+      - run: cargo install cargo-llvm-cov --version 0.8.4 --locked
+      - run: >-
+          cargo llvm-cov --manifest-path rust/Cargo.toml --locked
+          --fail-under-lines 85
+
+  # Opt-in: the image build takes ~30+ minutes, so it only runs when requested
+  # via workflow_dispatch. It exercises all engines end-to-end against the
+  # pinned refs in docker/Dockerfile.
+  live-mgrp:
+    if: github.event_name == 'workflow_dispatch' && inputs.live_mgrp
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - run: uv sync --locked
+      - run: uv run maturin develop --release --locked
+      - name: Build the mgrp image
+        run: docker build -t mgggdev/replicate:ci docker/
+      - name: Run live engine tests
+        env:
+          MGRP_TEST_IMAGE: mgggdev/replicate:ci
+        run: uv run pytest tests/mgrp/live -q

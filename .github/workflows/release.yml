@@ -1,0 +1,330 @@
+name: Build & publish GerryTools wheels
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, for example v2.0.0"
+        type: string
+        required: true
+      upload_to:
+        description: "Upload destination for manual runs"
+        type: choice
+        required: true
+        default: "testpypi"
+        options: [testpypi, pypi]
+
+env:
+  OUT_DIR: dist
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate release tag
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.release.outputs.sha }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.1"
+      - name: Validate release tag
+        id: release
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Dispatch this workflow from the main branch, not $GITHUB_REF_NAME."
+            exit 1
+          fi
+          project_version="$(uv version --short)"
+          if [[ "$RELEASE_TAG" != "v$project_version" ]]; then
+            echo "Tag $RELEASE_TAG does not match project version $project_version."
+            exit 1
+          fi
+          if ! git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            echo "$RELEASE_TAG is not a tag in this repository."
+            exit 1
+          fi
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "The tagged commit is not on the main branch."
+            exit 1
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "version=$project_version" >> "$GITHUB_OUTPUT"
+
+  linux:
+    name: linux (${{ matrix.target }})
+    needs: validate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64, aarch64]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+      - name: Build wheels (manylinux_2_28, abi3)
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: "2_28"
+          command: build
+          args: >-
+            --release
+            --locked
+            --out ${{ env.OUT_DIR }}
+      - name: Smoke test wheel
+        if: matrix.target == 'x86_64'
+        run: |
+          python3 -m venv /tmp/wheel-smoke
+          /tmp/wheel-smoke/bin/pip install ${{ env.OUT_DIR }}/*.whl
+          /tmp/wheel-smoke/bin/python .github/workflows/wheel_smoke.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: wheels-linux-${{ matrix.target }}
+          path: ${{ env.OUT_DIR }}/*
+          if-no-files-found: error
+
+  macos:
+    name: macos (universal2, abi3)
+    needs: validate
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+      - name: Add x86_64 target
+        run: rustup target add x86_64-apple-darwin
+      - name: Build universal2 wheel
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "10.13"
+        with:
+          manylinux: "off"
+          command: build
+          args: >-
+            --release
+            --locked
+            --target universal2-apple-darwin
+            --out ${{ env.OUT_DIR }}
+      - name: Smoke test wheel
+        run: |
+          python3 -m venv /tmp/wheel-smoke
+          /tmp/wheel-smoke/bin/pip install ${{ env.OUT_DIR }}/*.whl
+          /tmp/wheel-smoke/bin/python .github/workflows/wheel_smoke.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: wheels-macos-universal2
+          path: ${{ env.OUT_DIR }}/*
+          if-no-files-found: error
+
+  windows:
+    name: windows (x64, abi3)
+    needs: validate
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+          architecture: x64
+      - name: Build wheel (Windows x64, abi3)
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
+        with:
+          manylinux: "off"
+          command: build
+          args: >-
+            --release
+            --locked
+            --out ${{ env.OUT_DIR }}
+      - name: Smoke test wheel
+        shell: pwsh
+        run: |
+          python -m venv $env:TEMP\wheel-smoke
+          $wheel = Get-ChildItem "${{ env.OUT_DIR }}\*.whl" | Select-Object -First 1
+          & "$env:TEMP\wheel-smoke\Scripts\pip" install $wheel.FullName
+          & "$env:TEMP\wheel-smoke\Scripts\python" .github\workflows\wheel_smoke.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: wheels-windows
+          path: ${{ env.OUT_DIR }}/*
+          if-no-files-found: error
+
+  windows-arm64:
+    name: windows (ARM64, abi3)
+    needs: validate
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+          architecture: arm64
+      - name: Build wheel (win_arm64, abi3)
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
+        with:
+          command: build
+          args: >-
+            --release
+            --locked
+            --out ${{ env.OUT_DIR }}
+            --target aarch64-pc-windows-msvc
+      - name: Smoke test wheel
+        shell: pwsh
+        run: |
+          python -m venv $env:TEMP\wheel-smoke
+          $wheel = Get-ChildItem "${{ env.OUT_DIR }}\*.whl" | Select-Object -First 1
+          & "$env:TEMP\wheel-smoke\Scripts\pip" install $wheel.FullName
+          & "$env:TEMP\wheel-smoke\Scripts\python" .github\workflows\wheel_smoke.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: wheels-windows-arm64
+          path: ${{ env.OUT_DIR }}/*
+          if-no-files-found: error
+
+  sdist:
+    name: sdist
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+      - name: Build sdist
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
+        with:
+          manylinux: "off"
+          command: sdist
+          args: --manifest-path rust/Cargo.toml --out ${{ env.OUT_DIR }}
+      - name: Verify sdist license
+        run: tar -tzf ${{ env.OUT_DIR }}/*.tar.gz | grep -E '(^|/)LICENSE$' >/dev/null
+      - name: Smoke test source distribution
+        run: |
+          python3 -m venv "$RUNNER_TEMP/sdist-smoke"
+          "$RUNNER_TEMP/sdist-smoke/bin/pip" install "${{ env.OUT_DIR }}"/*.tar.gz
+          "$RUNNER_TEMP/sdist-smoke/bin/python" .github/workflows/wheel_smoke.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: sdist
+          path: ${{ env.OUT_DIR }}/*
+          if-no-files-found: error
+
+  testpypi:
+    name: Publish to TestPyPI
+    needs: [linux, macos, windows, windows-arm64, sdist]
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/gerrytools/
+    permissions:
+      contents: read
+      id-token: write # for PyPI/TestPyPI Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          path: collected
+      - name: Collect dists
+        run: |
+          mkdir -p upload
+          find collected -type f -name "*.whl" -exec cp {} upload/ \;
+          find collected -type f -name "*.tar.gz" -exec cp {} upload/ \;
+          ls -l upload
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        with:
+          packages-dir: upload
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  testpypi_verify:
+    name: Verify TestPyPI installation
+    needs: [validate, testpypi]
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.1"
+      - name: Install Python
+        run: uv python install 3.13
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: wheels-linux-x86_64
+          path: dist
+      - name: Install dependencies from the built wheel
+        run: |
+          uv venv --python 3.13 "$RUNNER_TEMP/testpypi-venv"
+          uv pip install --python "$RUNNER_TEMP/testpypi-venv/bin/python" dist/*.whl
+      - name: Install GerryTools from TestPyPI
+        run: |
+          for attempt in {1..10}; do
+            if uv pip install \
+              --python "$RUNNER_TEMP/testpypi-venv/bin/python" \
+              --reinstall-package gerrytools \
+              --no-deps \
+              --default-index https://test.pypi.org/simple/ \
+              "gerrytools==$RELEASE_VERSION"; then
+              exit 0
+            fi
+            if [[ "$attempt" == 10 ]]; then
+              echo "TestPyPI did not make gerrytools $RELEASE_VERSION available in time."
+              exit 1
+            fi
+            sleep 15
+          done
+      - name: Smoke test TestPyPI installation
+        run: |
+          "$RUNNER_TEMP/testpypi-venv/bin/python" -c \
+            'import os; from importlib.metadata import version; \
+            assert version("gerrytools") == os.environ["RELEASE_VERSION"]'
+          "$RUNNER_TEMP/testpypi-venv/bin/python" .github/workflows/wheel_smoke.py
+
+  pypi:
+    name: Publish to PyPI
+    if: ${{ inputs.upload_to == 'pypi' }}
+    needs: testpypi_verify
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/gerrytools/
+    permissions:
+      contents: read
+      id-token: write # for PyPI Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          path: collected
+      - name: Collect dists
+        run: |
+          mkdir -p upload
+          find collected -type f -name "*.whl" -exec cp {} upload/ \;
+          find collected -type f -name "*.tar.gz" -exec cp {} upload/ \;
+          ls -l upload
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        with:
+          packages-dir: upload

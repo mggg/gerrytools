@@ -1,0 +1,31 @@
+name: Documentation
+
+on:
+  pull_request:
+    paths:
+      - "user_guide/**"
+      - "gerrytools/**"
+      - "tests/test_docs_snippets.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "Taskfile.yml"
+      - ".github/workflows/docs.yml"
+  push:
+    branches: [main]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: arduino/setup-task@v2
+        with:
+          version: 3.44.0
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check prose examples
+        run: task docs-test
+      - name: Build documentation
+        run: task docs
