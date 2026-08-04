@@ -1,6 +1,6 @@
 # Tutorial data
 
-<div style="text-align: center;"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-primary reference external" href="https://www.dropbox.com/scl/fo/s22x9phl0hldiakn8nbuz/ABKfxHBaak5ra3eBGkNFWMM?rlkey=igpo7qi07oz5tfgjki317o79t&amp;st=gcxkicnc&amp;dl=1">Download tutorial data</a></div>
+<div style="text-align: center;"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-primary reference external" href="https://github.com/mggg/gerrytools/tree/main/user_guide/_static/data">Browse tutorial data</a></div>
 
 The tutorials use the datasets in this bundle. Extract it so the `data` directory is next to the
 tutorial notebook:
