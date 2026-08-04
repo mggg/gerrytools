@@ -17,6 +17,7 @@ import warnings  # noqa: E402
 
 import matplotlib.pyplot as plt  # noqa: E402
 import pytest  # noqa: E402
+from matplotlib.backend_bases import FigureCanvasBase  # noqa: E402
 from matplotlib.figure import SubFigure  # noqa: E402
 
 from gerrytools.plotting import DotDensityPlot, GeoPlot, Histogram  # noqa: E402
@@ -298,6 +299,36 @@ class TestFigureLifecycle:
     reference until ``plt.close``. Both plot base classes register a ``weakref.finalize`` so a
     plot going out of scope closes its own figure; user-supplied figures are never touched.
     """
+
+    def test_jupyter_close_preserves_canvas_for_deferred_arrow_alignment(self, monkeypatch):
+        import gerrytools.plotting._axes_backed as axes_backed
+
+        original_close = axes_backed.plt.close
+        original_canvases = []
+
+        def close_with_base_canvas(fig):
+            if not hasattr(fig, "canvas"):
+                return original_close(fig)
+            original_canvases.append(fig.canvas)
+            original_close(fig)
+            FigureCanvasBase(fig)
+
+        monkeypatch.setattr(axes_backed, "in_jupyter_kernel", lambda: True)
+        monkeypatch.setattr(axes_backed.plt, "close", close_with_base_canvas)
+
+        plot = Histogram()
+        assert plot.fig.canvas is original_canvases[0]
+
+        plot.add_dataset([1.0, 2.0, 3.0])
+        plot.add_axis_text_arrow("x", "more votes", position=0.13, offset=0.12)
+        ax = plot.ax
+        arrow_text = next(text for text in ax.texts if text.get_text() == "more votes")
+        bbox_patch = arrow_text.get_bbox_patch()
+        assert bbox_patch is not None
+        vertices = bbox_patch.get_transform().transform(bbox_patch.get_path().vertices)
+        desired_tip_x = float(ax.transAxes.transform((0.13, -0.12))[0])
+
+        assert float(vertices[:, 0].max()) == pytest.approx(desired_tip_x)
 
     def test_histogram_figures_close_when_plots_collected(self):
         import gc

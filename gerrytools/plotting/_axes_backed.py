@@ -91,7 +91,11 @@ class _AxesBackedPlot:
                 self.fig, self._ax = plt.subplots(figsize=self._figure_size, dpi=self._figure_dpi)
             self._figure_is_shared = False
             if in_jupyter_kernel():  # pragma: no cover - only reachable in a live Jupyter kernel
+                canvas = self.fig.canvas
                 plt.close(self.fig)  # pragma: no cover
+                # Matplotlib 3.11 replaces a closed inline figure's render-capable canvas with
+                # FigureCanvasBase, which cannot realize deferred text-arrow bounding boxes.
+                self.fig.set_canvas(canvas)  # pragma: no cover
             self._finalizer = weakref.finalize(self, plt.close, self.fig)
         else:
             new_fig = cast(Figure, ax.get_figure(root=True))
