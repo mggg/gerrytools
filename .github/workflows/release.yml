@@ -167,40 +167,7 @@ jobs:
           path: ${{ env.OUT_DIR }}/*
           if-no-files-found: error
 
-  windows-arm64:
-    name: windows (ARM64, abi3)
-    needs: validate
-    runs-on: windows-11-arm
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          ref: ${{ needs.validate.outputs.sha }}
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
-        with:
-          python-version: "3.11"
-          architecture: arm64
-      - name: Build wheel (win_arm64, abi3)
-        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
-        with:
-          command: build
-          args: >-
-            --release
-            --locked
-            --out ${{ env.OUT_DIR }}
-            --target aarch64-pc-windows-msvc
-      - name: Smoke test wheel
-        shell: pwsh
-        run: |
-          python -m venv $env:TEMP\wheel-smoke
-          $wheel = Get-ChildItem "${{ env.OUT_DIR }}\*.whl" | Select-Object -First 1
-          & "$env:TEMP\wheel-smoke\Scripts\pip" install $wheel.FullName
-          & "$env:TEMP\wheel-smoke\Scripts\python" .github\workflows\wheel_smoke.py
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: wheels-windows-arm64
-          path: ${{ env.OUT_DIR }}/*
-          if-no-files-found: error
-
+  # Windows ARM64 is omitted until PyArrow, Pyogrio, and Shapely publish compatible wheels.
   sdist:
     name: sdist
     needs: validate
@@ -230,7 +197,7 @@ jobs:
 
   testpypi:
     name: Publish to TestPyPI
-    needs: [linux, macos, windows, windows-arm64, sdist]
+    needs: [linux, macos, windows, sdist]
     runs-on: ubuntu-latest
     environment:
       name: testpypi
