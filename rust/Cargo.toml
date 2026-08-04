@@ -14,17 +14,17 @@ crate-type = ["rlib", "cdylib"]
 python = ["dep:pyo3"]
 
 [dependencies]
-arrow-array = "=58.3.0"
-arrow-schema = "=58.3.0"
+arrow-array = "=59.0.0"
+arrow-schema = "=59.0.0"
 ben = { package = "binary-ensemble", version = "=2.0.0" }
 clipper2 = { version = "=0.6.0", default-features = false }
-fastrand = "=2.4.1"
+fastrand = "=2.5.0"
 geo = "=0.33.1"
 geo-traits = "=0.3.0"
 lzma-sys = { version = "=0.1.20", features = ["static"] }
-parquet = { version = "=58.3.0", features = ["arrow"] }
+parquet = { version = "=59.0.0", features = ["arrow"] }
 pyo3 = { version = "=0.29.0", features = ["abi3-py311"], optional = true }
-rayon = "=1.11.0"
+rayon = "=1.12.0"
 rstar = "=0.12.2"
 rustix = { version = "=1.1.4", features = ["fs"] }
 serde = { version = "=1.0.229", features = ["derive"] }

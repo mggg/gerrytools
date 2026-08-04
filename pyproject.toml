@@ -24,7 +24,7 @@ classifiers = [
 dependencies = [
   # Working with graphs and ensembles
   "networkx>=3.6.1",
-  "gerrychain @ git+https://github.com/mggg/GerryChain.git@dbce5dfedda7bf6258cfd47feed38ad34d693a7c",
+  "gerrychain>=1.0.0",
   "binary-ensemble==2.0.0",
   # Data manipulation
   "pandas>=3.0.5",
@@ -61,7 +61,7 @@ dev = [
   "pre-commit>=4.6.1",
   "maturin>=1.14.1,<2",
   "ruff>=0.16.1",
-  "ty>=0.0.65",
+  "ty>=0.0.66",
   "pyright>=1.1.411",
 ]
 docs-exec = [
