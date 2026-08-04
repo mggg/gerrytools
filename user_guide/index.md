@@ -166,6 +166,7 @@ LaTeX output <user/latex/index>
 :maxdepth: 2
 
 API reference <api>
+Changelog <changelog>
 ```
 
 ```{toctree}

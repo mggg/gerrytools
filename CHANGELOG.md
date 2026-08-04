@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-08-04
+
 GerryTools 2.0.0 is a rewrite. Every subpackage changed, the public API is not backward
 compatible with 1.x, and no deprecation aliases are provided. Read the migration notes below
 before upgrading.
@@ -294,7 +296,7 @@ rust/src        # the compiled scoring engine, built as gerrytools._scoring_engi
   | `drawgraph`                                             | `draw_graph`                                                                    |
   | `arrow`                                                 | `add_arrow` methods (`add_label_arrow`, `add_text_arrow`, and axis variants)    |
   | `ideal`                                                 | `add_vertical_lines` / `add_horizontal_lines` (multiple lines, optional jitter) |
-  | `bins`                                                  | `Histogram.set_bins` / `Histogram.set_bin_widths`                            |
+  | `bins`                                                  | `Histogram.set_bins` / `Histogram.set_bin_widths`                               |
   | `districtr`, `flare`, `purples`, `redbluecmap`, `latex` | `gerrytools.colors`                                                             |
 
 - **`gerrytools.data` reorganized around US Census tables.** Census access lives under
@@ -392,16 +394,6 @@ rust/src        # the compiled scoring engine, built as gerrytools._scoring_engi
   replacement.
 - **`gerrytools.ben`:** the Docker-based `docker_manager.py` is removed; `binary-ensemble` is now
   a direct dependency.
-
-### Fixed
-
-- Dot-density sampling is deterministic given a seed, and independent of `n_jobs` and `n_chunks`.
-- Plot classes no longer call `ax.clear()`. Each plot tracks only the artists it created, so
-  rendering onto a shared or externally-styled axes leaves other content untouched.
-- Owned matplotlib figures are closed through a finalizer instead of being retained by pyplot's
-  figure manager for the life of the process.
-- Streamed scoring runs publish atomically. A failed run leaves no partial output directory.
-- The `mgrp` API reference now picks up all engine functions.
 
 [Unreleased]: https://github.com/mggg/gerrytools/compare/v2.0.0...HEAD
 [2.0.0]: https://github.com/mggg/gerrytools/compare/v1.2.1...v2.0.0
