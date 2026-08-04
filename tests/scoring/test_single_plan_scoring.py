@@ -506,9 +506,9 @@ def test_geometry_polsby_derives_rook_edges_and_reuses_native_geometry() -> None
         ],
         crs="EPSG:3857",
     )
-    wrong: nx.Graph[int] = nx.Graph([(0, 2)])
+    wrong: nx.Graph = nx.Graph([(0, 2)])
     wrong.add_node(1)
-    correct: nx.Graph[int] = nx.Graph([(0, 1), (1, 2)])
+    correct: nx.Graph = nx.Graph([(0, 1), (1, 2)])
 
     wrong_evaluator = PlanEvaluator(wrong, geometry=frame).add_metric(PolsbyPopper())
     correct_evaluator = PlanEvaluator(correct, geometry=frame).add_metric(PolsbyPopper())
