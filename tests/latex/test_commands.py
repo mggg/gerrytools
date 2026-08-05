@@ -99,7 +99,7 @@ class TestCommandGeneration:
         assert r"\num[round-mode=places,round-precision=2]{#1}%" in out
 
     def test_diverging_gradient_command_branches_in_fpeval_space(self):
-        # Regression (C3): \ifdim on "<value> pt" overflows TeX's 16383pt dimension ceiling
+        # Regression: \ifdim on "<value> pt" overflows TeX's 16383pt dimension ceiling
         # for population-scale ranges; the side selection must stay in fpeval space.
         out = tex_diverging_gradient_command(lo=0.0, mid=50000.0, hi=100000.0)
 

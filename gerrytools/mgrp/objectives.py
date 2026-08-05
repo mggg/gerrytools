@@ -7,16 +7,16 @@ constructed without memorizing the JSON schema; each builder returns a plain dic
 spec dicts remain interchangeable with builder output.
 
 Every run needs exactly one objective, passed as the ``objective`` argument of
-:class:`~gerrytools.mgrp.ShortBurstsRunInfo` or :class:`~gerrytools.mgrp.TiltedRunInfo`. Whether
+:class:`~gerrytools.mgrp.ShortBurstsRunSpec` or :class:`~gerrytools.mgrp.TiltedRunSpec`. Whether
 the optimizer drives the score up or down is controlled by the run's ``maximize`` flag, not by the
 objective itself: for example, ``by_district_abs_deviation`` measures a distance and is normally
 *minimized*, while ``gingles_partial`` counts districts and is normally *maximized*.
 
 Example::
 
-    from gerrytools.mgrp import Objective, ShortBurstsRunInfo
+    from gerrytools.mgrp import Objective, ShortBurstsRunSpec
 
-    run_info = ShortBurstsRunInfo(
+    run_spec = ShortBurstsRunSpec(
         pop_col="TOTPOP",
         assignment_col="CD",
         objective=Objective.gingles_partial(

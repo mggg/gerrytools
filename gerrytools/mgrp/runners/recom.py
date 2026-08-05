@@ -18,8 +18,8 @@ from ..run_config import (
     check_unit_interval,
 )
 from ..run_container import (
-    RunInfo,
     RunnerConfig,
+    RunSpec,
     _resolve_output_name,
     _validate_output_file_name,
 )
@@ -240,7 +240,7 @@ RustRecomConfig = RecomChainConfig | OptimizerConfig
 
 
 @dataclass
-class RecomRunInfo(RunInfo):
+class RecomRunSpec(RunSpec):
     """Represents all of the settings that can be passed to the rustrecom Rust code.
 
     The settings are validated on construction, so mistakes (an unknown variant, region-aware
@@ -450,10 +450,10 @@ OPTIMIZER_VARIANTS = ("A", "B", "C", "D")
 
 
 @dataclass(kw_only=True)
-class OptimizerRunInfoBase(RunInfo, ABC):
+class OptimizerRunSpecBase(RunSpec, ABC):
     """Settings shared by the ``short-bursts`` and ``tilted`` optimizer runs.
 
-    All fields are keyword-only; construct the concrete run infos with named arguments.
+    All fields are keyword-only; construct the concrete run specs with named arguments.
 
     Raises:
         ValueError: If a shared optimizer setting or objective is invalid.
@@ -479,7 +479,7 @@ class OptimizerRunInfoBase(RunInfo, ABC):
     n_threads: int = 1
     """The number of threads used to generate proposals. Defaults to 1."""
     writer: Writer = "canonical"
-    """The chain-record writer. Same options as RecomRunInfo.writer. Defaults to ``"canonical"``."""
+    """The chain-record writer. Same options as RecomRunSpec.writer. Defaults to ``"canonical"``."""
     sum_cols: list[str] = field(default_factory=list)
     """Additional columns to sum over districts. Defaults to an empty list."""
     partial_sum_cols: list[str] = field(default_factory=list)
@@ -576,7 +576,7 @@ class OptimizerRunInfoBase(RunInfo, ABC):
 
 
 @dataclass(kw_only=True)
-class ShortBurstsRunInfo(OptimizerRunInfoBase):
+class ShortBurstsRunSpec(OptimizerRunSpecBase):
     """
     Represents the settings for a ``rustrecom short-bursts`` optimizer run.
 
@@ -595,7 +595,7 @@ class ShortBurstsRunInfo(OptimizerRunInfoBase):
     per-district scores where the objective provides them). The settings are validated on
     construction, so mistakes raise before the Docker container starts. All settings are
     keyword-only; the shared optimizer settings (columns, objective, variant, writer, and output
-    controls) are common to both optimizer run infos.
+    controls) are common to both optimizer run specs.
 
     Raises:
         ValueError: If ``burst_length`` or a shared optimizer setting is invalid.
@@ -626,7 +626,7 @@ class ShortBurstsRunInfo(OptimizerRunInfoBase):
 
 
 @dataclass(kw_only=True)
-class TiltedRunInfo(OptimizerRunInfoBase):
+class TiltedRunSpec(OptimizerRunSpecBase):
     """
     Represents the settings for a ``rustrecom tilted`` optimizer run.
 
@@ -653,7 +653,7 @@ class TiltedRunInfo(OptimizerRunInfoBase):
     ``*_scores.csv`` next to it with one row per step. The settings are validated on construction,
     so mistakes raise before the Docker container starts. All settings are keyword-only; the shared
     optimizer settings (columns, objective, variant, writer, and output controls) are common to both
-    optimizer run infos.
+    optimizer run specs.
 
     Raises:
         ValueError: If an acceptance-rule option or shared optimizer setting is invalid.
@@ -705,36 +705,36 @@ class TiltedRunInfo(OptimizerRunInfoBase):
         super().validate()
 
 
-OptimizerRunInfo = ShortBurstsRunInfo | TiltedRunInfo
-RustRecomRunInfo = RecomRunInfo | ShortBurstsRunInfo | TiltedRunInfo
+OptimizerRunSpec = ShortBurstsRunSpec | TiltedRunSpec
+RustRecomRunSpec = RecomRunSpec | ShortBurstsRunSpec | TiltedRunSpec
 
-# Canonical rustrecom CLI subcommand for each run-info type. Keyed by exact type so instance
+# Canonical rustrecom CLI subcommand for each run-spec type. Keyed by exact type so instance
 # data can never shadow the token interpolated into the sh -c command template.
-RUN_INFO_SUBCOMMANDS: dict[type[RunInfo], str] = {
-    RecomRunInfo: "chain",
-    ShortBurstsRunInfo: "short-bursts",
-    TiltedRunInfo: "tilted",
+RUN_SPEC_SUBCOMMANDS: dict[type[RunSpec], str] = {
+    RecomRunSpec: "chain",
+    ShortBurstsRunSpec: "short-bursts",
+    TiltedRunSpec: "tilted",
 }
 
 
-def _subcommand(run_info: RustRecomRunInfo) -> str:
-    """The fixed CLI subcommand for ``run_info``'s exact type."""
+def _subcommand(run_spec: RustRecomRunSpec) -> str:
+    """The fixed CLI subcommand for ``run_spec``'s exact type."""
     try:
-        return RUN_INFO_SUBCOMMANDS[type(run_info)]
+        return RUN_SPEC_SUBCOMMANDS[type(run_spec)]
     except KeyError:
         raise TypeError(
-            f"No rustrecom subcommand for {type(run_info).__name__}; expected exactly "
-            "RecomRunInfo, ShortBurstsRunInfo, or TiltedRunInfo."
+            f"No rustrecom subcommand for {type(run_spec).__name__}; expected exactly "
+            "RecomRunSpec, ShortBurstsRunSpec, or TiltedRunSpec."
         ) from None
 
 
-class RecomRunnerConfig(RunnerConfig[RustRecomRunInfo]):
+class RecomRunnerConfig(RunnerConfig[RustRecomRunSpec]):
     """
-    Represents the configuration for a RunContainer which is used to run the
+    Represents the configuration for a RunnerSession which is used to run the
     rustrecom code on a given dual graph within the docker container.
     """
 
-    run_info_type = (RecomRunInfo, ShortBurstsRunInfo, TiltedRunInfo)
+    run_spec_type = (RecomRunSpec, ShortBurstsRunSpec, TiltedRunSpec)
 
     def __init__(
         self,
@@ -755,39 +755,39 @@ class RecomRunnerConfig(RunnerConfig[RustRecomRunInfo]):
         """
         super().__init__("recom", json_file_path, output_folder, log_folder)
 
-    def run_command(self, run_info: RustRecomRunInfo) -> list:
+    def run_command(self, run_spec: RustRecomRunSpec) -> list:
         """Return the command for a rustrecom run.
 
-        The template is static per run-info type: the subcommand token comes from
-        ``RUN_INFO_SUBCOMMANDS``, keyed by exact run-info type, never from instance
+        The template is static per run-spec type: the subcommand token comes from
+        ``RUN_SPEC_SUBCOMMANDS``, keyed by exact run-spec type, never from instance
         data (see ``RunnerConfig._shell_command`` for the config-as-``$1``
         transport). ``--overwrite-output`` is an output-lifecycle flag rather than
         a sampler value; the CLI accepts it alongside ``--config`` and it preserves
         the clobbering behavior of the shell redirects this template replaced.
 
         Args:
-            run_info (RustRecomRunInfo): Chain or optimizer run settings.
+            run_spec (RustRecomRunSpec): Chain or optimizer run settings.
 
         Returns:
             list: Shell command arguments for the container.
 
         Raises:
-            TypeError: If ``run_info`` is not one of the supported concrete run-info types.
+            TypeError: If ``run_spec`` is not one of the supported concrete run-spec types.
         """
-        self._check_run_info(run_info)
+        self._check_run_spec(run_spec)
         template = (
             ". /root/.cargo/env; /usr/bin/time -v rustrecom "
-            f'{_subcommand(run_info)} --config "$1" --overwrite-output'
+            f'{_subcommand(run_spec)} --config "$1" --overwrite-output'
         )
-        return self._shell_command(template, self.run_config(run_info), argv0="rustrecom")
+        return self._shell_command(template, self.run_config(run_spec), argv0="rustrecom")
 
     @overload
-    def run_config(self, run_info: RecomRunInfo) -> RecomChainConfig: ...
+    def run_config(self, run_spec: RecomRunSpec) -> RecomChainConfig: ...
 
     @overload
-    def run_config(self, run_info: OptimizerRunInfo) -> OptimizerConfig: ...
+    def run_config(self, run_spec: OptimizerRunSpec) -> OptimizerConfig: ...
 
-    def run_config(self, run_info: RustRecomRunInfo) -> RustRecomConfig:
+    def run_config(self, run_spec: RustRecomRunSpec) -> RustRecomConfig:
         """Return the complete effective configuration for a ReCom run.
 
         Unlike the Forest and SMC runners, which use gerrytools' own engine
@@ -799,154 +799,154 @@ class RecomRunnerConfig(RunnerConfig[RustRecomRunInfo]):
         so they translate to the CLI spellings here.
 
         Args:
-            run_info (RustRecomRunInfo): Chain or optimizer run settings.
+            run_spec (RustRecomRunSpec): Chain or optimizer run settings.
 
         Returns:
             RustRecomConfig: Independent native rustrecom configuration.
 
         Raises:
-            TypeError: If ``run_info`` is not one of the supported concrete run-info types.
+            TypeError: If ``run_spec`` is not one of the supported concrete run-spec types.
             ValueError: If its settings are invalid.
         """
-        self._check_run_info(run_info)
-        return self._config_document(run_info, self.file_stem(run_info))
+        self._check_run_spec(run_spec)
+        return self._config_document(run_spec, self.file_stem(run_spec))
 
-    def _base_config(self, run_info: RustRecomRunInfo) -> RustRecomConfig:
+    def _base_config(self, run_spec: RustRecomRunSpec) -> RustRecomConfig:
         """The config document with hash-free names, hashed into :meth:`file_stem`."""
-        return self._config_document(run_info, self._stem(run_info))
+        return self._config_document(run_spec, self._stem(run_spec))
 
-    def _config_document(self, run_info: RustRecomRunInfo, stem: str) -> RustRecomConfig:
+    def _config_document(self, run_spec: RustRecomRunSpec, stem: str) -> RustRecomConfig:
         """The independent effective config, with file names built from ``stem``."""
-        if not isinstance(run_info, RecomRunInfo):
-            return copy.deepcopy(self._optimizer_config(run_info, stem))
-        output_name = run_info.output_name(stem)
+        if not isinstance(run_spec, RecomRunSpec):
+            return copy.deepcopy(self._optimizer_config(run_spec, stem))
+        output_name = run_spec.output_name(stem)
         output = None if output_name is None else f"{self.container_output_dir}/{output_name}"
-        constraint = run_info.resolved_constraint
+        constraint = run_spec.resolved_constraint
         config = RecomChainConfig(
             version=1,
-            command=_subcommand(run_info),
+            command=_subcommand(run_spec),
             graph_json=self.container_graph_path,
-            n_steps=run_info.n_steps,
-            tol=run_info.pop_tol,
-            pop_col=run_info.pop_col,
-            assignment_col=run_info.assignment_col,
-            rng_seed=run_info.rng_seed,
+            n_steps=run_spec.n_steps,
+            tol=run_spec.pop_tol,
+            pop_col=run_spec.pop_col,
+            assignment_col=run_spec.assignment_col,
+            rng_seed=run_spec.rng_seed,
             # Rechecked so post-construction assignments cannot bypass __post_init__.
-            variant=VARIANT_TO_RUSTRECOM[_checked_chain_variant(run_info.variant)],
-            target_pop=run_info.target_pop,
-            balance_ub=run_info.balance_ub,
-            n_threads=run_info.n_threads,
-            batch_size=run_info.batch_size,
-            writer=_checked_writer(run_info.writer),
-            sum_cols=run_info.sum_cols,
-            region_weights=run_info.region_weights,
-            edge_weight_keys=run_info.edge_weight_keys,
-            cut_edges_count=run_info.cut_edges_count,
+            variant=VARIANT_TO_RUSTRECOM[_checked_chain_variant(run_spec.variant)],
+            target_pop=run_spec.target_pop,
+            balance_ub=run_spec.balance_ub,
+            n_threads=run_spec.n_threads,
+            batch_size=run_spec.batch_size,
+            writer=_checked_writer(run_spec.writer),
+            sum_cols=run_spec.sum_cols,
+            region_weights=run_spec.region_weights,
+            edge_weight_keys=run_spec.edge_weight_keys,
+            cut_edges_count=run_spec.cut_edges_count,
             output_file=output,
-            bendl_graph_order=run_info.bendl_graph_order,
-            show_progress=run_info.show_progress,
+            bendl_graph_order=run_spec.bendl_graph_order,
+            show_progress=run_spec.show_progress,
         )
         if constraint:
             config["constraint"] = constraint
         return copy.deepcopy(config)
 
-    def _optimizer_config(self, run_info: OptimizerRunInfo, stem: str) -> OptimizerConfig:
+    def _optimizer_config(self, run_spec: OptimizerRunSpec, stem: str) -> OptimizerConfig:
         """The native config document for a short-bursts or tilted run."""
         config = OptimizerConfig(
             version=1,
-            command=_subcommand(run_info),
+            command=_subcommand(run_spec),
             graph_json=self.container_graph_path,
-            n_steps=run_info.n_steps,
-            tol=run_info.pop_tol,
-            pop_col=run_info.pop_col,
-            assignment_col=run_info.assignment_col,
-            rng_seed=run_info.rng_seed,
-            objective=run_info.resolved_objective,
-            maximize=run_info.maximize,
-            n_threads=run_info.n_threads,
+            n_steps=run_spec.n_steps,
+            tol=run_spec.pop_tol,
+            pop_col=run_spec.pop_col,
+            assignment_col=run_spec.assignment_col,
+            rng_seed=run_spec.rng_seed,
+            objective=run_spec.resolved_objective,
+            maximize=run_spec.maximize,
+            n_threads=run_spec.n_threads,
             # Rechecked so post-construction assignments cannot bypass __post_init__.
-            variant=VARIANT_TO_RUSTRECOM[_checked_optimizer_variant(run_info.variant)],
-            writer=_checked_writer(run_info.writer),
-            sum_cols=run_info.sum_cols,
-            partial_sum_cols=run_info.partial_sum_cols,
-            region_weights=run_info.region_weights,
-            edge_weight_keys=run_info.edge_weight_keys,
-            output_file=f"{self.container_output_dir}/{run_info.output_name(stem)}",
-            scores_output_file=f"{self.container_output_dir}/{run_info.scores_name(stem)}",
-            show_progress=run_info.show_progress,
-            write_improved_scores_only=run_info.write_improved_scores_only,
+            variant=VARIANT_TO_RUSTRECOM[_checked_optimizer_variant(run_spec.variant)],
+            writer=_checked_writer(run_spec.writer),
+            sum_cols=run_spec.sum_cols,
+            partial_sum_cols=run_spec.partial_sum_cols,
+            region_weights=run_spec.region_weights,
+            edge_weight_keys=run_spec.edge_weight_keys,
+            output_file=f"{self.container_output_dir}/{run_spec.output_name(stem)}",
+            scores_output_file=f"{self.container_output_dir}/{run_spec.scores_name(stem)}",
+            show_progress=run_spec.show_progress,
+            write_improved_scores_only=run_spec.write_improved_scores_only,
         )
-        if isinstance(run_info, ShortBurstsRunInfo):
-            config["burst_length"] = run_info.burst_length
+        if isinstance(run_spec, ShortBurstsRunSpec):
+            config["burst_length"] = run_spec.burst_length
         else:
-            config["accept_rule"] = run_info.accept_rule
-            if run_info.accept_worse_prob is not None:
-                config["accept_worse_prob"] = run_info.accept_worse_prob
-            if run_info.acceptance_beta is not None:
-                config["acceptance_beta"] = run_info.acceptance_beta
+            config["accept_rule"] = run_spec.accept_rule
+            if run_spec.accept_worse_prob is not None:
+                config["accept_worse_prob"] = run_spec.accept_worse_prob
+            if run_spec.acceptance_beta is not None:
+                config["acceptance_beta"] = run_spec.acceptance_beta
         return config
 
-    def _stem(self, run_info: RustRecomRunInfo) -> str:
+    def _stem(self, run_spec: RustRecomRunSpec) -> str:
         """The human-readable stem derived from the run's headline settings."""
-        return run_info.stem()
+        return run_spec.stem()
 
-    def _output_name(self, run_info: RustRecomRunInfo) -> str | None:
+    def _output_name(self, run_spec: RustRecomRunSpec) -> str | None:
         """
         The name of the file the run will produce, or None when the output is
         printed to stdout instead.
         """
-        return run_info.output_name(self.file_stem(run_info))
+        return run_spec.output_name(self.file_stem(run_spec))
 
-    def scores_file(self, run_info: RustRecomRunInfo) -> str | None:
+    def scores_file(self, run_spec: RustRecomRunSpec) -> str | None:
         """Return the optimizer's scores CSV path, or None for a chain run.
 
         Args:
-            run_info (RustRecomRunInfo): Chain or optimizer run settings.
+            run_spec (RustRecomRunSpec): Chain or optimizer run settings.
 
         Returns:
             str | None: Host scores CSV path, or None for a chain run.
         """
-        scores_name = run_info.scores_name(self.file_stem(run_info))
+        scores_name = run_spec.scores_name(self.file_stem(run_spec))
         return None if scores_name is None else str(self.output_folder / scores_name)
 
-    def expected_files(self, run_info: RustRecomRunInfo) -> list[str]:
+    def expected_files(self, run_spec: RustRecomRunSpec) -> list[str]:
         """Return outputs, adding sidecar provenance when the primary output lacks it.
 
         Args:
-            run_info (RustRecomRunInfo): Chain or optimizer run settings.
+            run_spec (RustRecomRunSpec): Chain or optimizer run settings.
 
         Returns:
             list[str]: Primary output plus applicable provenance and scores sidecars.
         """
-        expected = super().expected_files(run_info)
-        inline_provenance = isinstance(run_info, RecomRunInfo) and run_info.writer in (
+        expected = super().expected_files(run_spec)
+        inline_provenance = isinstance(run_spec, RecomRunSpec) and run_spec.writer in (
             "jsonl",
             "jsonl-full",
         )
-        if expected and run_info.writer != "bendl" and not inline_provenance:
+        if expected and run_spec.writer != "bendl" and not inline_provenance:
             expected.append(self._sidecar_file(expected[0], "metadata.jsonl"))
-        scores_file = self.scores_file(run_info)
+        scores_file = self.scores_file(run_spec)
         if scores_file is not None:
             expected.append(scores_file)
         return expected
 
-    def canonical_stdout_command(self, run_info: RustRecomRunInfo) -> list:
+    def canonical_stdout_command(self, run_spec: RustRecomRunSpec) -> list:
         """Return the chain command with canonical assignment output forced to stdout.
 
         Args:
-            run_info (RustRecomRunInfo): Chain run settings.
+            run_spec (RustRecomRunSpec): Chain run settings.
 
         Returns:
             list: Shell command arguments for the container.
 
         Raises:
-            TypeError: If ``run_info`` describes an optimizer rather than a chain.
+            TypeError: If ``run_spec`` describes an optimizer rather than a chain.
         """
-        if not isinstance(run_info, RecomRunInfo):
-            raise TypeError("Canonical stdout runs require a RecomRunInfo, not an optimizer run.")
+        if not isinstance(run_spec, RecomRunSpec):
+            raise TypeError("Canonical stdout runs require a RecomRunSpec, not an optimizer run.")
         return self.run_command(
             replace(
-                run_info,
+                run_spec,
                 writer="canonical",
                 force_print=True,
                 bendl_graph_order="none",

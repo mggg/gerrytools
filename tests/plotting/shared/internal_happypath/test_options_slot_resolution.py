@@ -1,7 +1,7 @@
-"""Tests for the `*_options=` slot resolution rule (Phase C).
+"""Tests for the ``*_options=`` slot-resolution rule.
 
-Each `add_*` method on every plot now accepts a styling Options dataclass via
-an `options=` (or `line_options=`/`band_options=`/`marker_options=`) parameter.
+Each ``add_*`` method accepts a styling options dataclass through
+an ``options=`` (or ``line_options=``/``band_options=``/``marker_options=``) parameter.
 The resolution rule is: explicit kwargs override the options' fields. These
 tests assert that contract end-to-end through the public API.
 """

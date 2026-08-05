@@ -6,7 +6,7 @@ from typing import Any, Literal, cast
 
 import pytest
 
-from gerrytools.mgrp import Objective, RecomRunnerConfig, ShortBurstsRunInfo, TiltedRunInfo
+from gerrytools.mgrp import Objective, RecomRunnerConfig, ShortBurstsRunSpec, TiltedRunSpec
 from gerrytools.mgrp.objectives import Aggregation, validate_objective_spec
 from gerrytools.mgrp.runners.recom import WRITERS, Writer
 
@@ -18,22 +18,22 @@ OBJECTIVE = {
 }
 
 
-def build(run_info):
+def build(run_spec):
     """The static shell template. The JSON config rides as the "$1" argv slot."""
     config = RecomRunnerConfig("./graphs/testing.json")
-    argv = config.run_command(run_info)
+    argv = config.run_command(run_spec)
     assert argv[:2] == ["sh", "-c"]
     assert argv[3] == "rustrecom"
     assert len(argv) == 5
     return argv[2]
 
 
-def command_config(run_info):
+def command_config(run_spec):
     runner = RecomRunnerConfig("./graphs/testing.json")
-    return json.loads(runner.run_command(run_info)[4])
+    return json.loads(runner.run_command(run_spec)[4])
 
 
-def sb_info(**overrides: Any) -> ShortBurstsRunInfo:
+def short_bursts_spec(**overrides: Any) -> ShortBurstsRunSpec:
     settings: dict[str, Any] = dict(
         pop_col="TOTPOP",
         assignment_col="CD",
@@ -43,10 +43,10 @@ def sb_info(**overrides: Any) -> ShortBurstsRunInfo:
         maximize=False,
     )
     settings.update(overrides)
-    return ShortBurstsRunInfo(**settings)
+    return ShortBurstsRunSpec(**settings)
 
 
-def tilted_info(**overrides: Any) -> TiltedRunInfo:
+def tilted_spec(**overrides: Any) -> TiltedRunSpec:
     settings: dict[str, Any] = dict(
         pop_col="TOTPOP",
         assignment_col="CD",
@@ -55,18 +55,18 @@ def tilted_info(**overrides: Any) -> TiltedRunInfo:
         maximize=False,
     )
     settings.update(overrides)
-    return TiltedRunInfo(**settings)
+    return TiltedRunSpec(**settings)
 
 
 def test_short_bursts_command_and_config():
-    command = build(sb_info())
+    command = build(short_bursts_spec())
     assert command == (
         ". /root/.cargo/env; /usr/bin/time -v rustrecom "
         'short-bursts --config "$1" --overwrite-output'
     )
 
-    config = command_config(sb_info())
-    config_hash = RecomRunnerConfig("./graphs/testing.json").config_hash(sb_info())
+    config = command_config(short_bursts_spec())
+    config_hash = RecomRunnerConfig("./graphs/testing.json").config_hash(short_bursts_spec())
     assert config == {
         "version": 1,
         "command": "short-bursts",
@@ -96,14 +96,14 @@ def test_short_bursts_command_and_config():
 
 
 def test_tilted_command_and_config():
-    command = build(tilted_info(accept_rule="fixed", accept_worse_prob=0.05))
+    command = build(tilted_spec(accept_rule="fixed", accept_worse_prob=0.05))
     assert command == (
         '. /root/.cargo/env; /usr/bin/time -v rustrecom tilted --config "$1" --overwrite-output'
     )
 
-    config = command_config(tilted_info(accept_rule="fixed", accept_worse_prob=0.05))
+    config = command_config(tilted_spec(accept_rule="fixed", accept_worse_prob=0.05))
     config_hash = RecomRunnerConfig("./graphs/testing.json").config_hash(
-        tilted_info(accept_rule="fixed", accept_worse_prob=0.05)
+        tilted_spec(accept_rule="fixed", accept_worse_prob=0.05)
     )
     assert config["command"] == "tilted"
     assert config["accept_rule"] == "fixed"
@@ -117,14 +117,14 @@ def test_tilted_command_and_config():
     )
 
     # The default rule leaves the engine-side beta default implicit.
-    config = command_config(tilted_info())
+    config = command_config(tilted_spec())
     assert config["accept_rule"] == "linear"
     assert "accept_worse_prob" not in config
     assert "acceptance_beta" not in config
 
 
 def test_values_travel_only_in_the_config_slot():
-    hostile = sb_info(assignment_col='CD $(touch nope) "; rm -rf')
+    hostile = short_bursts_spec(assignment_col='CD $(touch nope) "; rm -rf')
     command = build(hostile)
     assert "touch nope" not in command
     assert command_config(hostile)["assignment_col"] == 'CD $(touch nope) "; rm -rf'
@@ -132,24 +132,24 @@ def test_values_travel_only_in_the_config_slot():
 
 def test_output_and_scores_paths():
     runner = RecomRunnerConfig("./graphs/testing.json", output_folder="./output")
-    output = runner.output_file(sb_info())
-    scores = runner.scores_file(sb_info())
-    stem = f"SBB_CD_42_50_5_{runner.config_hash(sb_info())}"
+    output = runner.output_file(short_bursts_spec())
+    scores = runner.scores_file(short_bursts_spec())
+    stem = f"SBB_CD_42_50_5_{runner.config_hash(short_bursts_spec())}"
     assert output is not None and output.endswith(f"/output/testing/{stem}.jsonl")
     assert scores is not None and scores.endswith(f"/output/testing/{stem}_scores.csv")
     # An explicit output_file_name is used verbatim, with no hash folded in.
-    custom = runner.output_file(sb_info(output_file_name="custom.jsonl"))
+    custom = runner.output_file(short_bursts_spec(output_file_name="custom.jsonl"))
     assert custom is not None and custom.endswith("/output/testing/custom.jsonl")
-    custom_scores = runner.scores_file(sb_info(output_file_name="custom.jsonl"))
+    custom_scores = runner.scores_file(short_bursts_spec(output_file_name="custom.jsonl"))
     assert custom_scores is not None and custom_scores.endswith("/output/testing/custom_scores.csv")
 
-    from gerrytools.mgrp import RecomRunInfo
+    from gerrytools.mgrp import RecomRunSpec
 
-    chain = RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A")
+    chain = RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A")
     assert runner.scores_file(chain) is None
     # File output includes a provenance sidecar; optimizers also promise scores.
     metadata = str(Path(output).with_name(f"{Path(output).stem}_metadata.jsonl"))
-    assert runner.expected_files(sb_info()) == [output, metadata, scores]
+    assert runner.expected_files(short_bursts_spec()) == [output, metadata, scores]
     chain_output = runner.output_file(chain)
     assert chain_output is not None
     chain_metadata = str(Path(chain_output).with_name(f"{Path(chain_output).stem}_metadata.jsonl"))
@@ -158,96 +158,96 @@ def test_output_and_scores_paths():
 
 @pytest.mark.parametrize("writer", WRITERS)
 def test_recom_expected_files_match_writer_provenance(writer: Writer):
-    from gerrytools.mgrp import RecomRunInfo
+    from gerrytools.mgrp import RecomRunSpec
 
     runner = RecomRunnerConfig("./graphs/testing.json", output_folder="./output")
-    run_info = RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A", writer=writer)
-    output = runner.output_file(run_info)
+    run_spec = RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A", writer=writer)
+    output = runner.output_file(run_spec)
     assert output is not None
     expected = [output]
     if writer not in {"jsonl", "jsonl-full", "bendl"}:
         expected.append(str(Path(output).with_name(f"{Path(output).stem}_metadata.jsonl")))
 
-    assert runner.expected_files(run_info) == expected
+    assert runner.expected_files(run_spec) == expected
 
 
-@pytest.mark.parametrize("run_info_factory", [sb_info, tilted_info])
+@pytest.mark.parametrize("run_spec_factory", [short_bursts_spec, tilted_spec])
 @pytest.mark.parametrize("writer", WRITERS)
-def test_optimizer_expected_files_match_writer_provenance(run_info_factory, writer: Writer):
+def test_optimizer_expected_files_match_writer_provenance(run_spec_factory, writer: Writer):
     runner = RecomRunnerConfig("./graphs/testing.json", output_folder="./output")
-    run_info = run_info_factory(writer=writer)
-    output = runner.output_file(run_info)
-    scores = runner.scores_file(run_info)
+    run_spec = run_spec_factory(writer=writer)
+    output = runner.output_file(run_spec)
+    scores = runner.scores_file(run_spec)
     assert output is not None and scores is not None
     expected = [output]
     if writer != "bendl":
         expected.append(str(Path(output).with_name(f"{Path(output).stem}_metadata.jsonl")))
     expected.append(scores)
 
-    assert runner.expected_files(run_info) == expected
+    assert runner.expected_files(run_spec) == expected
 
 
 @pytest.mark.parametrize("bad_name", ["/tmp/unrelated.jsonl", "../../escaped.jsonl", ""])
 def test_optimizer_output_file_override_must_be_a_bare_file_name(bad_name):
     with pytest.raises(ValueError, match="bare file name"):
-        sb_info(output_file_name=bad_name)
+        short_bursts_spec(output_file_name=bad_name)
 
-    # Regression: a post-construction override skipped validation, and RunContainer.run
+    # Regression: a post-construction override skipped validation, and RunnerSession.run
     # unlinks the resolved host path, so a traversal name deleted files outside the
     # output folder. The override now revalidates wherever the name is used.
-    run_info = sb_info()
-    run_info.output_file_name = bad_name
+    run_spec = short_bursts_spec()
+    run_spec.output_file_name = bad_name
     with pytest.raises(ValueError, match="bare file name"):
-        run_info.output_name()
+        run_spec.output_name()
     with pytest.raises(ValueError, match="bare file name"):
-        RecomRunnerConfig("./graphs/testing.json").output_file(run_info)
+        RecomRunnerConfig("./graphs/testing.json").output_file(run_spec)
 
 
 @pytest.mark.parametrize("assignment_col", ["CD/2020", r"..\CD"])
 def test_optimizer_assignment_column_must_be_safe_for_derived_file_names(assignment_col):
     with pytest.raises(ValueError, match="assignment_col must be a bare file name"):
-        sb_info(assignment_col=assignment_col)
+        short_bursts_spec(assignment_col=assignment_col)
 
 
 def test_post_construction_optimizer_variant_and_writer_assignments_are_revalidated():
     # Same pattern as the objective and output_file_name fields: assignments after
     # construction are rechecked at config build with the constructor's messages.
-    run_info = sb_info()
-    run_info.variant = "cut-edges-mst"  # long spelling normalizes at use
-    assert command_config(run_info)["variant"] == "cut-edges-mst"
+    run_spec = short_bursts_spec()
+    run_spec.variant = "cut-edges-mst"  # long spelling normalizes at use
+    assert command_config(run_spec)["variant"] == "cut-edges-mst"
 
-    run_info.variant = cast(Any, "R")
+    run_spec.variant = cast(Any, "R")
     with pytest.raises(ValueError, match="Unknown optimizer variant 'R'"):
-        command_config(run_info)
+        command_config(run_spec)
 
-    run_info.variant = "B"
-    run_info.writer = cast(Any, "parquet")
+    run_spec.variant = "B"
+    run_spec.writer = cast(Any, "parquet")
     with pytest.raises(ValueError, match="Unknown writer 'parquet'"):
-        command_config(run_info)
+        command_config(run_spec)
 
 
 @pytest.mark.parametrize("bad_weight", [float("nan"), float("inf"), "2.0", True], ids=repr)
 def test_optimizer_region_weight_values_must_be_finite_numbers(bad_weight):
     with pytest.raises(ValueError, match="region_weights"):
-        sb_info(region_weights={"COUNTY": bad_weight})
+        short_bursts_spec(region_weights={"COUNTY": bad_weight})
 
 
 def test_post_construction_objective_assignment_is_validated_and_reaches_config():
     # Mirrors the constraints live-property pattern: the raw field is stored, and
     # resolved_objective validates on access, so the config build catches a bad
     # post-assignment and a good one reaches the emitted run_config.
-    run_info = sb_info()
-    run_info.objective = Objective.gingles_partial(threshold=0.5, min_pop="BVAP", total_pop="VAP")
-    assert command_config(run_info)["objective"] == {
+    run_spec = short_bursts_spec()
+    run_spec.objective = Objective.gingles_partial(threshold=0.5, min_pop="BVAP", total_pop="VAP")
+    assert command_config(run_spec)["objective"] == {
         "objective": "gingles_partial",
         "threshold": 0.5,
         "min_pop": "BVAP",
         "total_pop": "VAP",
     }
 
-    run_info.objective = cast(Any, {"not_an_objective": 1})
+    run_spec.objective = cast(Any, {"not_an_objective": 1})
     with pytest.raises(ValueError, match="objective"):
-        command_config(run_info)
+        command_config(run_spec)
 
 
 @pytest.mark.parametrize(
@@ -264,35 +264,35 @@ def test_post_construction_objective_assignment_is_validated_and_reaches_config(
 )
 def test_optimizer_numeric_domains_rejected_at_construction(field, value):
     with pytest.raises(ValueError, match=field):
-        sb_info(**{field: value})
+        short_bursts_spec(**{field: value})
 
 
 def test_tilted_accept_worse_prob_must_be_a_probability():
     with pytest.raises(ValueError, match="accept_worse_prob"):
-        tilted_info(accept_rule="fixed", accept_worse_prob=2)
+        tilted_spec(accept_rule="fixed", accept_worse_prob=2)
     with pytest.raises(ValueError, match="acceptance_beta"):
-        tilted_info(acceptance_beta=-1.0)
+        tilted_spec(acceptance_beta=-1.0)
 
 
 def test_tilted_acceptance_beta_reaches_optimizer_config():
-    config = command_config(tilted_info(acceptance_beta=2.5))
+    config = command_config(tilted_spec(acceptance_beta=2.5))
 
     assert config["acceptance_beta"] == 2.5
 
 
 def test_optimizer_validation():
     with pytest.raises(ValueError, match="Unknown optimizer variant"):
-        sb_info(variant="R")
+        short_bursts_spec(variant="R")
     with pytest.raises(ValueError, match="Unknown optimizer variant"):
-        sb_info(variant="AW")
+        short_bursts_spec(variant="AW")
     with pytest.raises(ValueError, match="burst_length"):
-        sb_info(burst_length=0)
+        short_bursts_spec(burst_length=0)
     with pytest.raises(ValueError, match="burst_length"):
-        sb_info(burst_length=True)
+        short_bursts_spec(burst_length=True)
     with pytest.raises(ValueError, match="objective"):
-        sb_info(objective={"not_an_objective": 1})
+        short_bursts_spec(objective={"not_an_objective": 1})
     with pytest.raises(ValueError, match="missing"):
-        sb_info(
+        short_bursts_spec(
             objective=cast(
                 Any,
                 {
@@ -303,7 +303,7 @@ def test_optimizer_validation():
             )
         )
     with pytest.raises(TypeError, match="threshold"):
-        sb_info(
+        short_bursts_spec(
             objective=cast(
                 Any,
                 {
@@ -315,16 +315,16 @@ def test_optimizer_validation():
             )
         )
     with pytest.raises(ValueError, match="edge_weight_keys"):
-        sb_info(variant="C", edge_weight_keys=["water_len"])
+        short_bursts_spec(variant="C", edge_weight_keys=["water_len"])
 
     with pytest.raises(ValueError, match="accept_worse_prob"):
-        tilted_info(accept_rule="fixed")
+        tilted_spec(accept_rule="fixed")
     with pytest.raises(ValueError, match="acceptance_beta"):
-        tilted_info(accept_rule="fixed", accept_worse_prob=0.5, acceptance_beta=2.0)
+        tilted_spec(accept_rule="fixed", accept_worse_prob=0.5, acceptance_beta=2.0)
     with pytest.raises(ValueError, match="accept_worse_prob"):
-        tilted_info(accept_rule="linear", accept_worse_prob=0.5)
+        tilted_spec(accept_rule="linear", accept_worse_prob=0.5)
     with pytest.raises(ValueError, match="Unknown accept_rule"):
-        tilted_info(accept_rule="metropolis")
+        tilted_spec(accept_rule="metropolis")
 
 
 @pytest.mark.parametrize(
@@ -340,13 +340,13 @@ def test_optimizer_validation():
 )
 def test_optimizer_config_field_types_rejected(field, value):
     with pytest.raises(ValueError, match=field):
-        sb_info(**{field: value})
+        short_bursts_spec(**{field: value})
 
 
 def test_rustrecom_variant_names_normalize():
-    run_info = sb_info(variant="cut-edges-mst")
-    assert run_info.variant == "A"
-    assert command_config(run_info)["variant"] == "cut-edges-mst"
+    run_spec = short_bursts_spec(variant="cut-edges-mst")
+    assert run_spec.variant == "A"
+    assert command_config(run_spec)["variant"] == "cut-edges-mst"
 
 
 def test_objective_builders_match_rustrecom_schemas():
@@ -400,11 +400,11 @@ def test_objective_builders_match_rustrecom_schemas():
         "boundary_perim_col": "hull",
     }
 
-    # Builder output feeds straight into a run info.
-    run_info = sb_info(
+    # Builder output feeds straight into a run spec.
+    run_spec = short_bursts_spec(
         objective=Objective.gingles_partial(threshold=0.5, min_pop="BVAP", total_pop="VAP")
     )
-    assert command_config(run_info)["objective"]["objective"] == "gingles_partial"
+    assert command_config(run_spec)["objective"]["objective"] == "gingles_partial"
 
 
 @pytest.mark.parametrize(
@@ -527,11 +527,11 @@ def test_objective_spec_rejects_unexpected_fields():
         validate_objective_spec(spec)
 
 
-def test_canonical_stdout_rejects_optimizer_run_info():
+def test_canonical_stdout_rejects_optimizer_run_spec():
     runner = RecomRunnerConfig("./graphs/testing.json")
 
-    with pytest.raises(TypeError, match="RecomRunInfo"):
-        runner.canonical_stdout_command(tilted_info())
+    with pytest.raises(TypeError, match="RecomRunSpec"):
+        runner.canonical_stdout_command(tilted_spec())
 
 
 @pytest.mark.parametrize(

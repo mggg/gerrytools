@@ -367,7 +367,7 @@ class TestSeatsVotesInternalBuilders:
         )
 
     def test_legend_constants_scale_with_axis_span(self):
-        # Regression (C6): the legend used raw data-unit constants, so non-unit limits pushed
+        # Regression: the legend used raw data-unit constants, so non-unit limits pushed
         # it out of proportion. With xlim (0, 2): x_start = 2 + 0.03*2 = 2.06, line length
         # 0.06*2 = 0.12, label offset 0.08*2 = 0.16.
         plot = TikzSeatsVotesPlot(legend=True)

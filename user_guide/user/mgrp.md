@@ -53,11 +53,11 @@ contracts needed to reproduce a run.
 Every run has three parts:
 
 1. A runner configuration identifies the host input, output directory, and log directory.
-2. A run-info object contains the sampler settings and validates them before Docker starts.
-3. `RunContainer` mounts the input read-only, runs the configured engine, writes stderr to a log,
+2. A run-spec object contains the sampler settings and validates them before Docker starts.
+3. `RunnerSession` mounts the input read-only, runs the configured engine, writes stderr to a log,
    and removes the temporary container when the `with` block exits.
 
-When the container starts, `RunContainer` tries to pull the pinned `mgggdev/replicate` image and
+When the container starts, `RunnerSession` tries to pull the pinned `mgggdev/replicate` image and
 falls back to a local copy if the pull fails. The running container has networking disabled. See
 {doc}`Docker setup <../topics/docker>` for installation and daemon troubleshooting.
 

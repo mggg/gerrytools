@@ -10,16 +10,16 @@ import pytest
 
 from gerrytools.mgrp import (
     Constraints,
-    ForestRunInfo,
     ForestRunnerConfig,
+    ForestRunSpec,
     Objective,
-    RecomRunInfo,
     RecomRunnerConfig,
-    RunContainer,
-    ShortBurstsRunInfo,
-    SMCRunInfo,
+    RecomRunSpec,
+    RunnerSession,
+    ShortBurstsRunSpec,
     SMCRunnerConfig,
-    TiltedRunInfo,
+    SMCRunSpec,
+    TiltedRunSpec,
 )
 
 pytestmark = pytest.mark.mgrp_live
@@ -62,9 +62,9 @@ def assert_assignment_jsonl(output_path, *, node_count, district_count):
         assert len(set(assignment)) == district_count
 
 
-def assert_inline_recom_provenance(runner, run_info, output_path):
+def assert_inline_recom_provenance(runner, run_spec, output_path):
     records = read_jsonl(output_path)
-    raw_config = runner.run_command(run_info)[4]
+    raw_config = runner.run_command(run_spec)[4]
     assert records[0] == {"meta": {"config": raw_config}}
     assert "init" in records[1]
     assert not metadata_path(output_path).exists()
@@ -104,7 +104,7 @@ def test_recom_config_transport_and_provenance(mgrp_image, tmp_path, writer):
         output_folder=str(tmp_path / "output"),
         log_folder=str(tmp_path / "logs"),
     )
-    run_info = RecomRunInfo(
+    run_spec = RecomRunSpec(
         pop_col="TOTPOP",
         assignment_col="district",
         variant="A",
@@ -118,8 +118,8 @@ def test_recom_config_transport_and_provenance(mgrp_image, tmp_path, writer):
         ),
     )
 
-    with RunContainer(runner, docker_image_name=mgrp_image) as container:
-        output_path = container.run(run_info)
+    with RunnerSession(runner, docker_image_name=mgrp_image) as container:
+        output_path = container.run(run_spec)
 
     assert output_path is not None
     if writer == "canonical":
@@ -128,12 +128,12 @@ def test_recom_config_transport_and_provenance(mgrp_image, tmp_path, writer):
             node_count=graph_node_count(graph),
             district_count=4,
         )
-        assert_provenance(runner, (run_info,), output_path)
+        assert_provenance(runner, (run_spec,), output_path)
     else:
         if writer in ("jsonl", "jsonl-full"):
-            assert_inline_recom_provenance(runner, run_info, output_path)
+            assert_inline_recom_provenance(runner, run_spec, output_path)
         else:
-            for expected in runner.expected_files(run_info):
+            for expected in runner.expected_files(run_spec):
                 assert Path(expected).is_file()
                 assert Path(expected).stat().st_size > 0
 
@@ -145,7 +145,7 @@ def test_recom_streaming_apis(mgrp_image, tmp_path):
         output_folder=str(tmp_path / "output"),
         log_folder=str(tmp_path / "logs"),
     )
-    run_info = RecomRunInfo(
+    run_spec = RecomRunSpec(
         pop_col="TOTPOP",
         assignment_col="district",
         variant="A",
@@ -156,10 +156,10 @@ def test_recom_streaming_apis(mgrp_image, tmp_path):
         updaters={"district_count": lambda partition: len(partition.parts)},
     )
 
-    with RunContainer(runner, docker_image_name=mgrp_image) as container:
-        raw_records = [record for record, _ in container.run_iter(run_info) if record is not None]
+    with RunnerSession(runner, docker_image_name=mgrp_image) as container:
+        raw_records = [record for record, _ in container.run_iter(run_spec) if record is not None]
         updated_records = [
-            record for record, _ in container.mcmc_run_with_updaters(run_info) if record is not None
+            record for record, _ in container.mcmc_run_with_updaters(run_spec) if record is not None
         ]
 
     assert raw_records
@@ -182,7 +182,7 @@ def test_optimizers_run_and_write_scores(mgrp_image, tmp_path):
         pov_counts_col="TOTPOP",
         total_counts_col="TOTPOP",
     )
-    short_bursts = ShortBurstsRunInfo(
+    short_bursts = ShortBurstsRunSpec(
         pop_col="TOTPOP",
         assignment_col="district",
         objective=objective,
@@ -191,7 +191,7 @@ def test_optimizers_run_and_write_scores(mgrp_image, tmp_path):
         pop_tol=0.2,
         maximize=False,
     )
-    tilted = TiltedRunInfo(
+    tilted = TiltedRunSpec(
         pop_col="TOTPOP",
         assignment_col="district",
         objective=objective,
@@ -205,21 +205,21 @@ def test_optimizers_run_and_write_scores(mgrp_image, tmp_path):
     # Ownership is handed back to the invoking user when the container exits,
     # so run both optimizers first and assert afterwards.
     outputs = []
-    with RunContainer(runner, docker_image_name=mgrp_image) as container:
-        for run_info in (short_bursts, tilted):
-            outputs.append((run_info, container.run(run_info)))
+    with RunnerSession(runner, docker_image_name=mgrp_image) as container:
+        for run_spec in (short_bursts, tilted):
+            outputs.append((run_spec, container.run(run_spec)))
 
-    for run_info, output_path in outputs:
+    for run_spec, output_path in outputs:
         assert output_path is not None
         assert_assignment_jsonl(
             output_path,
             node_count=graph_node_count(graph),
             district_count=4,
         )
-        scores_file = runner.scores_file(run_info)
+        scores_file = runner.scores_file(run_spec)
         assert scores_file is not None
         read_nonempty_csv(scores_file)
-        assert_provenance(runner, (run_info,), output_path)
+        assert_provenance(runner, (run_spec,), output_path)
 
 
 def test_forest_config_transport_and_provenance(mgrp_image, tmp_path):
@@ -229,7 +229,7 @@ def test_forest_config_transport_and_provenance(mgrp_image, tmp_path):
         output_folder=str(tmp_path / "output"),
         log_folder=str(tmp_path / "logs"),
     )
-    run_info = ForestRunInfo(
+    run_spec = ForestRunSpec(
         levels=["county", "precinct"],
         pop_col="TOTPOP",
         num_dists=4,
@@ -238,16 +238,16 @@ def test_forest_config_transport_and_provenance(mgrp_image, tmp_path):
         constraints=Constraints().max_coarse_node_splits(5),
     )
 
-    with RunContainer(runner, docker_image_name=mgrp_image) as container:
-        output_path = container.run(run_info)
+    with RunnerSession(runner, docker_image_name=mgrp_image) as container:
+        output_path = container.run(run_spec)
 
     assert output_path is not None
     assert_assignment_jsonl(
         output_path,
         node_count=graph_node_count(graph),
-        district_count=run_info.num_dists,
+        district_count=run_spec.num_dists,
     )
-    assert_provenance(runner, (run_info,), output_path)
+    assert_provenance(runner, (run_spec,), output_path)
 
 
 def test_smc_config_transport_and_provenance(mgrp_image, tmp_path):
@@ -257,7 +257,7 @@ def test_smc_config_transport_and_provenance(mgrp_image, tmp_path):
         output_folder=str(tmp_path / "output"),
         log_folder=str(tmp_path / "logs"),
     )
-    run_info = SMCRunInfo(
+    run_spec = SMCRunSpec(
         pop_col="tot_pop",
         n_dists=4,
         pop_tol=0.2,
@@ -270,16 +270,16 @@ def test_smc_config_transport_and_provenance(mgrp_image, tmp_path):
         ),
     )
 
-    with RunContainer(runner, docker_image_name=mgrp_image) as container:
-        output_path = container.run(run_info)
+    with RunnerSession(runner, docker_image_name=mgrp_image) as container:
+        output_path = container.run(run_spec)
 
     assert output_path is not None
     assert_assignment_jsonl(
         output_path,
         node_count=len(gpd.read_file(geopackage)),
-        district_count=run_info.n_dists,
+        district_count=run_spec.n_dists,
     )
-    assert_provenance(runner, (run_info,), output_path)
+    assert_provenance(runner, (run_spec,), output_path)
 
     # Tally columns survive the jsonl pipeline via the CSV sidecar.
     tally_path = Path(output_path).with_name(f"{Path(output_path).stem}_tallies.csv")

@@ -155,7 +155,7 @@ class EngineRunConfig(TypedDict):
 
 
 NOT_ENGINE_CONFIG = {"engine_config": False}
-"""Field metadata excluding a run-info field from the config's ``run`` section, either because
+"""Field metadata excluding a run-spec field from the config's ``run`` section, either because
 it is Python-side only (updaters, output naming) or because it is marshaled into another
 section (``io``, ``map``, ``constraints``)."""
 

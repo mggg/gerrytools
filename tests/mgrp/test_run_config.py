@@ -8,16 +8,43 @@ import networkx as nx
 import pytest
 from gerrychain import Graph
 
+import gerrytools.mgrp as mgrp
 from gerrytools.mgrp import (
     Constraints,
-    ForestRunInfo,
     ForestRunnerConfig,
-    RecomRunInfo,
+    ForestRunSpec,
     RecomRunnerConfig,
-    SMCRunInfo,
+    RecomRunSpec,
     SMCRunnerConfig,
+    SMCRunSpec,
 )
 from tests.mgrp.conftest import make_fake_run_container
+
+
+def test_public_names_describe_run_specs_and_runner_session() -> None:
+    new_names = (
+        "RunSpec",
+        "RecomRunSpec",
+        "OptimizerRunSpecBase",
+        "ShortBurstsRunSpec",
+        "TiltedRunSpec",
+        "ForestRunSpec",
+        "SMCRunSpec",
+        "RunnerSession",
+    )
+    old_names = (
+        "RunInfo",
+        "RecomRunInfo",
+        "OptimizerRunInfoBase",
+        "ShortBurstsRunInfo",
+        "TiltedRunInfo",
+        "ForestRunInfo",
+        "SMCRunInfo",
+        "RunContainer",
+    )
+
+    assert all(name in mgrp.__all__ for name in new_names)
+    assert all(not hasattr(mgrp, name) for name in old_names)
 
 
 class LockingUpdater:
@@ -30,7 +57,7 @@ class LockingUpdater:
 
 def test_recom_effective_config_is_complete():
     runner = RecomRunnerConfig("./graphs/testing.json")
-    run_info = RecomRunInfo(
+    run_spec = RecomRunSpec(
         pop_col="TOTPOP",
         assignment_col="CD",
         variant="A",
@@ -42,12 +69,12 @@ def test_recom_effective_config_is_complete():
         },
     )
 
-    config = runner.run_config(run_info)
+    config = runner.run_config(run_spec)
 
     # rustrecom's native chain config: flat, CLI-mirroring field names and
     # variant spellings, with a version/command envelope. Derived file names
     # carry the config hash so distinct configs never collide.
-    config_hash = runner.config_hash(run_info)
+    config_hash = runner.config_hash(run_spec)
     assert config == {
         "version": 1,
         "command": "chain",
@@ -77,35 +104,35 @@ def test_recom_effective_config_is_complete():
             "threshold": 0.4,
         },
     }
-    assert json.loads(runner.run_command(run_info)[4]) == config
+    assert json.loads(runner.run_command(run_spec)[4]) == config
 
 
 def test_recom_config_excludes_updaters_before_copying():
     runner = RecomRunnerConfig("./graphs/testing.json")
     updater = LockingUpdater()
-    run_info = RecomRunInfo(
+    run_spec = RecomRunSpec(
         pop_col="TOTPOP",
         assignment_col="CD",
         variant="A",
         updaters={"locked": updater},
     )
 
-    config = json.loads(runner.run_command(run_info)[4])
+    config = json.loads(runner.run_command(run_spec)[4])
 
     assert "updaters" not in config
-    assert run_info.updaters["locked"] is updater
+    assert run_spec.updaters["locked"] is updater
 
 
 def test_forest_effective_config_records_internal_defaults():
     runner = ForestRunnerConfig("./graphs/testing.json")
-    run_info = ForestRunInfo(
+    run_spec = ForestRunSpec(
         levels=["county", "precinct"],
         pop_col="TOTPOP",
     )
 
-    config = runner.run_config(run_info)
+    config = runner.run_config(run_spec)
 
-    config_hash = runner.config_hash(run_info)
+    config_hash = runner.config_hash(run_spec)
     assert config == {
         "version": 1,
         "engine": "forest",
@@ -129,16 +156,16 @@ def test_forest_effective_config_records_internal_defaults():
         },
         "constraints": [],
     }
-    assert json.loads(runner.run_command(run_info)[4]) == config
+    assert json.loads(runner.run_command(run_spec)[4]) == config
 
 
 def test_smc_effective_config_splits_map_and_run_sections():
     runner = SMCRunnerConfig("./shapefiles/testing")
-    run_info = SMCRunInfo(pop_col="TOTPOP", n_dists=4, n_sims=20)
+    run_spec = SMCRunSpec(pop_col="TOTPOP", n_dists=4, n_sims=20)
 
-    config = runner.run_config(run_info)
+    config = runner.run_config(run_spec)
 
-    config_hash = runner.config_hash(run_info)
+    config_hash = runner.config_hash(run_spec)
     assert config == {
         "version": 1,
         "engine": "smc",
@@ -168,64 +195,64 @@ def test_smc_effective_config_splits_map_and_run_sections():
         },
         "constraints": [],
     }
-    assert json.loads(runner.run_command(run_info)[4]) == config
+    assert json.loads(runner.run_command(run_spec)[4]) == config
 
 
 def test_post_construction_constraint_assignment_reaches_run_config():
     # Regression: the resolved constraint specs were computed once in __post_init__, so a
     # constraint assigned after construction was silently dropped from the emitted config.
     recom_runner = RecomRunnerConfig("./graphs/testing.json")
-    recom_info = RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A")
-    recom_info.constraint = {
+    recom_spec = RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A")
+    recom_spec.constraint = {
         "constraint": "district_share_floor",
         "numerator_col": "BVAP",
         "denominator_cols": ["VAP"],
         "threshold": 0.4,
     }
-    assert recom_runner.run_config(recom_info).get("constraint") == recom_info.constraint
+    assert recom_runner.run_config(recom_spec).get("constraint") == recom_spec.constraint
 
     forest_runner = ForestRunnerConfig("./graphs/testing.json")
-    forest_info = ForestRunInfo(levels=["county", "precinct"], pop_col="TOTPOP")
-    forest_info.constraints = Constraints().max_coarse_node_splits(max_splits=8)
-    assert forest_runner.run_config(forest_info)["constraints"] == [
+    forest_spec = ForestRunSpec(levels=["county", "precinct"], pop_col="TOTPOP")
+    forest_spec.constraints = Constraints().max_coarse_node_splits(max_splits=8)
+    assert forest_runner.run_config(forest_spec)["constraints"] == [
         {"constraint": "max_coarse_node_splits", "max_splits": 8}
     ]
 
     smc_runner = SMCRunnerConfig("./shapefiles/testing")
-    smc_info = SMCRunInfo(pop_col="TOTPOP", n_dists=4, n_sims=20)
-    smc_info.constraints = Constraints().splits(strength=100.0, admin_col="COUNTY")
-    assert smc_runner.run_config(smc_info)["constraints"] == [
+    smc_spec = SMCRunSpec(pop_col="TOTPOP", n_dists=4, n_sims=20)
+    smc_spec.constraints = Constraints().splits(strength=100.0, admin_col="COUNTY")
+    assert smc_runner.run_config(smc_spec)["constraints"] == [
         {"constraint": "splits", "strength": 100.0, "admin_col": "COUNTY"}
     ]
 
 
 def test_post_construction_invalid_fields_are_revalidated_before_config_emission():
     recom_runner = RecomRunnerConfig("./graphs/testing.json")
-    recom_info = RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A")
-    recom_info.n_steps = 0
+    recom_spec = RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A")
+    recom_spec.n_steps = 0
     with pytest.raises(ValueError, match="n_steps"):
-        recom_runner.run_config(recom_info)
+        recom_runner.run_config(recom_spec)
 
     forest_runner = ForestRunnerConfig("./graphs/testing.json")
-    forest_info = ForestRunInfo(levels=["county"], pop_col="TOTPOP")
-    forest_info.levels.clear()
+    forest_spec = ForestRunSpec(levels=["county"], pop_col="TOTPOP")
+    forest_spec.levels.clear()
     with pytest.raises(ValueError, match="levels"):
-        forest_runner.run_config(forest_info)
+        forest_runner.run_config(forest_spec)
 
     smc_runner = SMCRunnerConfig("./shapefiles/testing")
-    smc_info = SMCRunInfo(pop_col="TOTPOP", n_dists=4, n_sims=20)
-    smc_info.pop_bounds[:] = [100, 50, 10]
+    smc_spec = SMCRunSpec(pop_col="TOTPOP", n_dists=4, n_sims=20)
+    smc_spec.pop_bounds[:] = [100, 50, 10]
     with pytest.raises(ValueError, match="ordered"):
-        smc_runner.run_config(smc_info)
+        smc_runner.run_config(smc_spec)
 
 
 def test_config_hash_separates_configs_that_share_a_stem():
     # Regression: file stems were pure functions of a subset of config fields, so two runs
     # differing only elsewhere (e.g. pop_tol) overwrote each other's outputs and logs.
     runner = RecomRunnerConfig("./graphs/testing.json")
-    base = RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A")
-    same = RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A")
-    different = RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A", pop_tol=0.02)
+    base = RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A")
+    same = RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A")
+    different = RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A", pop_tol=0.02)
 
     assert base.stem() == different.stem()
     assert runner.output_file(base) == runner.output_file(same)  # identical configs reuse paths
@@ -233,65 +260,65 @@ def test_config_hash_separates_configs_that_share_a_stem():
 
 
 def test_config_hash_separates_inputs_that_share_a_filename():
-    run_info = RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A")
+    run_spec = RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A")
     first = RecomRunnerConfig("/tmp/dir_a/foo.json")
     second = RecomRunnerConfig("/tmp/dir_b/foo.json")
 
-    assert first.config_hash(run_info) != second.config_hash(run_info)
-    assert first.output_file(run_info) != second.output_file(run_info)
-    assert first.config_hash(run_info) == RecomRunnerConfig("/tmp/dir_a/foo.json").config_hash(
-        run_info
+    assert first.config_hash(run_spec) != second.config_hash(run_spec)
+    assert first.output_file(run_spec) != second.output_file(run_spec)
+    assert first.config_hash(run_spec) == RecomRunnerConfig("/tmp/dir_a/foo.json").config_hash(
+        run_spec
     )
 
 
 @pytest.mark.parametrize(
-    ("runner", "run_info", "mutate"),
+    ("runner", "run_spec", "mutate"),
     [
         (
             RecomRunnerConfig("./graphs/testing.json"),
-            RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A", sum_cols=["BVAP"]),
+            RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A", sum_cols=["BVAP"]),
             lambda config: config["sum_cols"].append("INJECTED"),
         ),
         (
             ForestRunnerConfig("./graphs/testing.json"),
-            ForestRunInfo(levels=["county"], pop_col="TOTPOP"),
+            ForestRunSpec(levels=["county"], pop_col="TOTPOP"),
             lambda config: config["run"]["levels"].append("INJECTED"),
         ),
         (
             SMCRunnerConfig("./shapefiles/testing"),
-            SMCRunInfo(pop_col="TOTPOP", n_dists=4, n_sims=20, pop_bounds=[1, 2, 3]),
+            SMCRunSpec(pop_col="TOTPOP", n_dists=4, n_sims=20, pop_bounds=[1, 2, 3]),
             lambda config: config["map"]["pop_bounds"].append(99),
         ),
     ],
     ids=["recom", "forest", "smc"],
 )
-def test_run_config_does_not_alias_the_run_infos_mutable_fields(runner, run_info, mutate):
-    before_hash = runner.config_hash(run_info)
-    before_output = runner.output_file(run_info)
+def test_run_config_does_not_alias_the_run_specs_mutable_fields(runner, run_spec, mutate):
+    before_hash = runner.config_hash(run_spec)
+    before_output = runner.output_file(run_spec)
 
-    mutate(runner.run_config(run_info))
+    mutate(runner.run_config(run_spec))
 
-    assert runner.config_hash(run_info) == before_hash
-    assert runner.output_file(run_info) == before_output
-    assert "INJECTED" not in json.dumps(runner.run_config(run_info))
+    assert runner.config_hash(run_spec) == before_hash
+    assert runner.output_file(run_spec) == before_output
+    assert "INJECTED" not in json.dumps(runner.run_config(run_spec))
 
 
 @pytest.mark.parametrize(
-    ("runner", "run_info", "suffix"),
+    ("runner", "run_spec", "suffix"),
     [
         (
             ForestRunnerConfig("./graphs/testing.json"),
-            ForestRunInfo(levels=["county"], pop_col="TOTPOP", writer="ben"),
+            ForestRunSpec(levels=["county"], pop_col="TOTPOP", writer="ben"),
             ".jsonl.ben",
         ),
         (
             SMCRunnerConfig("./shapefiles/testing"),
-            SMCRunInfo(pop_col="TOTPOP", n_dists=4, n_sims=20, writer="csv"),
+            SMCRunSpec(pop_col="TOTPOP", n_dists=4, n_sims=20, writer="csv"),
             ".csv",
         ),
         (
             RecomRunnerConfig("./graphs/testing.json"),
-            RecomRunInfo(
+            RecomRunSpec(
                 pop_col="TOTPOP",
                 assignment_col="CD",
                 variant="A",
@@ -301,17 +328,17 @@ def test_run_config_does_not_alias_the_run_infos_mutable_fields(runner, run_info
         ),
     ],
 )
-def test_runner_writer_suffixes_are_consistent(runner, run_info, suffix):
-    output = runner.output_file(run_info)
+def test_runner_writer_suffixes_are_consistent(runner, run_spec, suffix):
+    output = runner.output_file(run_spec)
     assert output is not None and output.endswith(suffix)
 
 
 @pytest.mark.parametrize(
-    ("runner", "run_info"),
+    ("runner", "run_spec"),
     [
         (
             ForestRunnerConfig("./graphs/testing.json"),
-            ForestRunInfo(
+            ForestRunSpec(
                 levels=["county"],
                 pop_col="TOTPOP",
                 writer="ben",
@@ -320,7 +347,7 @@ def test_runner_writer_suffixes_are_consistent(runner, run_info, suffix):
         ),
         (
             SMCRunnerConfig("./shapefiles/testing"),
-            SMCRunInfo(
+            SMCRunSpec(
                 pop_col="TOTPOP",
                 n_dists=4,
                 n_sims=20,
@@ -330,8 +357,8 @@ def test_runner_writer_suffixes_are_consistent(runner, run_info, suffix):
         ),
     ],
 )
-def test_runner_output_file_overrides_are_verbatim(runner, run_info):
-    output = runner.output_file(run_info)
+def test_runner_output_file_overrides_are_verbatim(runner, run_spec):
+    output = runner.output_file(run_spec)
     assert output is not None and output.endswith("/chosen.output")
 
 
@@ -343,14 +370,14 @@ def test_runner_output_file_overrides_must_be_bare_file_names(bad_name):
     # A separator or traversal component would escape the mounted output directory
     # and let the host and container paths identify different files.
     forest_runner = ForestRunnerConfig("./graphs/testing.json")
-    forest_info = ForestRunInfo(levels=["county"], pop_col="TOTPOP", output_file_name=bad_name)
+    forest_spec = ForestRunSpec(levels=["county"], pop_col="TOTPOP", output_file_name=bad_name)
     with pytest.raises(ValueError, match="bare file name"):
-        forest_runner.output_file(forest_info)
+        forest_runner.output_file(forest_spec)
 
     smc_runner = SMCRunnerConfig("./shapefiles/testing")
-    smc_info = SMCRunInfo(pop_col="TOTPOP", n_dists=4, n_sims=20, output_file_name=bad_name)
+    smc_spec = SMCRunSpec(pop_col="TOTPOP", n_dists=4, n_sims=20, output_file_name=bad_name)
     with pytest.raises(ValueError, match="bare file name"):
-        smc_runner.output_file(smc_info)
+        smc_runner.output_file(smc_spec)
 
 
 def test_log_file_layout_and_directory_creation(tmp_path):
@@ -363,39 +390,39 @@ def test_log_file_layout_and_directory_creation(tmp_path):
         output_folder=str(tmp_path / "output"),
         log_folder=str(tmp_path / "logs"),
     )
-    run_info = RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A")
+    run_spec = RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A")
 
-    log_file = runner.log_file(run_info)
+    log_file = runner.log_file(run_spec)
 
     log_dir = tmp_path / "logs" / "testing"
-    assert Path(log_file) == log_dir / f"{runner.file_stem(run_info)}.log"
+    assert Path(log_file) == log_dir / f"{runner.file_stem(run_spec)}.log"
     assert log_dir.is_dir()
 
 
 @pytest.mark.parametrize(
-    ("runner", "foreign_run_info", "expected_type"),
+    ("runner", "foreign_run_spec", "expected_type"),
     [
         (
             ForestRunnerConfig("./graphs/testing.json"),
-            SMCRunInfo(pop_col="TOTPOP", n_dists=4, n_sims=20),
-            "ForestRunInfo",
+            SMCRunSpec(pop_col="TOTPOP", n_dists=4, n_sims=20),
+            "ForestRunSpec",
         ),
         (
             SMCRunnerConfig("./shapefiles/testing"),
-            ForestRunInfo(levels=["county"], pop_col="TOTPOP"),
-            "SMCRunInfo",
+            ForestRunSpec(levels=["county"], pop_col="TOTPOP"),
+            "SMCRunSpec",
         ),
         (
             RecomRunnerConfig("./graphs/testing.json"),
-            SMCRunInfo(pop_col="TOTPOP", n_dists=4, n_sims=20),
-            "RecomRunInfo",
+            SMCRunSpec(pop_col="TOTPOP", n_dists=4, n_sims=20),
+            "RecomRunSpec",
         ),
     ],
 )
-def test_runner_shared_paths_reject_foreign_run_infos(runner, foreign_run_info, expected_type):
+def test_runner_shared_paths_reject_foreign_run_specs(runner, foreign_run_spec, expected_type):
     for operation in (runner.run_command, runner.output_file, runner.log_file):
         with pytest.raises(TypeError, match=expected_type):
-            operation(foreign_run_info)
+            operation(foreign_run_spec)
 
 
 class FakeDockerAPI:
@@ -428,20 +455,20 @@ def test_all_execution_paths_pass_the_config_in_argv(tmp_path, monkeypatch):
     )
 
     # force_print keeps the fake run's stdout path: no output file is expected on disk.
-    run_info = RecomRunInfo(
+    run_spec = RecomRunSpec(
         pop_col="TOTPOP", assignment_col="CD", variant="A", writer="jsonl", force_print=True
     )
-    container.run(run_info)
-    list(container.run_iter(run_info))
-    list(container.mcmc_run_with_updaters(run_info))
+    container.run(run_spec)
+    list(container.run_iter(run_spec))
+    list(container.mcmc_run_with_updaters(run_spec))
 
     # The config rides in the command's "$1" argv slot; nothing travels in
     # the exec environment on any path.
     commands = [call[1]["cmd"] for call in api.exec_calls]
     assert len(commands) == 3
     assert all("environment" not in call[1] for call in api.exec_calls)
-    assert json.loads(commands[0][4]) == runner.run_config(run_info)
-    assert json.loads(commands[1][4]) == runner.run_config(run_info)
+    assert json.loads(commands[0][4]) == runner.run_config(run_spec)
+    assert json.loads(commands[1][4]) == runner.run_config(run_spec)
 
     updater_config = json.loads(commands[2][4])
     assert updater_config["writer"] == "canonical"
@@ -462,12 +489,12 @@ def test_forest_updater_path_uses_stdout_jsonl_config(tmp_path, monkeypatch):
         Graph, "from_json", staticmethod(lambda _path: Graph.from_networkx(nx.Graph()))
     )
 
-    run_info = ForestRunInfo(
+    run_spec = ForestRunSpec(
         levels=["county", "precinct"],
         pop_col="TOTPOP",
         writer="ben",
     )
-    list(container.mcmc_run_with_updaters(run_info))
+    list(container.mcmc_run_with_updaters(run_spec))
 
     updater_config = json.loads(api.exec_calls[0][1]["cmd"][4])
     assert updater_config["io"]["writer"] == "jsonl"

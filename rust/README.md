@@ -1,47 +1,7 @@
 # GerryTools scoring engine
 
-This crate is the reusable Rust scoring engine migrated from `ben-process`. It deliberately has
-no CLI. The repository root packages its PyO3 bindings as `gerrytools._scoring_engine` with
-Maturin.
-
-## Upstream baseline
-
-The selected source is the clean local checkout at:
-
-```text
-/home/peter/Projects/ben-process
-f27b748466a491d49ecf1146347e3ae012610499
-```
-
-The prepared scoring core is derived from:
-
-```text
-src/adjacency.rs
-src/geometry/mod.rs
-src/geometry/unit_hulls.rs
-src/metrics/area_perimeter.rs
-src/metrics/convex_hull_ratio.rs
-src/metrics/cut_edges.rs
-src/metrics/formulas.rs
-src/metrics/hull_metric.rs
-src/metrics/polsby_popper.rs
-src/metrics/population_polygon.rs
-src/metrics/region.rs
-src/metrics/region_parts.rs
-src/metrics/region_tally.rs
-src/metrics/reock.rs
-src/metrics/schwartzberg.rs
-src/metrics/state_clipped_convex_hull_ratio.rs
-src/metrics/tally.rs
-src/python.rs
-src/scoring/delta.rs
-src/scoring/district.rs
-src/scoring/input.rs
-src/scoring/mod.rs
-src/scoring/output.rs
-src/scoring/result.rs
-src/scoring/stream.rs
-```
+This crate provides the reusable Rust scoring engine. It deliberately has no CLI. The repository
+root packages its PyO3 bindings as `gerrytools._scoring_engine` with Maturin.
 
 The standalone core contains full and TwoDelta-incremental Tally, Polsby-Popper, Reock,
 convex-hull ratio, state-clipped convex-hull ratio, population-polygon, cut-edge, region, and
@@ -49,7 +9,7 @@ region-tally kernels. Shared delta validation rejects stale labels, out-of-range
 and duplicate node changes before a metric mutates.
 
 `PreparedCutEdges` accepts an explicit node count and validated edge list, with a separate weighted
-constructor. Finite negative weights retain the upstream signed-sum behavior. `PreparedRegion`
+constructor. Finite negative weights contribute directly to the signed sum. `PreparedRegion`
 accepts one or more aligned columns, ignores missing values, and internally densifies arbitrary
 `u32` region identifiers. Region splits count distinct district intersections. Region pieces also
 accept graph edges and count connected components in each region-induced district subgraph, so a
@@ -79,10 +39,10 @@ table and the manifest, and renames a temporary sibling only after all output fi
 push poisons the writer and its drop guard removes unpublished files. Existing output paths are
 never opened or replaced.
 
-The writer uses Arrow and Parquet directly rather than migrating the upstream Polars layer.
-`PreparedReock::from_wkb` and `PreparedPolsbyPopper::from_wkb` accept ordered Polygon or
-MultiPolygon WKB rows that have already been aligned and transformed to a projected CRS. The
-constructors reject malformed, empty, non-polygon, topologically invalid, degenerate, and
+The writer uses Arrow and Parquet directly. `PreparedReock::from_wkb` and
+`PreparedPolsbyPopper::from_wkb` accept ordered Polygon or MultiPolygon WKB rows that have already
+been aligned and transformed to a projected CRS. The constructors reject malformed, empty,
+non-polygon, topologically invalid, degenerate, and
 non-finite geometry. Polsby-Popper preparation also checks graph endpoints, polygon overlap,
 missing shared boundaries, and impossible aggregate shared perimeter before constructing the
 metric.

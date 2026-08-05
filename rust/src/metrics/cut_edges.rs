@@ -8,8 +8,8 @@ use crate::{Error, PlanTable, Result};
 // MkvChain stores full assignments, but Scorer derives changes between adjacent frames in each
 // batch. Here a dense transition means that the sum of degrees of changed nodes is large relative
 // to |E|; an edge with two changed endpoints is counted twice because the incremental loop visits
-// it twice. I (Peter) ran benchmarks over 15 states and found that a full edge scan is faster once
-// this estimate reaches ~1/4 of |E|.
+// it twice. Benchmarks across 15 states showed that a full edge scan is faster once this estimate
+// reaches roughly one quarter of |E|.
 const MKV_FULL_RESCAN_WORK_MULTIPLIER: usize = 4;
 
 #[derive(Debug)]

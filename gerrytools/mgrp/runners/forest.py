@@ -16,14 +16,14 @@ from ..run_config import (
     check_string_list,
     dataclass_config,
 )
-from ..run_container import RunInfo, RunnerConfig
+from ..run_container import RunnerConfig, RunSpec
 
 ForestWriter = Literal["jsonl", "ben", "raw"]
 """A forest output writer: standard JSONL, BEN, or the engine's raw atlas output."""
 
 
 @dataclass
-class ForestRunInfo(RunInfo):
+class ForestRunSpec(RunSpec):
     """Settings passed to the Multi-Scale Map Sampler (MSMS) Julia code.
 
     Raises:
@@ -101,15 +101,15 @@ class ForestRunInfo(RunInfo):
         _ = self.resolved_constraints
 
 
-class ForestRunnerConfig(RunnerConfig[ForestRunInfo]):
+class ForestRunnerConfig(RunnerConfig[ForestRunSpec]):
     """
-    Represents the configuration for a RunContainer which is used to
+    Represents the configuration for a RunnerSession which is used to
     run the Multi-Scale Map Sampler (MSMS) algorithm on a dual graph
     within the docker container.
     """
 
     parser_name: ClassVar[str | None] = "msms_parser"
-    run_info_type = ForestRunInfo
+    run_spec_type = ForestRunSpec
 
     def __init__(
         self,
@@ -130,7 +130,7 @@ class ForestRunnerConfig(RunnerConfig[ForestRunInfo]):
         """
         super().__init__("forest", json_file_path, output_folder, log_folder)
 
-    def run_command(self, run_info: ForestRunInfo) -> list:
+    def run_command(self, run_spec: ForestRunSpec) -> list:
         """Return the command for a Forest run.
 
         The template is a code constant (see ``RunnerConfig._shell_command`` for the
@@ -138,53 +138,53 @@ class ForestRunnerConfig(RunnerConfig[ForestRunInfo]):
         atlas output through the parser stage.
 
         Args:
-            run_info (ForestRunInfo): Forest run settings.
+            run_spec (ForestRunSpec): Forest run settings.
 
         Returns:
             list: Shell command arguments for the container.
 
         Raises:
-            TypeError: If ``run_info`` is not exactly a ForestRunInfo.
+            TypeError: If ``run_spec`` is not exactly a ForestRunSpec.
         """
-        self._check_run_info(run_info)
+        self._check_run_spec(run_spec)
         template = (
             'export JULIA_PROJECT="/home/forest"; '
             '/usr/bin/time -v julia /home/forest/cli/multi_cli.jl --config "$1"'
         )
         return self._shell_command(
             template,
-            self.run_config(run_info),
-            with_parser=run_info.writer in ("jsonl", "ben"),
+            self.run_config(run_spec),
+            with_parser=run_spec.writer in ("jsonl", "ben"),
         )
 
-    def run_config(self, run_info: ForestRunInfo) -> EngineRunConfig:
+    def run_config(self, run_spec: ForestRunSpec) -> EngineRunConfig:
         """Return the complete effective configuration for a Forest run.
 
         Args:
-            run_info (ForestRunInfo): Forest run settings.
+            run_spec (ForestRunSpec): Forest run settings.
 
         Returns:
             EngineRunConfig: Independent version-1 engine configuration.
 
         Raises:
-            TypeError: If ``run_info`` is not exactly a ForestRunInfo.
+            TypeError: If ``run_spec`` is not exactly a ForestRunSpec.
         """
-        self._check_run_info(run_info)
-        return self._config_document(run_info, self._output_name(run_info))
+        self._check_run_spec(run_spec)
+        return self._config_document(run_spec, self._output_name(run_spec))
 
-    def _base_config(self, run_info: ForestRunInfo) -> EngineRunConfig:
+    def _base_config(self, run_spec: ForestRunSpec) -> EngineRunConfig:
         """The config document with hash-free names, hashed into ``file_stem``."""
         output_name = self._writer_output_name(
-            self._stem(run_info),
-            run_info.writer,
-            run_info.output_file_name,
-            force_print=run_info.force_print,
+            self._stem(run_spec),
+            run_spec.writer,
+            run_spec.output_file_name,
+            force_print=run_spec.force_print,
         )
-        return self._config_document(run_info, output_name)
+        return self._config_document(run_spec, output_name)
 
-    def _config_document(self, run_info: ForestRunInfo, output_name: str | None) -> EngineRunConfig:
+    def _config_document(self, run_spec: ForestRunSpec, output_name: str | None) -> EngineRunConfig:
         """The effective config, naming the container-side output ``output_name``."""
-        run = dataclass_config(run_info)
+        run = dataclass_config(run_spec)
         run.update(edge_weights="connections", output_freq=1)
 
         output = None if output_name is None else f"{self.container_output_dir}/{output_name}"
@@ -193,53 +193,53 @@ class ForestRunnerConfig(RunnerConfig[ForestRunInfo]):
             io={
                 "graph": self.container_graph_path,
                 "output": output,
-                "writer": run_info.writer,
+                "writer": run_spec.writer,
             },
             run=run,
-            constraints=run_info.resolved_constraints,
+            constraints=run_spec.resolved_constraints,
         )
 
-    def canonical_stdout_command(self, run_info: ForestRunInfo) -> list:
+    def canonical_stdout_command(self, run_spec: ForestRunSpec) -> list:
         """Return the run command with standard JSONL assignment output forced to stdout.
 
         Args:
-            run_info (ForestRunInfo): Forest run settings.
+            run_spec (ForestRunSpec): Forest run settings.
 
         Returns:
             list: Shell command arguments for the container.
 
         Raises:
-            TypeError: If ``run_info`` is not exactly a ForestRunInfo.
+            TypeError: If ``run_spec`` is not exactly a ForestRunSpec.
         """
-        self._check_run_info(run_info)
-        return self.run_command(replace(run_info, writer="jsonl", force_print=True))
+        self._check_run_spec(run_spec)
+        return self.run_command(replace(run_spec, writer="jsonl", force_print=True))
 
-    def _stem(self, run_info: ForestRunInfo) -> str:
+    def _stem(self, run_spec: ForestRunSpec) -> str:
         """The human-readable stem derived from the run's headline settings."""
-        return f"Forest_{run_info.rng_seed}_atlas_gamma{run_info.gamma}_{run_info.n_steps}"
+        return f"Forest_{run_spec.rng_seed}_atlas_gamma{run_spec.gamma}_{run_spec.n_steps}"
 
-    def _output_name(self, run_info: ForestRunInfo) -> str | None:
+    def _output_name(self, run_spec: ForestRunSpec) -> str | None:
         """
         The name of the file the run will produce, or None when the output is
         printed to stdout instead.
         """
         return self._writer_output_name(
-            self.file_stem(run_info),
-            run_info.writer,
-            run_info.output_file_name,
-            force_print=run_info.force_print,
+            self.file_stem(run_spec),
+            run_spec.writer,
+            run_spec.output_file_name,
+            force_print=run_spec.force_print,
         )
 
-    def expected_files(self, run_info: ForestRunInfo) -> list[str]:
+    def expected_files(self, run_spec: ForestRunSpec) -> list[str]:
         """Return every output path, including provenance alongside file output.
 
         Args:
-            run_info (ForestRunInfo): Forest run settings.
+            run_spec (ForestRunSpec): Forest run settings.
 
         Returns:
             list[str]: Primary output and metadata sidecar paths, or an empty list for stdout.
         """
-        expected = super().expected_files(run_info)
+        expected = super().expected_files(run_spec)
         if expected:
             expected.append(self._sidecar_file(expected[0], "metadata.jsonl"))
         return expected

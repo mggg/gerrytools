@@ -1,4 +1,4 @@
-"""Docker-free tests for RunContainer's output processing."""
+"""Docker-free tests for RunnerSession's output processing."""
 
 import os
 from typing import Any, cast
@@ -8,7 +8,7 @@ import networkx as nx
 import pytest
 from gerrychain import Graph
 
-from gerrytools.mgrp import RunContainer
+from gerrytools.mgrp import RunnerSession
 from gerrytools.mgrp.run_container import (
     RunnerConfig,
     _preserve_outputs_on_failure,
@@ -72,7 +72,7 @@ def test_rejects_non_runner_configuration():
     # The type check runs before any Docker connection is attempted.
     bad_config = cast(RunnerConfig, "not a config")
     with pytest.raises(TypeError, match="RecomRunnerConfig"):
-        RunContainer(configuration=bad_config)
+        RunnerSession(configuration=bad_config)
 
 
 def test_output_file_name_rejects_windows_drive_relative_path():
@@ -80,7 +80,7 @@ def test_output_file_name_rejects_windows_drive_relative_path():
         _validate_output_file_name("C:unrelated.jsonl")
 
 
-def test_mcmc_run_with_updaters_rejects_incompatible_run_info():
+def test_mcmc_run_with_updaters_rejects_incompatible_run_spec():
     container = make_fake_run_container()
 
     with pytest.raises(TypeError, match="does not carry updaters"):
@@ -202,27 +202,27 @@ class _FakeConfig(RunnerConfig):
         self._log_path = log_path
         self._output_path = output_path
 
-    def _stem(self, run_info):
+    def _stem(self, run_spec):
         return "fake"
 
-    def _output_name(self, run_info):
+    def _output_name(self, run_spec):
         return None if self._output_path is None else self._output_path.name
 
-    def _base_config(self, run_info):
+    def _base_config(self, run_spec):
         return {}
 
-    def run_command(self, run_info):
+    def run_command(self, run_spec):
         return ["cmd"]
 
-    def log_file(self, run_info):
+    def log_file(self, run_spec):
         return str(self._log_path)
 
-    def output_file(self, run_info):
+    def output_file(self, run_spec):
         return None if self._output_path is None else str(self._output_path)
 
 
 def make_streaming_container(chunks, exit_code=0, config=None):
-    """A RunContainer wired to a fake Docker client; chunks must be one-sided
+    """A RunnerSession wired to a fake Docker client; chunks must be one-sided
     (stdout, None) / (None, stderr) frames, matching docker-py's demux contract.
     """
     from types import SimpleNamespace
@@ -234,7 +234,7 @@ def make_streaming_container(chunks, exit_code=0, config=None):
             else SimpleNamespace(
                 engine="fake-engine",
                 container_output_dir="/output",
-                run_command=lambda run_info: ["cmd"],
+                run_command=lambda run_spec: ["cmd"],
             )
         ),
         client=SimpleNamespace(api=_FakeExecAPI(chunks, exit_code)),
@@ -467,8 +467,8 @@ def test_run_raises_when_promised_sidecar_missing_after_zero_exit(tmp_path):
     scores_path.write_text("old scores\n")
 
     class _SidecarConfig(_FakeConfig):
-        def expected_files(self, run_info):
-            return super().expected_files(run_info) + [str(scores_path)]
+        def expected_files(self, run_spec):
+            return super().expected_files(run_spec) + [str(scores_path)]
 
     def engine_chunks():
         output_path.write_text("{}\n")  # primary output only; the sidecar never appears
@@ -581,7 +581,7 @@ def test_preserve_outputs_reports_unrestorable_backups(tmp_path):
 
 
 def make_updater_container(tmp_path, monkeypatch, graph, chunks):
-    """A RunContainer on a real RecomRunnerConfig with Graph.from_json faked to `graph`."""
+    """A RunnerSession on a real RecomRunnerConfig with Graph.from_json faked to `graph`."""
     from gerrytools.mgrp import RecomRunnerConfig
 
     monkeypatch.setattr(Graph, "from_json", staticmethod(lambda _path: Graph.from_networkx(graph)))
@@ -594,7 +594,7 @@ def make_updater_container(tmp_path, monkeypatch, graph, chunks):
 def test_mcmc_run_with_updaters_streams_assignments_and_stderr(tmp_path, monkeypatch):
     # End-to-end wiring: JSON assignment lines flow through _iter_json_lines into
     # _process_output, and stderr chunks pass through as (None, text).
-    from gerrytools.mgrp import RecomRunInfo
+    from gerrytools.mgrp import RecomRunSpec
 
     square_graph = nx.Graph()
     square_graph.add_edges_from([(0, 1), (1, 2), (2, 3), (3, 0)])
@@ -607,14 +607,14 @@ def test_mcmc_run_with_updaters_streams_assignments_and_stderr(tmp_path, monkeyp
             (b'{"assignment": [1, 1, 2, 2], "sample": 1}\n', None),
         ],
     )
-    run_info = RecomRunInfo(
+    run_spec = RecomRunSpec(
         pop_col="TOTPOP",
         assignment_col="CD",
         variant="A",
         updaters={"num_cut_edges": lambda partition: len(partition["cut_edges"])},
     )
 
-    results = list(container.mcmc_run_with_updaters(run_info))
+    results = list(container.mcmc_run_with_updaters(run_spec))
 
     assert results == [
         (None, "engine warming up\n"),
@@ -623,7 +623,7 @@ def test_mcmc_run_with_updaters_streams_assignments_and_stderr(tmp_path, monkeyp
 
 
 def test_closing_updater_stream_terminates_the_engine_container(tmp_path, monkeypatch):
-    from gerrytools.mgrp import RecomRunInfo
+    from gerrytools.mgrp import RecomRunSpec
 
     graph = nx.cycle_graph(4)
     container = make_updater_container(
@@ -637,7 +637,7 @@ def test_closing_updater_stream_terminates_the_engine_container(tmp_path, monkey
     )
     docker_container = cast(_FakeContainer, container.container)
     iterator = container.mcmc_run_with_updaters(
-        RecomRunInfo(
+        RecomRunSpec(
             pop_col="TOTPOP",
             assignment_col="CD",
             variant="A",
@@ -655,7 +655,7 @@ def test_closing_updater_stream_terminates_the_engine_container(tmp_path, monkey
 
 
 def test_updater_error_survives_container_removal_failure(tmp_path, monkeypatch):
-    from gerrytools.mgrp import RecomRunInfo
+    from gerrytools.mgrp import RecomRunSpec
 
     def failing_updater(_partition):
         raise ValueError("updater failed")
@@ -669,7 +669,7 @@ def test_updater_error_survives_container_removal_failure(tmp_path, monkeypatch)
     docker_container = cast(_FakeContainer, container.container)
     docker_container.remove_error = OSError("daemon unavailable")
     iterator = container.mcmc_run_with_updaters(
-        RecomRunInfo(
+        RecomRunSpec(
             pop_col="TOTPOP",
             assignment_col="CD",
             variant="A",
@@ -694,19 +694,19 @@ def test_mcmc_run_with_updaters_rejects_non_positional_node_labels(
 ):
     # The engines emit positional assignment lists; string labels used to raise a bare
     # KeyError and permuted integer labels would be silently matched to the wrong nodes.
-    from gerrytools.mgrp import RecomRunInfo
+    from gerrytools.mgrp import RecomRunSpec
 
     labeled_graph = nx.Graph()
     labeled_graph.add_edges_from(zip(node_labels, node_labels[1:]))
     container = make_updater_container(tmp_path, monkeypatch, labeled_graph, [])
-    run_info = RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A")
+    run_spec = RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A")
 
     with pytest.raises(RuntimeError, match="node labels to be exactly 0..2"):
-        list(container.mcmc_run_with_updaters(run_info))
+        list(container.mcmc_run_with_updaters(run_spec))
 
 
 def test_mcmc_run_with_updaters_rejects_a_permuted_complete_label_set(tmp_path, monkeypatch):
-    from gerrytools.mgrp import RecomRunInfo
+    from gerrytools.mgrp import RecomRunSpec
 
     permuted = nx.Graph()
     permuted.add_edges_from([(3, 1), (1, 0), (0, 2)])
@@ -714,10 +714,10 @@ def test_mcmc_run_with_updaters_rejects_a_permuted_complete_label_set(tmp_path, 
     assert set(permuted.nodes) == set(range(4))  # A set comparison would pass.
 
     container = make_updater_container(tmp_path, monkeypatch, permuted, [])
-    run_info = RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A")
+    run_spec = RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A")
 
     with pytest.raises(RuntimeError, match="ascending order"):
-        list(container.mcmc_run_with_updaters(run_info))
+        list(container.mcmc_run_with_updaters(run_spec))
 
 
 # ==================================
@@ -761,7 +761,7 @@ def test_docker_connection_is_deferred_until_context_entry(tmp_path, monkeypatch
 
     monkeypatch.setattr("gerrytools.mgrp.run_container.docker.from_env", fail_connection)
 
-    container = RunContainer(runner)
+    container = RunnerSession(runner)
     assert container.client is None
     assert attempts == []
 
@@ -1016,7 +1016,7 @@ def test_chown_nonzero_exit_is_only_a_warning(tmp_path, caplog):
 
 
 def make_exiting_container(tmp_path, remove):
-    """A RunContainer ready for __exit__, recording chown execs and client closes."""
+    """A RunnerSession ready for __exit__, recording chown execs and client closes."""
     from types import SimpleNamespace
 
     from gerrytools.mgrp import RecomRunnerConfig

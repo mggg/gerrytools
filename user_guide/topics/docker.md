@@ -207,7 +207,7 @@ in one shell.
 
 ## How MGRP uses the container
 
-When a {class}`~gerrytools.mgrp.RunContainer` context is entered, GerryTools:
+When a {class}`~gerrytools.mgrp.RunnerSession` context is entered, GerryTools:
 
 1. connects to the daemon using the Docker SDK;
 2. attempts to pull the image pinned by the installed GerryTools version;
@@ -226,7 +226,7 @@ docker image ls mgggdev/replicate
 ```
 
 Do not substitute a moving `latest` tag for a published analysis. Record the GerryTools version and
-the complete image reference when reproducibility matters. Passing a custom image to `RunContainer`
+the complete image reference when reproducibility matters. Passing a custom image to `RunnerSession`
 is intended for controlled development or a project that deliberately maintains its own image.
 
 ## File sharing and mounted paths

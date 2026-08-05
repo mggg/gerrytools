@@ -349,7 +349,7 @@ class TestPaintballStringGeneration:
         assert r"\foreach \votes/\seats in {" in latex
 
     def test_crosshairs_span_configured_limits(self):
-        # Regression (C5): crosshairs used to hardcode the unit square regardless of limits.
+        # Regression: crosshairs used to hardcode the unit square regardless of limits.
         plot = TikzPaintballPlot(vote_share_data=[0.5], seats_data=[0.5])
         plot.set_xlim(0.25, 0.75)
         plot.set_ylim(0.2, 0.8)

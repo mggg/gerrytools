@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `evaluate_many` now returns `ManyPlanEvalResult`; streamed ensemble evaluations use
   `EnsembleEvalResult`. `EvaluationRun` has been removed.
+- `EnsembleEvalResult.read` accepts `return_type` to request a pandas `Series` or `DataFrame` and
+  narrow its static return type. Series and one-column DataFrame results convert between shapes.
+- `gerrytools.ben.RunIterator` and `Variant` are now `RecordedChainIterator` and
+  `EncodingVariant`, respectively. The old generic names have been removed.
+- `RecordedChain` now preserves input node order by default (`graph_order=None`). Pass
+  `graph_order="mlc"` to retain compression-oriented node reordering.
+- MGRP run settings now use `RunSpec`, `RecomRunSpec`, `ShortBurstsRunSpec`,
+  `TiltedRunSpec`, `ForestRunSpec`, and `SMCRunSpec`; shared optimizer settings use
+  `OptimizerRunSpecBase`. `RunContainer` is now `RunnerSession`. The old names have been removed.
+- The default MGRP Docker image is now `mgggdev/replicate:v2.0.1`, which updates `rustrecom`
+  from 0.1.4 to 0.2.0.
 
 ## [2.0.0] - 2026-08-04
 

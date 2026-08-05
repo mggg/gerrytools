@@ -1,5 +1,5 @@
 try:
-    from .run_container import RunContainer, RunInfo, RunnerConfig, SupportsUpdaters
+    from .run_container import RunnerConfig, RunnerSession, RunSpec, SupportsUpdaters
 except ModuleNotFoundError as e:
     if e.name and e.name.split(".")[0] == "docker":
         raise ModuleNotFoundError(
@@ -9,30 +9,30 @@ except ModuleNotFoundError as e:
     raise
 from .constraints import Constraints
 from .objectives import Objective
-from .runners.forest import ForestRunInfo, ForestRunnerConfig
+from .runners.forest import ForestRunnerConfig, ForestRunSpec
 from .runners.recom import (
-    OptimizerRunInfoBase,
-    RecomRunInfo,
+    OptimizerRunSpecBase,
     RecomRunnerConfig,
-    ShortBurstsRunInfo,
-    TiltedRunInfo,
+    RecomRunSpec,
+    ShortBurstsRunSpec,
+    TiltedRunSpec,
 )
-from .runners.smc import SMCRunInfo, SMCRunnerConfig
+from .runners.smc import SMCRunnerConfig, SMCRunSpec
 
 __all__ = [
     "Constraints",
     "Objective",
     "RecomRunnerConfig",
-    "RecomRunInfo",
-    "OptimizerRunInfoBase",
-    "ShortBurstsRunInfo",
-    "TiltedRunInfo",
+    "RecomRunSpec",
+    "OptimizerRunSpecBase",
+    "ShortBurstsRunSpec",
+    "TiltedRunSpec",
     "ForestRunnerConfig",
-    "ForestRunInfo",
+    "ForestRunSpec",
     "SMCRunnerConfig",
-    "SMCRunInfo",
-    "RunContainer",
+    "SMCRunSpec",
+    "RunnerSession",
     "RunnerConfig",
-    "RunInfo",
+    "RunSpec",
     "SupportsUpdaters",
 ]
