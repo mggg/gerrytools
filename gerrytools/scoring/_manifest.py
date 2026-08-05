@@ -23,12 +23,12 @@ _PANDAS_DTYPES = {"bool": "bool", "float": "float64", "int": "int64"}
 
 
 def preferred_manifest_path(path: Path) -> Path:
-    """Return the manifest path used for a newly written run."""
+    """Return the manifest path used for a newly written ensemble result."""
     return path / f"manifest__{_encode_path_component(path.name)}.json"
 
 
 def find_manifest_path(path: Path) -> Path:
-    """Find a current, renamed, or version-one run manifest."""
+    """Find a current, renamed, or version-one ensemble result manifest."""
     preferred = preferred_manifest_path(path)
     if preferred.is_file():
         return preferred
@@ -39,7 +39,7 @@ def find_manifest_path(path: Path) -> Path:
     if len(candidates) == 1:
         return candidates[0]
     if len(candidates) > 1:
-        raise ValueError("evaluation run contains multiple possible manifests")
+        raise ValueError("ensemble result contains multiple possible manifests")
     return preferred
 
 
@@ -95,7 +95,9 @@ def parse_manifest(
     if unique_plans is not None:
         if accepted == 0:
             if unique_plans != 0 or unique_districts != 0:
-                raise ValueError("an empty evaluation run cannot contain unique plans or districts")
+                raise ValueError(
+                    "an empty ensemble result cannot contain unique plans or districts"
+                )
         else:
             if not 1 <= unique_plans <= accepted:
                 raise ValueError(

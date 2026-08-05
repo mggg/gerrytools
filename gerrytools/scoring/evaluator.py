@@ -413,19 +413,20 @@ class PlanEvaluator:
         progress: bool = False,
         update: bool = False,
     ) -> EnsembleEvalResult:
-        """Evaluate a BEN, XBEN, or finalized BENDL stream into a Parquet run directory.
+        """Evaluate a BEN, XBEN, or finalized BENDL stream into an ensemble result directory.
 
         Assignment positions must follow this evaluator's graph-node order. The output path must
         contain scores for the same assignment stream when it already exists. New score names are
-        added to an existing run. Existing names require ``update=True`` and are replaced. A BENDL
-        graph, when present, must use exactly this evaluator's node order. BEN, XBEN, and graph-free
-        BENDL inputs leave ordering to the caller.
+        added to an existing result. Existing names require ``update=True`` and are replaced. A
+        BENDL graph, when present, must use exactly this evaluator's node order. BEN, XBEN, and
+        graph-free BENDL inputs leave ordering to the caller.
 
         Args:
             source (str | os.PathLike[str]): Input BEN, XBEN, or finalized BENDL file.
             output_dir (str | os.PathLike[str]): Directory containing the manifest and score tables.
             max_samples (int | np.integer | None, optional): Limit after expanding frame
-                repetitions. Zero writes an empty run. Defaults to None, which reads the full run.
+                repetitions. Zero writes an empty result. Defaults to None, which reads the full
+                stream.
             batch_size (int | np.integer, optional): Maximum full assignment frames scored in one
                 engine batch. Defaults to 256.
             track_uniqueness (bool, optional): Whether to count label-invariant unique plans and
@@ -435,7 +436,7 @@ class PlanEvaluator:
                 ``output_dir``. New names are always added. Defaults to False.
 
         Returns:
-            EnsembleEvalResult: The completed ensemble evaluation.
+            EnsembleEvalResult: The completed ensemble result.
 
         Raises:
             FileExistsError: If a registered score name is already present and ``update`` is
@@ -512,7 +513,7 @@ class PlanEvaluator:
             if duplicates and not update:
                 names = ", ".join(repr(name) for name in duplicates)
                 raise FileExistsError(
-                    f"evaluation run already contains {names}; pass update=True to replace them"
+                    f"ensemble result already contains {names}; pass update=True to replace them"
                 )
 
         def score(target: Path) -> None:
@@ -554,7 +555,7 @@ class PlanEvaluator:
         ) as temporary:
             staged = Path(temporary) / output_path.name
             score(staged)
-            _merge_evaluation_run(output_path, existing, staged)
+            _merge_ensemble_result(output_path, existing, staged)
         return EnsembleEvalResult.open(output_path)
 
     def _score_rows(
@@ -867,13 +868,13 @@ class PlanEvaluator:
                 if not -(2**63) <= integer < 2**63:
                     raise ValueError(
                         f"metric {instance!r} region label {value!r} at graph node {node!r} "
-                        "cannot be represented in a streamed run"
+                        "cannot be represented in a streamed ensemble result"
                     )
                 label = ("int", integer)
             else:
                 raise ValueError(
                     f"metric {instance!r} region label {value!r} at graph node {node!r} "
-                    "cannot be represented in a streamed run"
+                    "cannot be represented in a streamed ensemble result"
                 )
             if label not in seen:
                 seen.add(label)
@@ -1029,18 +1030,18 @@ def _checked_numeric_values(
     return tuple(checked)
 
 
-def _merge_evaluation_run(
+def _merge_ensemble_result(
     output: Path,
     existing: EnsembleEvalResult,
     staged: Path,
 ) -> None:
-    staged_run = EnsembleEvalResult.open(staged)
+    staged_result = EnsembleEvalResult.open(staged)
     if (
-        existing.summary.samples != staged_run.summary.samples
-        or existing.summary.accepted != staged_run.summary.accepted
-        or existing._districts != staged_run._districts
+        existing.summary.samples != staged_result.summary.samples
+        or existing.summary.accepted != staged_result.summary.accepted
+        or existing._districts != staged_result._districts
     ):
-        raise ValueError("new scores do not match the existing run dimensions")
+        raise ValueError("new scores do not match the existing ensemble result dimensions")
 
     existing_manifest = _version_2_manifest(_read_run_manifest(output))
     staged_manifest = _version_2_manifest(_read_run_manifest(staged))
@@ -1054,10 +1055,10 @@ def _merge_evaluation_run(
         merged.append(staged_by_name.pop(name, entry))
     merged.extend(entry for entry in staged_entries if entry["instance"] in staged_by_name)
 
-    replaced = set(existing.metrics) & set(staged_run.metrics)
+    replaced = set(existing.metrics) & set(staged_result.metrics)
     stale = {table.path for name in replaced for table in existing._metric_metadata[name].tables}
     staged_tables = [
-        table for metric in staged_run._metric_metadata.values() for table in metric.tables
+        table for metric in staged_result._metric_metadata.values() for table in metric.tables
     ]
     destinations = {output / table.path.relative_to(staged): table.path for table in staged_tables}
     unrelated = {

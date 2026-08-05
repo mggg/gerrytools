@@ -2,7 +2,7 @@ import hashlib
 import json
 import weakref
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal, assert_type, cast
 
 import geopandas as gpd
 import networkx as nx
@@ -459,7 +459,7 @@ def test_evaluate_stream_tags_mixed_integer_and_string_region_labels_without_col
     assert list(result.index.levels[1]) == [1, "1"]
 
 
-def test_evaluation_run_expands_repetitions_and_caps_the_last_frame(tmp_path: Path) -> None:
+def test_ensemble_eval_result_expands_repetitions_and_caps_the_last_frame(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     first = [0, 0, 1, 1]
@@ -500,7 +500,47 @@ def test_evaluation_run_expands_repetitions_and_caps_the_last_frame(tmp_path: Pa
     )
 
 
-def test_evaluation_run_iterators_reproduce_eager_results(tmp_path: Path) -> None:
+def test_ensemble_result_read_return_type_narrows_and_converts(tmp_path: Path) -> None:
+    source = tmp_path / "plans.ben"
+    output = tmp_path / "scores"
+    write_source(source, "ben", "standard")
+    run = scorer().evaluate_stream(source, output)
+
+    series = run.read("cut_edges", return_type="series")
+    frame = run.read("cut_edges", return_type="dataframe")
+
+    assert_type(series, pd.Series)
+    assert_type(frame, pd.DataFrame)
+    pd.testing.assert_frame_equal(frame, series.to_frame())
+    with pytest.raises(
+        TypeError,
+        match="metric 'population' produced a DataFrame with 2 columns; cannot return a Series",
+    ):
+        run.read("population", return_type="series")
+    with pytest.raises(ValueError, match="return_type must be 'series', 'dataframe', or None"):
+        run.read("cut_edges", return_type=cast("Literal['series']", "index"))
+
+    one_district_source = tmp_path / "one-district.ben"
+    one_district_output = tmp_path / "one-district-scores"
+    with BenEncoder(one_district_source, variant="standard") as stream:
+        stream.write([0, 0, 0, 0])
+    graph, _ = grid_resources()
+    one_district_run = (
+        PlanEvaluator(graph)
+        .add_metric(Tally("population"))
+        .evaluate_stream(
+            one_district_source,
+            one_district_output,
+        )
+    )
+    one_column_frame = one_district_run.read("population", return_type="dataframe")
+    converted_series = one_district_run.read("population", return_type="series")
+
+    assert_type(converted_series, pd.Series)
+    pd.testing.assert_series_equal(converted_series, one_column_frame.iloc[:, 0])
+
+
+def test_ensemble_eval_result_iterators_reproduce_eager_results(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
@@ -531,7 +571,7 @@ def test_evaluation_run_iterators_reproduce_eager_results(tmp_path: Path) -> Non
     )
 
 
-def test_evaluation_run_expanded_iterator_splits_one_repetition(tmp_path: Path) -> None:
+def test_ensemble_eval_result_expanded_iterator_splits_one_repetition(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     first = [0, 0, 1, 1]
@@ -559,7 +599,7 @@ def test_evaluation_run_expanded_iterator_splits_one_repetition(tmp_path: Path) 
     pd.testing.assert_frame_equal(pd.concat(frames), expected)
 
 
-def test_evaluation_run_memory_guard_warns_and_raises_before_parquet(
+def test_ensemble_eval_result_memory_guard_warns_and_raises_before_parquet(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -580,7 +620,7 @@ def test_evaluation_run_memory_guard_warns_and_raises_before_parquet(
     assert Path(captured[0].filename) == Path(__file__)
 
 
-def test_evaluation_run_allow_large_warns_and_proceeds(
+def test_ensemble_eval_result_allow_large_warns_and_proceeds(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -607,7 +647,7 @@ def test_evaluation_run_allow_large_warns_and_proceeds(
         ("length", "footer length"),
     ],
 )
-def test_evaluation_run_rejects_invalid_footer_before_parquet_construction(
+def test_ensemble_eval_result_rejects_invalid_footer_before_parquet_construction(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     corruption: str,
@@ -636,7 +676,7 @@ def test_evaluation_run_rejects_invalid_footer_before_parquet_construction(
         run.raw("cut_edges")
 
 
-def test_evaluation_run_rejects_footer_allowance_before_parquet_construction(
+def test_ensemble_eval_result_rejects_footer_allowance_before_parquet_construction(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -657,7 +697,7 @@ def test_evaluation_run_rejects_footer_allowance_before_parquet_construction(
             run.raw("cut_edges")
 
 
-def test_evaluation_run_uses_actual_row_group_floor(
+def test_ensemble_eval_result_uses_actual_row_group_floor(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -679,7 +719,7 @@ def test_evaluation_run_uses_actual_row_group_floor(
     assert 2 in physical_rows
 
 
-def test_evaluation_run_rejects_unsafe_row_group_before_requesting_a_batch(
+def test_ensemble_eval_result_rejects_unsafe_row_group_before_requesting_a_batch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -710,7 +750,7 @@ def test_evaluation_run_rejects_unsafe_row_group_before_requesting_a_batch(
             next(run.iter_raw_batches("cut_edges", batch_size=1))
 
 
-def test_evaluation_run_iterator_estimates_include_previous_outputs(tmp_path: Path) -> None:
+def test_ensemble_eval_result_iterator_estimates_include_previous_outputs(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
@@ -752,7 +792,7 @@ def test_evaluation_run_iterator_estimates_include_previous_outputs(tmp_path: Pa
     )
 
 
-def test_evaluation_run_estimates_semantic_shapes_and_expansion(tmp_path: Path) -> None:
+def test_ensemble_eval_result_estimates_semantic_shapes_and_expansion(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
@@ -783,7 +823,7 @@ def test_evaluation_run_estimates_semantic_shapes_and_expansion(tmp_path: Path) 
     )
 
 
-def test_evaluation_run_disables_threaded_parquet_reads(
+def test_ensemble_eval_result_disables_threaded_parquet_reads(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -944,7 +984,7 @@ def test_expanded_iterator_releases_inputs_before_requesting_the_next_batch(
 
 
 @pytest.mark.parametrize("operation", ["frames", "iterator"])
-def test_evaluation_run_attributes_other_memory_warnings_to_the_caller(
+def test_ensemble_eval_result_attributes_other_memory_warnings_to_the_caller(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     operation: str,
@@ -969,7 +1009,7 @@ def test_evaluation_run_attributes_other_memory_warnings_to_the_caller(
     assert Path(captured[0].filename) == Path(__file__)
 
 
-def test_evaluation_run_validates_iterator_options_before_file_io(tmp_path: Path) -> None:
+def test_ensemble_eval_result_validates_iterator_options_before_file_io(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
@@ -984,7 +1024,7 @@ def test_evaluation_run_validates_iterator_options_before_file_io(tmp_path: Path
         )
 
 
-def test_evaluation_run_rehashes_after_a_successful_read(tmp_path: Path) -> None:
+def test_ensemble_eval_result_rehashes_after_a_successful_read(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
@@ -999,7 +1039,7 @@ def test_evaluation_run_rehashes_after_a_successful_read(tmp_path: Path) -> None
         run.read("cut_edges")
 
 
-def test_evaluation_run_reports_unknown_metrics_and_exposes_raw_table(tmp_path: Path) -> None:
+def test_ensemble_eval_result_reports_unknown_metrics_and_exposes_raw_table(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
@@ -1030,7 +1070,7 @@ def test_evaluation_run_reports_unknown_metrics_and_exposes_raw_table(tmp_path: 
         ("metrics", [], "at least one metric"),
     ],
 )
-def test_evaluation_run_rejects_invalid_manifest_contracts(
+def test_ensemble_eval_result_rejects_invalid_manifest_contracts(
     tmp_path: Path,
     field: str,
     value: object,
@@ -1049,7 +1089,7 @@ def test_evaluation_run_rejects_invalid_manifest_contracts(
         EnsembleEvalResult.open(output)
 
 
-def test_evaluation_run_rejects_non_object_manifest(tmp_path: Path) -> None:
+def test_ensemble_eval_result_rejects_non_object_manifest(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
@@ -1060,7 +1100,7 @@ def test_evaluation_run_rejects_non_object_manifest(tmp_path: Path) -> None:
         EnsembleEvalResult.open(output)
 
 
-def test_evaluation_run_rejects_duplicate_metric_names(tmp_path: Path) -> None:
+def test_ensemble_eval_result_rejects_duplicate_metric_names(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
@@ -1074,7 +1114,7 @@ def test_evaluation_run_rejects_duplicate_metric_names(tmp_path: Path) -> None:
         EnsembleEvalResult.open(output)
 
 
-def test_evaluation_run_rejects_invalid_metric_metadata_and_missing_tables(
+def test_ensemble_eval_result_rejects_invalid_metric_metadata_and_missing_tables(
     tmp_path: Path,
 ) -> None:
     source = tmp_path / "plans.ben"
@@ -1109,7 +1149,9 @@ def test_evaluation_run_rejects_invalid_metric_metadata_and_missing_tables(
         EnsembleEvalResult.open(output)
 
 
-def test_evaluation_run_rejects_metric_axes_that_disagree_with_subkeys(tmp_path: Path) -> None:
+def test_ensemble_eval_result_rejects_metric_axes_that_disagree_with_subkeys(
+    tmp_path: Path,
+) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
@@ -1138,7 +1180,7 @@ def test_evaluation_run_rejects_metric_axes_that_disagree_with_subkeys(tmp_path:
         ("label_value", "invalid region label"),
     ],
 )
-def test_evaluation_run_rejects_invalid_region_metric_metadata(
+def test_ensemble_eval_result_rejects_invalid_region_metric_metadata(
     tmp_path: Path,
     corruption: str,
     message: str,
@@ -1189,7 +1231,7 @@ def test_evaluation_run_rejects_invalid_region_metric_metadata(
         ("region", "cannot define region axes"),
     ],
 )
-def test_evaluation_run_rejects_invalid_nonregion_axis_metadata(
+def test_ensemble_eval_result_rejects_invalid_nonregion_axis_metadata(
     tmp_path: Path,
     corruption: str,
     message: str,
@@ -1221,7 +1263,7 @@ def test_evaluation_run_rejects_invalid_nonregion_axis_metadata(
         ("accepted_index", "not contiguous"),
     ],
 )
-def test_evaluation_run_rejects_corrupt_physical_prefixes(
+def test_ensemble_eval_result_rejects_corrupt_physical_prefixes(
     tmp_path: Path, corruption: str, message: str
 ) -> None:
     source = tmp_path / "plans.ben"
@@ -1248,7 +1290,7 @@ def test_evaluation_run_rejects_corrupt_physical_prefixes(
         run.read("cut_edges")
 
 
-def test_evaluation_run_rejects_changed_metric_values(tmp_path: Path) -> None:
+def test_ensemble_eval_result_rejects_changed_metric_values(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
@@ -1262,7 +1304,7 @@ def test_evaluation_run_rejects_changed_metric_values(tmp_path: Path) -> None:
         run.read("cut_edges")
 
 
-def test_evaluation_run_rejects_same_size_table_corruption(tmp_path: Path) -> None:
+def test_ensemble_eval_result_rejects_same_size_table_corruption(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "scores"
     write_source(source, "ben", "standard")
@@ -1630,7 +1672,7 @@ def test_evaluate_stream_does_not_overwrite_an_untracked_score_path(tmp_path: Pa
     assert run_manifest(output).read_bytes() == manifest
 
 
-def test_evaluate_stream_rejects_new_scores_with_different_run_dimensions(
+def test_evaluate_stream_rejects_new_scores_with_different_result_dimensions(
     tmp_path: Path,
 ) -> None:
     source = tmp_path / "plans.ben"
@@ -1643,7 +1685,7 @@ def test_evaluate_stream_rejects_new_scores_with_different_run_dimensions(
     PlanEvaluator(graph).add_metric(Tally("population")).evaluate_stream(source, output)
     manifest = run_manifest(output).read_bytes()
 
-    with pytest.raises(ValueError, match="run dimensions"):
+    with pytest.raises(ValueError, match="ensemble result dimensions"):
         PlanEvaluator(graph).add_metric(CutEdges()).evaluate_stream(shorter_source, output)
 
     assert run_manifest(output).read_bytes() == manifest
@@ -1681,7 +1723,7 @@ def test_evaluate_stream_adds_scores_to_a_version_one_run(tmp_path: Path) -> Non
     assert cast(pd.Series, run.read("cut_edges")).tolist() == [2, 2]
 
 
-def test_evaluation_run_can_open_a_renamed_run_directory(tmp_path: Path) -> None:
+def test_ensemble_eval_result_can_open_a_renamed_result_directory(tmp_path: Path) -> None:
     source = tmp_path / "plans.ben"
     output = tmp_path / "original_scores"
     renamed = tmp_path / "renamed_scores"

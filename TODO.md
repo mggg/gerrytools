@@ -1,7 +1,5 @@
 # TODO
 
-- [ ] Better typing on the return of `read`
-
 - [ ] Ben module
   - [x] Improve integration with binary-ensemble
   - [ ] Add some python bindings for the MSMS parser and the SMC parser
