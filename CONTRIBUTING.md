@@ -35,7 +35,7 @@ Recommended setup:
 3. From the repository root, run `task setup`.
 
 `task setup` installs Astral's official standalone `uv` if you don't have it, installs a managed
-Python 3.11 environment, syncs the pinned dependencies, and installs the pre-commit hooks. 
+Python 3.11 environment, syncs the pinned dependencies, and installs the pre-commit hooks.
 
 If you already have `uv` installed and prefer to run the steps directly, the equivalent setup is:
 
@@ -232,7 +232,7 @@ Tests are required for behavior changes.
   `tests/scoring/...`.
 - Cover both successful behavior and expected failures.
 - When raising exceptions, prefer tests that check the error message with `pytest.raises(...,
-  match=...)`.
+match=...)`.
 - Include edge cases that are natural for the change: empty inputs, invalid candidate data,
   malformed rankings, tie handling, or zero-weight behavior.
 - Mark image regression tests with `@pytest.mark.snapshot` and LaTeX-dependent tests with
@@ -252,6 +252,43 @@ Depending on the change, that may include:
 - narrative docs under `user_guide/`
 - tutorial notebooks or generated tutorial pages
 - examples or README references
+
+## Cutting a release
+
+The `release.yml` workflow does the heavy lifting: it validates the tag, builds wheels and the
+sdist, smoke tests them, and publishes through TestPyPI to PyPI. The manual steps around it, in
+order:
+
+1. Bump the version (`uv version <X.Y.Z>`) and roll the `## [Unreleased]` entries in
+   `CHANGELOG.md` into a `## [X.Y.Z]` section.
+2. Publish the `mgggdev/replicate` Docker image under the release tag. Build it locally and run
+   the live mgrp tests against it first:
+
+   ```console
+   task docker-build -- vX.Y.Z; MGRP_TEST_IMAGE=mgggdev/replicate:vX.Y.Z uv run pytest tests/mgrp/live -q
+   ```
+
+   Then publish, picking the path that matches whether `docker/` changed since the last release:
+
+   ```console
+   task docker-push -- vX.Y.Z     # docker/ changed: full multi-arch rebuild and push
+   task docker-retag -- vX.Y.Z    # docker/ unchanged: retag the published digest, no rebuild
+   ```
+
+   Both tasks finish by rewriting `DEFAULT_DOCKER_IMAGE` in `gerrytools/mgrp/run_container.py` to
+   the freshly published `vX.Y.Z@sha256:...` pin; commit that change with the release. If the tag
+   is already on Docker Hub and only the constant needs re-pointing, `task docker-pin -- vX.Y.Z`
+   rewrites the pin from the registry digest without touching the image. The release workflow
+   refuses to build if the pinned tag does not match the release version or does not resolve to
+   the pinned digest on Docker Hub.
+
+3. Run `task all-checks` and `task check-release` on the release commit and merge it to `main`.
+   `check-release` verifies the version is not already tagged, the changelog has a section for
+   it, and the Docker pin matches it and resolves on Docker Hub.
+4. Tag the merged commit `vX.Y.Z` and push the tag.
+5. Dispatch `release.yml` from `main` with the tag and `upload_to: testpypi`; once the TestPyPI
+   verification job passes, rerun it with `upload_to: pypi`.
+6. Write the GitHub release notes from the new changelog section.
 
 ## Community guidelines
 

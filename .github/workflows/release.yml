@@ -60,6 +60,22 @@ jobs:
             echo "The tagged commit is not on the main branch."
             exit 1
           fi
+          image_pin="$(sed -n 's/^DEFAULT_DOCKER_IMAGE = "\(.*\)"$/\1/p' \
+            gerrytools/mgrp/run_container.py)"
+          if [[ "$image_pin" != mgggdev/replicate:v"$project_version"@sha256:* ]]; then
+            echo "DEFAULT_DOCKER_IMAGE ($image_pin) does not pin mgggdev/replicate:v$project_version."
+            echo "Publish the image (task docker-push / docker-retag) and update run_container.py."
+            exit 1
+          fi
+          image_tag="${image_pin%@*}"
+          image_digest="${image_pin#*@}"
+          published_digest="$(docker buildx imagetools inspect \
+            --format '{{.Manifest.Digest}}' "$image_tag")"
+          if [[ "$published_digest" != "$image_digest" ]]; then
+            echo "Published $image_tag resolves to $published_digest, but run_container.py"
+            echo "pins $image_digest. Retag the image or update the pin."
+            exit 1
+          fi
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "version=$project_version" >> "$GITHUB_OUTPUT"
 
