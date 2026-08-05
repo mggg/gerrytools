@@ -20,6 +20,7 @@ from gerrychain import Graph, MarkovChain, Partition
 from gerrychain.partition import GeographicPartition
 from gerrychain.partition.assignment import Assignment
 
+import gerrytools.ben as ben
 from gerrytools.ben import (
     BendlDecoder,
     BendlEncoder,
@@ -28,6 +29,13 @@ from gerrytools.ben import (
     read_geoparquet_asset,
     read_parquet_asset,
 )
+
+
+def test_public_type_names_identify_their_recording_scope() -> None:
+    assert "RecordedChainIterator" in ben.__all__
+    assert "EncodingVariant" in ben.__all__
+    assert not hasattr(ben, "RunIterator")
+    assert not hasattr(ben, "Variant")
 
 
 def configured_chain(

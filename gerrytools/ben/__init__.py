@@ -14,12 +14,12 @@ import pandas as pd
 from binary_ensemble import BendlDecoder, BendlEncoder
 
 from .recorded_chain import (
+    EncodingVariant,
     GraphOrder,
     GraphOrderName,
     RecordedChain,
+    RecordedChainIterator,
     RecordedRun,
-    RunIterator,
-    Variant,
 )
 
 
@@ -63,12 +63,12 @@ def read_geoparquet_asset(
 __all__ = [
     "BendlDecoder",
     "BendlEncoder",
+    "EncodingVariant",
     "GraphOrder",
     "GraphOrderName",
     "RecordedChain",
+    "RecordedChainIterator",
     "RecordedRun",
-    "RunIterator",
     "read_geoparquet_asset",
     "read_parquet_asset",
-    "Variant",
 ]
