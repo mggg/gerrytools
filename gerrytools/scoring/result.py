@@ -98,7 +98,7 @@ def _writable(values: NDArray[np.float64]) -> NDArray[np.float64]:
 
 
 class _Evaluation(Mapping[str, _EvaluationValue]):
-    """Read-only logical metric mapping shared by plan and ensemble results."""
+    """Read-only logical metric mapping shared by one-plan and many-plan results."""
 
     _single: bool
 
@@ -192,7 +192,7 @@ class PlanEvalResult(_Evaluation):
         return _cast_columns(frame, result.columns, result.dtypes)
 
 
-class EnsembleEvalResult(_Evaluation):
+class ManyPlanEvalResult(_Evaluation):
     """Read-only semantic metric values for an ordered collection of plans.
 
     Instances are normally returned by :meth:`PlanEvaluator.evaluate_many`.
@@ -224,7 +224,7 @@ class EnsembleEvalResult(_Evaluation):
         cls,
         results: Mapping[str, _MetricResult],
         sample_index: pd.Index,
-    ) -> EnsembleEvalResult:
+    ) -> ManyPlanEvalResult:
         result = cls.__new__(cls)
         result._initialize(results, None, None, sample_index=sample_index)
         return result
@@ -239,9 +239,9 @@ class EnsembleEvalResult(_Evaluation):
     ) -> None:
         row_counts = {len(result.values) for result in results.values()}
         if not row_counts:
-            raise ValueError("ensemble evaluation requires at least one metric result")
+            raise ValueError("many-plan evaluation requires at least one metric result")
         if len(row_counts) != 1:
-            raise ValueError("ensemble metrics must contain the same number of plans")
+            raise ValueError("many-plan metrics must contain the same number of plans")
         count = row_counts.pop()
         if summary is None:
             summary = EvaluationSummary(count, count)
@@ -319,8 +319,8 @@ class EnsembleEvalResult(_Evaluation):
         return _cast_columns(frame, columns, dtypes)
 
 
-class EvaluationRun:
-    """Read a completed streamed scoring run and reconstruct logical metric results.
+class EnsembleEvalResult:
+    """Read a completed streamed ensemble evaluation and reconstruct logical metric results.
 
     Use :meth:`open` to validate a published run directory before reading its metrics.
 
@@ -348,14 +348,14 @@ class EvaluationRun:
         self._frames: pd.DataFrame | None = None
 
     @classmethod
-    def open(cls, path: str | os.PathLike[str]) -> "EvaluationRun":
-        """Open and validate a successfully published evaluation run.
+    def open(cls, path: str | os.PathLike[str]) -> "EnsembleEvalResult":
+        """Open and validate a successfully published ensemble evaluation.
 
         Args:
             path (str | os.PathLike[str]): Evaluation run directory.
 
         Returns:
-            EvaluationRun: Validated lazy reader for the run.
+            EnsembleEvalResult: Validated lazy reader for the evaluation.
 
         Raises:
             OSError: If the manifest or metric files cannot be read.
@@ -1082,7 +1082,7 @@ def _enforce_memory(
         label = "frames" if operation == "frames" else f"{operation}({metric.name!r})"
     estimate = _format_bytes(estimated_bytes)
     if not warned:
-        _warn_external(f"EvaluationRun.{label} may use approximately {estimate} of memory")
+        _warn_external(f"EnsembleEvalResult.{label} may use approximately {estimate} of memory")
         warned = True
     if estimated_bytes < _ERROR_BYTES or allow_large:
         return warned
@@ -1097,7 +1097,7 @@ def _enforce_memory(
     else:
         advice = "use iter_batches() or allow_large=True"
     message = (
-        f"EvaluationRun.{label} is estimated to use {estimate}, exceeding the "
+        f"EnsembleEvalResult.{label} is estimated to use {estimate}, exceeding the "
         f"{_format_bytes(_ERROR_BYTES)} limit; {advice}"
     )
     raise EvaluationMemoryError(message, estimated_bytes, _ERROR_BYTES)
@@ -1149,7 +1149,7 @@ def _semantic_value(
         metric.regions,
         metric.region_name,
     )
-    return EnsembleEvalResult._from_index({name: result}, index)[name]
+    return ManyPlanEvalResult._from_index({name: result}, index)[name]
 
 
 def _validate_bool(value: object, name: str) -> None:

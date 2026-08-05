@@ -37,11 +37,12 @@ effect on an evaluator that uses only ordinary columns.
 Saved evaluation runs
 ---------------------
 
-``evaluate_stream`` creates a score directory when it does not exist. When the directory is an
-existing ``EvaluationRun``, score names not already present are added automatically. A matching
-name raises ``FileExistsError`` unless ``update=True``; with that flag, only matching names are
-replaced. The caller is responsible for using the same assignment stream. See :doc:`the BENDL
-scoring guide <../user/scoring/bendl>` for a complete saved-run example and the physical file layout.
+``evaluate_stream`` creates a score directory when it does not exist. When the directory contains
+an existing ensemble evaluation, score names not already present are added automatically. A
+matching name raises ``FileExistsError`` unless ``update=True``; with that flag, only matching
+names are replaced. The caller is responsible for using the same assignment stream. See :doc:`the
+BENDL scoring guide <../user/scoring/bendl>` for a complete saved-run example and the physical file
+layout.
 
 .. automodule:: gerrytools.scoring
    :members:

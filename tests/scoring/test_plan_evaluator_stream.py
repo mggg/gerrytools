@@ -16,8 +16,8 @@ from shapely.geometry import box
 from gerrytools.scoring import (
     ConvexHullRatio,
     CutEdges,
+    EnsembleEvalResult,
     EvaluationMemoryError,
-    EvaluationRun,
     EvaluationSummary,
     PlanEvaluator,
     PolsbyPopper,
@@ -161,7 +161,7 @@ def test_evaluate_stream_supports_every_container_and_variant(
     )
     run = plan_evaluator.evaluate_stream(source, output, batch_size=1, track_uniqueness=True)
 
-    assert isinstance(run, EvaluationRun)
+    assert isinstance(run, EnsembleEvalResult)
     assert run.summary == EvaluationSummary(
         samples=2, accepted=2, unique_plans=2, unique_districts=4
     )
@@ -369,7 +369,7 @@ def test_evaluate_stream_round_trips_every_metric_and_manifest_field(tmp_path: P
             "sample",
         )
 
-    reopened = EvaluationRun.open(output)
+    reopened = EnsembleEvalResult.open(output)
     assert reopened.summary == run.summary
     assert reopened.metrics == run.metrics
     pd.testing.assert_frame_equal(reopened.frames, run.frames)
@@ -625,7 +625,7 @@ def test_evaluation_run_rejects_invalid_footer_before_parquet_construction(
         contents[-8:-4] = len(contents).to_bytes(4, "little")
     table.write_bytes(contents)
     refresh_table_integrity(output, "cut_edges")
-    run = EvaluationRun.open(output)
+    run = EnsembleEvalResult.open(output)
 
     def fail_parquet(*args, **kwargs):
         raise AssertionError("ParquetFile must not be constructed")
@@ -1046,7 +1046,7 @@ def test_evaluation_run_rejects_invalid_manifest_contracts(
     manifest_path.write_text(json.dumps(manifest))
 
     with pytest.raises(ValueError, match=message):
-        EvaluationRun.open(output)
+        EnsembleEvalResult.open(output)
 
 
 def test_evaluation_run_rejects_non_object_manifest(tmp_path: Path) -> None:
@@ -1057,7 +1057,7 @@ def test_evaluation_run_rejects_non_object_manifest(tmp_path: Path) -> None:
     run_manifest(output).write_text("[]")
 
     with pytest.raises(ValueError, match="must be an object"):
-        EvaluationRun.open(output)
+        EnsembleEvalResult.open(output)
 
 
 def test_evaluation_run_rejects_duplicate_metric_names(tmp_path: Path) -> None:
@@ -1071,7 +1071,7 @@ def test_evaluation_run_rejects_duplicate_metric_names(tmp_path: Path) -> None:
     manifest_path.write_text(json.dumps(manifest))
 
     with pytest.raises(ValueError, match="metric names must be unique"):
-        EvaluationRun.open(output)
+        EnsembleEvalResult.open(output)
 
 
 def test_evaluation_run_rejects_invalid_metric_metadata_and_missing_tables(
@@ -1087,26 +1087,26 @@ def test_evaluation_run_rejects_invalid_metric_metadata_and_missing_tables(
     manifest["metrics"][0]["tables"][0]["sha256"] = "bad"
     manifest_path.write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match="SHA-256"):
-        EvaluationRun.open(output)
+        EnsembleEvalResult.open(output)
 
     refresh_table_integrity(output, "population")
     manifest = json.loads(manifest_path.read_text())
     manifest["metrics"][0]["dtypes"] = []
     manifest_path.write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match="logical dtypes"):
-        EvaluationRun.open(output)
+        EnsembleEvalResult.open(output)
 
     manifest["metrics"][0]["dtypes"] = ["float"]
     manifest["metrics"][0]["tables"][0]["path"] = "../scores.parquet"
     manifest_path.write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match="table path"):
-        EvaluationRun.open(output)
+        EnsembleEvalResult.open(output)
 
     manifest["metrics"][0]["tables"][0]["path"] = "population/population_tallies__scores.parquet"
     manifest_path.write_text(json.dumps(manifest))
     (output / "population" / "population_tallies__scores.parquet").unlink()
     with pytest.raises(FileNotFoundError, match="does not exist"):
-        EvaluationRun.open(output)
+        EnsembleEvalResult.open(output)
 
 
 def test_evaluation_run_rejects_metric_axes_that_disagree_with_subkeys(tmp_path: Path) -> None:
@@ -1121,7 +1121,7 @@ def test_evaluation_run_rejects_metric_axes_that_disagree_with_subkeys(tmp_path:
     manifest_path.write_text(json.dumps(manifest))
 
     with pytest.raises(ValueError, match="axis values disagree with its subkeys"):
-        EvaluationRun.open(output)
+        EnsembleEvalResult.open(output)
 
 
 @pytest.mark.parametrize(
@@ -1179,7 +1179,7 @@ def test_evaluation_run_rejects_invalid_region_metric_metadata(
     manifest_path.write_text(json.dumps(manifest))
 
     with pytest.raises(ValueError, match=message):
-        EvaluationRun.open(output)
+        EnsembleEvalResult.open(output)
 
 
 @pytest.mark.parametrize(
@@ -1208,7 +1208,7 @@ def test_evaluation_run_rejects_invalid_nonregion_axis_metadata(
     manifest_path.write_text(json.dumps(manifest))
 
     with pytest.raises(ValueError, match=message):
-        EvaluationRun.open(output)
+        EnsembleEvalResult.open(output)
 
 
 @pytest.mark.parametrize(
@@ -1242,7 +1242,7 @@ def test_evaluation_run_rejects_corrupt_physical_prefixes(
         table.loc[1, "accepted_index"] = 0
     table.to_parquet(table_path)
     refresh_table_integrity(output, "cut_edges")
-    run = EvaluationRun.open(output)
+    run = EnsembleEvalResult.open(output)
 
     with pytest.raises(ValueError, match=message):
         run.read("cut_edges")
@@ -1593,7 +1593,7 @@ def test_evaluate_stream_rolls_back_tables_when_manifest_publication_fails(
     PlanEvaluator(graph).add_metric(
         Tally("population", "area", result_name="district_totals")
     ).evaluate_stream(source, output)
-    expected = EvaluationRun.open(output).read("district_totals")
+    expected = EnsembleEvalResult.open(output).read("district_totals")
     original = {
         path.relative_to(output): path.read_bytes() for path in output.rglob("*") if path.is_file()
     }
@@ -1610,7 +1610,7 @@ def test_evaluate_stream_rolls_back_tables_when_manifest_publication_fails(
     assert {
         path.relative_to(output): path.read_bytes() for path in output.rglob("*") if path.is_file()
     } == original
-    pd.testing.assert_frame_equal(EvaluationRun.open(output).read("district_totals"), expected)
+    pd.testing.assert_frame_equal(EnsembleEvalResult.open(output).read("district_totals"), expected)
 
 
 def test_evaluate_stream_does_not_overwrite_an_untracked_score_path(tmp_path: Path) -> None:
@@ -1690,7 +1690,7 @@ def test_evaluation_run_can_open_a_renamed_run_directory(tmp_path: Path) -> None
     PlanEvaluator(graph).add_metric(CutEdges()).evaluate_stream(source, output)
     output.rename(renamed)
 
-    run = EvaluationRun.open(renamed)
+    run = EnsembleEvalResult.open(renamed)
 
     assert run.metrics == ("cut_edges",)
     assert cast(pd.Series, run.read("cut_edges")).tolist() == [2, 2]

@@ -1,7 +1,5 @@
 # TODO
 
-- [ ] Change `EvaluationRun` -> `Evaluation` (with alias)
-
 - [ ] Better typing on the return of `read`
 
 - [ ] Ben module

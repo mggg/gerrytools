@@ -40,7 +40,7 @@ from ._types import (
 from .metrics import Metric, _merged_keys, _MetricBase, _OutputSpec, _ResourceSpec
 from .result import (
     EnsembleEvalResult,
-    EvaluationRun,
+    ManyPlanEvalResult,
     PlanEvalResult,
 )
 
@@ -354,7 +354,7 @@ class PlanEvaluator:
         sample_ids: Iterable[Hashable] | None = None,
         track_uniqueness: bool = False,
         progress: bool = False,
-    ) -> EnsembleEvalResult:
+    ) -> ManyPlanEvalResult:
         """Evaluate a nonempty batch of assignments or partitions with stable district labels.
 
         Args:
@@ -366,7 +366,7 @@ class PlanEvaluator:
             progress (bool, optional): Whether to display a progress bar. Defaults to False.
 
         Returns:
-            EnsembleEvalResult: Metric values and optional uniqueness summary for every plan.
+            ManyPlanEvalResult: Metric values and optional uniqueness summary for every plan.
 
         Raises:
             TypeError: If a Boolean option or plan has an incompatible type.
@@ -385,7 +385,7 @@ class PlanEvaluator:
         rows = [self._normalize_plan(plan) for plan in chain((first,), iterator)]
         if not progress:
             results, uniqueness = self._score_rows(rows, track_uniqueness=track_uniqueness)
-            return EnsembleEvalResult(
+            return ManyPlanEvalResult(
                 results,
                 sample_ids,
                 summary=_batch_summary(len(rows), uniqueness),
@@ -396,7 +396,7 @@ class PlanEvaluator:
                 track_uniqueness=track_uniqueness,
                 progress=bar.update,
             )
-            return EnsembleEvalResult(
+            return ManyPlanEvalResult(
                 results,
                 sample_ids,
                 summary=_batch_summary(len(rows), uniqueness),
@@ -412,7 +412,7 @@ class PlanEvaluator:
         track_uniqueness: bool = False,
         progress: bool = False,
         update: bool = False,
-    ) -> EvaluationRun:
+    ) -> EnsembleEvalResult:
         """Evaluate a BEN, XBEN, or finalized BENDL stream into a Parquet run directory.
 
         Assignment positions must follow this evaluator's graph-node order. The output path must
@@ -435,7 +435,7 @@ class PlanEvaluator:
                 ``output_dir``. New names are always added. Defaults to False.
 
         Returns:
-            EvaluationRun: The completed evaluation run.
+            EnsembleEvalResult: The completed ensemble evaluation.
 
         Raises:
             FileExistsError: If a registered score name is already present and ``update`` is
@@ -506,7 +506,7 @@ class PlanEvaluator:
             "track_uniqueness": track_uniqueness,
             "progress": None,
         }
-        existing = EvaluationRun.open(output_path) if output_path.exists() else None
+        existing = EnsembleEvalResult.open(output_path) if output_path.exists() else None
         if existing is not None:
             duplicates = tuple(name for name in self.metrics if name in existing.metrics)
             if duplicates and not update:
@@ -545,7 +545,7 @@ class PlanEvaluator:
 
         if existing is None:
             score(output_path)
-            return EvaluationRun.open(output_path)
+            return EnsembleEvalResult.open(output_path)
 
         output_parent = output_path.parent if output_path.parent != Path("") else Path(".")
         with tempfile.TemporaryDirectory(
@@ -555,7 +555,7 @@ class PlanEvaluator:
             staged = Path(temporary) / output_path.name
             score(staged)
             _merge_evaluation_run(output_path, existing, staged)
-        return EvaluationRun.open(output_path)
+        return EnsembleEvalResult.open(output_path)
 
     def _score_rows(
         self,
@@ -1031,10 +1031,10 @@ def _checked_numeric_values(
 
 def _merge_evaluation_run(
     output: Path,
-    existing: EvaluationRun,
+    existing: EnsembleEvalResult,
     staged: Path,
 ) -> None:
-    staged_run = EvaluationRun.open(staged)
+    staged_run = EnsembleEvalResult.open(staged)
     if (
         existing.summary.samples != staged_run.summary.samples
         or existing.summary.accepted != staged_run.summary.accepted

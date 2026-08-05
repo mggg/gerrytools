@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `evaluate_many` now returns `ManyPlanEvalResult`; streamed ensemble evaluations use
+  `EnsembleEvalResult`. `EvaluationRun` has been removed.
+
 ## [2.0.0] - 2026-08-04
 
 GerryTools 2.0.0 is a rewrite. Every subpackage changed, the public API is not backward
