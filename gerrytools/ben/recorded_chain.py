@@ -625,7 +625,7 @@ class RecordedChain(MarkovChain):
         output_path: str | os.PathLike[str],
         total_steps: int | None = None,
         rng: Any = None,
-        graph_order: GraphOrder = "mlc",
+        graph_order: GraphOrder = None,
         graph_order_key: str | None = None,
         metadata: dict[str, Any] | list[Any] | None = None,
         variant: Variant = "twodelta",
@@ -646,7 +646,7 @@ class RecordedChain(MarkovChain):
             graph_order (GraphOrder): Node reordering applied before encoding: ``"mlc"`` (the
                 default), ``"rcm"``, ``"key"`` (sort by the ``graph_order_key`` node attribute),
                 or ``None`` to keep the input order. Reordering improves compression; the
-                permutation back to the source order is stored in the file.
+                permutation back to the source order is stored in the file. Defaults to None.
             graph_order_key (str | None): Node attribute to sort by; required exactly when
                 ``graph_order="key"``.
             metadata (dict[str, Any] | list[Any] | None, optional): JSON-serializable metadata
