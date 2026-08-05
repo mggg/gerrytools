@@ -111,7 +111,7 @@ def test_process_output_passes_error_through():
 def test_process_output_wraps_schema_mismatched_lines_in_runtime_error():
     # A metadata-shaped line (no assignment/sample) used to surface a bare KeyError.
     container, graph = make_container_and_graph()
-    metadata_line = {"metadata": {"engine": "rustrecom", "version": "0.1.4"}}
+    metadata_line = {"metadata": {"engine": "rustrecom", "version": "0.2.0"}}
 
     with pytest.raises(RuntimeError, match="'assignment'.*rustrecom"):
         list(container._process_output(graph, metadata_line, {}))

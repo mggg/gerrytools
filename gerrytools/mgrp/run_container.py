@@ -20,7 +20,7 @@ from gerrychain import Graph, Partition
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_DOCKER_IMAGE = "mgggdev/replicate:v2.0.0@sha256:b9243d65bfce934dcb1318a509388f9b9f25eacf13ab4ec4eefddf8e566fc1f6"
+DEFAULT_DOCKER_IMAGE = "mgggdev/replicate:v2.0.1@sha256:fe03dd8c70e72e15d50410317892c32a6b04e1d254d0a4af6f16b4a10d14768f"
 
 BINARY_WRITERS = ("pcompress", "ben", "bendl")
 """Writers whose output cannot be decoded from a console stream."""
@@ -511,8 +511,8 @@ class RunnerSession(Generic[RunSpecT]):
             configuration (RunnerConfig): The runner configuration to use. One of
                 RecomRunnerConfig, ForestRunnerConfig, or SMCRunnerConfig.
             docker_image_name (str, optional): Override for the Docker image to run.
-                Defaults to the immutable digest currently published as
-                ``mgggdev/replicate:v2.0.0``.
+                Defaults to the immutable ``mgggdev/replicate`` digest pinned for this
+                release in ``DEFAULT_DOCKER_IMAGE``.
             docker_client_args (dict, optional): Extra keyword arguments for
                 docker.DockerClient, for non-default Docker setups.
 
