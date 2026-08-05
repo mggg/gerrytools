@@ -62,9 +62,9 @@ impl<'a> Scorer<'a> {
             ),
             // MkvChain frames are full assignments, but adjacent frames are updated incrementally.
             BenVariant::MkvChain => self.score_mkvchain(source, options, emit),
-            // NOTE: Standard plans may be unrelated. I tried delta derivation with a retained
-            // 10k-plan, but that made the cut-only scorer 2.37x slower, so every assignment is
-            // still scored independently.
+            // Standard plans may be unrelated. Retaining the previous assignment to derive deltas
+            // made cut-only scoring 2.37x slower on a 10,000-plan benchmark, so each assignment is
+            // scored independently.
             BenVariant::Standard => self.score_standard(source, options, emit),
         }
     }

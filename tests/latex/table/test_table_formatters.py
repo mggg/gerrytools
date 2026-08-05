@@ -520,7 +520,7 @@ class TestFormatterContracts:
     # runtime validation, so the static signature is deliberately wrong.
 
     def test_two_arg_formatter_returning_plain_string_raises(self):
-        # Regression (C1): a 2-character string unpacks like a pair, so "hello" used to
+        # Regression: a 2-character string unpacks like a pair, so "hello" used to
         # silently truncate the cell to its second character instead of failing.
         table = TexTable(pd.DataFrame({"a": ["hello"]}), use_defaults=False)
         table.set_column_formatter("a", cast(CellWrapper, lambda v, s: "hello"))
@@ -554,7 +554,7 @@ class TestFormatterContracts:
             table.set_row_formatter(0, cast(CellWrapper, three_param_formatter))
 
     def test_one_arg_string_formatter_receives_escaped_text(self):
-        # Regression (C2): one-arg string formatters used to receive the raw value and
+        # Regression: one-arg string formatters used to receive the raw value and
         # replace the escaped rendering, letting raw % & _ reach the LaTeX output.
         table = TexTable(pd.DataFrame({"a": ["50% & up_ok"]}), use_defaults=False)
         table.set_string_formatter(lambda s: s.upper())

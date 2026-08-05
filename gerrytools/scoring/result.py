@@ -11,7 +11,7 @@ import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
-from typing import BinaryIO, Literal, cast
+from typing import BinaryIO, Literal, TypeAlias, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -32,6 +32,7 @@ from ._types import (
 )
 
 _ReadOperation = Literal["frames", "raw", "read"]
+_PandasResult: TypeAlias = pd.Series | pd.DataFrame
 _PANDAS_DTYPES = {"bool": "bool", "float": "float64", "int": "int64"}
 _DTYPE_WIDTHS = {"bool": 1, "float": 8, "int": 8}
 _PREFIX_COLUMNS = ("sample_offset", "repetitions", "accepted_index")
@@ -98,7 +99,7 @@ def _writable(values: NDArray[np.float64]) -> NDArray[np.float64]:
 
 
 class _Evaluation(Mapping[str, _EvaluationValue]):
-    """Read-only logical metric mapping shared by plan and ensemble results."""
+    """Read-only logical metric mapping shared by one-plan and many-plan results."""
 
     _single: bool
 
@@ -192,7 +193,7 @@ class PlanEvalResult(_Evaluation):
         return _cast_columns(frame, result.columns, result.dtypes)
 
 
-class EnsembleEvalResult(_Evaluation):
+class ManyPlanEvalResult(_Evaluation):
     """Read-only semantic metric values for an ordered collection of plans.
 
     Instances are normally returned by :meth:`PlanEvaluator.evaluate_many`.
@@ -224,7 +225,7 @@ class EnsembleEvalResult(_Evaluation):
         cls,
         results: Mapping[str, _MetricResult],
         sample_index: pd.Index,
-    ) -> EnsembleEvalResult:
+    ) -> ManyPlanEvalResult:
         result = cls.__new__(cls)
         result._initialize(results, None, None, sample_index=sample_index)
         return result
@@ -239,9 +240,9 @@ class EnsembleEvalResult(_Evaluation):
     ) -> None:
         row_counts = {len(result.values) for result in results.values()}
         if not row_counts:
-            raise ValueError("ensemble evaluation requires at least one metric result")
+            raise ValueError("many-plan evaluation requires at least one metric result")
         if len(row_counts) != 1:
-            raise ValueError("ensemble metrics must contain the same number of plans")
+            raise ValueError("many-plan metrics must contain the same number of plans")
         count = row_counts.pop()
         if summary is None:
             summary = EvaluationSummary(count, count)
@@ -267,7 +268,7 @@ class EnsembleEvalResult(_Evaluation):
                 raise ValueError("sample_ids must contain unique hashable values")
         super().__init__(results)
 
-    def __getitem__(self, name: str) -> _EvaluationValue:
+    def __getitem__(self, name: str) -> _PandasResult:
         result = _metric(self._results, name)
         values = result.values
         if result.shape == _ResultShape.REGION:
@@ -319,17 +320,17 @@ class EnsembleEvalResult(_Evaluation):
         return _cast_columns(frame, columns, dtypes)
 
 
-class EvaluationRun:
-    """Read a completed streamed scoring run and reconstruct logical metric results.
+class EnsembleEvalResult:
+    """Read a completed streamed ensemble evaluation and reconstruct logical metric results.
 
-    Use :meth:`open` to validate a published run directory before reading its metrics.
+    Use :meth:`open` to validate a published ensemble result directory before reading its metrics.
 
     Direct construction accepts already validated internal metadata; callers should normally use
     :meth:`open`.
 
     Args:
-        path (Path): Evaluation run directory.
-        summary (EvaluationSummary): Validated run counts.
+        path (Path): Ensemble result directory.
+        summary (EvaluationSummary): Validated evaluation counts.
         districts (tuple[int, ...]): District labels in stored column order.
         metrics (tuple[_RunMetric, ...]): Validated internal metric metadata.
     """
@@ -348,18 +349,18 @@ class EvaluationRun:
         self._frames: pd.DataFrame | None = None
 
     @classmethod
-    def open(cls, path: str | os.PathLike[str]) -> "EvaluationRun":
-        """Open and validate a successfully published evaluation run.
+    def open(cls, path: str | os.PathLike[str]) -> "EnsembleEvalResult":
+        """Open and validate a successfully published ensemble result.
 
         Args:
-            path (str | os.PathLike[str]): Evaluation run directory.
+            path (str | os.PathLike[str]): Ensemble result directory.
 
         Returns:
-            EvaluationRun: Validated lazy reader for the run.
+            EnsembleEvalResult: Validated lazy reader for the result.
 
         Raises:
             OSError: If the manifest or metric files cannot be read.
-            ValueError: If the manifest or run layout is malformed or inconsistent.
+            ValueError: If the manifest or result layout is malformed or inconsistent.
         """
         run_path = Path(path)
         manifest_path = _find_manifest_path(run_path)
@@ -408,7 +409,7 @@ class EvaluationRun:
         Raises:
             EvaluationMemoryError: If the estimated eager read is too large and ``allow_large`` is
                 False.
-            KeyError: If ``name`` is not a metric in this run.
+            KeyError: If ``name`` is not a metric in this result.
             TypeError: If ``allow_large`` is not a Boolean.
             ValueError: If the stored table is malformed or inconsistent with the manifest.
         """
@@ -424,13 +425,44 @@ class EvaluationRun:
         self._cache_or_compare_frames(metric, table)
         return table
 
+    @overload
     def read(
         self,
         name: str,
         *,
         expand_repetitions: bool = False,
         allow_large: bool = False,
-    ) -> _EvaluationValue:
+        return_type: Literal["series"],
+    ) -> pd.Series: ...
+
+    @overload
+    def read(
+        self,
+        name: str,
+        *,
+        expand_repetitions: bool = False,
+        allow_large: bool = False,
+        return_type: Literal["dataframe"],
+    ) -> pd.DataFrame: ...
+
+    @overload
+    def read(
+        self,
+        name: str,
+        *,
+        expand_repetitions: bool = False,
+        allow_large: bool = False,
+        return_type: None = None,
+    ) -> _PandasResult: ...
+
+    def read(
+        self,
+        name: str,
+        *,
+        expand_repetitions: bool = False,
+        allow_large: bool = False,
+        return_type: Literal["series", "dataframe"] | None = None,
+    ) -> _PandasResult:
         """Read one logical metric, optionally expanding repeated stream frames.
 
         Args:
@@ -439,6 +471,9 @@ class EvaluationRun:
                 repetition count. Defaults to False.
             allow_large (bool, optional): Whether to permit an eager read above the memory safety
                 limit. Defaults to False.
+            return_type (Literal["series", "dataframe"] | None, optional): Requested pandas result
+                shape. Series results become one-column DataFrames; one-column DataFrames become
+                Series. Defaults to None.
 
         Returns:
             pd.Series | pd.DataFrame: Values in the metric's logical result shape.
@@ -446,12 +481,16 @@ class EvaluationRun:
         Raises:
             EvaluationMemoryError: If the estimated eager read is too large and ``allow_large`` is
                 False.
-            KeyError: If ``name`` is not a metric in this run.
-            TypeError: If a Boolean option has an incompatible type.
-            ValueError: If the stored table is malformed or inconsistent with the manifest.
+            KeyError: If ``name`` is not a metric in this result.
+            TypeError: If a Boolean option has an incompatible type or a multi-column result is
+                requested as a Series.
+            ValueError: If ``return_type`` is invalid or the stored table is malformed or
+                inconsistent with the manifest.
         """
         _validate_bool(expand_repetitions, "expand_repetitions")
         _validate_bool(allow_large, "allow_large")
+        if return_type not in (None, "series", "dataframe"):
+            raise ValueError("return_type must be 'series', 'dataframe', or None")
         metric = _run_metric(self._metric_metadata, name)
         table = _read_eager_table(
             metric,
@@ -468,13 +507,23 @@ class EvaluationRun:
             values = np.repeat(values, repetitions, axis=0)
         sample_name = "sample" if expand_repetitions else "accepted"
         index = pd.RangeIndex(len(values), name=sample_name)
-        return _semantic_value(
+        result = _semantic_value(
             metric.name,
             metric,
             self._districts,
             values,
             index,
         )
+        if return_type == "series" and isinstance(result, pd.DataFrame):
+            if len(result.columns) != 1:
+                raise TypeError(
+                    f"metric {name!r} produced a DataFrame with {len(result.columns)} columns; "
+                    "cannot return a Series"
+                )
+            return result.iloc[:, 0]
+        if return_type == "dataframe" and isinstance(result, pd.Series):
+            return result.to_frame()
+        return result
 
     def iter_raw_batches(
         self,
@@ -496,7 +545,7 @@ class EvaluationRun:
 
         Raises:
             EvaluationMemoryError: If one batch is too large and ``allow_large`` is False.
-            KeyError: If ``name`` is not a metric in this run.
+            KeyError: If ``name`` is not a metric in this result.
             TypeError: If ``allow_large`` is not a Boolean.
             ValueError: If ``batch_size`` or the stored table is invalid.
         """
@@ -592,7 +641,7 @@ class EvaluationRun:
         batch_size: int = 1_024,
         expand_repetitions: bool = False,
         allow_large: bool = False,
-    ) -> Iterator[_EvaluationValue]:
+    ) -> Iterator[_PandasResult]:
         """Yield bounded semantic batches for one metric.
 
         Args:
@@ -608,7 +657,7 @@ class EvaluationRun:
 
         Raises:
             EvaluationMemoryError: If one batch is too large and ``allow_large`` is False.
-            KeyError: If ``name`` is not a metric in this run.
+            KeyError: If ``name`` is not a metric in this result.
             TypeError: If a Boolean option has an incompatible type.
             ValueError: If ``batch_size`` or the stored table is invalid.
         """
@@ -689,7 +738,7 @@ class EvaluationRun:
             self._frames = frames
         elif not frames.equals(self._frames):
             raise ValueError(
-                f"metric {metric.name!r} frame columns disagree with the evaluation run"
+                f"metric {metric.name!r} frame columns disagree with the ensemble result"
             )
 
 
@@ -1082,7 +1131,7 @@ def _enforce_memory(
         label = "frames" if operation == "frames" else f"{operation}({metric.name!r})"
     estimate = _format_bytes(estimated_bytes)
     if not warned:
-        _warn_external(f"EvaluationRun.{label} may use approximately {estimate} of memory")
+        _warn_external(f"EnsembleEvalResult.{label} may use approximately {estimate} of memory")
         warned = True
     if estimated_bytes < _ERROR_BYTES or allow_large:
         return warned
@@ -1097,7 +1146,7 @@ def _enforce_memory(
     else:
         advice = "use iter_batches() or allow_large=True"
     message = (
-        f"EvaluationRun.{label} is estimated to use {estimate}, exceeding the "
+        f"EnsembleEvalResult.{label} is estimated to use {estimate}, exceeding the "
         f"{_format_bytes(_ERROR_BYTES)} limit; {advice}"
     )
     raise EvaluationMemoryError(message, estimated_bytes, _ERROR_BYTES)
@@ -1127,7 +1176,7 @@ def _semantic_value(
     districts: tuple[int, ...],
     flat_values: NDArray[np.float64],
     index: pd.Index,
-) -> _EvaluationValue:
+) -> _PandasResult:
     row_count = len(flat_values)
     if metric.shape == _ResultShape.REGION:
         values = flat_values.reshape(
@@ -1149,7 +1198,7 @@ def _semantic_value(
         metric.regions,
         metric.region_name,
     )
-    return EnsembleEvalResult._from_index({name: result}, index)[name]
+    return ManyPlanEvalResult._from_index({name: result}, index)[name]
 
 
 def _validate_bool(value: object, name: str) -> None:

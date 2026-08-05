@@ -215,6 +215,27 @@ tasks:
         vars:
           PYTEST_ARGS: "-m mgrp_live tests/mgrp/live"
 
+  test-all:
+    desc: >-
+      Run the Python and Rust suites plus snapshot, LaTeX, and live mgrp tests against the pinned
+      Docker image (needs Docker and a local LaTeX toolchain)
+    silent: true
+    env:
+      PYTHONHASHSEED: "0"
+      TERM: xterm
+      # Override any UPDATE_SNAPSHOTS leaked from the shell or .env; "0" is not truthy.
+      UPDATE_SNAPSHOTS: "0"
+      MGRP_TEST_IMAGE:
+        sh: sed -n 's/^DEFAULT_DOCKER_IMAGE = "\(.*\)"$/\1/p' gerrytools/mgrp/run_container.py
+    cmds:
+      # Env does not cross `task:` boundaries, so pytest runs inline instead of via the
+      # internal pytest task.
+      - docker image inspect "$MGRP_TEST_IMAGE" >/dev/null 2>&1 || docker pull "$MGRP_TEST_IMAGE"
+      - task: sync
+      - task: build
+      - uv run pytest -v --with-snapshot --with-latex tests
+      - task: test-rust
+
   coverage:
     desc: Run tests with coverage reporting
     silent: true
@@ -383,6 +404,83 @@ tasks:
         --platform linux/amd64,linux/arm64
         --tag {{.DOCKER_IMAGE}}:{{.TAG}} --push .
       - docker buildx imagetools inspect {{.DOCKER_IMAGE}}:{{.TAG}}
+      - task: docker-pin
+        vars: { TAG: "{{.TAG}}" }
+
+  docker-retag:
+    desc: Retag the pinned mgrp image digest to a new version, no rebuild (`task docker-retag -- <tag>`)
+    silent: true
+    vars:
+      TAG: "{{.CLI_ARGS}}"
+      PINNED:
+        sh: sed -n 's/^DEFAULT_DOCKER_IMAGE = "\(.*\)"$/\1/p' gerrytools/mgrp/run_container.py
+    preconditions:
+      - sh: test -n "{{.CLI_ARGS}}"
+        msg: "Provide the new tag to publish, e.g. `task docker-retag -- v2.0.1`"
+      - sh: "! docker buildx imagetools inspect {{.DOCKER_IMAGE}}:{{.TAG}} >/dev/null 2>&1"
+        msg: >-
+          {{.DOCKER_IMAGE}}:{{.TAG}} is already published; retagging would overwrite it with the
+          currently pinned digest. To pin the published tag instead, run `task docker-pin -- {{.TAG}}`.
+    cmds:
+      - docker buildx imagetools create --tag {{.DOCKER_IMAGE}}:{{.TAG}} "{{.PINNED}}"
+      - task: docker-pin
+        vars: { TAG: "{{.TAG}}" }
+
+  docker-pin:
+    desc: Point DEFAULT_DOCKER_IMAGE at the published digest of an image tag (`task docker-pin -- <tag>`)
+    silent: true
+    vars:
+      PIN_TAG: "{{coalesce .TAG .CLI_ARGS}}"
+      # Dynamic vars resolve before preconditions, so skip the lookup when no tag was given and
+      # let the precondition report the friendly error.
+      DIGEST:
+        sh: >-
+          test -z "{{.PIN_TAG}}" ||
+          docker buildx imagetools inspect
+          --format '{{"{{.Manifest.Digest}}"}}' {{.DOCKER_IMAGE}}:{{.PIN_TAG}}
+    preconditions:
+      - sh: test -n "{{.PIN_TAG}}"
+        msg: "Provide the tag to pin, e.g. `task docker-pin -- v2.0.1`"
+    cmds:
+      - >-
+        sed -i.bak
+        's|^DEFAULT_DOCKER_IMAGE = .*|DEFAULT_DOCKER_IMAGE = "{{.DOCKER_IMAGE}}:{{.PIN_TAG}}@{{.DIGEST}}"|'
+        gerrytools/mgrp/run_container.py
+      - rm gerrytools/mgrp/run_container.py.bak
+      - echo "Pinned DEFAULT_DOCKER_IMAGE to {{.DOCKER_IMAGE}}:{{.PIN_TAG}}@{{.DIGEST}}"
+
+  check-release:
+    desc: Verify the version bump, changelog entry, and Docker pin agree before tagging a release
+    silent: true
+    cmds:
+      - |
+        version="$(uv version --short)"
+        fail=0
+        err() { echo "FAIL: $1"; fail=1; }
+        git fetch --tags --quiet 2>/dev/null || true
+        if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+          err "v$version is already tagged; bump the version with \`uv version <X.Y.Z>\`."
+        fi
+        if ! grep -q "^## \[$version\]" CHANGELOG.md; then
+          err "CHANGELOG.md has no \`## [$version]\` section."
+        fi
+        image_pin="$(sed -n 's/^DEFAULT_DOCKER_IMAGE = "\(.*\)"$/\1/p' gerrytools/mgrp/run_container.py)"
+        case "$image_pin" in
+          "{{.DOCKER_IMAGE}}:v$version@sha256:"*)
+            published="$(docker buildx imagetools inspect \
+              --format '{{"{{.Manifest.Digest}}"}}' "${image_pin%@*}" 2>/dev/null || true)"
+            if [ "$published" != "${image_pin#*@}" ]; then
+              err "{{.DOCKER_IMAGE}}:v$version resolves to ${published:-nothing} on Docker Hub, not the pinned ${image_pin#*@}."
+            fi
+            ;;
+          *)
+            err "DEFAULT_DOCKER_IMAGE ($image_pin) does not pin {{.DOCKER_IMAGE}}:v$version; run \`task docker-push\`, \`docker-retag\`, or \`docker-pin\`."
+            ;;
+        esac
+        if [ "$fail" -ne 0 ]; then
+          exit 1
+        fi
+        echo "check-release: all checks passed for v$version"
 
   clean-windows:
     internal: true

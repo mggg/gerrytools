@@ -16,7 +16,7 @@ from ..run_config import (
     check_unit_interval,
     dataclass_config,
 )
-from ..run_container import RunInfo, RunnerConfig, _resolve_output_name
+from ..run_container import RunnerConfig, RunSpec, _resolve_output_name
 
 SMCWriter = Literal["jsonl", "ben", "csv"]
 """An SMC output writer: standard JSONL, BEN, or the redist plans CSV."""
@@ -26,7 +26,7 @@ _MAP_FIELDS = ("pop_col", "n_dists", "pop_tol", "pop_bounds")
 
 
 @dataclass
-class SMCRunInfo(RunInfo):
+class SMCRunSpec(RunSpec):
     """
     Represents all of the settings for one Sequential Monte Carlo (SMC) run.
 
@@ -146,15 +146,15 @@ class SMCRunInfo(RunInfo):
         _ = self.resolved_constraints
 
 
-class SMCRunnerConfig(RunnerConfig[SMCRunInfo]):
+class SMCRunnerConfig(RunnerConfig[SMCRunSpec]):
     """
-    Represents the configuration for a RunContainer which is used to run the
+    Represents the configuration for a RunnerSession which is used to run the
     Sequential Monte Carlo (SMC) algorithm on a shapefile within the
     docker container.
     """
 
     parser_name: ClassVar[str | None] = "smc_parser"
-    run_info_type = SMCRunInfo
+    run_spec_type = SMCRunSpec
 
     def __init__(
         self,
@@ -175,7 +175,7 @@ class SMCRunnerConfig(RunnerConfig[SMCRunInfo]):
         """
         super().__init__("smc", shapefile_path, output_folder, log_folder)
 
-    def run_command(self, run_info: SMCRunInfo) -> list:
+    def run_command(self, run_spec: SMCRunSpec) -> list:
         """Return the command for an SMC run.
 
         The template is a code constant (see ``RunnerConfig._shell_command`` for the
@@ -183,73 +183,73 @@ class SMCRunnerConfig(RunnerConfig[SMCRunInfo]):
         through the parser stage.
 
         Args:
-            run_info (SMCRunInfo): SMC run settings.
+            run_spec (SMCRunSpec): SMC run settings.
 
         Returns:
             list: Shell command arguments for the container.
 
         Raises:
-            TypeError: If ``run_info`` is not exactly an SMCRunInfo.
+            TypeError: If ``run_spec`` is not exactly an SMCRunSpec.
         """
-        self._check_run_info(run_info)
+        self._check_run_spec(run_spec)
         template = '/usr/bin/time -v Rscript /home/smc/cli/smc_cli.R --config "$1"'
         return self._shell_command(
             template,
-            self.run_config(run_info),
-            with_parser=run_info.writer in ("jsonl", "ben"),
+            self.run_config(run_spec),
+            with_parser=run_spec.writer in ("jsonl", "ben"),
         )
 
-    def run_config(self, run_info: SMCRunInfo) -> EngineRunConfig:
+    def run_config(self, run_spec: SMCRunSpec) -> EngineRunConfig:
         """Return the complete effective configuration for an SMC run.
 
         Args:
-            run_info (SMCRunInfo): SMC run settings.
+            run_spec (SMCRunSpec): SMC run settings.
 
         Returns:
             EngineRunConfig: Independent version-1 engine configuration.
 
         Raises:
-            TypeError: If ``run_info`` is not exactly an SMCRunInfo.
+            TypeError: If ``run_spec`` is not exactly an SMCRunSpec.
         """
-        self._check_run_info(run_info)
-        return self._config_document(run_info, self._output_name(run_info))
+        self._check_run_spec(run_spec)
+        return self._config_document(run_spec, self._output_name(run_spec))
 
-    def _base_config(self, run_info: SMCRunInfo) -> EngineRunConfig:
+    def _base_config(self, run_spec: SMCRunSpec) -> EngineRunConfig:
         """The config document with hash-free names, hashed into ``file_stem``."""
         # SMC never prints to stdout, so the name resolves directly (no force_print hook).
         output_name = _resolve_output_name(
-            self._stem(run_info), run_info.writer, run_info.output_file_name
+            self._stem(run_spec), run_spec.writer, run_spec.output_file_name
         )
-        return self._config_document(run_info, output_name)
+        return self._config_document(run_spec, output_name)
 
-    def _config_document(self, run_info: SMCRunInfo, output_name: str) -> EngineRunConfig:
+    def _config_document(self, run_spec: SMCRunSpec, output_name: str) -> EngineRunConfig:
         """The effective config, naming the container-side output ``output_name``."""
-        map_info = {name: getattr(run_info, name) for name in _MAP_FIELDS}
-        run = dataclass_config(run_info)
+        map_info = {name: getattr(run_spec, name) for name in _MAP_FIELDS}
+        run = dataclass_config(run_spec)
 
         return build_run_config(
             "smc",
             io={
                 "graph": self.container_graph_path,
                 "output": f"{self.container_output_dir}/{output_name}",
-                "writer": run_info.writer,
+                "writer": run_spec.writer,
             },
             map_info=map_info,
             run=run,
-            constraints=run_info.resolved_constraints,
+            constraints=run_spec.resolved_constraints,
         )
 
-    def _stem(self, run_info: SMCRunInfo) -> str:
+    def _stem(self, run_spec: SMCRunSpec) -> str:
         """The human-readable stem derived from the run's headline settings."""
-        return f"SMC_{run_info.rng_seed}_{run_info.n_sims}"
+        return f"SMC_{run_spec.rng_seed}_{run_spec.n_sims}"
 
-    def _output_name(self, run_info: SMCRunInfo) -> str:
+    def _output_name(self, run_spec: SMCRunSpec) -> str:
         """The name of the file the run will produce."""
         return _resolve_output_name(
-            self.file_stem(run_info), run_info.writer, run_info.output_file_name
+            self.file_stem(run_spec), run_spec.writer, run_spec.output_file_name
         )
 
-    def expected_files(self, run_info: SMCRunInfo) -> list[str]:
+    def expected_files(self, run_spec: SMCRunSpec) -> list[str]:
         """Return the primary output and its promised SMC sidecars.
 
         Every run writes a ``*_metadata.jsonl`` provenance sidecar. The jsonl and ben
@@ -257,15 +257,15 @@ class SMCRunnerConfig(RunnerConfig[SMCRunInfo]):
         keeps tallies in the plans CSV itself and adds a ``*_assignments.csv`` instead.
 
         Args:
-            run_info (SMCRunInfo): SMC run settings.
+            run_spec (SMCRunSpec): SMC run settings.
 
         Returns:
             list[str]: Primary output and applicable metadata, tally, or assignment sidecars.
         """
-        expected = super().expected_files(run_info)
+        expected = super().expected_files(run_spec)
         expected.append(self._sidecar_file(expected[0], "metadata.jsonl"))
-        if run_info.writer == "csv":
+        if run_spec.writer == "csv":
             expected.append(self._sidecar_file(expected[0], "assignments.csv"))
-        elif run_info.tally_columns:
+        elif run_spec.tally_columns:
             expected.append(self._sidecar_file(expected[0], "tallies.csv"))
         return expected

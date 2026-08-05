@@ -45,8 +45,8 @@ from .metrics import (
 from .result import (
     EnsembleEvalResult,
     EvaluationMemoryError,
-    EvaluationRun,
     EvaluationSummary,
+    ManyPlanEvalResult,
     PlanEvalResult,
 )
 from .single_plan import (
@@ -103,13 +103,13 @@ __all__ = [
     "Eguia",
     "EnsembleEvalResult",
     "EvaluationMemoryError",
-    "EvaluationRun",
     "MaxAbsolutePopulationDeviation",
     "MaxPopulationDeviation",
     "MeanAbsoluteSeatVoteGap",
     "MeanMedian",
     "MeanSignedSeatVoteGap",
     "Metric",
+    "ManyPlanEvalResult",
     "OppositionPartyDistricts",
     "OverallVoteShare",
     "PartisanBias",

@@ -644,9 +644,10 @@ class TestPropertySetterReclaim:
         assert ax.get_title() == "My Plot"
 
     def test_constructor_title_none_preserves_preset_title(self):
-        """Tradeoff documented in the plan: ``title=None`` is the Python
-        default and reads as "no opinion", so it does not clear a preset
-        title — that path is post-construction via the property setter."""
+        """``title=None`` means "no opinion" and preserves a preset title.
+
+        Clearing happens after construction through the property setter.
+        """
         fig, ax = plt.subplots()
         ax.set_title("preset")
         hist = Histogram(ax=ax, title=None)
@@ -700,12 +701,12 @@ class TestUnitVocabularySync:
 
 
 # ---------------------------------------------------------------------------
-# Category 8: gaps surfaced by the Phase 3 review (G1–G7)
+# Category 8: additional managed-state edge cases
 # ---------------------------------------------------------------------------
 
 
 class TestScaleMostRecentWins:
-    """G1 — xscale / yscale obey most-recent-wins.
+    """xscale and yscale obey most-recent-wins.
 
     Gerrytools data plots do not set a matplotlib axis scale, so the only
     user-facing path is direct ``ax.set_xscale(...)`` / ``ax.set_yscale(...)``.
@@ -740,12 +741,11 @@ class TestScaleMostRecentWins:
 
 
 class TestNamedAddReclaimsLegend:
-    """G2 + G3 — named ``add_*`` reclaims the legend; ``add_*(name=None)`` does not.
+    """A named ``add_*`` reclaims the legend; ``add_*(name=None)`` does not.
 
-    Per precedence rule 5: a user-supplied ``name`` is the signal that the
-    user wants the resulting handle reflected in the legend, and gerrytools
-    should own the legend slot from that point on. ``name=None`` (the Python
-    default) means "no opinion" and must leave legend ownership alone.
+    A user-supplied ``name`` signals that the resulting handle belongs in the
+    legend, so gerrytools owns the legend slot from that point on. ``name=None``
+    (the Python default) means "no opinion" and leaves legend ownership alone.
     """
 
     def test_named_add_histogram_reclaims_legend_unit(self):
@@ -894,7 +894,7 @@ _UNNAMED_ADD_CASES = [
 
 
 class TestNamedAddReclaimsLegendAcrossPlotTypes:
-    """G2 + G3 across every plot type — the ``_claim_legend_if_named`` matrix.
+    """Named and unnamed ``add_*`` calls follow the legend-ownership contract.
 
     Same contract as ``TestNamedAddReclaimsLegend``: a user-supplied name
     (or label, for ScatterPlot) reclaims the legend unit; omitting it leaves
@@ -916,7 +916,7 @@ class TestNamedAddReclaimsLegendAcrossPlotTypes:
 
 
 class TestExternalLegendReplacedByNamedAdd:
-    """G4 — external legend is replaced by a later named ``add_*`` call.
+    """A later named ``add_*`` call replaces an external legend.
 
     Order: external legend placed → named ``add_*`` reclaims legend →
     next rebuild's ``_apply_legend`` removes the external legend and places
@@ -941,7 +941,7 @@ class TestExternalLegendReplacedByNamedAdd:
 
 
 class TestImplicitTicksSelfCorrect:
-    """G5 — implicit ticks self-correct after restored external limits.
+    """Implicit ticks self-correct after restored external limits.
 
     Gerrytools data plots do not set explicit tick locations by default; they
     let matplotlib's locator pick. After an external xlim that drifts past
@@ -966,15 +966,14 @@ class TestImplicitTicksSelfCorrect:
 
 
 class TestUnobservableNoOpLimitation:
-    """G6 — document the unobservable-no-op limitation in a test.
+    """Pin the unobservable-no-op limitation.
 
     If a user explicitly sets a managed unit to a value identical to its
     matplotlib default, gerrytools cannot distinguish that from a fresh
     untouched axes. The bind-time signal compares to the matplotlib default,
-    so setting to the default at bind time looks like "untouched." Plan
-    documents this is a fundamental constraint of matplotlib's state model;
-    test pins the observed behavior so a future contributor who tries to
-    "fix" this sees the intentional decision.
+    so setting the default at bind time looks untouched. This is a fundamental
+    constraint of matplotlib's state model; the test pins the behavior so it is
+    not mistaken for a bug.
     """
 
     def test_xlim_explicitly_set_to_default_is_unobservable_at_bind(self):
@@ -1007,7 +1006,7 @@ class TestUnobservableNoOpLimitation:
 
 
 class TestConstructorDefaultDoesNotReclaim:
-    """G7 — ``Histogram()`` (no constructor args) does not reclaim title.
+    """``Histogram()`` without constructor arguments does not reclaim the title.
 
     The constructor rule: a Python default constructor arg means "no opinion"
     and must not promote into explicit gerrytools ownership. The complement

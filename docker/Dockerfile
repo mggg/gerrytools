@@ -16,7 +16,7 @@
 #
 # Every engine version is exposed as a build ARG so it can be bumped in
 # isolation, e.g.:
-#   docker build --build-arg RUSTRECOM_REF=0.1.4 -t mgggdev/replicate:dev .
+#   docker build --build-arg RUSTRECOM_REF=v0.2.0 -t mgggdev/replicate:dev .
 
 # Pin the multi-platform index so BuildKit selects the matching amd64 or arm64 image.
 ARG R_BASE_DIGEST=sha256:555a0e7734b17f3901f01c8e379f87d797a0e6344a4cc3b246329ed3f0689809
@@ -36,16 +36,16 @@ ARG RUSTUP_INIT_SHA256_ARM64=9732d6c5e2a098d3521fca8145d826ae0aaa067ef2385ead08e
 ARG JULIA_VERSION=1.10.2
 ARG JULIA_SHA256_AMD64=51bccc9bb245197f24e6b2394e6aa69c0dc1e41b4e300b796e17da34ef64db1e
 ARG JULIA_SHA256_ARM64=f319ff2812bece0918cb9ea6e0df54cc9412fc5ef8c0589b6a4fea485c07535d
-ARG REDIST_VERSION=4.3.2                 # current CRAN release
+ARG REDIST_VERSION=4.3.2
 
 ARG RUSTRECOM_REPO=https://github.com/mggg/rustrecom.git
-# 0.1.4 branch: unified `rustrecom` CLI (chain/short-bursts/tilted subcommands,
-# --config JSON mode on every subcommand, frcw compatibility shims, mst variant
-# spellings with rmst deprecation shims).
-ARG RUSTRECOM_REF=846971ca3205ce4286b42415d9627b5fd318b143
+# rustrecom v0.2.0 provides the unified CLI (chain/short-bursts/tilted subcommands),
+# --config JSON mode on every subcommand, frcw compatibility shims, and mst variant spellings
+# with rmst deprecation shims.
+ARG RUSTRECOM_REF=f551e02fe6abe2b661e8229f6e57cf2ac585b541
 
 ARG MSMS_REPO=https://github.com/mggg/Multi-Scale-Map-Sampler.git
-# Current main: path-based Writer, Float64 Measure, single-level support.
+# This revision provides a path-based Writer, Float64 Measure, and single-level support.
 ARG MSMS_REF=0d77a358c7c7e714b14c52da13db49354c5b627a
 
 # Parser refs take --config (inline JSON or a path), validate only the config

@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "gerrytools"
-version = "2.0.0"
+version = "2.0.1"
 description = "Tools for processing and visualizing districting plans."
 readme = "README.md"
 authors = [

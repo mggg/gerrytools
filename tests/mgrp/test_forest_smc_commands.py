@@ -9,10 +9,10 @@ from typing import Any
 import pytest
 
 from gerrytools.mgrp import (
-    ForestRunInfo,
     ForestRunnerConfig,
-    SMCRunInfo,
+    ForestRunSpec,
     SMCRunnerConfig,
+    SMCRunSpec,
 )
 
 FOREST_DIRECT_COMMAND = (
@@ -52,8 +52,8 @@ def command_config(argv):
     return json.loads(argv[4])
 
 
-def base_forest_info(**overrides):
-    return ForestRunInfo(
+def base_forest_spec(**overrides):
+    return ForestRunSpec(
         levels=["county", "precinct"],
         pop_col="TOTPOP",
         **overrides,
@@ -63,20 +63,20 @@ def base_forest_info(**overrides):
 def test_forest_uses_exact_static_templates():
     runner = ForestRunnerConfig("./graphs/testing.json")
 
-    assert runner.run_command(base_forest_info())[:4] == [
+    assert runner.run_command(base_forest_spec())[:4] == [
         "sh",
         "-c",
         FOREST_PARSER_COMMAND,
         "forest",
     ]
-    assert runner.run_command(base_forest_info(writer="ben"))[2] == FOREST_PARSER_COMMAND
-    assert runner.run_command(base_forest_info(writer="raw"))[2] == FOREST_DIRECT_COMMAND
+    assert runner.run_command(base_forest_spec(writer="ben"))[2] == FOREST_PARSER_COMMAND
+    assert runner.run_command(base_forest_spec(writer="raw"))[2] == FOREST_DIRECT_COMMAND
 
 
 def test_forest_values_change_only_the_environment():
     runner = ForestRunnerConfig("./graphs/testing.json")
-    first = base_forest_info()
-    second = ForestRunInfo(
+    first = base_forest_spec()
+    second = ForestRunSpec(
         levels=["county $(touch nope)", "precinct with spaces"],
         pop_col="POP; false",
         num_dists=7,
@@ -99,8 +99,8 @@ def test_forest_values_change_only_the_environment():
 
 def test_forest_force_print_changes_config_not_template():
     runner = ForestRunnerConfig("./graphs/testing.json")
-    file_run = base_forest_info()
-    stdout_run = base_forest_info(force_print=True)
+    file_run = base_forest_spec()
+    stdout_run = base_forest_spec(force_print=True)
 
     assert runner.run_command(file_run)[:4] == runner.run_command(stdout_run)[:4]
     config = command_config(runner.run_command(stdout_run))
@@ -109,30 +109,30 @@ def test_forest_force_print_changes_config_not_template():
 
 def test_forest_binary_writer_cannot_force_print():
     with pytest.raises(ValueError, match="binary output cannot be decoded"):
-        base_forest_info(writer="ben", force_print=True)
+        base_forest_spec(writer="ben", force_print=True)
 
 
-def base_smc_info(**overrides):
-    return SMCRunInfo(pop_col="TOTPOP", n_dists=4, n_sims=20, **overrides)
+def base_smc_spec(**overrides):
+    return SMCRunSpec(pop_col="TOTPOP", n_dists=4, n_sims=20, **overrides)
 
 
 def test_smc_uses_exact_static_templates():
     runner = SMCRunnerConfig("./shapefiles/testing")
 
-    assert runner.run_command(base_smc_info())[:4] == [
+    assert runner.run_command(base_smc_spec())[:4] == [
         "sh",
         "-c",
         SMC_PARSER_COMMAND,
         "smc",
     ]
-    assert runner.run_command(base_smc_info(writer="ben"))[2] == SMC_PARSER_COMMAND
-    assert runner.run_command(base_smc_info(writer="csv"))[2] == SMC_DIRECT_COMMAND
+    assert runner.run_command(base_smc_spec(writer="ben"))[2] == SMC_PARSER_COMMAND
+    assert runner.run_command(base_smc_spec(writer="csv"))[2] == SMC_DIRECT_COMMAND
 
 
 def test_smc_values_change_only_the_config_slot():
     runner = SMCRunnerConfig("./shapefiles/testing")
-    first = base_smc_info()
-    second = SMCRunInfo(
+    first = base_smc_spec()
+    second = SMCRunSpec(
         pop_col="POP; false",
         n_dists=8,
         pop_bounds=[9000, 10000, 11000],
@@ -155,18 +155,18 @@ def test_smc_values_change_only_the_config_slot():
 
 def test_smc_pop_bounds_wrong_length_rejected():
     with pytest.raises(ValueError, match="pop_bounds"):
-        base_smc_info(pop_bounds=[9000, 11000])
+        base_smc_spec(pop_bounds=[9000, 11000])
 
 
 def test_smc_unordered_pop_bounds_rejected():
     with pytest.raises(ValueError, match="ordered"):
-        base_smc_info(pop_bounds=[11000, 10000, 9000])
+        base_smc_spec(pop_bounds=[11000, 10000, 9000])
 
 
 @pytest.mark.parametrize("pop_bounds", [[False, True, True], [0, 10.5, 20]])
 def test_smc_pop_bounds_require_nonnegative_integers(pop_bounds):
     with pytest.raises(ValueError, match="pop_bounds"):
-        base_smc_info(pop_bounds=pop_bounds)
+        base_smc_spec(pop_bounds=pop_bounds)
 
 
 @pytest.mark.parametrize(
@@ -191,7 +191,7 @@ def test_smc_numeric_domains_rejected_at_construction(field, value):
     settings: dict[str, Any] = dict(pop_col="TOTPOP", n_dists=4, n_sims=20)
     settings[field] = value
     with pytest.raises(ValueError, match=field):
-        SMCRunInfo(**settings)
+        SMCRunSpec(**settings)
 
 
 @pytest.mark.parametrize(
@@ -210,22 +210,22 @@ def test_smc_numeric_domains_rejected_at_construction(field, value):
 )
 def test_forest_numeric_domains_rejected_at_construction(field, value):
     with pytest.raises(ValueError, match=field):
-        base_forest_info(**{field: value})
+        base_forest_spec(**{field: value})
 
 
 def test_engine_specific_seed_bounds_are_accepted():
-    assert base_forest_info(rng_seed=2**63 - 1).rng_seed == 2**63 - 1
-    assert base_smc_info(rng_seed=-(2**31 - 1)).rng_seed == -(2**31 - 1)
+    assert base_forest_spec(rng_seed=2**63 - 1).rng_seed == 2**63 - 1
+    assert base_smc_spec(rng_seed=-(2**31 - 1)).rng_seed == -(2**31 - 1)
 
 
 @pytest.mark.parametrize(
     ("constructor", "field"),
     [
-        (lambda: ForestRunInfo(levels=["county"], pop_col=""), "pop_col"),
-        (lambda: base_forest_info(force_print=1), "force_print"),
-        (lambda: SMCRunInfo(pop_col="", n_dists=4, n_sims=20), "pop_col"),
-        (lambda: base_smc_info(resample=1), "resample"),
-        (lambda: base_smc_info(tally_columns=["VAP", ""]), "tally_columns"),
+        (lambda: ForestRunSpec(levels=["county"], pop_col=""), "pop_col"),
+        (lambda: base_forest_spec(force_print=1), "force_print"),
+        (lambda: SMCRunSpec(pop_col="", n_dists=4, n_sims=20), "pop_col"),
+        (lambda: base_smc_spec(resample=1), "resample"),
+        (lambda: base_smc_spec(tally_columns=["VAP", ""]), "tally_columns"),
     ],
 )
 def test_engine_config_field_types_rejected(constructor, field):
@@ -235,25 +235,25 @@ def test_engine_config_field_types_rejected(constructor, field):
 
 def test_smc_unknown_writer_rejected():
     with pytest.raises(ValueError, match="writer"):
-        base_smc_info(writer="parquet")
+        base_smc_spec(writer="parquet")
 
 
 def test_forest_unknown_writer_rejected():
     with pytest.raises(ValueError, match="writer"):
-        base_forest_info(writer="parquet")
+        base_forest_spec(writer="parquet")
 
 
 def test_output_file_paths():
     forest_config = ForestRunnerConfig("./graphs/testing.json", output_folder="./output")
-    forest_file = forest_config.output_file(base_forest_info())
-    forest_hash = forest_config.config_hash(base_forest_info())
+    forest_file = forest_config.output_file(base_forest_spec())
+    forest_hash = forest_config.config_hash(base_forest_spec())
     assert forest_file is not None
     assert forest_file.endswith(f"/output/testing/Forest_42_atlas_gamma0.0_10_{forest_hash}.jsonl")
-    assert forest_config.output_file(base_forest_info(force_print=True)) is None
+    assert forest_config.output_file(base_forest_spec(force_print=True)) is None
 
     smc_config = SMCRunnerConfig("./shapefiles/testing", output_folder="./output")
-    smc_file = smc_config.output_file(base_smc_info())
-    smc_hash = smc_config.config_hash(base_smc_info())
+    smc_file = smc_config.output_file(base_smc_spec())
+    smc_hash = smc_config.config_hash(base_smc_spec())
     assert smc_file is not None
     assert smc_file.endswith(f"/output/testing/SMC_42_20_{smc_hash}.jsonl")
 
@@ -262,17 +262,17 @@ def test_config_hash_separates_configs_that_share_a_stem():
     # Regression: stems used only headline settings, so runs differing elsewhere
     # (e.g. num_dists or compactness) overwrote each other's outputs and logs.
     forest_config = ForestRunnerConfig("./graphs/testing.json", output_folder="./output")
-    assert forest_config.output_file(base_forest_info()) == forest_config.output_file(
-        base_forest_info()
+    assert forest_config.output_file(base_forest_spec()) == forest_config.output_file(
+        base_forest_spec()
     )
-    assert forest_config.output_file(base_forest_info()) != forest_config.output_file(
-        base_forest_info(num_dists=7)
+    assert forest_config.output_file(base_forest_spec()) != forest_config.output_file(
+        base_forest_spec(num_dists=7)
     )
 
     smc_config = SMCRunnerConfig("./shapefiles/testing", output_folder="./output")
-    assert smc_config.output_file(base_smc_info()) == smc_config.output_file(base_smc_info())
-    assert smc_config.output_file(base_smc_info()) != smc_config.output_file(
-        base_smc_info(compactness=0.5)
+    assert smc_config.output_file(base_smc_spec()) == smc_config.output_file(base_smc_spec())
+    assert smc_config.output_file(base_smc_spec()) != smc_config.output_file(
+        base_smc_spec(compactness=0.5)
     )
 
 
@@ -316,7 +316,7 @@ def test_parser_pipeline_exit_status_under_local_sh(
 def test_smc_expected_files_include_metadata_and_tallies_sidecars():
     runner = SMCRunnerConfig("./shapefiles/testing", output_folder="./output")
 
-    plain = base_smc_info()
+    plain = base_smc_spec()
     plain_output = runner.output_file(plain)
     assert plain_output is not None
     assert runner.expected_files(plain) == [
@@ -326,7 +326,7 @@ def test_smc_expected_files_include_metadata_and_tallies_sidecars():
 
     # An engine exiting 0 without the tallies CSV must fail the expected-file check, and a
     # failed rerun must restore the previous tallies alongside the primary output.
-    tallied = base_smc_info(tally_columns=["VAP"])
+    tallied = base_smc_spec(tally_columns=["VAP"])
     tallied_output = runner.output_file(tallied)
     assert tallied_output is not None
     tallied_stem = Path(tallied_output).stem
@@ -340,11 +340,11 @@ def test_smc_expected_files_include_metadata_and_tallies_sidecars():
 def test_smc_csv_writer_expects_assignments_but_no_tallies_sidecar():
     # The csv writer keeps tallies in the plans CSV itself and writes an assignments CSV.
     runner = SMCRunnerConfig("./shapefiles/testing", output_folder="./output")
-    run_info = base_smc_info(writer="csv", tally_columns=["VAP"])
-    output = runner.output_file(run_info)
+    run_spec = base_smc_spec(writer="csv", tally_columns=["VAP"])
+    output = runner.output_file(run_spec)
     assert output is not None
     output_stem = Path(output).stem
-    assert runner.expected_files(run_info) == [
+    assert runner.expected_files(run_spec) == [
         output,
         str(Path(output).with_name(f"{output_stem}_metadata.jsonl")),
         str(Path(output).with_name(f"{output_stem}_assignments.csv")),
@@ -353,38 +353,38 @@ def test_smc_csv_writer_expects_assignments_but_no_tallies_sidecar():
 
 def test_forest_expected_files_include_provenance_for_every_file_output():
     runner = ForestRunnerConfig("./graphs/testing.json", output_folder="./output")
-    parsed = base_forest_info()
+    parsed = base_forest_spec()
     output = runner.output_file(parsed)
     assert output is not None
     assert runner.expected_files(parsed) == [
         output,
         str(Path(output).with_name(f"{Path(output).stem}_metadata.jsonl")),
     ]
-    raw = base_forest_info(writer="raw")
+    raw = base_forest_spec(writer="raw")
     raw_output = runner.output_file(raw)
     assert raw_output is not None
     assert runner.expected_files(raw) == [
         raw_output,
         str(Path(raw_output).with_name(f"{Path(raw_output).stem}_metadata.jsonl")),
     ]
-    assert runner.expected_files(base_forest_info(force_print=True)) == []
+    assert runner.expected_files(base_forest_spec(force_print=True)) == []
 
 
-def test_runner_configs_reject_foreign_run_infos():
+def test_runner_configs_reject_foreign_run_specs():
     # Only recom had an exact-type dispatch; forest and SMC failed incidentally (or not at
-    # all) when handed the wrong run-info class. The casts exercise the runtime guards.
+    # all) when handed the wrong run-spec class. The casts exercise the runtime guards.
     from typing import cast
 
     forest_runner = ForestRunnerConfig("./graphs/testing.json")
     smc_runner = SMCRunnerConfig("./shapefiles/testing")
-    smc_info = base_smc_info()
-    forest_info = base_forest_info()
+    smc_spec = base_smc_spec()
+    forest_spec = base_forest_spec()
 
-    with pytest.raises(TypeError, match="ForestRunInfo"):
-        forest_runner.run_command(cast(ForestRunInfo, smc_info))
-    with pytest.raises(TypeError, match="ForestRunInfo"):
-        forest_runner.run_config(cast(ForestRunInfo, smc_info))
-    with pytest.raises(TypeError, match="SMCRunInfo"):
-        smc_runner.run_command(cast(SMCRunInfo, forest_info))
-    with pytest.raises(TypeError, match="SMCRunInfo"):
-        smc_runner.run_config(cast(SMCRunInfo, forest_info))
+    with pytest.raises(TypeError, match="ForestRunSpec"):
+        forest_runner.run_command(cast(ForestRunSpec, smc_spec))
+    with pytest.raises(TypeError, match="ForestRunSpec"):
+        forest_runner.run_config(cast(ForestRunSpec, smc_spec))
+    with pytest.raises(TypeError, match="SMCRunSpec"):
+        smc_runner.run_command(cast(SMCRunSpec, forest_spec))
+    with pytest.raises(TypeError, match="SMCRunSpec"):
+        smc_runner.run_config(cast(SMCRunSpec, forest_spec))

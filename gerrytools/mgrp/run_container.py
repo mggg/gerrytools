@@ -20,13 +20,13 @@ from gerrychain import Graph, Partition
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_DOCKER_IMAGE = "mgggdev/replicate:v2.0.0@sha256:b9243d65bfce934dcb1318a509388f9b9f25eacf13ab4ec4eefddf8e566fc1f6"
+DEFAULT_DOCKER_IMAGE = "mgggdev/replicate:v2.0.1@sha256:fe03dd8c70e72e15d50410317892c32a6b04e1d254d0a4af6f16b4a10d14768f"
 
 BINARY_WRITERS = ("pcompress", "ben", "bendl")
 """Writers whose output cannot be decoded from a console stream."""
 
 
-class RunInfo:
+class RunSpec:
     """Base class for validated runner configuration dataclasses."""
 
     def validate(self) -> None:
@@ -67,8 +67,8 @@ WRITER_SUFFIXES = {
 """Output suffixes that differ from the default JSONL suffix."""
 
 
-RunInfoT = TypeVar("RunInfoT", bound=RunInfo)
-"""The run-info type a runner configuration (and its container) accepts."""
+RunSpecT = TypeVar("RunSpecT", bound=RunSpec)
+"""The run-spec type a runner configuration (and its container) accepts."""
 
 
 def _partial_output_path(output: Path) -> Path:
@@ -208,7 +208,7 @@ def _resolve_output_name(stem: str, writer: str, output_file_name: str | None = 
 
 @runtime_checkable
 class SupportsUpdaters(Protocol):
-    """Run infos usable with :meth:`RunContainer.mcmc_run_with_updaters`."""
+    """Run specs usable with :meth:`RunnerSession.mcmc_run_with_updaters`."""
 
     @property
     def updaters(self) -> dict[str, Callable]:
@@ -216,20 +216,20 @@ class SupportsUpdaters(Protocol):
         ...
 
 
-class RunnerConfig(ABC, Generic[RunInfoT]):
+class RunnerConfig(ABC, Generic[RunSpecT]):
     """Shared path, volume, and naming plumbing for the engine runner configurations.
 
     Concrete runners supply the engine name (which derives the ``/home/<engine>``
     container prefixes), the per-run file stem, output naming, and the run command.
-    Each is generic over the run-info dataclass it accepts, so the naming and
+    Each is generic over the run-spec dataclass it accepts, so the naming and
     command hooks receive that concrete type directly.
     """
 
     parser_name: ClassVar[str | None] = None
     """Container-side parser binary piped after the engine's stdout, or None."""
 
-    run_info_type: ClassVar[type[RunInfo] | tuple[type[RunInfo], ...]]
-    """Exact run-info type or types accepted by this runner."""
+    run_spec_type: ClassVar[type[RunSpec] | tuple[type[RunSpec], ...]]
+    """Exact run-spec type or types accepted by this runner."""
 
     def __init__(
         self,
@@ -259,18 +259,18 @@ class RunnerConfig(ABC, Generic[RunInfoT]):
         self.container_graph_path = f"{self.container_input_dir}/{self.input_name}"
         self.container_output_dir = f"/home/{engine}/output/{self.input_stem}"
 
-    def _check_run_info(self, run_info: RunInfo) -> None:
-        """Reject run infos whose exact type is not supported by this runner."""
+    def _check_run_spec(self, run_spec: RunSpec) -> None:
+        """Reject run specs whose exact type is not supported by this runner."""
         accepted = (
-            self.run_info_type if isinstance(self.run_info_type, tuple) else (self.run_info_type,)
+            self.run_spec_type if isinstance(self.run_spec_type, tuple) else (self.run_spec_type,)
         )
-        if type(run_info) not in accepted:
-            expected = " or ".join(run_info_type.__name__ for run_info_type in accepted)
+        if type(run_spec) not in accepted:
+            expected = " or ".join(run_spec_type.__name__ for run_spec_type in accepted)
             raise TypeError(
-                f"{type(self).__name__} requires a {expected} run info, "
-                f"but found {type(run_info).__name__}."
+                f"{type(self).__name__} requires a {expected} run spec, "
+                f"but found {type(run_spec).__name__}."
             )
-        run_info.validate()
+        run_spec.validate()
 
     @staticmethod
     def _writer_output_name(
@@ -318,18 +318,18 @@ class RunnerConfig(ABC, Generic[RunInfoT]):
         }
 
     @abstractmethod
-    def _stem(self, run_info: RunInfoT) -> str:
+    def _stem(self, run_spec: RunSpecT) -> str:
         """The human-readable stem derived from the run's headline settings, without the hash."""
 
     @abstractmethod
-    def _output_name(self, run_info: RunInfoT) -> str | None:
+    def _output_name(self, run_spec: RunSpecT) -> str | None:
         """The name of the file the run will produce, or None when it prints to stdout."""
 
     @abstractmethod
-    def _base_config(self, run_info: RunInfoT) -> Mapping[str, object]:
+    def _base_config(self, run_spec: RunSpecT) -> Mapping[str, object]:
         """The engine config document built with hash-free file names, used for hashing."""
 
-    def config_hash(self, run_info: RunInfoT) -> str:
+    def config_hash(self, run_spec: RunSpecT) -> str:
         """Short deterministic digest of the run's full engine configuration and input file.
 
         Folded into every derived file stem, so runs whose configs differ outside the
@@ -340,56 +340,56 @@ class RunnerConfig(ABC, Generic[RunInfoT]):
         The resolved host path distinguishes input graphs that share a basename.
 
         Args:
-            run_info (RunInfoT): Validated settings for one run.
+            run_spec (RunSpecT): Validated settings for one run.
 
         Returns:
             str: First ten hexadecimal characters of the configuration digest.
 
         Raises:
-            TypeError: If ``run_info`` has the wrong concrete type for this runner.
+            TypeError: If ``run_spec`` has the wrong concrete type for this runner.
             ValueError: If its settings cannot be validated or serialized as strict JSON.
         """
-        self._check_run_info(run_info)
+        self._check_run_spec(run_spec)
         payload = json.dumps(
-            {"config": self._base_config(run_info), "host_graph_path": self.host_graph_path},
+            {"config": self._base_config(run_spec), "host_graph_path": self.host_graph_path},
             sort_keys=True,
             allow_nan=False,
         )
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:10]
 
-    def file_stem(self, run_info: RunInfoT) -> str:
+    def file_stem(self, run_spec: RunSpecT) -> str:
         """The output/log file stem shared by every artifact of a run: the human-readable
         stem plus the config hash.
 
         Args:
-            run_info (RunInfoT): Validated settings for one run.
+            run_spec (RunSpecT): Validated settings for one run.
 
         Returns:
             str: Human-readable run stem followed by its configuration digest.
         """
-        self._check_run_info(run_info)
-        return f"{self._stem(run_info)}_{self.config_hash(run_info)}"
+        self._check_run_spec(run_spec)
+        return f"{self._stem(run_spec)}_{self.config_hash(run_spec)}"
 
     @abstractmethod
-    def run_command(self, run_info: RunInfoT) -> list:
+    def run_command(self, run_spec: RunSpecT) -> list:
         """Return the command to execute in the Docker container.
 
         Args:
-            run_info (RunInfoT): Validated settings for one run.
+            run_spec (RunSpecT): Validated settings for one run.
 
         Returns:
             list: Command arguments passed to the container.
         """
 
-    def canonical_stdout_command(self, run_info: RunInfoT) -> list:
+    def canonical_stdout_command(self, run_spec: RunSpecT) -> list:
         """The argv for a run forced to canonical assignment output on stdout.
 
         Overridden by the MCMC runners; defensive here, since
-        :meth:`RunContainer.mcmc_run_with_updaters` rejects run infos without updaters
+        :meth:`RunnerSession.mcmc_run_with_updaters` rejects run specs without updaters
         before this base implementation can be reached.
 
         Args:
-            run_info (RunInfoT): Validated settings for one run.
+            run_spec (RunSpecT): Validated settings for one run.
 
         Returns:
             list: Command arguments that emit canonical assignments to standard output.
@@ -435,32 +435,32 @@ class RunnerConfig(ABC, Generic[RunInfoT]):
             )
         return ["sh", "-c", template, argv0 or self.engine, json.dumps(config, allow_nan=False)]
 
-    def output_file(self, run_info: RunInfoT) -> str | None:
+    def output_file(self, run_spec: RunSpecT) -> str | None:
         """The host path of the file the run will produce, or None when the output
         is printed to stdout instead.
 
         Args:
-            run_info (RunInfoT): Validated settings for one run.
+            run_spec (RunSpecT): Validated settings for one run.
 
         Returns:
             str | None: Host output path, or None when output is printed to standard output.
         """
-        self._check_run_info(run_info)
-        output_name = self._output_name(run_info)
+        self._check_run_spec(run_spec)
+        output_name = self._output_name(run_spec)
         return None if output_name is None else str(self.output_folder / output_name)
 
-    def expected_files(self, run_info: RunInfoT) -> list[str]:
+    def expected_files(self, run_spec: RunSpecT) -> list[str]:
         """Host paths of every file the run promises to produce.
 
         Runners with sidecar artifacts (e.g. an optimizer scores CSV) extend this.
 
         Args:
-            run_info (RunInfoT): Validated settings for one run.
+            run_spec (RunSpecT): Validated settings for one run.
 
         Returns:
             list[str]: Host paths the run promises to create.
         """
-        output_file = self.output_file(run_info)
+        output_file = self.output_file(run_spec)
         return [] if output_file is None else [output_file]
 
     @staticmethod
@@ -469,22 +469,22 @@ class RunnerConfig(ABC, Generic[RunInfoT]):
         output = Path(output_file)
         return str(output.with_name(f"{output.stem}_{suffix}"))
 
-    def log_file(self, run_info: RunInfoT) -> str:
+    def log_file(self, run_spec: RunSpecT) -> str:
         """Return the host path of the log file capturing the run's standard error.
 
         Args:
-            run_info (RunInfoT): Validated settings for one run.
+            run_spec (RunSpecT): Validated settings for one run.
 
         Returns:
             str: Host path of the run log.
         """
-        self._check_run_info(run_info)
+        self._check_run_spec(run_spec)
         log_file_dir = self.log_folder / self.input_stem
         os.makedirs(log_file_dir, exist_ok=True)
-        return f"{log_file_dir}/{self.file_stem(run_info)}.log"
+        return f"{log_file_dir}/{self.file_stem(run_spec)}.log"
 
 
-class RunContainer(Generic[RunInfoT]):
+class RunnerSession(Generic[RunSpecT]):
     """
     A context manager that starts the Docker container for a runner
     configuration, runs commands in it, and cleans the container up afterwards.
@@ -492,15 +492,15 @@ class RunContainer(Generic[RunInfoT]):
     Example::
 
         config = RecomRunnerConfig("./graphs/my_state.json")
-        run_info = RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A")
+        run_spec = RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A")
 
-        with RunContainer(config) as container:
-            container.run(run_info)
+        with RunnerSession(config) as container:
+            container.run(run_spec)
     """
 
     def __init__(
         self,
-        configuration: RunnerConfig[RunInfoT],
+        configuration: RunnerConfig[RunSpecT],
         docker_image_name: str = DEFAULT_DOCKER_IMAGE,
         docker_client_args: dict | None = None,
     ):
@@ -511,8 +511,8 @@ class RunContainer(Generic[RunInfoT]):
             configuration (RunnerConfig): The runner configuration to use. One of
                 RecomRunnerConfig, ForestRunnerConfig, or SMCRunnerConfig.
             docker_image_name (str, optional): Override for the Docker image to run.
-                Defaults to the immutable digest currently published as
-                ``mgggdev/replicate:v2.0.0``.
+                Defaults to the immutable ``mgggdev/replicate`` digest pinned for this
+                release in ``DEFAULT_DOCKER_IMAGE``.
             docker_client_args (dict, optional): Extra keyword arguments for
                 docker.DockerClient, for non-default Docker setups.
 
@@ -610,8 +610,8 @@ class RunContainer(Generic[RunInfoT]):
         """Returns the started container, or raises if used outside a `with` block."""
         if self.container is None:
             raise RuntimeError(
-                "The container has not been started. Use RunContainer inside a "
-                "`with` block, e.g. `with RunContainer(config) as container:`."
+                "The container has not been started. Use RunnerSession inside a "
+                "`with` block, e.g. `with RunnerSession(config) as container:`."
             )
         return self.container
 
@@ -658,7 +658,7 @@ class RunContainer(Generic[RunInfoT]):
                         # A dead daemon here must not mask the with-body's exception.
                         logger.warning(f"Error removing Docker container: {e}")
         finally:
-            # Reset so a reused RunContainer never holds a stale container reference.
+            # Reset so a reused RunnerSession never holds a stale container reference.
             self.container = None
             self._close_client()
 
@@ -807,14 +807,14 @@ class RunContainer(Generic[RunInfoT]):
         finally:
             self._cleanup_exec_stream(stream, completed=completed)
 
-    def run(self, run_info: RunInfoT) -> str | None:
+    def run(self, run_spec: RunSpecT) -> str | None:
         """
-        Runs the configured engine once with the given run info. Anything printed
+        Runs the configured engine once with the given run spec. Anything printed
         to stderr in the container is written to the log file, and any output not
         sent to an output file is printed to the console.
 
         Args:
-            run_info (RunInfoT): The run-info object for the configured runner.
+            run_spec (RunSpecT): The run-spec object for the configured runner.
 
         Returns:
             str | None: The host path of the output file the run produced, or
@@ -824,9 +824,9 @@ class RunContainer(Generic[RunInfoT]):
             RuntimeError: When the engine command exits with nonzero status, or exits
                 cleanly without producing every expected nonempty output file.
         """
-        cmd = self.config.run_command(run_info)
-        log_file = self.config.log_file(run_info)
-        expected_files = self.config.expected_files(run_info)
+        cmd = self.config.run_command(run_spec)
+        log_file = self.config.log_file(run_spec)
+        expected_files = self.config.expected_files(run_spec)
 
         with _preserve_outputs_on_failure(expected_files), _preserve_log_on_failure(log_file):
             # Docker frames can split multi-byte characters, so decode each stream incrementally.
@@ -859,12 +859,12 @@ class RunContainer(Generic[RunInfoT]):
                     f"The {self.config.engine} engine exited successfully but did not "
                     f"produce the expected nonempty output file(s): {', '.join(invalid)}."
                 )
-        output_file = self.config.output_file(run_info)
+        output_file = self.config.output_file(run_spec)
         if output_file is not None:
             logger.info(f"Output written to {output_file}")
         return output_file
 
-    def run_iter(self, run_info: RunInfoT):
+    def run_iter(self, run_spec: RunSpecT):
         """
         Runs the configured engine once and yields its stdout as parsed JSON lines.
 
@@ -873,11 +873,11 @@ class RunContainer(Generic[RunInfoT]):
         stream to the caller, and any files the engine writes are left untouched.
 
         Exhaust the iterator normally. Closing it early force-removes the dedicated container so
-        the abandoned engine cannot continue running; the current ``RunContainer`` cannot then be
+        the abandoned engine cannot continue running; the current ``RunnerSession`` cannot then be
         reused.
 
         Args:
-            run_info (RunInfoT): The run-info object for the configured runner.
+            run_spec (RunSpecT): The run-spec object for the configured runner.
 
         Yields:
             tuple[dict, str]: JSON object parsed from the container's stdout and
@@ -887,33 +887,33 @@ class RunContainer(Generic[RunInfoT]):
             RuntimeError: When the engine command exits with nonzero status, raised
                 once the stream is exhausted.
         """
-        cmd = self.config.run_command(run_info)
+        cmd = self.config.run_command(run_spec)
         yield from self._iter_json_lines(cmd)
 
-    def mcmc_run_with_updaters(self, run_info: RunInfoT):
+    def mcmc_run_with_updaters(self, run_spec: RunSpecT):
         """
         Runs the configured MCMC engine with canonical assignment output forced to
-        stdout, applies the updater functions from ``run_info.updaters`` to every
+        stdout, applies the updater functions from ``run_spec.updaters`` to every
         sampled plan, and yields the results.
 
         Args:
-            run_info (RunInfoT): A RecomRunInfo or ForestRunInfo carrying updaters.
+            run_spec (RunSpecT): A RecomRunSpec or ForestRunSpec carrying updaters.
 
         Yields:
             tuple[dict, str]: Dictionary of the sample number and updater values and the
             error message (if any)
 
         Raises:
-            TypeError: If ``run_info`` does not carry an ``updaters`` mapping.
+            TypeError: If ``run_spec`` does not carry an ``updaters`` mapping.
             RuntimeError: When the engine command exits with nonzero status, raised
                 once the stream is exhausted.
         """
-        if not isinstance(run_info, SupportsUpdaters):
+        if not isinstance(run_spec, SupportsUpdaters):
             raise TypeError(
-                f"{type(run_info).__name__} does not carry updaters; mcmc_run_with_updaters "
-                "requires a run info with an 'updaters' mapping (RecomRunInfo or ForestRunInfo)."
+                f"{type(run_spec).__name__} does not carry updaters; mcmc_run_with_updaters "
+                "requires a run spec with an 'updaters' mapping (RecomRunSpec or ForestRunSpec)."
             )
-        cmd = self.config.canonical_stdout_command(run_info)
+        cmd = self.config.canonical_stdout_command(run_spec)
         graph = Graph.from_json(self.config.host_graph_path)
 
         # Output assignments are positional; a set comparison would miss permuted labels.
@@ -932,7 +932,7 @@ class RunContainer(Generic[RunInfoT]):
                 if json_obj is None:
                     yield (None, stderr_text)
                 else:
-                    yield from self._process_output(graph, json_obj, run_info.updaters, stderr_text)
+                    yield from self._process_output(graph, json_obj, run_spec.updaters, stderr_text)
         finally:
             primary_error = sys.exception()
             try:

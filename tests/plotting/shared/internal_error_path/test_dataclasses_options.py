@@ -1,4 +1,4 @@
-"""Tests for the new public Options dataclasses (Phase B of the API refactor).
+"""Tests for the public plotting-options dataclasses.
 
 Each dataclass collects the styling kwargs that one ``add_*`` method takes,
 so users can compose a style once and reuse it. These tests focus on the

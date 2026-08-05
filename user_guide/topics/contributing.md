@@ -1,7 +1,7 @@
 # Contributing
 
 Start with the repository's
-[contribution guide](https://github.com/mggg/gerrytools/blob/2.0.0/CONTRIBUTING.md) for development
+[contribution guide](https://github.com/mggg/gerrytools/blob/main/CONTRIBUTING.md) for development
 setup, testing expectations, and the pull-request process.
 
 ## Documentation checks

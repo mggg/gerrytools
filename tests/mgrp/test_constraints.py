@@ -7,12 +7,12 @@ import pytest
 
 from gerrytools.mgrp import (
     Constraints,
-    ForestRunInfo,
     ForestRunnerConfig,
-    RecomRunInfo,
+    ForestRunSpec,
     RecomRunnerConfig,
-    SMCRunInfo,
+    RecomRunSpec,
     SMCRunnerConfig,
+    SMCRunSpec,
 )
 from gerrytools.mgrp.constraints import ConstraintSpec, validate_constraint_spec
 
@@ -166,19 +166,19 @@ def test_nested_constraint_lists_do_not_alias_caller_or_builder_data():
     assert constraints.specs()[0]["denominator_cols"] == ["VAP"]
 
     runner = RecomRunnerConfig("./graphs/testing.json")
-    run_info = RecomRunInfo(
+    run_spec = RecomRunSpec(
         pop_col="TOTPOP", assignment_col="CD", variant="A", constraint=constraints
     )
-    hash_before = runner.config_hash(run_info)
-    emitted_config = cast(dict, runner.run_config(run_info))
+    hash_before = runner.config_hash(run_spec)
+    emitted_config = cast(dict, runner.run_config(run_spec))
     emitted_config["constraint"]["denominator_cols"].append("HVAP")
 
-    assert runner.config_hash(run_info) == hash_before
-    assert cast(dict, runner.run_config(run_info))["constraint"]["denominator_cols"] == ["VAP"]
+    assert runner.config_hash(run_spec) == hash_before
+    assert cast(dict, runner.run_config(run_spec))["constraint"]["denominator_cols"] == ["VAP"]
 
     # Raw-dict path: an already-emitted config document is decoupled from the caller's list.
     denominator_cols = ["VAP"]
-    raw_info = RecomRunInfo(
+    raw_spec = RecomRunSpec(
         pop_col="TOTPOP",
         assignment_col="CD",
         variant="A",
@@ -189,13 +189,13 @@ def test_nested_constraint_lists_do_not_alias_caller_or_builder_data():
             "threshold": 0.4,
         },
     )
-    raw_config = cast(dict, runner.run_config(raw_info))
+    raw_config = cast(dict, runner.run_config(raw_spec))
     denominator_cols.append("CVAP")
     assert raw_config["constraint"]["denominator_cols"] == ["VAP"]
 
 
 def test_recom_constraints_travel_only_in_config():
-    run_info = RecomRunInfo(
+    run_spec = RecomRunSpec(
         pop_col="TOTPOP",
         assignment_col="CD",
         variant="A",
@@ -204,8 +204,8 @@ def test_recom_constraints_travel_only_in_config():
         ),
     )
     runner = RecomRunnerConfig("./graphs/testing.json")
-    command = runner.run_command(run_info)[2]
-    config = json.loads(runner.run_command(run_info)[4])
+    command = runner.run_command(run_spec)[2]
+    config = json.loads(runner.run_command(run_spec)[4])
 
     assert config["constraint"] == {
         "constraint": "district_share_floor",
@@ -221,24 +221,24 @@ def test_recom_rejects_multiple_constraints():
     two.district_share_floor("BVAP", ["VAP"], 0.4)
     two.district_share_floor("HVAP", ["VAP"], 0.3)
     with pytest.raises(ValueError, match="single constraint"):
-        RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A", constraint=two)
+        RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A", constraint=two)
 
 
 def test_recom_rejects_smc_constraint_naming_engines():
     smc_only = Constraints().group_hinge(strength=1.0, group_pop_col="BVAP")
     with pytest.raises(ValueError, match="available on: smc"):
-        RecomRunInfo(pop_col="TOTPOP", assignment_col="CD", variant="A", constraint=smc_only)
+        RecomRunSpec(pop_col="TOTPOP", assignment_col="CD", variant="A", constraint=smc_only)
 
 
 def test_forest_constraints_travel_only_in_config():
-    run_info = ForestRunInfo(
+    run_spec = ForestRunSpec(
         levels=["county", "precinct"],
         pop_col="TOTPOP",
         constraints=Constraints().max_coarse_node_splits(2).allowed_excess_dists_in_coarse_nodes(1),
     )
     runner = ForestRunnerConfig("./graphs/testing.json")
-    command = runner.run_command(run_info)[2]
-    config = json.loads(runner.run_command(run_info)[4])
+    command = runner.run_command(run_spec)[2]
+    config = json.loads(runner.run_command(run_spec)[4])
 
     assert config["constraints"] == [
         {"constraint": "max_coarse_node_splits", "max_splits": 2},
@@ -250,7 +250,7 @@ def test_forest_constraints_travel_only_in_config():
     assert "max_coarse_node_splits" not in command
 
     with pytest.raises(ValueError, match="forest runner does not support"):
-        ForestRunInfo(
+        ForestRunSpec(
             levels=["county", "precinct"],
             pop_col="TOTPOP",
             constraints=Constraints().splits(strength=1.0, admin_col="COUNTY"),
@@ -258,7 +258,7 @@ def test_forest_constraints_travel_only_in_config():
 
 
 def test_smc_constraints_travel_only_in_config():
-    run_info = SMCRunInfo(
+    run_spec = SMCRunSpec(
         pop_col="TOTPOP",
         n_dists=4,
         n_sims=20,
@@ -270,8 +270,8 @@ def test_smc_constraints_travel_only_in_config():
         ),
     )
     runner = SMCRunnerConfig("./shapefiles/testing")
-    command = runner.run_command(run_info)[2]
-    config = json.loads(runner.run_command(run_info)[4])
+    command = runner.run_command(run_spec)[2]
+    config = json.loads(runner.run_command(run_spec)[4])
 
     assert config["constraints"] == [
         {
@@ -285,12 +285,12 @@ def test_smc_constraints_travel_only_in_config():
     assert "group_hinge" not in command
 
     with pytest.raises(ValueError, match="smc runner does not support"):
-        SMCRunInfo(pop_col="TOTPOP", n_dists=4, n_sims=20, constraints=Constraints().pack_nodes())
+        SMCRunSpec(pop_col="TOTPOP", n_dists=4, n_sims=20, constraints=Constraints().pack_nodes())
 
 
 def test_unknown_constraint_dict_rejected():
     with pytest.raises(ValueError, match="Unknown constraint"):
-        ForestRunInfo(
+        ForestRunSpec(
             levels=["county", "precinct"],
             pop_col="TOTPOP",
             constraints=[cast(ConstraintSpec, {"constraint": "make_it_pretty"})],
@@ -304,14 +304,14 @@ def test_raw_constraint_shape_and_types_rejected():
         "denominator_cols": ["VAP"],
     }
     with pytest.raises(ValueError, match="missing"):
-        RecomRunInfo(
+        RecomRunSpec(
             pop_col="TOTPOP",
             assignment_col="CD",
             variant="A",
             constraint=cast(ConstraintSpec, base),
         )
     with pytest.raises(TypeError, match="threshold"):
-        RecomRunInfo(
+        RecomRunSpec(
             pop_col="TOTPOP",
             assignment_col="CD",
             variant="A",
@@ -327,7 +327,7 @@ def test_constraint_column_names_must_be_nonempty():
 
 
 def test_raw_dict_still_accepted_for_recom():
-    run_info = RecomRunInfo(
+    run_spec = RecomRunSpec(
         pop_col="TOTPOP",
         assignment_col="CD",
         variant="A",
@@ -338,7 +338,7 @@ def test_raw_dict_still_accepted_for_recom():
             "threshold": 0.4,
         },
     )
-    command = RecomRunnerConfig("./graphs/testing.json").run_command(run_info)
+    command = RecomRunnerConfig("./graphs/testing.json").run_command(run_spec)
     config = json.loads(command[4])
     assert config["constraint"]["constraint"] == "district_share_floor"
 
@@ -356,7 +356,7 @@ def test_incumbency_spec_no_longer_recognized():
     # The builder was removed because the Docker translation cannot produce a working
     # configuration; a raw spec dict now fails name validation too.
     with pytest.raises(ValueError, match="Unknown constraint"):
-        SMCRunInfo(
+        SMCRunSpec(
             pop_col="TOTPOP",
             n_dists=4,
             n_sims=20,

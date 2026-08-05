@@ -306,7 +306,7 @@ class Constraints:
             strength (float): Coefficient multiplying the penalty statistic.
             group_pop_col (str): Map column containing the focal-group population.
             total_pop_col (str | None, optional): Denominator population column. If ``None``,
-                ``redist`` uses the population column supplied through ``SMCRunInfo.pop_col``.
+                ``redist`` uses the population column supplied through ``SMCRunSpec.pop_col``.
                 Defaults to None.
             targets (Sequence[float], optional): Nonempty target-share sequence. Values should be
                 finite and in ``[0, 1]``. Defaults to ``(0.55,)``.
@@ -674,7 +674,7 @@ def validate_constraint_spec(value: object) -> ConstraintSpec:
     return cast(ConstraintSpec, spec)
 
 
-# Accepted constraint input forms for each RunInfo dataclass.
+# Accepted constraint input forms for each RunSpec dataclass.
 ConstraintsLike = Constraints | Sequence[ConstraintSpec] | ConstraintSpec | None
 
 

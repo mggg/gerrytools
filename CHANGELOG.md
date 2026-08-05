@@ -7,7 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.0.0] - 2026-08-04
+## [2.0.1] - 2026-08-05
+
+This release contains breaking changes that were intended to ship in 2.0.0, so 2.0.0 has been
+yanked on PyPI and 2.0.1 is the intended 2.0 API. Upgrading from 2.0.0 is not a safe patch
+upgrade: the renames and removals below apply. Installs that pin `gerrytools==2.0.0` exactly
+still resolve, with a warning; everything else skips the yanked release.
+
+### Changed
+
+- `evaluate_many` now returns `ManyPlanEvalResult`; streamed ensemble evaluations use
+  `EnsembleEvalResult`. `EvaluationRun` has been removed.
+- `EnsembleEvalResult.read` accepts `return_type` to request a pandas `Series` or `DataFrame` and
+  narrow its static return type. Series and one-column DataFrame results convert between shapes.
+- `gerrytools.ben.RunIterator` and `Variant` are now `RecordedChainIterator` and
+  `EncodingVariant`, respectively. The old generic names have been removed.
+- `RecordedChain` now preserves input node order by default (`graph_order=None`). Pass
+  `graph_order="mlc"` to retain compression-oriented node reordering.
+- MGRP run settings now use `RunSpec`, `RecomRunSpec`, `ShortBurstsRunSpec`,
+  `TiltedRunSpec`, `ForestRunSpec`, and `SMCRunSpec`; shared optimizer settings use
+  `OptimizerRunSpecBase`. `RunContainer` is now `RunnerSession`. The old names have been removed.
+- The default MGRP Docker image is now `mgggdev/replicate:v2.0.1`, which updates `rustrecom`
+  from 0.1.4 to 0.2.0.
+
+## [2.0.0] - 2026-08-04 [YANKED]
 
 GerryTools 2.0.0 is a rewrite. Every subpackage changed, the public API is not backward
 compatible with 1.x, and no deprecation aliases are provided. Read the migration notes below
@@ -395,5 +418,6 @@ rust/src        # the compiled scoring engine, built as gerrytools._scoring_engi
 - **`gerrytools.ben`:** the Docker-based `docker_manager.py` is removed; `binary-ensemble` is now
   a direct dependency.
 
-[Unreleased]: https://github.com/mggg/gerrytools/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/mggg/gerrytools/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/mggg/gerrytools/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/mggg/gerrytools/compare/v1.2.1...v2.0.0

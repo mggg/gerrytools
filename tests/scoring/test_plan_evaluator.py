@@ -11,8 +11,8 @@ import gerrytools.scoring as scoring
 from gerrytools import _scoring_engine
 from gerrytools.scoring import (
     CutEdges,
-    EnsembleEvalResult,
     EvaluationSummary,
+    ManyPlanEvalResult,
     Metric,
     PlanEvalResult,
     PlanEvaluator,
@@ -32,8 +32,10 @@ def test_public_api_exposes_the_evaluator_without_legacy_factories() -> None:
     assert scoring.PlanEvaluator is PlanEvaluator
     assert not hasattr(scoring, "PlanScorer")
     assert hasattr(scoring, "PlanEvalResult")
+    assert hasattr(scoring, "ManyPlanEvalResult")
     assert hasattr(scoring, "EnsembleEvalResult")
-    assert hasattr(scoring, "EvaluationRun")
+    assert not hasattr(scoring, "EvaluationRun")
+    assert "EvaluationRun" not in scoring.__all__
     assert scoring.EvaluationSummary is EvaluationSummary
     assert not hasattr(scoring, "RunSummary")
     assert not hasattr(scoring, "PlanEvaluation")
@@ -96,9 +98,9 @@ def test_public_api_exposes_the_evaluator_without_legacy_factories() -> None:
         assert not hasattr(scoring, name)
 
 
-def test_ensemble_result_rejects_an_empty_metric_mapping() -> None:
+def test_many_plan_result_rejects_an_empty_metric_mapping() -> None:
     with pytest.raises(ValueError, match="at least one metric"):
-        EnsembleEvalResult({})
+        ManyPlanEvalResult({})
 
 
 def graph() -> nx.Graph:
@@ -317,9 +319,9 @@ def test_getitem_results_are_writable_whatever_the_metrics_shape() -> None:
     multi.iloc[0, 0] = 99.0
     assert single.iloc[0] == 99.0 and multi.iloc[0, 0] == 99.0
 
-    ensemble = evaluator.evaluate_many([plan, [1, 2, 2]])
-    district_frame = ensemble["population"]
-    plan_series = ensemble["cut_edges"]
+    many = evaluator.evaluate_many([plan, [1, 2, 2]])
+    district_frame = many["population"]
+    plan_series = many["cut_edges"]
     assert isinstance(district_frame, pd.DataFrame) and isinstance(plan_series, pd.Series)
     district_frame.iloc[0, 0] = 99.0
     plan_series.iloc[0] = 99
@@ -404,7 +406,7 @@ def test_evaluate_many_preserves_plan_order_and_requires_stable_districts() -> N
     result = scorer.evaluate_many(assignments, sample_ids=(10, 20))
     table = result["population"]
 
-    assert isinstance(result, EnsembleEvalResult)
+    assert isinstance(result, ManyPlanEvalResult)
     assert result.summary == EvaluationSummary(samples=2, accepted=2)
     assert isinstance(table, pd.DataFrame)
     assert table.index.name == "sample"

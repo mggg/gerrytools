@@ -37,7 +37,7 @@ from ._graph_prep import (
     _source_graph,
 )
 
-Variant = Literal["standard", "mkv_chain", "twodelta"]
+EncodingVariant = Literal["standard", "mkv_chain", "twodelta"]
 
 # Filesystems without hard-link support (exFAT, some network mounts) surface one of these.
 _HARD_LINK_UNSUPPORTED_ERRNOS = frozenset(
@@ -45,7 +45,7 @@ _HARD_LINK_UNSUPPORTED_ERRNOS = frozenset(
 )
 
 
-class RunIterator(Iterator[Partition], Protocol):
+class RecordedChainIterator(Iterator[Partition], Protocol):
     """Run iterator that, like a generator, can also be closed early."""
 
     def close(self) -> None:
@@ -84,7 +84,7 @@ class _BendlTransaction:
         graph_order: GraphOrder,
         graph_order_key: str | None,
         metadata: dict[str, Any] | list[Any] | None,
-        variant: Variant,
+        variant: EncodingVariant,
     ) -> None:
         self._output_path = output_path
         self._source_graph = source_graph
@@ -92,7 +92,7 @@ class _BendlTransaction:
         self._graph_order: GraphOrder = graph_order
         self._graph_order_key = graph_order_key
         self._metadata = metadata
-        self._variant: Variant = variant
+        self._variant: EncodingVariant = variant
         self.temporary_directory = Path(
             tempfile.mkdtemp(prefix=f".{output_path.name}.", dir=output_path.parent)
         )
@@ -616,7 +616,7 @@ class RecordedChain(MarkovChain):
         "_variant",
     )
     _graph_order: GraphOrder
-    _variant: Variant
+    _variant: EncodingVariant
 
     def __init__(
         self,
@@ -625,10 +625,10 @@ class RecordedChain(MarkovChain):
         output_path: str | os.PathLike[str],
         total_steps: int | None = None,
         rng: Any = None,
-        graph_order: GraphOrder = "mlc",
+        graph_order: GraphOrder = None,
         graph_order_key: str | None = None,
         metadata: dict[str, Any] | list[Any] | None = None,
-        variant: Variant = "twodelta",
+        variant: EncodingVariant = "twodelta",
     ) -> None:
         """Initialize a RecordedChain.
 
@@ -646,12 +646,12 @@ class RecordedChain(MarkovChain):
             graph_order (GraphOrder): Node reordering applied before encoding: ``"mlc"`` (the
                 default), ``"rcm"``, ``"key"`` (sort by the ``graph_order_key`` node attribute),
                 or ``None`` to keep the input order. Reordering improves compression; the
-                permutation back to the source order is stored in the file.
+                permutation back to the source order is stored in the file. Defaults to None.
             graph_order_key (str | None): Node attribute to sort by; required exactly when
                 ``graph_order="key"``.
             metadata (dict[str, Any] | list[Any] | None, optional): JSON-serializable metadata
                 embedded in the bundle. Defaults to None.
-            variant (Variant): Assignment-stream encoding: ``"twodelta"`` (the default),
+            variant (EncodingVariant): Assignment-stream encoding: ``"twodelta"`` (the default),
                 ``"mkv_chain"``, or ``"standard"``.
 
         Raises:
@@ -664,7 +664,7 @@ class RecordedChain(MarkovChain):
             raise ValueError("graph_order must be 'mlc', 'rcm', 'key', or None")
         if (graph_order == "key") != (graph_order_key is not None):
             raise ValueError("graph_order_key is required only when graph_order='key'")
-        if variant not in get_args(Variant):
+        if variant not in get_args(EncodingVariant):
             raise ValueError("variant must be 'standard', 'mkv_chain', or 'twodelta'")
         if metadata is not None and not isinstance(metadata, (dict, list)):
             raise TypeError("metadata must be a dict, list, or None")
@@ -718,7 +718,7 @@ class RecordedChain(MarkovChain):
         return copy.deepcopy(self._metadata)
 
     @property
-    def variant(self) -> Variant:
+    def variant(self) -> EncodingVariant:
         """Assignment-stream encoding variant written by runs."""
         return self._variant
 
@@ -742,20 +742,21 @@ class RecordedChain(MarkovChain):
                 raise RuntimeError("recording is unavailable before a successful recording")
             return self._recording
 
-    def __iter__(self) -> RunIterator:
+    def __iter__(self) -> RecordedChainIterator:
         """Return the single-use run iterator; the destination file must not already exist."""
-        return cast(RunIterator, self._record(overwrite=False))
+        return cast(RecordedChainIterator, self._record(overwrite=False))
 
-    def allow_overwrite(self) -> RunIterator:
+    def allow_overwrite(self) -> RecordedChainIterator:
         """Return one run iterator authorized to replace the destination file.
 
         The replacement is atomic: the new recording is finalized in a temporary location and
         moved over ``output_path`` only on clean completion.
 
         Returns:
-            RunIterator: Single-use iterator that records the run and may replace the output file.
+            RecordedChainIterator: Single-use iterator that records the run and may replace the
+                output file.
         """
-        return cast(RunIterator, self._record(overwrite=True))
+        return cast(RecordedChainIterator, self._record(overwrite=True))
 
     def _publish_run(
         self,
