@@ -58,3 +58,16 @@ axis unless an individual function documents another contract.
 .. automodule:: gerrytools.scoring.formulas
    :members:
    :exclude-members: TurnoutModel
+
+Travel-time scores
+------------------
+
+Pairwise (PTT) and centroid (CTT) drive-time scores over a finished unit-to-unit
+OD table. These helpers are independent of the compiled ``PlanEvaluator`` engine.
+
+.. automodule:: gerrytools.scoring.travel_time
+   :members:
+   :imported-members:
+   :undoc-members:
+   :show-inheritance:
+

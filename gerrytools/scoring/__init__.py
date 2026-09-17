@@ -1,6 +1,6 @@
 """Plan evaluation through reusable scoring-engine metrics and array formulas."""
 
-from . import formulas, single_plan
+from . import formulas, single_plan, travel_time
 from .evaluator import Assignment, PlanEvaluator
 from .formulas import TurnoutModel
 from .metrics import (
@@ -87,6 +87,15 @@ from .single_plan import (
     tally,
     tally_by_region,
 )
+from .travel_time import (
+    CentroidTravelTime,
+    PairwiseTravelTime,
+    TravelTimeScorer,
+    TravelTimeTable,
+    build_od_from_graph,
+    centroid_travel_time,
+    pairwise_travel_time,
+)
 
 __all__ = [
     "Assignment",
@@ -146,6 +155,14 @@ __all__ = [
     "efficiency_gap",
     "eguia",
     "formulas",
+    "travel_time",
+    "TravelTimeTable",
+    "build_od_from_graph",
+    "pairwise_travel_time",
+    "centroid_travel_time",
+    "PairwiseTravelTime",
+    "CentroidTravelTime",
+    "TravelTimeScorer",
     "max_absolute_population_deviation",
     "max_population_deviation",
     "mean_absolute_seat_vote_gap",

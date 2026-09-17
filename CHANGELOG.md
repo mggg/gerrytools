@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MGRP runs no longer fail on macOS when Docker stream cleanup encounters an already disconnected
   socket. Cleanup releases the socket and preserves other execution errors.
 
+### Added
+
+- `gerrytools.scoring.travel_time`: pairwise (PTT) and centroid (CTT) drive-time scores over a
+  unit-to-unit travel-time table, with weight modes ``none`` / ``p+p`` / ``p*p``, district mean/max
+  aggregates, and plan-level mean / max-district / global-max / mean-of-maxes summaries. Includes
+  `TravelTimeTable`, `build_od_from_graph`, convenience functions, and reusable metric objects.
+  These scores take a finished OD table and are not part of the compiled `PlanEvaluator` engine.
+
 ## [2.0.1] - 2026-08-05
 
 This release contains breaking changes that were intended to ship in 2.0.0, so 2.0.0 has been
