@@ -17,8 +17,19 @@ road-contiguous.
 | `p+p` | `pop_a + pop_b` | Population-involved pair weight |
 | `p*p` | `pop_a * pop_b` | Person-pair weight |
 
-District means use $\sum (t w) / \sum w$ (units of time). Weighted maxes are in
-time × weight units.
+District scores use $\sum (t w) / (\#\ \mathrm{trips})$ so population weights stay
+in the numerator: for PTT the trip count is the number of finite pairs, and for
+CTT it is the number of finite centroid-to-unit trips. Units are time (`none`),
+people-time per trip (`p+p`), or people²-time per trip (`p*p`). Weighted maxes
+are $\max(t w)$ in the same weight units.
+
+
+## Symmetric OD tables
+
+Scoring reads each trip as `t(a, b)` and treats it as interchangeable with
+`t(b, a)`. `TravelTimeTable` does not check or fix asymmetry. If you build a
+table from a directed road network (one-ways), symmetrize it before scoring
+(for example by taking the min or mean of the two directions).
 
 ## Centroid (CTT)
 

@@ -48,6 +48,7 @@ scoring guide <../user/scoring/bendl>` for a complete example and the physical f
    :imported-members:
    :undoc-members:
    :show-inheritance:
+   :exclude-members: CentroidTravelTime, PairwiseTravelTime, TravelTimeScorer, TravelTimeTable, build_od_from_graph, centroid_travel_time, pairwise_travel_time
 
 Array formulas
 --------------

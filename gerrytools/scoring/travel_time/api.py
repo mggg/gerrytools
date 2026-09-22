@@ -9,89 +9,53 @@ wrappers around the same core.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Mapping, Sequence
+from typing import Any, Literal, Mapping, Sequence
 
 from .district import DistrictTravelScores, score_district
-from .od_table import TravelTimeTable, UnitId
+from .od_table import TravelTimeTable
 from .plan import PlanAgg, PlanTravelScores, plan_aggregate, score_plan
 from .weights import WeightMode
 
 Family = Literal["ptt", "ctt"]
-DistrictAgg = Literal["mean", "max"]
 
-
-def _district_value(
-    scores: DistrictTravelScores, family: Family, district_agg: DistrictAgg
-) -> float:
-    if family == "ptt" and district_agg == "mean":
-        return scores.ptt_mean
-    if family == "ptt" and district_agg == "max":
-        return scores.ptt_max
-    if family == "ctt" and district_agg == "mean":
-        return scores.ctt_mean
-    if family == "ctt" and district_agg == "max":
-        return scores.ctt_max
-    raise ValueError(f"Unknown family/district_agg: {family!r}, {district_agg!r}")
+# NOTE on PlanAgg: each value already fixes *both* how a district is
+# summarized and how districts are combined into a plan number -- there
+# is no independent "district_agg" choice underneath it:
+#   "mean"           -> mean of district means
+#   "max_district"   -> max of district means  ("worst average district")
+#   "global_max"     -> max of district maxes  (single worst trip, plan-wide)
+#   "mean_of_maxes"  -> mean of district maxes
+# An earlier version of this API exposed district_agg and plan_agg as two
+# separate knobs, which implied 8 combinations; only 4 are actually
+# meaningful (PlanTravelScores only stores these 4), and the other 4 either
+# silently ignored one of the two arguments or recomputed a value that
+# duplicated one already on PlanTravelScores. PlanAgg is kept as the single
+# source of truth for "how do I turn per-district scores into one number."
 
 
 def pairwise_travel_time(
-    parts: Mapping[UnitId, Sequence[UnitId]],
-    populations: Mapping[UnitId, float],
+    parts: Mapping[Any, Sequence[Any]],
+    populations: Mapping[Any, float],
     od: TravelTimeTable,
     *,
     weight: WeightMode = "none",
-    district_agg: DistrictAgg = "mean",
     plan_agg: PlanAgg = "mean",
 ) -> float:
     """Convenience: one PTT plan-level number (gerrytools-style one-shot call)."""
     plan = score_plan(parts, populations, od, weight)
-    if plan_agg == "mean" and district_agg == "mean":
-        return plan.ptt_mean
-    if plan_agg == "max_district" and district_agg == "mean":
-        return plan.ptt_max_district_mean
-    if plan_agg == "global_max":
-        return plan.ptt_global_max
-    if plan_agg == "mean_of_maxes":
-        return plan.ptt_mean_of_maxes
-    # Generic path for less common combos (e.g. mean of district means already covered).
-    if plan_agg == "mean":
-        vals = [_district_value(s, "ptt", district_agg) for s in plan.by_district.values()]
-        finite = [v for v in vals if v == v]
-        return float(sum(finite) / len(finite)) if finite else float("nan")
-    if plan_agg == "max_district":
-        vals = [_district_value(s, "ptt", district_agg) for s in plan.by_district.values()]
-        finite = [v for v in vals if v == v]
-        return float(max(finite)) if finite else float("nan")
     return plan_aggregate(plan, "ptt", plan_agg)
 
 
 def centroid_travel_time(
-    parts: Mapping[UnitId, Sequence[UnitId]],
-    populations: Mapping[UnitId, float],
+    parts: Mapping[Any, Sequence[Any]],
+    populations: Mapping[Any, float],
     od: TravelTimeTable,
     *,
     weight: WeightMode = "none",
-    district_agg: DistrictAgg = "mean",
     plan_agg: PlanAgg = "mean",
 ) -> float:
     """Convenience: one CTT plan-level number."""
     plan = score_plan(parts, populations, od, weight)
-    if plan_agg == "mean" and district_agg == "mean":
-        return plan.ctt_mean
-    if plan_agg == "max_district" and district_agg == "mean":
-        return plan.ctt_max_district_mean
-    if plan_agg == "global_max":
-        return plan.ctt_global_max
-    if plan_agg == "mean_of_maxes":
-        return plan.ctt_mean_of_maxes
-    if plan_agg == "mean":
-        vals = [_district_value(s, "ctt", district_agg) for s in plan.by_district.values()]
-        finite = [v for v in vals if v == v]
-        return float(sum(finite) / len(finite)) if finite else float("nan")
-    if plan_agg == "max_district":
-        vals = [_district_value(s, "ctt", district_agg) for s in plan.by_district.values()]
-        finite = [v for v in vals if v == v]
-        return float(max(finite)) if finite else float("nan")
     return plan_aggregate(plan, "ctt", plan_agg)
 
 
@@ -100,14 +64,16 @@ class PairwiseTravelTime:
     """Reusable PTT metric description (port-ready for PlanEvaluator-style use)."""
 
     weight: WeightMode = "none"
-    district_agg: DistrictAgg = "mean"
     plan_agg: PlanAgg = "mean"
+    # TODO(port): once wired into the compiled PlanEvaluator engine, result_name
+    # becomes the column/field name the engine records this metric under. Unused
+    # until then.
     result_name: str = "pairwise_travel_time"
 
     def score(
         self,
-        parts: Mapping[UnitId, Sequence[UnitId]],
-        populations: Mapping[UnitId, float],
+        parts: Mapping[Any, Sequence[Any]],
+        populations: Mapping[Any, float],
         od: TravelTimeTable,
     ) -> float:
         return pairwise_travel_time(
@@ -115,7 +81,6 @@ class PairwiseTravelTime:
             populations,
             od,
             weight=self.weight,
-            district_agg=self.district_agg,
             plan_agg=self.plan_agg,
         )
 
@@ -125,14 +90,14 @@ class CentroidTravelTime:
     """Reusable CTT metric description."""
 
     weight: WeightMode = "none"
-    district_agg: DistrictAgg = "mean"
     plan_agg: PlanAgg = "mean"
+    # TODO(port): see PairwiseTravelTime.result_name.
     result_name: str = "centroid_travel_time"
 
     def score(
         self,
-        parts: Mapping[UnitId, Sequence[UnitId]],
-        populations: Mapping[UnitId, float],
+        parts: Mapping[Any, Sequence[Any]],
+        populations: Mapping[Any, float],
         od: TravelTimeTable,
     ) -> float:
         return centroid_travel_time(
@@ -140,7 +105,6 @@ class CentroidTravelTime:
             populations,
             od,
             weight=self.weight,
-            district_agg=self.district_agg,
             plan_agg=self.plan_agg,
         )
 
@@ -153,16 +117,16 @@ class TravelTimeScorer:
 
     def evaluate(
         self,
-        parts: Mapping[UnitId, Sequence[UnitId]],
-        populations: Mapping[UnitId, float],
+        parts: Mapping[Any, Sequence[Any]],
+        populations: Mapping[Any, float],
         od: TravelTimeTable,
     ) -> PlanTravelScores:
         return score_plan(parts, populations, od, self.weight)
 
     def district(
         self,
-        units: Sequence[UnitId],
-        populations: Mapping[UnitId, float],
+        units: Sequence[Any],
+        populations: Mapping[Any, float],
         od: TravelTimeTable,
     ) -> DistrictTravelScores:
         return score_district(units, populations, od, self.weight)

@@ -88,6 +88,7 @@ from .single_plan import (
     tally_by_region,
 )
 from .travel_time import (
+    PEOPLE_AWARE_MODES,
     CentroidTravelTime,
     PairwiseTravelTime,
     TravelTimeScorer,
@@ -156,6 +157,7 @@ __all__ = [
     "eguia",
     "formulas",
     "travel_time",
+    "PEOPLE_AWARE_MODES",
     "TravelTimeTable",
     "build_od_from_graph",
     "pairwise_travel_time",

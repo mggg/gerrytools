@@ -13,8 +13,14 @@ WeightMode = Literal["none", "p+p", "p*p"]
 
 WEIGHT_MODES: tuple[WeightMode, ...] = ("none", "p+p", "p*p")
 
+# Modes whose weight depends on population (as opposed to "none", which treats
+# every trip identically). Centroid selection and similar logic should check
+# membership in this set rather than hardcoding ("p+p", "p*p") so a future new
+# mode can't silently fall through people-aware branches.
+PEOPLE_AWARE_MODES: frozenset[WeightMode] = frozenset({"p+p", "p*p"})
 
-def trip_weight(pop_a: float, pop_b: float, mode: WeightMode) -> float:
+
+def trip_weight(pop_a: float, pop_b: float, mode: WeightMode | str) -> float:
     """Return the weight for a trip between two units.
 
     Args:

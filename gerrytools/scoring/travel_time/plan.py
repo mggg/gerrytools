@@ -7,7 +7,7 @@ Three max-style summaries are offered for experimentation.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Literal, Mapping, Sequence
+from typing import Any, Iterable, Literal, Mapping, Sequence
 
 from .district import DistrictTravelScores, is_finite, score_district
 from .od_table import TravelTimeTable, UnitId
@@ -47,8 +47,8 @@ def _max_finite(values: Iterable[float]) -> float:
 
 
 def score_plan(
-    parts: Mapping[UnitId, Sequence[UnitId]],
-    populations: Mapping[UnitId, float],
+    parts: Mapping[Any, Sequence[Any]],
+    populations: Mapping[Any, float],
     od: TravelTimeTable,
     weight: WeightMode,
 ) -> PlanTravelScores:
@@ -79,7 +79,11 @@ def score_plan(
     )
 
 
-def plan_aggregate(scores: PlanTravelScores, family: Literal["ptt", "ctt"], agg: PlanAgg) -> float:
+def plan_aggregate(
+    scores: PlanTravelScores,
+    family: Literal["ptt", "ctt"],
+    agg: PlanAgg | str,
+) -> float:
     """Pick one plan-level number from a scored plan (handy for experiments)."""
     if family == "ptt":
         if agg == "mean":

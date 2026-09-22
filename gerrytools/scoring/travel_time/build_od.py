@@ -7,17 +7,17 @@ download OSM; tests and callers supply a graph whose edges already have a
 
 from __future__ import annotations
 
-from typing import Hashable, Mapping
+from typing import Any, Hashable, Mapping
 
 import networkx as nx
 import numpy as np
 
-from .od_table import TravelTimeTable, UnitId
+from .od_table import TravelTimeTable
 
 
 def build_od_from_graph(
     graph: nx.Graph,
-    unit_to_node: Mapping[UnitId, Hashable],
+    unit_to_node: Mapping[Any, Any],
     *,
     weight: str = "travel_time",
 ) -> TravelTimeTable:
@@ -37,6 +37,19 @@ def build_od_from_graph(
     missing = [n for n in snap_nodes if n not in graph]
     if missing:
         raise KeyError(f"Snap nodes not in graph: {missing!r}")
+
+    # networkx silently treats an edge missing the `weight` attribute as
+    # weight 1 rather than raising, which would quietly corrupt every travel
+    # time computed through that edge (e.g. a `travel_time`-weighted graph
+    # with one un-annotated edge would treat it as a 1-second hop). Fail
+    # loudly instead.
+    unweighted_edges = [(u, v) for u, v, data in graph.edges(data=True) if weight not in data]
+    if unweighted_edges:
+        raise ValueError(
+            f"{len(unweighted_edges)} edge(s) missing the {weight!r} attribute "
+            f"(e.g. {unweighted_edges[:5]!r}); networkx would silently treat "
+            "these as weight 1, so refusing to build the table."
+        )
 
     n = len(unit_ids)
     times = np.full((n, n), np.nan, dtype=float)
