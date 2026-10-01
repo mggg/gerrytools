@@ -29,8 +29,10 @@ def build_od_from_graph(
         weight: Edge attribute used as path length (default ``travel_time``).
 
     Returns:
-        TravelTimeTable with unit order matching ``unit_to_node``'s insertion
-        order (Python 3.7+ dict order). Unreachable pairs are ``NaN``.
+        Symmetric TravelTimeTable with unit order matching ``unit_to_node``'s
+        insertion order (Python 3.7+ dict order). Opposite directed route times
+        are averaged. Unreachable pairs are ``NaN`` so callers can inspect
+        connectivity, but travel-time scoring rejects such a table.
     """
     unit_ids = list(unit_to_node.keys())
     snap_nodes = [unit_to_node[u] for u in unit_ids]
@@ -49,6 +51,21 @@ def build_od_from_graph(
             f"{len(unweighted_edges)} edge(s) missing the {weight!r} attribute "
             f"(e.g. {unweighted_edges[:5]!r}); networkx would silently treat "
             "these as weight 1, so refusing to build the table."
+        )
+    invalid_edges: list[tuple[Any, Any, Any]] = []
+    for u, v, data in graph.edges(data=True):
+        value = data[weight]
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            invalid_edges.append((u, v, value))
+            continue
+        if not np.isfinite(numeric) or numeric < 0:
+            invalid_edges.append((u, v, value))
+    if invalid_edges:
+        raise ValueError(
+            f"{len(invalid_edges)} edge(s) have a non-finite or negative {weight!r} "
+            f"value (e.g. {invalid_edges[:5]!r})"
         )
 
     n = len(unit_ids)
@@ -70,4 +87,4 @@ def build_od_from_graph(
             if t is not None:
                 times[i, j] = t
 
-    return TravelTimeTable.from_matrix(unit_ids, times)
+    return TravelTimeTable.from_directed_matrix(unit_ids, times)

@@ -23,9 +23,8 @@ def choose_centroid(
 ) -> UnitId | None:
     """Return the centroid unit id, or None if no valid candidate exists.
 
-    A candidate is invalid if any trip from that candidate to a unit in
-    ``units`` is NaN (unreachable). For people-aware modes, candidates with
-    ``population <= 0`` are skipped.
+    The OD table must be statewide connected. For people-aware modes,
+    candidates with ``population <= 0`` are skipped.
 
     Ties break toward whichever tied candidate appears first in ``units``.
     (``UnitId`` is only required to be ``Hashable``, not orderable, so we
@@ -34,6 +33,8 @@ def choose_centroid(
     """
     if not units:
         return None
+
+    od.validate_connected()
 
     # Redundant with score_district's own od.require_units(units) call on the
     # only current caller, but choose_centroid is exported as public API
@@ -53,19 +54,17 @@ def choose_centroid(
             continue
 
         cost = 0.0
-        unreachable = False
         for u in units:
             t_cu = od.travel_time(c, u)
             if is_missing(t_cu):
-                unreachable = True
-                break
+                raise ValueError(
+                    f"Missing travel time from centroid candidate {c!r} to unit {u!r}; "
+                    "validate statewide connectivity before scoring"
+                )
             if people_aware:
                 cost += t_cu * float(populations[u])
             else:
                 cost += t_cu
-
-        if unreachable:
-            continue
 
         if cost < best_cost:
             best_cost = cost
