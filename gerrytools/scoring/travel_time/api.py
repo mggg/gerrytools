@@ -41,7 +41,7 @@ def pairwise_travel_time(
     weight: WeightMode = "none",
     plan_agg: PlanAgg = "mean",
 ) -> float:
-    """Convenience: one PTT plan-level number (gerrytools-style one-shot call)."""
+    """Return one PTT plan score from a statewide-connected OD table."""
     plan = score_plan(parts, populations, od, weight)
     return plan_aggregate(plan, "ptt", plan_agg)
 
@@ -54,7 +54,7 @@ def centroid_travel_time(
     weight: WeightMode = "none",
     plan_agg: PlanAgg = "mean",
 ) -> float:
-    """Convenience: one CTT plan-level number."""
+    """Return one CTT plan score from a statewide-connected OD table."""
     plan = score_plan(parts, populations, od, weight)
     return plan_aggregate(plan, "ctt", plan_agg)
 

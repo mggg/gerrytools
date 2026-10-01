@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+from typing import Any, cast
+
 import numpy as np
 import pytest
 
 from gerrytools.scoring.travel_time import (
     TravelTimeTable,
     choose_centroid,
+    load_travel_time_table,
     plan_aggregate,
+    save_travel_time_table,
     score_district,
     score_plan,
     trip_weight,
@@ -62,7 +68,193 @@ def test_od_table_index_cannot_be_supplied_by_the_caller():
 
     init_names = {f.name for f in dataclasses.fields(OD) if f.init}
     assert "_index" not in init_names
-    assert {f.name for f in dataclasses.fields(OD)} == {"unit_ids", "times", "_index"}
+    assert {f.name for f in dataclasses.fields(OD)} == {
+        "unit_ids",
+        "times",
+        "_index",
+        "_fully_reachable",
+    }
+
+
+def test_od_table_validates_statewide_connectivity():
+    connected = _line_od()
+    assert connected.is_fully_reachable
+    connected.validate_connected()
+
+    times = np.array(
+        [
+            [0.0, 10.0, np.nan],
+            [10.0, 0.0, np.nan],
+            [np.nan, np.nan, 0.0],
+        ]
+    )
+    disconnected = TravelTimeTable.from_matrix(["a", "b", "island"], times)
+    assert not disconnected.is_fully_reachable
+    assert [len(component) for component in disconnected.connectivity_components()] == [2, 1]
+    with pytest.raises(ValueError, match="requires statewide connectivity"):
+        disconnected.validate_connected()
+
+
+def test_od_table_copies_and_freezes_times_to_preserve_connectivity_invariant():
+    source = np.array([[0.0, 5.0], [5.0, 0.0]])
+    od = TravelTimeTable.from_matrix([0, 1], source)
+    source[0, 1] = np.nan
+    assert od.travel_time(0, 1) == pytest.approx(5.0)
+    with pytest.raises(ValueError, match="read-only"):
+        od.times[0, 1] = np.nan
+
+
+def test_od_table_averages_directed_times_for_scoring():
+    directed = np.array([[0.0, 5.0], [15.0, 0.0]])
+    od = TravelTimeTable.from_directed_matrix(["a", "b"], directed)
+    assert od.travel_time("a", "b") == pytest.approx(10.0)
+    assert od.travel_time("b", "a") == pytest.approx(10.0)
+
+
+@pytest.mark.parametrize(
+    ("unit_ids", "times", "message"),
+    [
+        (["a", "b"], np.zeros((2, 3)), "must be square"),
+        (["a", "b", "c"], np.zeros((2, 2)), "side length"),
+        (["a", "b"], np.array([[1.0, 5.0], [5.0, 0.0]]), "diagonal"),
+        (["a", "b"], np.array([[0.0, -5.0], [5.0, 0.0]]), "nonnegative"),
+    ],
+)
+def test_directed_matrix_rejects_invalid_inputs(unit_ids, times, message):
+    with pytest.raises(ValueError, match=message):
+        TravelTimeTable.from_directed_matrix(unit_ids, times)
+
+
+def test_od_table_rejects_an_asymmetric_scoring_matrix():
+    with pytest.raises(ValueError, match="must be symmetric"):
+        TravelTimeTable.from_matrix(["a", "b"], np.array([[0.0, 5.0], [15.0, 0.0]]))
+
+
+@pytest.mark.parametrize(
+    "times",
+    [
+        np.array([[1.0, 5.0], [5.0, 0.0]]),
+        np.array([[0.0, -5.0], [-5.0, 0.0]]),
+    ],
+)
+def test_od_table_rejects_invalid_scoring_values(times):
+    with pytest.raises(ValueError):
+        TravelTimeTable.from_matrix(["a", "b"], times)
+
+
+def test_travel_time_artifact_round_trip(tmp_path: Path):
+    path = tmp_path / "travel_times.npz"
+    save_travel_time_table(
+        path,
+        _line_od(),
+        time_unit="seconds",
+        metadata={"state": "KS", "geography": "vtd2020"},
+    )
+
+    artifact = load_travel_time_table(path)
+    assert artifact.table.unit_ids == (0, 1, 2)
+    assert artifact.table.times == pytest.approx(_line_od().times)
+    assert artifact.time_unit == "seconds"
+    assert artifact.metadata == {"state": "KS", "geography": "vtd2020"}
+
+
+def test_artifact_save_rejects_disconnected_table(tmp_path: Path):
+    disconnected = TravelTimeTable.from_matrix(
+        ["mainland", "island"],
+        np.array([[0.0, np.nan], [np.nan, 0.0]]),
+    )
+    with pytest.raises(ValueError, match="requires statewide connectivity"):
+        save_travel_time_table(tmp_path / "invalid.npz", disconnected)
+
+
+def test_artifact_save_rejects_unsupported_values(tmp_path: Path):
+    with pytest.raises(ValueError, match="time_unit"):
+        save_travel_time_table(
+            tmp_path / "bad-unit.npz",
+            _line_od(),
+            time_unit=cast(Any, "hours"),
+        )
+    with pytest.raises(TypeError, match="unit IDs"):
+        save_travel_time_table(
+            tmp_path / "bad-id.npz",
+            TravelTimeTable.from_matrix([1.5], np.zeros((1, 1))),
+        )
+    with pytest.raises(TypeError, match="JSON-serializable"):
+        save_travel_time_table(
+            tmp_path / "bad-metadata.npz",
+            _line_od(),
+            metadata={"not_json": object()},
+        )
+
+
+def _write_artifact_parts(
+    path: Path,
+    *,
+    unit_ids: object = (0, 1),
+    metadata: object = None,
+    include_times: bool = True,
+) -> None:
+    if metadata is None:
+        metadata = {
+            "schema_version": 1,
+            "time_unit": "seconds",
+            "symmetrization": "mean_of_directions",
+            "matrix_dtype": "float32",
+            "metadata": {},
+        }
+    values: dict[str, Any] = {
+        "unit_ids_json": np.array(json.dumps(unit_ids)),
+        "metadata_json": np.array(json.dumps(metadata)),
+    }
+    if include_times:
+        values["times"] = np.array([[0.0, 5.0], [5.0, 0.0]], dtype=np.float32)
+    np.savez_compressed(path, **values)
+
+
+def test_artifact_load_rejects_missing_fields(tmp_path: Path):
+    path = tmp_path / "missing.npz"
+    _write_artifact_parts(path, include_times=False)
+    with pytest.raises(ValueError, match="missing fields"):
+        load_travel_time_table(path)
+
+
+@pytest.mark.parametrize(
+    ("unit_ids", "metadata", "message"),
+    [
+        ([True, 1], None, "unit_ids_json"),
+        ([0, 1], [], "metadata_json"),
+        ([0, 1], {"schema_version": 999}, "schema version"),
+        (
+            [0, 1],
+            {"schema_version": 1, "symmetrization": "minimum"},
+            "mean-of-directions",
+        ),
+        (
+            [0, 1],
+            {
+                "schema_version": 1,
+                "symmetrization": "mean_of_directions",
+                "time_unit": "hours",
+            },
+            "travel-time unit",
+        ),
+        (
+            [0, 1],
+            {
+                "schema_version": 1,
+                "symmetrization": "mean_of_directions",
+                "time_unit": "seconds",
+                "metadata": [],
+            },
+            "metadata field",
+        ),
+    ],
+)
+def test_artifact_load_rejects_invalid_schema(tmp_path: Path, unit_ids, metadata, message):
+    path = tmp_path / "invalid-schema.npz"
+    _write_artifact_parts(path, unit_ids=unit_ids, metadata=metadata)
+    with pytest.raises(ValueError, match=message):
+        load_travel_time_table(path)
 
 
 def test_ptt_unweighted_divides_by_number_of_pairs():
@@ -104,7 +296,7 @@ def test_centroid_returns_none_for_empty_units():
     assert choose_centroid([], {}, _line_od(), "none") is None
 
 
-def test_centroid_skips_a_candidate_that_cannot_reach_every_unit():
+def test_centroid_rejects_a_disconnected_statewide_table():
     times = np.array(
         [
             [0.0, 10.0, np.nan],
@@ -113,8 +305,8 @@ def test_centroid_skips_a_candidate_that_cannot_reach_every_unit():
         ]
     )
     od = TravelTimeTable.from_matrix([0, 1, 2], times)
-    # 0 and 2 can't reach each other, so only 1 is a valid centroid candidate.
-    assert choose_centroid([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, od, "none") == 1
+    with pytest.raises(ValueError, match="requires statewide connectivity"):
+        choose_centroid([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, od, "none")
 
 
 def test_centroid_breaks_ties_by_input_order_for_unorderable_ids():
@@ -149,7 +341,7 @@ def test_ctt_divides_by_number_of_centroid_trips():
     assert scores.ctt_max == pytest.approx(10.0)
 
 
-def test_district_skips_unreachable_pairs_but_still_scores_the_rest():
+def test_district_rejects_unreachable_pairs_instead_of_silently_dropping_them():
     times = np.array(
         [
             [0.0, 10.0, np.nan],
@@ -158,12 +350,11 @@ def test_district_skips_unreachable_pairs_but_still_scores_the_rest():
         ]
     )
     od = TravelTimeTable.from_matrix([0, 1, 2], times)
-    scores = score_district([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, od, "none")
-    # Only the 0-1 and 1-2 pairs are reachable: (10 + 15) / 2.
-    assert scores.ptt_mean == pytest.approx(12.5)
+    with pytest.raises(ValueError, match="requires statewide connectivity"):
+        score_district([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, od, "none")
 
 
-def test_district_all_pairs_unreachable_has_no_ptt_and_no_centroid():
+def test_district_rejects_a_fully_disconnected_statewide_table():
     times = np.array(
         [
             [0.0, np.nan, np.nan],
@@ -172,21 +363,20 @@ def test_district_all_pairs_unreachable_has_no_ptt_and_no_centroid():
         ]
     )
     od = TravelTimeTable.from_matrix([0, 1, 2], times)
-    scores = score_district([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, od, "none")
-    assert scores.ptt_mean != scores.ptt_mean  # NaN: zero reachable pairs
-    assert scores.centroid is None
+    with pytest.raises(ValueError, match="requires statewide connectivity"):
+        score_district([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, od, "none")
 
 
-def test_centroid_trips_skips_a_trip_missing_from_a_caller_supplied_centroid():
-    # score_district always picks a centroid that reaches every unit (see
-    # choose_centroid), so this path only matters if centroid_trips is called
-    # directly with an arbitrary centroid, which it's public enough to allow.
+def test_centroid_trips_rejects_a_missing_trip_from_a_caller_supplied_centroid():
     from gerrytools.scoring.travel_time.district import centroid_trips
 
     times = np.array([[0.0, 10.0, np.nan], [10.0, 0.0, 5.0], [np.nan, 5.0, 0.0]])
     od = TravelTimeTable.from_matrix([0, 1, 2], times)
-    times_out, weights_out = centroid_trips([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, od, "none", 0)
-    assert times_out == [0.0, 10.0]  # 0->2 is NaN and dropped
+    with pytest.raises(ValueError, match="Missing travel time"):
+        centroid_trips([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, od, "none", 0)
+
+
+def test_all_zero_population_has_no_people_aware_centroid_or_weighted_max():
     # p+p weight is 0 for every trip when every population is 0: the mean is a
     # legitimate 0, but there's no *active* (weight > 0) trip to take a max
     # over, and a people-aware centroid has no candidate with population > 0.
@@ -201,6 +391,28 @@ def test_singleton_is_nan():
     scores = score_district([1], {1: 5.0}, _line_od(), "none")
     assert scores.centroid is None
     assert all(x != x for x in (scores.ptt_mean, scores.ptt_max, scores.ctt_mean, scores.ctt_max))
+
+
+def test_invalid_district_scores_propagate_to_plan_summaries():
+    plan = score_plan(
+        {"ordinary": [0, 1], "singleton": [2]},
+        {0: 1.0, 1: 1.0, 2: 1.0},
+        _line_od(),
+        "none",
+    )
+    assert all(
+        value != value
+        for value in (
+            plan.ptt_mean,
+            plan.ctt_mean,
+            plan.ptt_max_district_mean,
+            plan.ctt_max_district_mean,
+            plan.ptt_global_max,
+            plan.ctt_global_max,
+            plan.ptt_mean_of_maxes,
+            plan.ctt_mean_of_maxes,
+        )
+    )
 
 
 def test_plan_layer_b_aggregates():

@@ -3,8 +3,8 @@
 District travel-time scores keep trip weights in the numerator and divide by
 the number of trips in that sum:
 
-- PTT: ``sum_{i<j} (t * w) / (# finite pairs)``
-- CTT: ``sum_u (t * w) / (# finite centroid trips)``
+- PTT: ``sum_{i<j} (t * w) / (# pairs)``
+- CTT: ``sum_u (t * w) / (# centroid-to-unit trips)``
 
 Units therefore depend on the weight mode:
 
@@ -62,13 +62,16 @@ def pairwise_trips(
     od: TravelTimeTable,
     weight: WeightMode,
 ) -> tuple[list[float], list[float]]:
-    """Collect finite pairwise times and weights for PTT (i < j)."""
+    """Collect pairwise times and weights for PTT (i < j)."""
     times: list[float] = []
     weights: list[float] = []
     for i, j in combinations(units, 2):
         t_ij = od.travel_time(i, j)
         if is_missing(t_ij):
-            continue
+            raise ValueError(
+                f"Missing travel time for pair ({i!r}, {j!r}); "
+                "validate statewide connectivity before scoring"
+            )
         w = trip_weight(populations[i], populations[j], weight)
         times.append(t_ij)
         weights.append(w)
@@ -82,7 +85,7 @@ def centroid_trips(
     weight: WeightMode,
     centroid: UnitId,
 ) -> tuple[list[float], list[float]]:
-    """Collect finite times and weights from centroid to each unit (incl. self).
+    """Collect times and weights from centroid to each unit (incl. self).
 
     Reads ``od.travel_time(centroid, u)``, i.e. centroid-outbound. ``od`` is
     assumed symmetric (see :class:`~.od_table.TravelTimeTable`), so this is
@@ -94,7 +97,10 @@ def centroid_trips(
     for u in units:
         t_cu = od.travel_time(centroid, u)
         if is_missing(t_cu):
-            continue
+            raise ValueError(
+                f"Missing travel time from centroid {centroid!r} to unit {u!r}; "
+                "validate statewide connectivity before scoring"
+            )
         w = trip_weight(pop_c, float(populations[u]), weight)
         times.append(t_cu)
         weights.append(w)
@@ -109,9 +115,11 @@ def score_district(
 ) -> DistrictTravelScores:
     """Compute PTT/CTT per-trip scores and maxes for one district.
 
-    Singletons (fewer than 2 units) yield NaN for all four scores.
+    The OD table must be statewide connected. Singletons (fewer than 2
+    units) yield NaN for all four scores.
     """
     units = list(units)
+    od.validate_connected()
     if len(units) < 2:
         return DistrictTravelScores(
             ptt_mean=float("nan"),

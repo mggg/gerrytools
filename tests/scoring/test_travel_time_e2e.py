@@ -40,6 +40,15 @@ def test_e2e_build_od_shortest_paths():
     assert od.travel_time(3, 0) == pytest.approx(30.0)
 
 
+def test_e2e_build_od_averages_opposite_directions():
+    G = nx.DiGraph()
+    G.add_edge(10, 20, travel_time=5.0)
+    G.add_edge(20, 10, travel_time=15.0)
+    od = build_od_from_graph(G, {"a": 10, "b": 20})
+    assert od.travel_time("a", "b") == pytest.approx(10.0)
+    assert od.travel_time("b", "a") == pytest.approx(10.0)
+
+
 def test_build_od_rejects_snap_node_not_in_graph():
     G, snaps = _corridor_graph()
     snaps[4] = 999  # 999 was never added to G
@@ -54,12 +63,33 @@ def test_build_od_rejects_edge_missing_the_weight_attribute():
         build_od_from_graph(G, snaps)
 
 
+@pytest.mark.parametrize("invalid_weight", ["slow", float("nan"), float("inf"), -1.0])
+def test_build_od_rejects_invalid_edge_weights(invalid_weight):
+    G, snaps = _corridor_graph()
+    G[10][20]["travel_time"] = invalid_weight
+    with pytest.raises(ValueError, match="non-finite or negative"):
+        build_od_from_graph(G, snaps)
+
+
 def test_build_od_marks_genuinely_disconnected_units_as_nan():
     G, snaps = _corridor_graph()
     G.add_edge(50, 60, travel_time=1.0)  # a second, disconnected component
     snaps[4] = 50
     od = build_od_from_graph(G, snaps)
     assert od.travel_time(0, 4) != od.travel_time(0, 4)  # NaN: no path exists
+    assert not od.is_fully_reachable
+    with pytest.raises(ValueError, match="requires statewide connectivity"):
+        od.validate_connected()
+
+
+def test_e2e_scoring_rejects_a_disconnected_statewide_table():
+    G, snaps = _corridor_graph()
+    G.add_edge(50, 60, travel_time=1.0)
+    snaps[4] = 50
+    od = build_od_from_graph(G, snaps)
+    pops = {unit: 1.0 for unit in snaps}
+    with pytest.raises(ValueError, match="requires statewide connectivity"):
+        pairwise_travel_time({1: [0, 1], 2: [2, 3]}, pops, od)
 
 
 def test_e2e_paths_may_leave_district():

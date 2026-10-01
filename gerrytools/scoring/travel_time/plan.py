@@ -1,7 +1,8 @@
 """Layer B — plan-level summaries from district scores.
 
-Plan mean averages district Layer-A scores.
-Three max-style summaries are offered for experimentation.
+Plan mean averages district Layer-A scores. Three max-style summaries are
+offered for experimentation. A non-finite district value invalidates the
+corresponding plan summary; districts are never silently dropped.
 """
 
 from __future__ import annotations
@@ -36,14 +37,20 @@ class PlanTravelScores:
     ctt_mean_of_maxes: float
 
 
-def _mean_finite(values: Iterable[float]) -> float:
-    vals = [v for v in values if is_finite(v)]
-    return float(sum(vals) / len(vals)) if vals else float("nan")
+def _mean_if_all_finite(values: Iterable[float]) -> float:
+    """Return the mean only when every district contributes a finite score."""
+    vals = list(values)
+    if not vals or not all(is_finite(v) for v in vals):
+        return float("nan")
+    return float(sum(vals) / len(vals))
 
 
-def _max_finite(values: Iterable[float]) -> float:
-    vals = [v for v in values if is_finite(v)]
-    return float(max(vals)) if vals else float("nan")
+def _max_if_all_finite(values: Iterable[float]) -> float:
+    """Return the maximum only when every district contributes a finite score."""
+    vals = list(values)
+    if not vals or not all(is_finite(v) for v in vals):
+        return float("nan")
+    return float(max(vals))
 
 
 def score_plan(
@@ -59,6 +66,10 @@ def score_plan(
         populations: Population for every unit that appears in ``parts``.
         od: Statewide (or larger) travel-time table.
         weight: Trip weight mode.
+
+    Notes:
+        ``od`` must pass :meth:`TravelTimeTable.validate_connected`. A
+        non-finite district score propagates to its plan-level summaries.
     """
     by_district: dict[UnitId, DistrictTravelScores] = {}
     for district_id, units in parts.items():
@@ -68,14 +79,14 @@ def score_plan(
 
     return PlanTravelScores(
         by_district=by_district,
-        ptt_mean=_mean_finite(r.ptt_mean for r in rows),
-        ctt_mean=_mean_finite(r.ctt_mean for r in rows),
-        ptt_max_district_mean=_max_finite(r.ptt_mean for r in rows),
-        ctt_max_district_mean=_max_finite(r.ctt_mean for r in rows),
-        ptt_global_max=_max_finite(r.ptt_max for r in rows),
-        ctt_global_max=_max_finite(r.ctt_max for r in rows),
-        ptt_mean_of_maxes=_mean_finite(r.ptt_max for r in rows),
-        ctt_mean_of_maxes=_mean_finite(r.ctt_max for r in rows),
+        ptt_mean=_mean_if_all_finite(r.ptt_mean for r in rows),
+        ctt_mean=_mean_if_all_finite(r.ctt_mean for r in rows),
+        ptt_max_district_mean=_max_if_all_finite(r.ptt_mean for r in rows),
+        ctt_max_district_mean=_max_if_all_finite(r.ctt_mean for r in rows),
+        ptt_global_max=_max_if_all_finite(r.ptt_max for r in rows),
+        ctt_global_max=_max_if_all_finite(r.ctt_max for r in rows),
+        ptt_mean_of_maxes=_mean_if_all_finite(r.ptt_max for r in rows),
+        ctt_mean_of_maxes=_mean_if_all_finite(r.ctt_max for r in rows),
     )
 
 
