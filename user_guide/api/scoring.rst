@@ -48,6 +48,7 @@ scoring guide <../user/scoring/bendl>` for a complete example and the physical f
    :imported-members:
    :undoc-members:
    :show-inheritance:
+   :exclude-members: CentroidTravelTime, FerryBuildSummary, PairwiseTravelTime, TravelTimeArtifact, TravelTimeBuildReport, TravelTimeBuildResult, TravelTimeScorer, TravelTimeTable, build_osm_drive_graph, build_travel_time_table, build_travel_time_table_from_pbf, census_representative_points, centroid_travel_time, load_travel_time_table, pairwise_travel_time, save_travel_time_table, snap_units_to_graph
 
 Array formulas
 --------------
@@ -58,3 +59,19 @@ axis unless an individual function documents another contract.
 .. automodule:: gerrytools.scoring.formulas
    :members:
    :exclude-members: TurnoutModel
+
+Travel-time scores
+------------------
+
+Pairwise (PTT) and centroid (CTT) drive-time scores over a finished unit-to-unit
+OD table. Each scoring time is the arithmetic mean of the two directed route times.
+Routes may leave district boundaries, but the table must contain a finite time for
+every unit pair. These helpers reject disconnected tables and are independent of
+the compiled ``PlanEvaluator`` engine. See :doc:`the travel-time guide
+<../user/scoring/travel_time>` for formulas, units, and connectivity policy.
+
+.. automodule:: gerrytools.scoring.travel_time
+   :members:
+   :imported-members:
+   :undoc-members:
+   :show-inheritance:

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `gerrytools.scoring.travel_time`: pairwise (PTT) and centroid (CTT) drive-time scores over a
+  unit-to-unit travel-time table, plus an optional reproducible OSM/PBF builder. PTT supports
+  ``none`` / ``p+p`` / ``p*p``; CTT supports ``none`` / destination-population ``p`` and never uses
+  the centroid unit's population. Includes district and plan aggregates, strict connectivity
+  validation, mean-of-directions symmetrization, and pickle-free table serialization.
+  Population-weighted scores reject missing or invalid populations; singleton districts validate
+  OD membership before returning `NaN`. The builder constructs travel times between the connected
+  road-network nodes nearest caller-supplied representative points (for example Census
+  ``INTPTLAT20`` / ``INTPTLON20``), adds eligible vehicle ferries, retains the largest strongly
+  connected driving component, and reports snap-distance diagnostics. These scores are not part
+  of the compiled `PlanEvaluator` engine.
+
 ## [2.0.1] - 2026-08-05
 
 This release contains breaking changes that were intended to ship in 2.0.0, so 2.0.0 has been

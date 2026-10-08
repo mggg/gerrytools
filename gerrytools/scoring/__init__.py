@@ -1,6 +1,6 @@
 """Plan evaluation through reusable scoring-engine metrics and array formulas."""
 
-from . import formulas, single_plan
+from . import formulas, single_plan, travel_time
 from .evaluator import Assignment, PlanEvaluator
 from .formulas import TurnoutModel
 from .metrics import (
@@ -87,6 +87,32 @@ from .single_plan import (
     tally,
     tally_by_region,
 )
+from .travel_time import (
+    CENTROID_WEIGHT_MODES,
+    DEFAULT_FERRY_SPEED_KPH,
+    PAIRWISE_WEIGHT_MODES,
+    CentroidTravelTime,
+    CentroidWeightMode,
+    FerryBuildSummary,
+    PairwiseTravelTime,
+    PairwiseWeightMode,
+    TravelTimeArtifact,
+    TravelTimeBuildReport,
+    TravelTimeBuildResult,
+    TravelTimeScorer,
+    TravelTimeTable,
+    build_osm_drive_graph,
+    build_travel_time_table,
+    build_travel_time_table_from_pbf,
+    census_representative_points,
+    centroid_travel_time,
+    centroid_trip_weight,
+    load_travel_time_table,
+    pairwise_travel_time,
+    pairwise_trip_weight,
+    save_travel_time_table,
+    snap_units_to_graph,
+)
 
 __all__ = [
     "Assignment",
@@ -103,6 +129,7 @@ __all__ = [
     "Eguia",
     "EnsembleEvalResult",
     "EvaluationMemoryError",
+    "DEFAULT_FERRY_SPEED_KPH",
     "MaxAbsolutePopulationDeviation",
     "MaxPopulationDeviation",
     "MeanAbsoluteSeatVoteGap",
@@ -146,6 +173,30 @@ __all__ = [
     "efficiency_gap",
     "eguia",
     "formulas",
+    "travel_time",
+    "CENTROID_WEIGHT_MODES",
+    "PAIRWISE_WEIGHT_MODES",
+    "CentroidWeightMode",
+    "FerryBuildSummary",
+    "PairwiseWeightMode",
+    "TravelTimeArtifact",
+    "TravelTimeBuildReport",
+    "TravelTimeBuildResult",
+    "TravelTimeTable",
+    "build_osm_drive_graph",
+    "build_travel_time_table",
+    "build_travel_time_table_from_pbf",
+    "census_representative_points",
+    "centroid_trip_weight",
+    "load_travel_time_table",
+    "pairwise_trip_weight",
+    "pairwise_travel_time",
+    "save_travel_time_table",
+    "snap_units_to_graph",
+    "centroid_travel_time",
+    "PairwiseTravelTime",
+    "CentroidTravelTime",
+    "TravelTimeScorer",
     "max_absolute_population_deviation",
     "max_population_deviation",
     "mean_absolute_seat_vote_gap",
