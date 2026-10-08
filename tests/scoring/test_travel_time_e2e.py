@@ -12,10 +12,10 @@ from gerrytools.scoring.travel_time import (
     CentroidTravelTime,
     PairwiseTravelTime,
     TravelTimeScorer,
-    build_od_from_graph,
     centroid_travel_time,
     pairwise_travel_time,
 )
+from gerrytools.scoring.travel_time.build_od import build_od_from_graph
 
 
 def _corridor_graph() -> tuple[nx.DiGraph, dict[int, int]]:
@@ -97,7 +97,7 @@ def test_e2e_paths_may_leave_district():
     G, snaps = _corridor_graph()
     od = build_od_from_graph(G, snaps)
     pops = {0: 10.0, 1: 10.0, 2: 10.0, 3: 10.0}
-    scorer = TravelTimeScorer(weight="none")
+    scorer = TravelTimeScorer()
     d = scorer.district([0, 2], pops, od)
     assert d.ptt_mean == pytest.approx(20.0)  # one pair
     assert d.ptt_max == pytest.approx(20.0)
@@ -133,7 +133,7 @@ def test_e2e_uneven_plan_global_max_and_mean_of_maxes():
     pops = {0: 1.0, 1: 1.0, 2: 1.0, 3: 1.0}
     parts = {"west": [0, 1], "east": [0, 1, 2, 3]}
 
-    plan = TravelTimeScorer("none").evaluate(parts, pops, od)
+    plan = TravelTimeScorer().evaluate(parts, pops, od)
     assert plan.by_district["west"].ptt_mean == pytest.approx(10.0)
     assert plan.by_district["east"].ptt_mean == pytest.approx((10 + 20 + 30 + 10 + 20 + 10) / 6.0)
     assert plan.ptt_global_max == pytest.approx(30.0)
@@ -155,3 +155,15 @@ def test_e2e_weighted_p_times_p_keeps_population_in_units():
     people = pairwise_travel_time(parts, pops, od, weight="p*p")
     # Same /#pairs; p*p leaves people² in the numerator so the score is larger.
     assert people > unweighted
+
+
+def test_e2e_ctt_population_weight_uses_only_destination_population():
+    G, snaps = _corridor_graph()
+    od = build_od_from_graph(G, snaps)
+    pops = {0: 100.0, 1: 0.0, 2: 100.0, 3: 0.0}
+    parts = {1: [0, 1, 2]}
+
+    score = centroid_travel_time(parts, pops, od, weight="p")
+    # Unit 1 is the center even though its own population is zero. Only the
+    # two destination populations weight its 10-minute trips.
+    assert score == pytest.approx((10 * 100 + 0 * 0 + 10 * 100) / 3)

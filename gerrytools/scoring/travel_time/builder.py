@@ -10,6 +10,7 @@ import importlib
 import json
 import math
 import re
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
@@ -123,10 +124,12 @@ class TravelTimeBuildResult:
     table: TravelTimeTable | None
     report: TravelTimeBuildReport
     unit_to_node: Mapping[UnitId, Hashable]
+    snap_distances_m: Mapping[UnitId, float] = field(default_factory=dict)
     directed_times: np.ndarray | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "unit_to_node", MappingProxyType(dict(self.unit_to_node)))
+        object.__setattr__(self, "snap_distances_m", MappingProxyType(dict(self.snap_distances_m)))
         if self.directed_times is not None:
             directed = np.array(self.directed_times, dtype=np.float32, copy=True)
             directed.setflags(write=False)
@@ -134,7 +137,12 @@ class TravelTimeBuildResult:
 
     @property
     def is_applicable(self) -> bool:
-        """Whether a connected scoring table was produced."""
+        """Whether a connected scoring table was produced.
+
+        Applicability means the selected snapped road nodes are mutually
+        reachable. It does not prove that every representative point was
+        geographically near its snapped node; inspect ``snap_distances_m``.
+        """
         return self.table is not None
 
 
@@ -356,7 +364,13 @@ def build_osm_drive_graph(
     *,
     ferry_speed_kph: float = DEFAULT_FERRY_SPEED_KPH,
 ) -> tuple[nx.MultiDiGraph, FerryBuildSummary]:
-    """Build a projected, directed, retain-all driving graph from an OSM PBF."""
+    """Build the principal mutually routable driving graph from an OSM PBF.
+
+    All OSM driving components are retained until eligible vehicle ferries have
+    been added. The returned graph is then restricted to its largest strongly
+    connected component so that representative points cannot snap to isolated
+    road fragments or directionally inaccessible components.
+    """
     source = Path(pbf_path)
     if not source.is_file():
         raise FileNotFoundError(f"OSM PBF not found: {source}")
@@ -403,8 +417,44 @@ def build_osm_drive_graph(
         keep_relations=False,
     )
     summary = add_vehicle_ferries(graph, ferries, ferry_speed_kph=ferry_speed_kph)
+
+    original_node_count = graph.number_of_nodes()
+    original_edge_count = graph.number_of_edges()
+    principal_nodes: set[Hashable] = set()
+    strong_component_count = 0
+    for component in nx.strongly_connected_components(graph):
+        strong_component_count += 1
+        if len(component) > len(principal_nodes):
+            principal_nodes = component
+    if not principal_nodes:
+        raise ValueError(f"No strongly connected driving component found in {source}")
+
+    removed_nodes = [node for node in graph if node not in principal_nodes]
+    graph.remove_nodes_from(removed_nodes)
+    connectivity_filter = {
+        "method": "largest_strongly_connected_component",
+        "original_strong_component_count": strong_component_count,
+        "original_node_count": original_node_count,
+        "original_edge_count": original_edge_count,
+        "retained_node_count": graph.number_of_nodes(),
+        "retained_edge_count": graph.number_of_edges(),
+        "removed_node_count": original_node_count - graph.number_of_nodes(),
+        "removed_edge_count": original_edge_count - graph.number_of_edges(),
+    }
     graph.graph["source_pbf"] = str(source.resolve())
     graph.graph["ferry_speed_kph"] = float(ferry_speed_kph)
+    graph.graph["connectivity_filter"] = connectivity_filter
+    if connectivity_filter["removed_node_count"]:
+        warnings.warn(
+            "The principal-road connectivity filter removed "
+            f"{connectivity_filter['removed_node_count']} of {original_node_count} road nodes "
+            f"and {connectivity_filter['removed_edge_count']} of {original_edge_count} edges. "
+            "Eligible vehicle ferries were added before this filter. Inspect snap distances "
+            "for islands or other geographies whose representative points may have snapped "
+            "onto the retained component from far away.",
+            UserWarning,
+            stacklevel=2,
+        )
     return graph, summary
 
 
@@ -414,7 +464,12 @@ def snap_units_to_graph(
     *,
     id_column: str,
 ) -> tuple[dict[UnitId, Hashable], dict[UnitId, float]]:
-    """Snap representative points to nearest graph nodes and report distances."""
+    """Snap representative points to nearest graph nodes and report distances.
+
+    Points may use any declared CRS; they are projected to the road-graph CRS
+    before snapping. The graph from :func:`build_osm_drive_graph` is already
+    restricted to its principal strongly connected component.
+    """
     if id_column not in unit_points.columns:
         raise KeyError(f"Unit ID column not found: {id_column!r}")
     if unit_points.crs is None:
@@ -422,13 +477,17 @@ def snap_units_to_graph(
     if graph.graph.get("crs") is None:
         raise ValueError("road graph must declare a CRS")
     ids = unit_points[id_column].to_list()
-    if len(ids) == 0 or len(set(ids)) != len(ids):
-        raise ValueError("unit_points must contain unique IDs and at least one row")
+    if len(ids) == 0 or len(set(ids)) != len(ids) or bool(pd.isna(ids).any()):
+        raise ValueError("unit_points must contain unique, non-missing IDs and at least one row")
     projected = unit_points.to_crs(graph.graph["crs"])
     if not all(
         isinstance(geometry, Point) and not geometry.is_empty for geometry in projected.geometry
     ):
         raise ValueError("unit_points geometry must contain nonempty Point values")
+    xs = projected.geometry.x.to_numpy(dtype=float)
+    ys = projected.geometry.y.to_numpy(dtype=float)
+    if not np.isfinite(xs).all() or not np.isfinite(ys).all():
+        raise ValueError("unit_points coordinates must be finite")
 
     try:
         ox = importlib.import_module("osmnx")
@@ -436,15 +495,27 @@ def snap_units_to_graph(
         raise ImportError("Install gerrytools[travel-time] to snap units to an OSM graph") from exc
     nearest, distances = ox.distance.nearest_nodes(
         graph,
-        X=projected.geometry.x.to_numpy(),
-        Y=projected.geometry.y.to_numpy(),
+        X=xs,
+        Y=ys,
         return_dist=True,
     )
-    nodes = np.atleast_1d(nearest)
+    nodes = np.atleast_1d(nearest).tolist()
     distance_values = np.atleast_1d(distances).astype(float)
     if not np.isfinite(distance_values).all():
         raise ValueError("one or more units could not be snapped to a finite graph distance")
-    return dict(zip(ids, nodes.tolist())), dict(zip(ids, distance_values.tolist()))
+    return dict(zip(ids, nodes)), dict(zip(ids, distance_values.tolist()))
+
+
+def _json_unit_ids(unit_ids: Sequence[UnitId]) -> list[str | int]:
+    serializable: list[str | int] = []
+    for unit_id in unit_ids:
+        if isinstance(unit_id, str):
+            serializable.append(unit_id)
+        elif isinstance(unit_id, (int, np.integer)) and not isinstance(unit_id, bool):
+            serializable.append(int(unit_id))
+        else:
+            raise TypeError("Travel-time unit IDs must be strings or integers")
+    return serializable
 
 
 def compute_directed_travel_times(
@@ -533,14 +604,7 @@ def _save_directed_audit(
     unit_ids: Sequence[UnitId],
     directed: np.ndarray,
 ) -> None:
-    serializable_ids: list[str | int] = []
-    for unit_id in unit_ids:
-        if isinstance(unit_id, str):
-            serializable_ids.append(unit_id)
-        elif isinstance(unit_id, (int, np.integer)) and not isinstance(unit_id, bool):
-            serializable_ids.append(int(unit_id))
-        else:
-            raise TypeError("Directed-audit unit IDs must be strings or integers")
+    serializable_ids = _json_unit_ids(unit_ids)
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("wb") as file:
@@ -615,17 +679,16 @@ def build_travel_time_table(
         table=symmetric if applicable else None,
         report=report,
         unit_to_node=unit_to_node,
+        snap_distances_m=dict(snap_distances_m or {}),
         directed_times=directed if keep_directed else None,
     )
 
 
 def build_travel_time_table_from_pbf(
-    units: pd.DataFrame,
+    unit_points: gpd.GeoDataFrame,
     pbf_path: str | Path,
     *,
     id_column: str,
-    latitude_column: str = "INTPTLAT20",
-    longitude_column: str = "INTPTLON20",
     ferry_speed_kph: float = DEFAULT_FERRY_SPEED_KPH,
     batch_size: int = 32,
     keep_directed: bool = False,
@@ -634,26 +697,39 @@ def build_travel_time_table_from_pbf(
     directed_audit_path: str | Path | None = None,
     metadata: Mapping[str, Any] | None = None,
 ) -> TravelTimeBuildResult:
-    """Build a complete table from Census-style units and a local OSM PBF."""
-    points = census_representative_points(
-        units,
-        id_column=id_column,
-        latitude_column=latitude_column,
-        longitude_column=longitude_column,
-    )
+    """Build a complete table from representative points and a local OSM PBF.
+
+    ``unit_points`` must be a nonempty GeoDataFrame of Point geometries with a
+    declared CRS and unique ``id_column`` values. This helper does not inspect
+    polygons, calculate centroids, or repair geometry.
+    """
+    if not isinstance(unit_points, gpd.GeoDataFrame):
+        raise TypeError("unit_points must be a GeoDataFrame of Point geometries")
     graph, ferry = build_osm_drive_graph(pbf_path, ferry_speed_kph=ferry_speed_kph)
-    unit_to_node, snap_distances = snap_units_to_graph(graph, points, id_column=id_column)
+    unit_to_node, snap_distances = snap_units_to_graph(
+        graph,
+        unit_points,
+        id_column=id_column,
+    )
     provenance = dict(metadata or {})
     provenance.update(
         {
             "source_pbf": str(Path(pbf_path).resolve()),
             "representative_point": {
-                "latitude_column": latitude_column,
-                "longitude_column": longitude_column,
+                "method": "caller_supplied_points",
+                "crs": str(unit_points.crs),
             },
-            "snapping": "nearest_drive_graph_node",
+            "snapping": {
+                "method": "nearest_drive_graph_node",
+                "road_network": "principal_strong_component",
+            },
+            "road_graph_filter": dict(graph.graph.get("connectivity_filter", {})),
             "ferry_missing_duration_speed_kph": float(ferry_speed_kph),
             "symmetrization": "mean_of_directions",
+            "measure": (
+                "Travel time between the connected road-network nodes nearest "
+                "the supplied representative points."
+            ),
         }
     )
     return build_travel_time_table(

@@ -1,16 +1,14 @@
-"""Layer A — one number (or NaN) per district.
+"""Layer A — PTT and CTT numbers (or NaN) for one district.
 
 District travel-time scores keep trip weights in the numerator and divide by
 the number of trips in that sum:
 
 - PTT: ``sum_{i<j} (t * w) / (# pairs)``
-- CTT: ``sum_u (t * w) / (# centroid-to-unit trips)``
+- CTT: ``sum_u (t * w_ctt) / (# centroid-to-unit trips)``
 
-Units therefore depend on the weight mode:
-
-- ``none``: time
-- ``p+p``: people-time (per trip)
-- ``p*p``: people²-time (per trip)
+PTT supports ``none`` (time), ``p+p`` (people-time), and ``p*p``
+(people²-time). CTT supports ``none`` (time) and destination-population
+weight ``p`` (people-time). The centroid unit's population is never used.
 
 Weighted maxes are ``max (t * w)`` in the same weight units (no trip division).
 """
@@ -25,12 +23,20 @@ import numpy as np
 
 from .centroid import choose_centroid
 from .od_table import TravelTimeTable, UnitId, is_missing
-from .weights import WeightMode, trip_weight
+from .weights import (
+    CENTROID_WEIGHT_MODES,
+    PAIRWISE_WEIGHT_MODES,
+    CentroidWeightMode,
+    PairwiseWeightMode,
+    centroid_trip_weight,
+    pairwise_trip_weight,
+    validate_populations,
+)
 
 
 @dataclass(frozen=True, slots=True)
 class DistrictTravelScores:
-    """All Layer-A scores for one district under one weight mode."""
+    """All Layer-A scores for one district under the selected family weights."""
 
     ptt_mean: float
     ptt_max: float
@@ -60,7 +66,7 @@ def pairwise_trips(
     units: Sequence[Any],
     populations: Mapping[Any, float],
     od: TravelTimeTable,
-    weight: WeightMode,
+    weight: PairwiseWeightMode,
 ) -> tuple[list[float], list[float]]:
     """Collect pairwise times and weights for PTT (i < j)."""
     times: list[float] = []
@@ -72,7 +78,7 @@ def pairwise_trips(
                 f"Missing travel time for pair ({i!r}, {j!r}); "
                 "validate statewide connectivity before scoring"
             )
-        w = trip_weight(populations[i], populations[j], weight)
+        w = pairwise_trip_weight(populations[i], populations[j], weight)
         times.append(t_ij)
         weights.append(w)
     return times, weights
@@ -82,7 +88,7 @@ def centroid_trips(
     units: Sequence[Any],
     populations: Mapping[Any, float],
     od: TravelTimeTable,
-    weight: WeightMode,
+    weight: CentroidWeightMode,
     centroid: UnitId,
 ) -> tuple[list[float], list[float]]:
     """Collect times and weights from centroid to each unit (incl. self).
@@ -93,7 +99,6 @@ def centroid_trips(
     """
     times: list[float] = []
     weights: list[float] = []
-    pop_c = float(populations[centroid])
     for u in units:
         t_cu = od.travel_time(centroid, u)
         if is_missing(t_cu):
@@ -101,7 +106,7 @@ def centroid_trips(
                 f"Missing travel time from centroid {centroid!r} to unit {u!r}; "
                 "validate statewide connectivity before scoring"
             )
-        w = trip_weight(pop_c, float(populations[u]), weight)
+        w = centroid_trip_weight(float(populations[u]), weight)
         times.append(t_cu)
         weights.append(w)
     return times, weights
@@ -111,7 +116,9 @@ def score_district(
     units: Sequence[Any],
     populations: Mapping[Any, float],
     od: TravelTimeTable,
-    weight: WeightMode,
+    *,
+    ptt_weight: PairwiseWeightMode = "none",
+    ctt_weight: CentroidWeightMode = "none",
 ) -> DistrictTravelScores:
     """Compute PTT/CTT per-trip scores and maxes for one district.
 
@@ -119,7 +126,18 @@ def score_district(
     units) yield NaN for all four scores.
     """
     units = list(units)
+    if ptt_weight not in PAIRWISE_WEIGHT_MODES:
+        raise ValueError(
+            f"Unknown pairwise weight mode {ptt_weight!r}; expected one of {PAIRWISE_WEIGHT_MODES}"
+        )
+    if ctt_weight not in CENTROID_WEIGHT_MODES:
+        raise ValueError(
+            f"Unknown centroid weight mode {ctt_weight!r}; expected one of {CENTROID_WEIGHT_MODES}"
+        )
     od.validate_connected()
+    od.require_units(units)
+    if ptt_weight != "none" or ctt_weight == "p":
+        validate_populations(units, populations)
     if len(units) < 2:
         return DistrictTravelScores(
             ptt_mean=float("nan"),
@@ -128,13 +146,10 @@ def score_district(
             ctt_max=float("nan"),
             centroid=None,
         )
-
-    od.require_units(units)
-
-    ptt_times, ptt_weights = pairwise_trips(units, populations, od, weight)
+    ptt_times, ptt_weights = pairwise_trips(units, populations, od, ptt_weight)
     ptt_mean, ptt_max = _weighted_sum_per_trip_and_max(ptt_times, ptt_weights)
 
-    centroid = choose_centroid(units, populations, od, weight)
+    centroid = choose_centroid(units, populations, od, ctt_weight)
     if centroid is None:
         return DistrictTravelScores(
             ptt_mean=ptt_mean,
@@ -144,7 +159,7 @@ def score_district(
             centroid=None,
         )
 
-    ctt_times, ctt_weights = centroid_trips(units, populations, od, weight, centroid)
+    ctt_times, ctt_weights = centroid_trips(units, populations, od, ctt_weight, centroid)
     ctt_mean, ctt_max = _weighted_sum_per_trip_and_max(ctt_times, ctt_weights)
 
     return DistrictTravelScores(

@@ -18,15 +18,17 @@ from shapely.geometry import LineString, MultiLineString, Point, Polygon
 import gerrytools.scoring.travel_time.builder as builder_module
 from gerrytools.scoring.travel_time import (
     FerryBuildSummary,
-    add_vehicle_ferries,
     build_osm_drive_graph,
     build_travel_time_table,
     build_travel_time_table_from_pbf,
     census_representative_points,
-    compute_directed_travel_times,
     load_travel_time_table,
-    parse_osm_duration_seconds,
     snap_units_to_graph,
+)
+from gerrytools.scoring.travel_time.builder import (
+    add_vehicle_ferries,
+    compute_directed_travel_times,
+    parse_osm_duration_seconds,
 )
 
 
@@ -184,6 +186,9 @@ def test_build_travel_time_table_writes_validated_artifacts(tmp_path: Path):
     assert result.report.max_directional_difference_seconds == pytest.approx(12.0)
     assert result.report.mean_snap_distance_m == pytest.approx(20.0)
     assert result.directed_times is not None and not result.directed_times.flags.writeable
+    assert dict(result.snap_distances_m) == {"a": 10.0, "b": 20.0, "c": 30.0}
+    with pytest.raises(TypeError):
+        cast(dict, result.snap_distances_m)["a"] = 0.0
     assert load_travel_time_table(output).metadata["state"] == "KS"
     assert json.loads(report_path.read_text())["status"] == "applicable"
     with np.load(audit_path, allow_pickle=False) as audit:
@@ -404,7 +409,7 @@ def test_snap_units_to_graph_returns_nodes_and_distances(monkeypatch: pytest.Mon
                 {"id": ["a", "a"]}, geometry=[Point(0, 0), Point(1, 1)], crs="EPSG:3857"
             ),
             "id",
-            "unique IDs",
+            "unique",
         ),
         (
             nx.MultiDiGraph(crs="EPSG:3857"),
@@ -419,6 +424,18 @@ def test_snap_units_to_graph_returns_nodes_and_distances(monkeypatch: pytest.Mon
 def test_snap_units_to_graph_validates_inputs(graph, points, id_column, message):
     with pytest.raises((KeyError, ValueError), match=message):
         snap_units_to_graph(graph, points, id_column=id_column)
+
+
+def test_snap_units_to_graph_rejects_nonfinite_coordinates(monkeypatch: pytest.MonkeyPatch):
+    _fake_osmnx(monkeypatch)
+    graph = nx.MultiDiGraph(crs="EPSG:3857")
+    points = gpd.GeoDataFrame(
+        {"id": ["a"]},
+        geometry=[Point(float("nan"), 0.0)],
+        crs="EPSG:3857",
+    )
+    with pytest.raises(ValueError, match="coordinates must be finite"):
+        snap_units_to_graph(graph, points, id_column="id")
 
 
 def test_snap_units_to_graph_rejects_nonfinite_distance(monkeypatch: pytest.MonkeyPatch):
@@ -454,6 +471,11 @@ def test_build_osm_drive_graph_orchestrates_pyrosm_and_osmnx(
             calls["to_graph"] = kwargs
             graph = nx.MultiDiGraph(crs="EPSG:4326")
             graph.add_edge(1, 2, length=10.0)
+            graph.add_edge(2, 1, length=10.0)
+            graph.add_edge(2, 3, length=10.0)
+            graph.add_edge(3, 2, length=10.0)
+            graph.add_edge(10, 11, length=10.0)
+            graph.add_edge(11, 10, length=10.0)
             return graph
 
         def get_data_by_custom_criteria(self, **kwargs):
@@ -478,9 +500,21 @@ def test_build_osm_drive_graph_orchestrates_pyrosm_and_osmnx(
         sys.modules, "osmnx", SimpleNamespace(routing=routing, project_graph=project_graph)
     )
 
-    graph, summary = build_osm_drive_graph(pbf)
+    with pytest.warns(UserWarning, match="ferries were added before this filter"):
+        graph, summary = build_osm_drive_graph(pbf)
     assert graph.graph["source_pbf"] == str(pbf.resolve())
     assert graph.graph["ferry_speed_kph"] == 20.0
+    assert set(graph) == {1, 2, 3}
+    assert graph.graph["connectivity_filter"] == {
+        "method": "largest_strongly_connected_component",
+        "original_strong_component_count": 2,
+        "original_node_count": 5,
+        "original_edge_count": 6,
+        "retained_node_count": 3,
+        "retained_edge_count": 4,
+        "removed_node_count": 2,
+        "removed_edge_count": 2,
+    }
     assert summary == FerryBuildSummary()
     assert calls["network"] == {"network_type": "driving", "nodes": True}
     assert cast(dict, calls["to_graph"])["retain_all"] is True
@@ -512,7 +546,11 @@ def test_build_osm_drive_graph_rejects_missing_or_empty_source(
 def test_build_travel_time_table_from_pbf_forwards_inputs_and_provenance(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    units = pd.DataFrame({"id": ["a"], "lat": [38.0], "lon": [-98.0]})
+    points = gpd.GeoDataFrame(
+        {"id": ["a"]},
+        geometry=[Point(-98.0, 38.0)],
+        crs="EPSG:4326",
+    )
     graph = nx.MultiDiGraph(crs="EPSG:3857")
     graph.add_edge(1, 2, travel_time=1.0)
     ferry = FerryBuildSummary(found=1, included=1)
@@ -525,7 +563,7 @@ def test_build_travel_time_table_from_pbf_forwards_inputs_and_provenance(
     monkeypatch.setattr(
         builder_module,
         "snap_units_to_graph",
-        lambda graph, points, id_column: ({"a": 1}, {"a": 12.0}),
+        lambda graph, points, *, id_column: ({"a": 1}, {"a": 12.0}),
     )
 
     def fake_build(graph_arg, unit_to_node, **kwargs):
@@ -536,11 +574,9 @@ def test_build_travel_time_table_from_pbf_forwards_inputs_and_provenance(
 
     monkeypatch.setattr(builder_module, "build_travel_time_table", fake_build)
     result = build_travel_time_table_from_pbf(
-        units,
+        points,
         tmp_path / "state.osm.pbf",
         id_column="id",
-        latitude_column="lat",
-        longitude_column="lon",
         metadata={"state": "KS"},
         keep_directed=True,
     )
@@ -549,12 +585,18 @@ def test_build_travel_time_table_from_pbf_forwards_inputs_and_provenance(
     assert captured["units"] == {"a": 1}
     assert captured["ferry"] == ferry
     assert captured["keep_directed"] is True
+    assert captured["snap_distances_m"] == {"a": 12.0}
     metadata = cast(dict, captured["metadata"])
     assert metadata["state"] == "KS"
     assert metadata["symmetrization"] == "mean_of_directions"
+    assert metadata["snapping"] == {
+        "method": "nearest_drive_graph_node",
+        "road_network": "principal_strong_component",
+    }
+    assert metadata["road_graph_filter"] == {}
     assert metadata["representative_point"] == {
-        "latitude_column": "lat",
-        "longitude_column": "lon",
+        "method": "caller_supplied_points",
+        "crs": "EPSG:4326",
     }
 
 
