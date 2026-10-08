@@ -12,7 +12,7 @@ from typing import Any, Iterable, Literal, Mapping, Sequence
 
 from .district import DistrictTravelScores, is_finite, score_district
 from .od_table import TravelTimeTable, UnitId
-from .weights import WeightMode
+from .weights import CentroidWeightMode, PairwiseWeightMode
 
 DistrictScoreKey = Literal["ptt_mean", "ptt_max", "ctt_mean", "ctt_max"]
 PlanAgg = Literal["mean", "max_district", "global_max", "mean_of_maxes"]
@@ -57,7 +57,9 @@ def score_plan(
     parts: Mapping[Any, Sequence[Any]],
     populations: Mapping[Any, float],
     od: TravelTimeTable,
-    weight: WeightMode,
+    *,
+    ptt_weight: PairwiseWeightMode = "none",
+    ctt_weight: CentroidWeightMode = "none",
 ) -> PlanTravelScores:
     """Score every district, then build plan-level summaries.
 
@@ -65,7 +67,8 @@ def score_plan(
         parts: Map district_id → sequence of unit ids in that district.
         populations: Population for every unit that appears in ``parts``.
         od: Statewide (or larger) travel-time table.
-        weight: Trip weight mode.
+        ptt_weight: Pairwise trip weight mode.
+        ctt_weight: Centroid-to-unit trip weight mode.
 
     Notes:
         ``od`` must pass :meth:`TravelTimeTable.validate_connected`. A
@@ -73,7 +76,13 @@ def score_plan(
     """
     by_district: dict[UnitId, DistrictTravelScores] = {}
     for district_id, units in parts.items():
-        by_district[district_id] = score_district(units, populations, od, weight)
+        by_district[district_id] = score_district(
+            units,
+            populations,
+            od,
+            ptt_weight=ptt_weight,
+            ctt_weight=ctt_weight,
+        )
 
     rows = list(by_district.values())
 

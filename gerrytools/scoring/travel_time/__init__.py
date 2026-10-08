@@ -6,16 +6,9 @@ Routes may leave a district. Every included unit must be mutually reachable thro
 the statewide road network; scoring rejects a disconnected table instead of silently
 dropping unreachable trips.
 
-Weight modes
-    ``none``
-        Each unit pair counts equally.
-    ``p+p``
-        Weight ``pop_a + pop_b``.
-    ``p*p``
-        Weight ``pop_a * pop_b`` (person-pair interpretation).
-
-Centroid selection follows weight *intent* without a ``p_c`` self-penalty:
-``none`` minimizes ``sum_u t(c,u)``; ``p+p`` / ``p*p`` minimize ``sum_u t(c,u) p_u``.
+PTT weight modes are ``none``, ``p+p``, and ``p*p``. CTT weight modes are
+``none`` and ``p``. For CTT, ``p`` is destination-unit population; the
+centroid unit's population never enters selection or scoring.
 
 Symmetric OD definition
     Every scoring time is the arithmetic mean of the two directed route times.
@@ -35,19 +28,15 @@ from .api import (
     centroid_travel_time,
     pairwise_travel_time,
 )
-from .build_od import build_od_from_graph
 from .builder import (
     DEFAULT_FERRY_SPEED_KPH,
     FerryBuildSummary,
     TravelTimeBuildReport,
     TravelTimeBuildResult,
-    add_vehicle_ferries,
     build_osm_drive_graph,
     build_travel_time_table,
     build_travel_time_table_from_pbf,
     census_representative_points,
-    compute_directed_travel_times,
-    parse_osm_duration_seconds,
     snap_units_to_graph,
 )
 from .centroid import choose_centroid
@@ -59,11 +48,18 @@ from .table_io import (
     load_travel_time_table,
     save_travel_time_table,
 )
-from .weights import PEOPLE_AWARE_MODES, WEIGHT_MODES, WeightMode, trip_weight
+from .weights import (
+    CENTROID_WEIGHT_MODES,
+    PAIRWISE_WEIGHT_MODES,
+    CentroidWeightMode,
+    PairwiseWeightMode,
+    centroid_trip_weight,
+    pairwise_trip_weight,
+)
 
 __all__ = [
-    "PEOPLE_AWARE_MODES",
-    "WEIGHT_MODES",
+    "CENTROID_WEIGHT_MODES",
+    "PAIRWISE_WEIGHT_MODES",
     "DEFAULT_FERRY_SPEED_KPH",
     "CentroidTravelTime",
     "DistrictTravelScores",
@@ -75,23 +71,21 @@ __all__ = [
     "TravelTimeBuildReport",
     "TravelTimeBuildResult",
     "TravelTimeTable",
-    "WeightMode",
-    "add_vehicle_ferries",
+    "CentroidWeightMode",
+    "PairwiseWeightMode",
     "build_osm_drive_graph",
-    "build_od_from_graph",
     "build_travel_time_table",
     "build_travel_time_table_from_pbf",
     "census_representative_points",
     "centroid_travel_time",
     "choose_centroid",
-    "compute_directed_travel_times",
     "load_travel_time_table",
     "pairwise_travel_time",
     "plan_aggregate",
-    "parse_osm_duration_seconds",
     "score_district",
     "score_plan",
     "save_travel_time_table",
     "snap_units_to_graph",
-    "trip_weight",
+    "centroid_trip_weight",
+    "pairwise_trip_weight",
 ]

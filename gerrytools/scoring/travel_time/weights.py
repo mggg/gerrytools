@@ -1,40 +1,81 @@
-"""Trip weight modes for travel-time scores.
-
-A *trip* has two endpoints ``a`` and ``b`` (unit ids) with populations
-``pop_a`` and ``pop_b``. The weight mode chooses how much that trip counts
-in a weighted mean or weighted max.
-"""
+"""Family-specific trip weights for travel-time scores."""
 
 from __future__ import annotations
 
-from typing import Literal
+import math
+from typing import Any, Literal, Mapping, Sequence
 
-WeightMode = Literal["none", "p+p", "p*p"]
+PairwiseWeightMode = Literal["none", "p+p", "p*p"]
+CentroidWeightMode = Literal["none", "p"]
 
-WEIGHT_MODES: tuple[WeightMode, ...] = ("none", "p+p", "p*p")
-
-# Modes whose weight depends on population (as opposed to "none", which treats
-# every trip identically). Centroid selection and similar logic should check
-# membership in this set rather than hardcoding ("p+p", "p*p") so a future new
-# mode can't silently fall through people-aware branches.
-PEOPLE_AWARE_MODES: frozenset[WeightMode] = frozenset({"p+p", "p*p"})
+PAIRWISE_WEIGHT_MODES: tuple[PairwiseWeightMode, ...] = ("none", "p+p", "p*p")
+CENTROID_WEIGHT_MODES: tuple[CentroidWeightMode, ...] = ("none", "p")
 
 
-def trip_weight(pop_a: float, pop_b: float, mode: WeightMode | str) -> float:
-    """Return the weight for a trip between two units.
+def validate_populations(
+    units: Sequence[Any],
+    populations: Mapping[Any, float],
+) -> None:
+    """Require finite, nonnegative numeric populations for ``units``.
 
-    Args:
-        pop_a: Population at endpoint a (nonnegative).
-        pop_b: Population at endpoint b (nonnegative).
-        mode: ``"none"`` → 1; ``"p+p"`` → pop_a + pop_b; ``"p*p"`` → pop_a * pop_b.
-
-    Returns:
-        Nonnegative weight. May be 0 when populations are 0 under ``p+p`` / ``p*p``.
+    Population validation is intentionally performed before weighted scoring.
+    Otherwise, a NaN can contaminate every candidate centroid cost and prevent
+    any candidate from being selected without producing a useful error.
     """
+    for unit in units:
+        try:
+            raw_population = populations[unit]
+        except KeyError as exc:
+            raise ValueError(f"Population is missing for unit {unit!r}") from exc
+        if isinstance(raw_population, (bool, complex)):
+            raise ValueError(
+                f"Population for unit {unit!r} must be a finite, nonnegative number; "
+                f"got {raw_population!r}"
+            )
+        try:
+            population = float(raw_population)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"Population for unit {unit!r} must be a finite, nonnegative number; "
+                f"got {raw_population!r}"
+            ) from exc
+        if not math.isfinite(population) or population < 0:
+            raise ValueError(
+                f"Population for unit {unit!r} must be a finite, nonnegative number; "
+                f"got {raw_population!r}"
+            )
+
+
+def pairwise_trip_weight(
+    pop_a: float,
+    pop_b: float,
+    mode: PairwiseWeightMode | str,
+) -> float:
+    """Return the PTT weight for a trip between two population endpoints."""
     if mode == "none":
         return 1.0
     if mode == "p+p":
         return float(pop_a) + float(pop_b)
     if mode == "p*p":
         return float(pop_a) * float(pop_b)
-    raise ValueError(f"Unknown weight mode {mode!r}; expected one of {WEIGHT_MODES}")
+    raise ValueError(
+        f"Unknown pairwise weight mode {mode!r}; expected one of {PAIRWISE_WEIGHT_MODES}"
+    )
+
+
+def centroid_trip_weight(
+    destination_population: float,
+    mode: CentroidWeightMode | str,
+) -> float:
+    """Return the CTT weight for a center-to-unit trip.
+
+    The selected centroid unit is a location, not a population endpoint. Its
+    population therefore never enters CTT selection or scoring.
+    """
+    if mode == "none":
+        return 1.0
+    if mode == "p":
+        return float(destination_population)
+    raise ValueError(
+        f"Unknown centroid weight mode {mode!r}; expected one of {CENTROID_WEIGHT_MODES}"
+    )

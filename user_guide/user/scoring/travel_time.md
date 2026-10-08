@@ -34,18 +34,37 @@ silently drops unreachable pairs.
 
 ## Weight modes
 
-| Mode | Trip weight | Interpretation |
+PTT connects two population-bearing units and supports three pairwise modes:
+
+| PTT mode | Trip weight | Interpretation |
 | --- | --- | --- |
 | `none` | `1` | Each unit pair counts equally |
 | `p+p` | `pop_a + pop_b` | Population-involved pair weight |
 | `p*p` | `pop_a * pop_b` | Person-pair weight |
 
-District scores use $\sum (t w) / (\#\ \mathrm{trips})$ so population weights stay
-in the numerator. For PTT, the denominator is the number of unordered unit pairs,
-$n(n-1)/2$. For CTT, it is the number of centroid-to-unit trips, including the
-zero-time trip from the centroid unit to itself. Units are time (`none`),
-people-time (`p+p`), or people²-time (`p*p`). Weighted maximums are $\max(tw)$
-and have the same units.
+CTT connects a selected center location to one destination unit and supports two
+modes:
+
+| CTT mode | Trip weight | Interpretation |
+| --- | --- | --- |
+| `none` | `1` | Each destination unit counts equally |
+| `p` | `pop_u` | Destination-population weight |
+
+The centroid unit represents a location, not a population endpoint. Its population
+never enters centroid selection or CTT scoring. In particular, CTT does not accept
+`p+p` or `p*p`.
+
+Whenever a population-weighted mode is selected, every participating unit must
+have a numeric, finite, nonnegative population. Missing values, `NaN`, infinity,
+negative values, and nonnumeric values raise a unit-specific `ValueError` before
+scoring. Zero population is valid.
+
+District scores use $\sum (t w) / (\#\ \mathrm{trips})$, so population weights
+stay in the numerator. For PTT, the denominator is the number of unordered unit
+pairs, $n(n-1)/2$. For CTT, it is the number of centroid-to-unit trips, including
+the zero-time trip from the centroid unit to itself. PTT units are time (`none`),
+people-time (`p+p`), or people²-time (`p*p`); CTT units are time (`none`) or
+people-time (`p`). Weighted maximums are $\max(tw)$ and have the same units.
 
 More explicitly, for district units $D$:
 
@@ -94,10 +113,10 @@ the scoring API never uses it directly.
 ## Centroid (CTT)
 
 - `none`: choose unit $c$ minimizing $\sum_u t(c,u)$
-- `p+p` / `p*p`: choose $c$ with $p_c > 0$ minimizing $\sum_u t(c,u)\,p_u$
+- `p`: choose unit $c$ minimizing $\sum_u t(c,u)\,p_u$
 
-(The $p_c$ self-penalty is intentionally omitted so centers are not pushed toward
-empty units.)
+Every unit is eligible to represent the center, including a zero-population unit.
+Only destination population $p_u$ enters the population-weighted definition.
 
 ## Plan summaries
 
@@ -111,6 +130,8 @@ Each PTT or CTT family exposes four plan-level summaries:
 | `global_max` | District maximum | Maximum across districts |
 
 A singleton district has no pairwise trip and receives `NaN` district scores.
+Its unit ID is still required to exist in the OD table, and weighted singleton
+inputs still undergo population validation before the `NaN` result is returned.
 Any non-finite district score propagates to the corresponding plan summary;
 aggregation never removes an invalid district from the plan denominator.
 
@@ -126,13 +147,15 @@ G.add_edge(20, 10, travel_time=12.0)
 G.add_edge(20, 30, travel_time=9.0)
 G.add_edge(30, 20, travel_time=11.0)
 
-od = gs.build_od_from_graph(G, {0: 10, 1: 20, 2: 30})
+result = gs.build_travel_time_table(G, {0: 10, 1: 20, 2: 30})
+assert result.is_applicable
+od = result.table
 od.validate_connected()
 parts = {1: [0, 1], 2: [1, 2]}
 pops = {0: 1.0, 1: 1.0, 2: 1.0}
 
 gs.PairwiseTravelTime(weight="none", plan_agg="mean").score(parts, pops, od)
-gs.CentroidTravelTime(weight="p*p", plan_agg="max_district").score(parts, pops, od)
+gs.CentroidTravelTime(weight="p", plan_agg="max_district").score(parts, pops, od)
 ```
 
 The corresponding convenience functions are `pairwise_travel_time(...)` and
@@ -164,28 +187,29 @@ od = artifact.table
 print(artifact.time_unit, artifact.metadata)
 ```
 
-## Building a table from Census units and OSM
+## Building a table from representative points and OSM
 
 The optional table builder requires OSMnx and Pyrosm. Install the extra from a
 checkout with `uv sync --extra travel-time`, or from a published package with
 `pip install "gerrytools[travel-time]"`.
 
-`build_travel_time_table_from_pbf(...)` performs the expensive, plan-independent
-work. It:
+The implemented unit-to-unit measure is:
 
-1. reads Census representative points from `INTPTLAT20` / `INTPTLON20` by default;
-2. builds a directed driving graph from a local OSM PBF while retaining every road
-   component;
-3. adds explicitly vehicle-compatible OSM ferry ways;
-4. uses an OSM ferry `duration` when available, otherwise estimates the crossing at
-   20 km/h with no additional waiting penalty;
-5. snaps representative points to the nearest eligible graph nodes;
-6. computes directed shortest paths in batches, then averages opposite directions;
-7. validates statewide connectivity and writes a reproducibility report; and
-8. publishes a scoring table only when every included unit pair is reachable.
+**Travel time between the connected road-network nodes nearest the supplied
+representative points.**
 
-The function is geography-generic: change the ID and representative-point columns
-to use block groups or another unit layer. It does not depend on district plans.
+Canonical workflow:
+
+1. Create or supply a point GeoDataFrame of representative locations
+   (`census_representative_points(...)` for Census `INTPTLAT20` / `INTPTLON20`,
+   or any other Point frame with a declared CRS);
+2. build a directed driving graph from a local OSM PBF, add eligible vehicle
+   ferries, then retain the largest strongly connected component;
+3. snap each point to the nearest retained road node and record snap distances;
+4. compute directed shortest paths, average opposite directions, and publish a
+   table only when every snapped-node pair is mutually reachable.
+
+One-shot helper:
 
 <!-- docs-test: skip -- requires user-supplied Census geography and OSM PBF files -->
 ```python
@@ -193,32 +217,80 @@ import geopandas as gpd
 import gerrytools.scoring as gs
 
 units = gpd.read_file("tl_2020_20_vtd20.shp")
+points = gs.census_representative_points(units, id_column="GEOID20")
 result = gs.build_travel_time_table_from_pbf(
-    units,
+    points,
     "kansas-latest.osm.pbf",
     id_column="GEOID20",
     output_path="ks_vtd2020_travel_times.npz",
     report_path="ks_vtd2020_travel_times.report.json",
-    # Optional, larger audit artifact retaining both route directions:
+    # Optional directed audit retaining both route directions:
     directed_audit_path="ks_vtd2020_directed_audit.npz",
     metadata={"state": "KS", "geography": "2020 VTD"},
 )
 
 if not result.is_applicable:
     print("Travel time is not applicable:", result.report.connectivity_component_sizes)
+else:
+    print("Max snap distance (m):", result.report.max_snap_distance_m)
 ```
+
+Equivalent stepwise form:
+
+<!-- docs-test: skip -- requires user-supplied Census geography and OSM PBF files -->
+```python
+points = gs.census_representative_points(units, id_column="GEOID20")
+graph, ferry = gs.build_osm_drive_graph("kansas-latest.osm.pbf")
+unit_to_node, snap_distances = gs.snap_units_to_graph(graph, points, id_column="GEOID20")
+result = gs.build_travel_time_table(
+    graph,
+    unit_to_node,
+    snap_distances_m=snap_distances,
+    ferry=ferry,
+)
+```
+
+`build_travel_time_table_from_pbf(...)` accepts only a Point GeoDataFrame. It does
+not inspect polygons, calculate centroids, or repair boundaries. Users without
+Census internal-point columns must supply their own representative points.
 
 Vehicle-ferry inclusion is conservative. A ferry way must affirmatively permit
 `motor_vehicle`, `motorcar`, or `vehicle`, or carry a drivable `ferry=*` road
 classification. Explicit denials and ambiguous passenger-only routes are excluded
-and counted in the report. The report also records included and estimated ferries,
-road-component counts, snap-distance statistics, directional asymmetry, and final
-unit connectivity.
+and counted in the report. Ferries are added *before* the largest strongly
+connected component is selected, so a correctly mapped vehicle ferry can keep an
+island in the principal network. Filtering occurs only in memory and does not
+modify the source PBF. A state-only PBF constrains routes to roads in that extract;
+use a broader PBF when routes that leave and re-enter the state must be represented.
 
-If the universe remains disconnected after legitimate road and ferry links are
-included, `result.table` is `None`, the report status is `not_applicable`, and no
-scoring artifact is written. The optional directed audit may still be retained for
-diagnosis.
+The build report records ferry counts, SCC filter counts, snap-distance
+statistics, directional asymmetry, and final connectivity. The builder warns when
+the connectivity filter removes road nodes or edges. Applicability means the
+selected snapped nodes are mutually reachable; it does **not** prove that every
+representative point was geographically near its snapped node. Inspect
+`result.report.mean_snap_distance_m`, `result.report.max_snap_distance_m`, and
+`result.snap_distances_m` before trusting a table.
+
+If snapped nodes remain disconnected, `result.table` is `None`, the report status
+is `not_applicable`, and no scoring artifact is written. The optional directed
+audit may still be retained for diagnosis.
+
+The published table is dense, so storage and routing work grow quadratically with
+the number of units. A single `float32` matrix for $n$ units requires $4n^2$ bytes,
+and construction needs additional working memory for directed and symmetric copies.
+Estimate the matrix size and test a deterministic subset before launching a large
+build.
+
+### Limitations
+
+- Nearest-node snapping is an approximation of unit-to-unit drive time.
+- A road segment may cross a small unit without containing an OSM graph node; this
+  is especially relevant for Census blocks. Edge-based snapping may be preferable
+  for very small units, but is not included in this version.
+- Largest-SCC filtering can cause island or secondary-component points to snap far
+  away onto the retained network. Review snap distances carefully.
+- GerryTools does not repair polygon boundaries in this builder because the public
+  path consumes points, not polygons.
 
 See the {doc}`scoring API <../../api/scoring>` for full signatures under
 `gerrytools.scoring.travel_time`.

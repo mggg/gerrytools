@@ -14,7 +14,7 @@ from typing import Any, Literal, Mapping, Sequence
 from .district import DistrictTravelScores, score_district
 from .od_table import TravelTimeTable
 from .plan import PlanAgg, PlanTravelScores, plan_aggregate, score_plan
-from .weights import WeightMode
+from .weights import CentroidWeightMode, PairwiseWeightMode
 
 Family = Literal["ptt", "ctt"]
 
@@ -38,11 +38,11 @@ def pairwise_travel_time(
     populations: Mapping[Any, float],
     od: TravelTimeTable,
     *,
-    weight: WeightMode = "none",
+    weight: PairwiseWeightMode = "none",
     plan_agg: PlanAgg = "mean",
 ) -> float:
     """Return one PTT plan score from a statewide-connected OD table."""
-    plan = score_plan(parts, populations, od, weight)
+    plan = score_plan(parts, populations, od, ptt_weight=weight)
     return plan_aggregate(plan, "ptt", plan_agg)
 
 
@@ -51,11 +51,11 @@ def centroid_travel_time(
     populations: Mapping[Any, float],
     od: TravelTimeTable,
     *,
-    weight: WeightMode = "none",
+    weight: CentroidWeightMode = "none",
     plan_agg: PlanAgg = "mean",
 ) -> float:
     """Return one CTT plan score from a statewide-connected OD table."""
-    plan = score_plan(parts, populations, od, weight)
+    plan = score_plan(parts, populations, od, ctt_weight=weight)
     return plan_aggregate(plan, "ctt", plan_agg)
 
 
@@ -63,7 +63,7 @@ def centroid_travel_time(
 class PairwiseTravelTime:
     """Reusable PTT metric description (port-ready for PlanEvaluator-style use)."""
 
-    weight: WeightMode = "none"
+    weight: PairwiseWeightMode = "none"
     plan_agg: PlanAgg = "mean"
     # TODO(port): once wired into the compiled PlanEvaluator engine, result_name
     # becomes the column/field name the engine records this metric under. Unused
@@ -89,7 +89,7 @@ class PairwiseTravelTime:
 class CentroidTravelTime:
     """Reusable CTT metric description."""
 
-    weight: WeightMode = "none"
+    weight: CentroidWeightMode = "none"
     plan_agg: PlanAgg = "mean"
     # TODO(port): see PairwiseTravelTime.result_name.
     result_name: str = "centroid_travel_time"
@@ -113,7 +113,8 @@ class CentroidTravelTime:
 class TravelTimeScorer:
     """Score a plan once and expose all Layer-A/B fields (batch / debugging)."""
 
-    weight: WeightMode = "none"
+    ptt_weight: PairwiseWeightMode = "none"
+    ctt_weight: CentroidWeightMode = "none"
 
     def evaluate(
         self,
@@ -121,7 +122,13 @@ class TravelTimeScorer:
         populations: Mapping[Any, float],
         od: TravelTimeTable,
     ) -> PlanTravelScores:
-        return score_plan(parts, populations, od, self.weight)
+        return score_plan(
+            parts,
+            populations,
+            od,
+            ptt_weight=self.ptt_weight,
+            ctt_weight=self.ctt_weight,
+        )
 
     def district(
         self,
@@ -129,4 +136,10 @@ class TravelTimeScorer:
         populations: Mapping[Any, float],
         od: TravelTimeTable,
     ) -> DistrictTravelScores:
-        return score_district(units, populations, od, self.weight)
+        return score_district(
+            units,
+            populations,
+            od,
+            ptt_weight=self.ptt_weight,
+            ctt_weight=self.ctt_weight,
+        )

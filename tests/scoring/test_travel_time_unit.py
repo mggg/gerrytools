@@ -11,16 +11,16 @@ import pytest
 
 from gerrytools.scoring.travel_time import (
     TravelTimeTable,
+    centroid_trip_weight,
     choose_centroid,
     load_travel_time_table,
+    pairwise_trip_weight,
     plan_aggregate,
     save_travel_time_table,
     score_district,
     score_plan,
-    trip_weight,
 )
 from gerrytools.scoring.travel_time.od_table import TravelTimeTable as OD
-from gerrytools.scoring.travel_time.weights import trip_weight as tw
 
 
 def _line_od() -> TravelTimeTable:
@@ -35,12 +35,16 @@ def _line_od() -> TravelTimeTable:
     return TravelTimeTable.from_matrix([0, 1, 2], times)
 
 
-def test_trip_weight_modes():
-    assert trip_weight(3, 4, "none") == 1.0
-    assert trip_weight(3, 4, "p+p") == 7.0
-    assert trip_weight(3, 4, "p*p") == 12.0
-    with pytest.raises(ValueError):
-        tw(1, 1, "nope")  # type: ignore[arg-type]
+def test_family_specific_trip_weight_modes():
+    assert pairwise_trip_weight(3, 4, "none") == 1.0
+    assert pairwise_trip_weight(3, 4, "p+p") == 7.0
+    assert pairwise_trip_weight(3, 4, "p*p") == 12.0
+    assert centroid_trip_weight(4, "none") == 1.0
+    assert centroid_trip_weight(4, "p") == 4.0
+    with pytest.raises(ValueError, match="pairwise weight"):
+        pairwise_trip_weight(1, 1, "p")
+    with pytest.raises(ValueError, match="centroid weight"):
+        centroid_trip_weight(1, "p*p")
 
 
 def test_od_table_rejects_bad_shapes():
@@ -259,26 +263,26 @@ def test_artifact_load_rejects_invalid_schema(tmp_path: Path, unit_ids, metadata
 
 def test_ptt_unweighted_divides_by_number_of_pairs():
     # pairs 10+20+10 = 40 over 3 pairs
-    scores = score_district([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, _line_od(), "none")
+    scores = score_district([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, _line_od())
     assert scores.ptt_mean == pytest.approx(40.0 / 3.0)
     assert scores.ptt_max == pytest.approx(20.0)
 
 
 def test_ptt_two_units_one_pair():
-    scores = score_district([0, 1], {0: 1.0, 1: 1.0}, _line_od(), "none")
+    scores = score_district([0, 1], {0: 1.0, 1: 1.0}, _line_od())
     assert scores.ptt_mean == pytest.approx(10.0)
 
 
 def test_ptt_p_times_p_keeps_weights_in_numerator():
     pops = {0: 100.0, 1: 100.0, 2: 1.0}
-    scores = score_district([0, 1, 2], pops, _line_od(), "p*p")
+    scores = score_district([0, 1, 2], pops, _line_od(), ptt_weight="p*p")
     num = 10 * 10000 + 20 * 100 + 10 * 100
     assert scores.ptt_mean == pytest.approx(num / 3.0)
 
 
 def test_ptt_p_plus_p_keeps_weights_in_numerator():
     pops = {0: 100.0, 1: 100.0, 2: 1.0}
-    scores = score_district([0, 1, 2], pops, _line_od(), "p+p")
+    scores = score_district([0, 1, 2], pops, _line_od(), ptt_weight="p+p")
     num = 10 * 200 + 20 * 101 + 10 * 101
     assert scores.ptt_mean == pytest.approx(num / 3.0)
 
@@ -289,7 +293,36 @@ def test_centroid_unweighted_picks_middle():
 
 def test_centroid_people_aware_prefers_populated_side():
     pops = {0: 100.0, 1: 1.0, 2: 0.0}
-    assert choose_centroid([0, 1, 2], pops, _line_od(), "p*p") == 0
+    assert choose_centroid([0, 1, 2], pops, _line_od(), "p") == 0
+
+
+@pytest.mark.parametrize("bad_population", [np.nan, np.inf, -np.inf, -1.0, "unknown", True])
+def test_population_weighted_centroid_rejects_invalid_populations(bad_population):
+    populations = {0: 1.0, 1: bad_population, 2: 1.0}
+    with pytest.raises(ValueError, match=r"Population for unit 1.*finite, nonnegative"):
+        choose_centroid([0, 1, 2], populations, _line_od(), "p")
+
+
+def test_population_weighted_centroid_rejects_missing_population():
+    with pytest.raises(ValueError, match="Population is missing for unit 1"):
+        choose_centroid([0, 1, 2], {0: 1.0, 2: 1.0}, _line_od(), "p")
+
+
+def test_weighted_ptt_rejects_invalid_population_before_scoring():
+    with pytest.raises(ValueError, match=r"Population for unit 1.*finite, nonnegative"):
+        score_district(
+            [0, 1, 2],
+            {0: 1.0, 1: np.nan, 2: 1.0},
+            _line_od(),
+            ptt_weight="p+p",
+        )
+
+
+def test_centroid_population_weight_never_uses_candidate_population():
+    pops = {0: 100.0, 1: 0.0, 2: 100.0}
+    times = np.array([[0.0, 5.0, 20.0], [5.0, 0.0, 5.0], [20.0, 5.0, 0.0]])
+    od = TravelTimeTable.from_matrix([0, 1, 2], times)
+    assert choose_centroid([0, 1, 2], pops, od, "p") == 1
 
 
 def test_centroid_returns_none_for_empty_units():
@@ -334,7 +367,7 @@ def test_centroid_breaks_ties_by_input_order_for_unorderable_ids():
 
 
 def test_ctt_divides_by_number_of_centroid_trips():
-    scores = score_district([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, _line_od(), "none")
+    scores = score_district([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, _line_od())
     assert scores.centroid == 1
     # from middle: 10 + 0 + 10 = 20 over 3 trips
     assert scores.ctt_mean == pytest.approx(20.0 / 3.0)
@@ -351,7 +384,7 @@ def test_district_rejects_unreachable_pairs_instead_of_silently_dropping_them():
     )
     od = TravelTimeTable.from_matrix([0, 1, 2], times)
     with pytest.raises(ValueError, match="requires statewide connectivity"):
-        score_district([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, od, "none")
+        score_district([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, od)
 
 
 def test_district_rejects_a_fully_disconnected_statewide_table():
@@ -364,7 +397,7 @@ def test_district_rejects_a_fully_disconnected_statewide_table():
     )
     od = TravelTimeTable.from_matrix([0, 1, 2], times)
     with pytest.raises(ValueError, match="requires statewide connectivity"):
-        score_district([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, od, "none")
+        score_district([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, od)
 
 
 def test_centroid_trips_rejects_a_missing_trip_from_a_caller_supplied_centroid():
@@ -376,21 +409,35 @@ def test_centroid_trips_rejects_a_missing_trip_from_a_caller_supplied_centroid()
         centroid_trips([0, 1, 2], {0: 1.0, 1: 1.0, 2: 1.0}, od, "none", 0)
 
 
-def test_all_zero_population_has_no_people_aware_centroid_or_weighted_max():
-    # p+p weight is 0 for every trip when every population is 0: the mean is a
-    # legitimate 0, but there's no *active* (weight > 0) trip to take a max
-    # over, and a people-aware centroid has no candidate with population > 0.
-    scores = score_district([0, 1, 2], {0: 0.0, 1: 0.0, 2: 0.0}, _line_od(), "p+p")
+def test_all_zero_population_keeps_centroid_but_has_no_weighted_max():
+    scores = score_district(
+        [0, 1, 2],
+        {0: 0.0, 1: 0.0, 2: 0.0},
+        _line_od(),
+        ptt_weight="p+p",
+        ctt_weight="p",
+    )
     assert scores.ptt_mean == pytest.approx(0.0)
     assert scores.ptt_max != scores.ptt_max  # NaN
-    assert scores.centroid is None
-    assert scores.ctt_mean != scores.ctt_mean  # NaN
+    assert scores.centroid == 0
+    assert scores.ctt_mean == pytest.approx(0.0)
+    assert scores.ctt_max != scores.ctt_max  # NaN
 
 
 def test_singleton_is_nan():
-    scores = score_district([1], {1: 5.0}, _line_od(), "none")
+    scores = score_district([1], {1: 5.0}, _line_od())
     assert scores.centroid is None
     assert all(x != x for x in (scores.ptt_mean, scores.ptt_max, scores.ctt_mean, scores.ctt_max))
+
+
+def test_singleton_still_requires_od_membership():
+    with pytest.raises(KeyError, match="99"):
+        score_district([99], {99: 5.0}, _line_od())
+
+
+def test_weighted_singleton_still_validates_population():
+    with pytest.raises(ValueError, match=r"Population for unit 1.*finite, nonnegative"):
+        score_district([1], {1: np.nan}, _line_od(), ctt_weight="p")
 
 
 def test_invalid_district_scores_propagate_to_plan_summaries():
@@ -398,7 +445,6 @@ def test_invalid_district_scores_propagate_to_plan_summaries():
         {"ordinary": [0, 1], "singleton": [2]},
         {0: 1.0, 1: 1.0, 2: 1.0},
         _line_od(),
-        "none",
     )
     assert all(
         value != value
@@ -417,7 +463,7 @@ def test_invalid_district_scores_propagate_to_plan_summaries():
 
 def test_plan_layer_b_aggregates():
     pops = {0: 1.0, 1: 1.0, 2: 1.0}
-    plan = score_plan({"A": [0, 1], "B": [0, 1, 2]}, pops, _line_od(), "none")
+    plan = score_plan({"A": [0, 1], "B": [0, 1, 2]}, pops, _line_od())
     # A: 10/1 = 10; B: 40/3
     assert plan.ptt_mean == pytest.approx((10.0 + 40.0 / 3.0) / 2.0)
     assert plan.ptt_max_district_mean == pytest.approx(40.0 / 3.0)
@@ -441,13 +487,13 @@ def test_plan_layer_b_aggregates():
 )
 def test_plan_aggregate_covers_every_family_and_agg(family, agg, expected_attr):
     pops = {0: 1.0, 1: 1.0, 2: 1.0}
-    plan = score_plan({"A": [0, 1], "B": [0, 1, 2]}, pops, _line_od(), "none")
+    plan = score_plan({"A": [0, 1], "B": [0, 1, 2]}, pops, _line_od())
     assert plan_aggregate(plan, family, agg) == getattr(plan, expected_attr)
 
 
 def test_plan_aggregate_rejects_unknown_agg():
     pops = {0: 1.0, 1: 1.0}
-    plan = score_plan({"A": [0, 1]}, pops, _line_od(), "none")
+    plan = score_plan({"A": [0, 1]}, pops, _line_od())
     with pytest.raises(ValueError, match="Unknown family/agg"):
         plan_aggregate(plan, "ptt", "bogus")  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="Unknown family/agg"):
