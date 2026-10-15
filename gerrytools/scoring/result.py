@@ -8,7 +8,7 @@ import json
 import numbers
 import os
 import warnings
-from collections.abc import Hashable, Iterable, Iterator, Mapping
+from collections.abc import Generator, Hashable, Iterable, Iterator, Mapping
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
 from typing import BinaryIO, Literal, TypeAlias, cast, overload
@@ -791,7 +791,7 @@ def _open_metric_readers(
     expand_repetitions: bool = False,
     allow_large: bool,
     batch_size: int | None = None,
-) -> Iterator[list[tuple[_RunTable, pq.ParquetFile]]]:
+) -> Generator[list[tuple[_RunTable, pq.ParquetFile]], None, None]:
     selected = metric.tables[:1] if operation == "frames" else metric.tables
     with ExitStack() as stack:
         verified = [
@@ -881,7 +881,7 @@ def _open_metric_readers(
 def _verified_metric_file(
     metric: _RunMetric,
     table: _RunTable,
-) -> Iterator[tuple[BinaryIO, int]]:
+) -> Generator[tuple[BinaryIO, int], None, None]:
     with table.path.open("rb") as file:
         size = os.fstat(file.fileno()).st_size
         if size != table.size:
