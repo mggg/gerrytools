@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import codecs
+import errno
 import hashlib
 import json
 import logging
@@ -16,6 +17,7 @@ from types import TracebackType
 from typing import ClassVar, Generic, Iterator, Protocol, TypeVar, cast, runtime_checkable
 
 import docker.errors
+from docker.types.daemon import CancellableStream
 from gerrychain import Graph, Partition
 
 logger = logging.getLogger(__name__)
@@ -729,14 +731,55 @@ class RunnerSession(Generic[RunSpecT]):
             raise RuntimeError("Could not stop the abandoned streamed engine command.") from error
         self.container = None
 
+    @staticmethod
+    def _close_exec_stream(stream: object) -> None:
+        """Close the stream even if Docker's socket shutdown finds it disconnected."""
+        close = getattr(stream, "close", None)
+        if close is None:
+            return
+
+        try:
+            close()
+        except OSError as error:
+            if error.errno != errno.ENOTCONN:
+                raise
+        else:
+            return
+
+        if isinstance(stream, CancellableStream):
+            RunnerSession._close_disconnected_docker_stream(stream)
+
+    @staticmethod
+    def _close_disconnected_docker_stream(stream: CancellableStream) -> None:
+        """Release Docker's response even when its private socket layout is unfamiliar."""
+        # Docker's failed shutdown skips socket.close(); release both owners.
+        # NOTE: This uses a private SDK socket layout; revisit if/when Docker fixes close().
+        response = getattr(stream, "_response", None)
+        if response is None:
+            raise RuntimeError("Docker exec stream response is unavailable; cannot finish cleanup.")
+
+        try:
+            try:
+                socket_file = response.raw._fp.fp
+                raw_socket_file = getattr(socket_file, "raw", socket_file)
+                response_socket = getattr(raw_socket_file, "sock", None)
+                if response_socket is None:
+                    response_socket = raw_socket_file._sock
+            except AttributeError as error:
+                raise RuntimeError(
+                    "Docker exec stream socket layout has changed; cannot finish socket cleanup."
+                ) from error
+
+            response_socket.close()
+        finally:
+            response.close()
+
     def _cleanup_exec_stream(self, stream: object, *, completed: bool) -> None:
         """Close a Docker exec stream and stop its container if consumption failed."""
         primary_error = sys.exception()
         cleanup_errors: list[Exception] = []
-        close = getattr(stream, "close", None)
         try:
-            if close is not None:
-                close()
+            self._close_exec_stream(stream)
         except Exception as error:
             cleanup_errors.append(error)
         if not completed:
