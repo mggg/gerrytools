@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- MGRP runs no longer fail on macOS when Docker stream cleanup encounters an already
-  disconnected socket. Cleanup releases the socket and preserves other execution errors.
+- MGRP runs no longer fail on macOS when Docker stream cleanup encounters an already disconnected
+  socket. Cleanup releases the socket and preserves other execution errors.
 
 ## [2.0.1] - 2026-08-05
 

@@ -7,9 +7,9 @@ from types import SimpleNamespace
 from typing import Any, cast
 
 import docker.errors
-from docker.types.daemon import CancellableStream
 import networkx as nx
 import pytest
+from docker.types.daemon import CancellableStream
 from gerrychain import Graph
 
 from gerrytools.mgrp import RunnerSession
