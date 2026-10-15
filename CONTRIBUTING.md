@@ -255,9 +255,9 @@ Depending on the change, that may include:
 
 ## Cutting a release
 
-The `release.yml` workflow does the heavy lifting: it validates the tag, builds wheels and the
-sdist, smoke tests them, and publishes through TestPyPI to PyPI. The manual steps around it, in
-order:
+The `release.yml` workflow builds wheels and the sdist, smoke tests them, and publishes either
+release candidates to TestPyPI or a final release to PyPI. Always dispatch it from `main`.
+The manual steps around it, in order:
 
 1. Bump the version (`uv version <X.Y.Z>`) and roll the `## [Unreleased]` entries in
    `CHANGELOG.md` into a `## [X.Y.Z]` section.
@@ -285,10 +285,28 @@ order:
 3. Run `task all-checks` and `task check-release` on the release commit and merge it to `main`.
    `check-release` verifies the version is not already tagged, the changelog has a section for
    it, and the Docker pin matches it and resolves on Docker Hub.
-4. Tag the merged commit `vX.Y.Z` and push the tag.
-5. Dispatch `release.yml` from `main` with the tag and `upload_to: testpypi`; once the TestPyPI
-   verification job passes, rerun it with `upload_to: pypi`.
-6. Write the GitHub release notes from the new changelog section.
+4. Dispatch `release.yml` with `tag: vX.Y.Z`, `source_ref: main` (or another branch or commit),
+   and `upload_to: testpypi`. The tag need not exist yet. The workflow chooses the next unused
+   `X.Y.ZrcN`, changes the version only in its build checkouts, and publishes to TestPyPI.
+   It keeps the Docker pin at `vX.Y.Z`. The run summary records the version and source SHA.
+5. Install and test the exact candidate version, such as `gerrytools==2.0.2rc1`, using a
+   TestPyPI-specific source for GerryTools and regular PyPI for dependencies. Explicitly pin the
+   RC: an existing final version on TestPyPI sorts above its candidates. For another candidate,
+   start a new workflow run; do not rerun publishing jobs or reuse an uploaded version.
+6. Once satisfied, make sure that exact tested commit is on `main`, tag it `vX.Y.Z`, and push
+   the tag. If merging changed the commit, test the merged commit as a new candidate first.
+7. Dispatch `release.yml` with that tag, `upload_to: pypi`, and `candidate_run` set to the
+   successful candidate's Actions run ID (the number in its URL). The workflow checks that the
+   tag matches the candidate's source SHA and base version, rebuilds and smoke tests the final
+   artifacts, then publishes directly to PyPI. It does not upload the final version to TestPyPI.
+   `source_ref` is ignored for production. Production environment approval still applies.
+8. Write the GitHub release notes from the new changelog section.
+
+Candidate runs are serialized through upload and installation verification to prevent RC-number
+collisions. They never commit version changes or create Git tags. Candidate metadata is retained
+as an Actions artifact; if it expires, create a new candidate before publishing the final release.
+For an already existing Git tag, ensure it points to the tested commit before production dispatch;
+the workflow will reject a tag pointing to an earlier candidate.
 
 ## Community guidelines
 

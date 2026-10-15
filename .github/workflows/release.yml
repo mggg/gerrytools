@@ -4,9 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag, for example v2.0.0"
+        description: "Base release tag, for example v2.0.2 (must exist only for PyPI)"
         type: string
         required: true
+      source_ref:
+        description: "Branch, tag, or commit to test (TestPyPI only)"
+        type: string
+        default: "main"
+        required: true
+      candidate_run:
+        description: "Successful TestPyPI workflow run ID (required for PyPI)"
+        type: string
+        required: false
       upload_to:
         description: "Upload destination for manual runs"
         type: choice
@@ -17,8 +26,14 @@ on:
 env:
   OUT_DIR: dist
 
+# Hold the lock through publication and verification, not just RC number selection.
+concurrency:
+  group: gerrytools-release
+  cancel-in-progress: false
+
 permissions:
   contents: read
+  actions: read
 
 jobs:
   validate:
@@ -28,38 +43,50 @@ jobs:
       sha: ${{ steps.release.outputs.sha }}
       version: ${{ steps.release.outputs.version }}
     steps:
-      - name: Check out release tag
+      - name: Check out workflow tools
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Require dispatch from main
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Dispatch this workflow from main."
+            exit 1
+          fi
+      - name: Check out release source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ inputs.upload_to == 'pypi' && format('refs/tags/{0}', inputs.tag) || inputs.source_ref }}
+          path: source
           fetch-depth: 0
-      - name: Install uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - name: Download tested candidate metadata
+        if: inputs.upload_to == 'pypi'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          version: "0.12.1"
-      - name: Validate release tag
+          name: release-metadata
+          path: candidate
+          run-id: ${{ inputs.candidate_run }}
+          github-token: ${{ github.token }}
+      - name: Select and validate release version
         id: release
         env:
           RELEASE_TAG: ${{ inputs.tag }}
+          UPLOAD_TO: ${{ inputs.upload_to }}
+          CANDIDATE_RUN: ${{ inputs.candidate_run }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/release_metadata.py
+      - name: Validate source and Docker pin
+        working-directory: source
+        env:
+          UPLOAD_TO: ${{ inputs.upload_to }}
+          BASE_VERSION: ${{ steps.release.outputs.base_version }}
         run: |
-          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
-            echo "Dispatch this workflow from the main branch, not $GITHUB_REF_NAME."
-            exit 1
+          if [[ "$UPLOAD_TO" == "pypi" ]]; then
+            git fetch --no-tags origin main
+            if ! git merge-base --is-ancestor HEAD origin/main; then
+              echo "The release tag must be on main."
+              exit 1
+            fi
           fi
-          project_version="$(uv version --short)"
-          if [[ "$RELEASE_TAG" != "v$project_version" ]]; then
-            echo "Tag $RELEASE_TAG does not match project version $project_version."
-            exit 1
-          fi
-          if ! git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
-            echo "$RELEASE_TAG is not a tag in this repository."
-            exit 1
-          fi
-          git fetch --no-tags origin main
-          if ! git merge-base --is-ancestor HEAD origin/main; then
-            echo "The tagged commit is not on the main branch."
-            exit 1
-          fi
+          project_version="$BASE_VERSION"
           image_pin="$(sed -n 's/^DEFAULT_DOCKER_IMAGE = "\(.*\)"$/\1/p' \
             gerrytools/mgrp/run_container.py)"
           if [[ "$image_pin" != mgggdev/replicate:v"$project_version"@sha256:* ]]; then
@@ -76,8 +103,13 @@ jobs:
             echo "pins $image_digest. Retag the image or update the pin."
             exit 1
           fi
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          echo "version=$project_version" >> "$GITHUB_OUTPUT"
+      - name: Record candidate source
+        if: inputs.upload_to == 'testpypi'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-metadata
+          path: release-metadata.json
+          if-no-files-found: error
 
   linux:
     name: linux (${{ matrix.target }})
@@ -91,6 +123,15 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.validate.outputs.sha }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.1"
+      - name: Set build version
+        shell: bash
+        env:
+          BUILD_VERSION: ${{ needs.validate.outputs.version }}
+        run: uv version --frozen "$BUILD_VERSION"
       - name: Build wheels (manylinux_2_28, abi3)
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
         with:
@@ -121,6 +162,15 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.validate.outputs.sha }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.1"
+      - name: Set build version
+        shell: bash
+        env:
+          BUILD_VERSION: ${{ needs.validate.outputs.version }}
+        run: uv version --frozen "$BUILD_VERSION"
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.11"
@@ -157,6 +207,15 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.validate.outputs.sha }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.1"
+      - name: Set build version
+        shell: bash
+        env:
+          BUILD_VERSION: ${{ needs.validate.outputs.version }}
+        run: uv version --frozen "$BUILD_VERSION"
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.11"
@@ -192,6 +251,15 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.validate.outputs.sha }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.12.1"
+      - name: Set build version
+        shell: bash
+        env:
+          BUILD_VERSION: ${{ needs.validate.outputs.version }}
+        run: uv version --frozen "$BUILD_VERSION"
       - name: Build sdist
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
         with:
@@ -213,6 +281,7 @@ jobs:
 
   testpypi:
     name: Publish to TestPyPI
+    if: inputs.upload_to == 'testpypi'
     needs: [linux, macos, windows, sdist]
     runs-on: ubuntu-latest
     environment:
@@ -236,7 +305,6 @@ jobs:
         with:
           packages-dir: upload
           repository-url: https://test.pypi.org/legacy/
-          skip-existing: true
 
   testpypi_verify:
     name: Verify TestPyPI installation
@@ -289,7 +357,7 @@ jobs:
   pypi:
     name: Publish to PyPI
     if: ${{ inputs.upload_to == 'pypi' }}
-    needs: testpypi_verify
+    needs: [linux, macos, windows, sdist]
     runs-on: ubuntu-latest
     environment:
       name: pypi

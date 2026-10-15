@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.2] - 2026-10-15
 
+### Added
+
+- Release workflow publishes automatically numbered TestPyPI candidates and verifies their source
+  commit before rebuilding a final release for PyPI.
+
+- Geometry-backed scores automatically select a UTM projection for geographic input when no
+  target CRS is supplied. Existing projected inputs and explicit target CRSs retain their behavior.
+- Separate population polygons are transformed to the scoring CRS. State-clipped convex-hull
+  scores accept `state_crs` to transform an explicitly referenced state boundary.
+
 ### Fixed
 
 - MGRP runs no longer fail on macOS when Docker stream cleanup encounters an already disconnected
