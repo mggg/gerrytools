@@ -146,7 +146,7 @@ class PlanEvaluator:
         node_id_column (str | None, optional): Geometry-frame column containing graph node
             identifiers. Defaults to None, which uses the GeoDataFrame index.
         target_crs (Any | None, optional): Projected CRS used by geometry-backed metrics. Defaults
-            to None, which uses the geometry's CRS.
+            to None, which preserves projected input or estimates UTM for geographic input.
 
     Raises:
         ValueError: If the graph is empty, directed, a multigraph, or otherwise incompatible with
@@ -223,7 +223,8 @@ class PlanEvaluator:
             geometry (GeoDataFrame): Frame containing one row per graph node.
             node_id_column (str | None, optional): Column containing graph node identifiers.
                 Defaults to None, which uses the frame index.
-            target_crs (Any | None, optional): Projected CRS for geometry metrics. Defaults to None.
+            target_crs (Any | None, optional): Projected CRS for geometry metrics. Defaults to None,
+                preserving projected input or estimating UTM for geographic input.
 
         Returns:
             PlanEvaluator: This evaluator, for chained registration.

@@ -77,10 +77,18 @@ def _validated_geometry_frame(
     """Transform and validate a geometry frame whose rows are already aligned."""
     if frame.crs is None:
         raise ValueError("geometries must have a CRS")
+    _require_valid_polygons(frame, "geometries")
+    if crs is None and frame.crs.is_geographic:
+        try:
+            crs = frame.estimate_utm_crs()
+        except (RuntimeError, ValueError) as error:
+            raise ValueError(
+                "Cannot determine a UTM CRS; supply an explicit projected CRS"
+            ) from error
     if crs is not None:
         frame = frame.to_crs(crs)
+        _require_valid_polygons(frame, "geometries")
     _require_projected_crs(frame, "geometry scoring")
-    _require_valid_polygons(frame, "geometries")
     return frame
 
 
@@ -103,7 +111,8 @@ def aligned_geodataframe(
         geometries (gpd.GeoDataFrame): One geometry row per graph node.
         node_column (str | None): Optional column containing graph node identifiers.
         crs (Any | None): Optional projected CRS to which the geometries are transformed. Without
-            this argument, ``geometries`` must already use a projected CRS.
+            this argument, geographic input is projected to an estimated UTM CRS; projected input
+            retains its CRS.
 
     Returns:
         gpd.GeoDataFrame: An aligned copy of ``geometries``.
@@ -111,7 +120,8 @@ def aligned_geodataframe(
     Raises:
         TypeError: If ``geometries`` is not a GeoDataFrame.
         ValueError: If identifiers are missing, duplicated, or do not match the node set; if CRS
-            information is absent or geographic; or if a geometry is missing, empty, or invalid.
+            information is absent or no projected CRS can be determined; or if a geometry is
+            missing, empty, or invalid.
     """
     if not isinstance(geometries, gpd.GeoDataFrame):
         raise TypeError("geometries must be a GeoDataFrame")

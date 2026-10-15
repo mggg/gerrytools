@@ -98,15 +98,16 @@ def test_aligned_geodataframe_rejects_unsafe_alignment_or_geometry(nodes, frame,
         aligned_geodataframe(nodes, frame, node_column=node_column)
 
 
-def test_aligned_geodataframe_requires_a_projected_crs() -> None:
+def test_aligned_geodataframe_estimates_a_projected_crs() -> None:
     geometries = gpd.GeoDataFrame(
         {"geometry": [box(-105.01, 39.99, -105.00, 40.00)]},
         index=pd.Index(["a"]),
         crs="EPSG:4326",
     )
 
-    with pytest.raises(ValueError, match="projected CRS"):
-        aligned_geodataframe(["a"], geometries)
+    aligned = aligned_geodataframe(["a"], geometries)
+    assert aligned.crs == geometries.estimate_utm_crs()
+    assert geometries.crs == "EPSG:4326"
 
 
 def test_aligned_geodataframe_requires_a_geodataframe() -> None:

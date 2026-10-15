@@ -56,3 +56,25 @@ PlanEvaluator <plan_evaluator>
 Scoring BENDL files <bendl>
 Working with GerryChain <basic>
 ```
+
+## Coordinate reference systems
+
+Geometry-backed scoring preserves an existing projected CRS. For geographic input (such as
+longitude/latitude in EPSG:4326), it estimates a UTM CRS from the complete scoring dataset when
+`target_crs` is omitted. The projection is prepared once per evaluator, not per district or plan.
+An explicit `target_crs` overrides this choice. Input geometry must always declare its source CRS.
+
+For example, `PlanEvaluator(graph, geometry=units).add_metric(Reock())` accepts geographic
+`units` without requiring an explicit projection.
+
+Automatic UTM selection is a convenience for local or regional data. For wide extents, polar
+regions, or data crossing the antimeridian, choose an appropriate projected `target_crs` explicitly.
+If a UTM CRS cannot be determined, scoring raises an error instead of measuring in degrees.
+Projection can affect compactness scores; use an explicit CRS for comparisons across datasets.
+Graph-backed scores using existing area and perimeter attributes do not reproject those values.
+
+`PopulationPolygon(..., population_units=blocks)` transforms the separate population polygons
+from their declared CRS into the evaluator's scoring CRS. For a bare Shapely state boundary, use
+`StateClippedConvexHullRatio(boundary, state_crs=units.crs)` (or pass `state_crs` to the single-plan
+function). Without `state_crs`, the boundary must already use the final scoring CRS, as before.
+Caller-owned GeoDataFrames and geometries are not modified.

@@ -564,10 +564,11 @@ def test_geometry_can_be_nonprojected_until_geometry_is_requested() -> None:
     assert reprojected._resources is not None
     assert reprojected._resources.geometry is None
 
-    with pytest.raises(ValueError, match="projected CRS"):
-        PlanEvaluator(graph, geometry=geographic, node_id_column="node").add_metric(
-            Reock()
-        ).evaluate([0, 0, 1, 1])
+    automatic = PlanEvaluator(graph, geometry=geographic, node_id_column="node").add_metric(Reock())
+    explicit = PlanEvaluator(
+        graph, geometry=geographic, node_id_column="node", target_crs=geographic.estimate_utm_crs()
+    ).add_metric(Reock())
+    assert_same(automatic.evaluate([0, 0, 1, 1])["reock"], explicit.evaluate([0, 0, 1, 1])["reock"])
 
 
 def test_active_geometry_column_is_reserved_for_geometry_backed_metrics() -> None:

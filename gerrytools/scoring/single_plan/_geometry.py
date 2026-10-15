@@ -81,7 +81,7 @@ def polsby_popper(
         node_id_column (str | None, optional): Geometry column containing the graph's node
             labels. Defaults to None.
         target_crs (Any | None, optional): Projected CRS to which geometry is transformed before
-            scoring. Defaults to None.
+            scoring. Defaults to None: preserve projected input or estimate UTM for geographic input.
         area_attr (str | None): Graph node attribute containing unit areas. Defaults to
             ``"area"`` for graph-backed scoring.
         perimeter_attr (str | None, optional): Graph node attribute containing total unit
@@ -139,7 +139,7 @@ def schwartzberg(
         node_id_column (str | None, optional): Geometry column containing the graph's node
             labels. Defaults to None.
         target_crs (Any | None, optional): Projected CRS to which geometry is transformed before
-            scoring. Defaults to None.
+            scoring. Defaults to None: preserve projected input or estimate UTM for geographic input.
         area_attr (str | None): Graph node attribute containing unit areas. Defaults to
             ``"area"`` for graph-backed scoring.
         perimeter_attr (str | None, optional): Graph node attribute containing total unit
@@ -191,7 +191,7 @@ def reock(
         node_id_column (str | None, optional): Geometry column containing the graph's node
             labels. Defaults to None.
         target_crs (Any | None, optional): Projected CRS to which geometry is transformed before
-            scoring. Defaults to None.
+            scoring. Defaults to None: preserve projected input or estimate UTM for geographic input.
 
     Returns:
         Series: District-indexed ratios of district area to minimum enclosing-circle area.
@@ -229,7 +229,7 @@ def convex_hull_ratio(
         node_id_column (str | None, optional): Geometry column containing the graph's node
             labels. Defaults to None.
         target_crs (Any | None, optional): Projected CRS to which geometry is transformed before
-            scoring. Defaults to None.
+            scoring. Defaults to None: preserve projected input or estimate UTM for geographic input.
 
     Returns:
         Series: District-indexed ratios of district area to convex-hull area.
@@ -252,6 +252,7 @@ def state_clipped_convex_hull_ratio(
     assignment: GeoAssignment | None = None,
     *,
     state_geometry: BaseGeometry,
+    state_crs: Any | None = None,
     geometry: GeoDataFrame | None = None,
     node_id_column: str | None = None,
     target_crs: Any | None = None,
@@ -264,13 +265,16 @@ def state_clipped_convex_hull_ratio(
             GeoDataFrame sources and omitted for a Partition. A GeoDataFrame also accepts an
             assignment column name.
         state_geometry (BaseGeometry): Nonempty, valid Polygon or MultiPolygon covering every
-            scoring unit and using the same projected CRS.
+            scoring unit. Without ``state_crs``, it must use the scoring CRS.
+        state_crs (Any | None, optional): CRS of the state boundary, used to transform it into
+            the scoring CRS. Defaults to None.
         geometry (GeoDataFrame | None, optional): Authoritative geometry for a graph or Partition
             source. Defaults to None and is required unless ``source`` is a GeoDataFrame.
         node_id_column (str | None, optional): Geometry column containing the graph's node
             labels. Defaults to None.
         target_crs (Any | None, optional): Projected CRS to which unit geometry is transformed
-            before scoring. Defaults to None.
+            before scoring. Defaults to None, preserving projected input or estimating UTM for
+            geographic input.
 
     Returns:
         Series: District-indexed ratios of district area to state-clipped convex-hull area.
@@ -280,7 +284,7 @@ def state_clipped_convex_hull_ratio(
         _evaluate(
             source,
             assignment,
-            StateClippedConvexHullRatio(state_geometry),
+            StateClippedConvexHullRatio(state_geometry, state_crs=state_crs),
             geometry=geometry,
             node_id_column=node_id_column,
             target_crs=target_crs,
@@ -306,14 +310,15 @@ def population_polygon(
             GeoDataFrame sources and omitted for a Partition. A GeoDataFrame also accepts an
             assignment column name.
         population_col (str): Column containing finite, nonnegative population weights.
-        population_units (GeoDataFrame | None): Optional finer projected population polygons
+        population_units (GeoDataFrame | None): Optional finer population polygons with a CRS
             containing ``population_col``. When omitted, weights and polygons come from the
-            authoritative scoring geometry.
+            authoritative scoring geometry. Separate polygons are transformed to the scoring CRS.
         geometry (GeoDataFrame | None, optional): Authoritative geometry for a graph or Partition
             source. Defaults to None and is required unless ``source`` is a GeoDataFrame.
         node_id_column (str | None, optional): Geometry column containing the graph's node
             labels. Defaults to None.
-        target_crs (Any | None, optional): Projected CRS for scoring geometry. Defaults to None.
+        target_crs (Any | None, optional): Projected CRS for scoring geometry. Defaults to None,
+            preserving projected input or estimating UTM for geographic input.
 
     Returns:
         Series: District-indexed population-polygon compactness scores.

@@ -347,21 +347,13 @@ def test_metric_descriptions_reject_ambiguous_or_empty_options() -> None:
         ).evaluate([0, 0, 1, 1])
 
 
-def test_population_polygon_requires_projected_matching_polygon_geometry() -> None:
+def test_population_polygon_requires_crs_and_polygon_geometry() -> None:
     no_crs = gpd.GeoDataFrame(
         {"population": [1]},
         geometry=[box(0, 0, 1, 1)],
     )
     with pytest.raises(ValueError, match="must have a CRS"):
         PopulationPolygon("population", population_units=no_crs)
-
-    geographic = gpd.GeoDataFrame(
-        {"population": [1]},
-        geometry=[box(0, 0, 1, 1)],
-        crs="EPSG:4326",
-    )
-    with pytest.raises(ValueError, match="projected CRS"):
-        PopulationPolygon("population", population_units=geographic)
 
     points = gpd.GeoDataFrame(
         {"population": [1]},
@@ -370,14 +362,6 @@ def test_population_polygon_requires_projected_matching_polygon_geometry() -> No
     )
     with pytest.raises(ValueError, match="only Polygon or MultiPolygon"):
         PopulationPolygon("population", population_units=points)
-
-    graph = nx.empty_graph(1)
-    graph_geometry = gpd.GeoDataFrame(geometry=[box(0, 0, 1, 1)], crs="EPSG:3857")
-    population = population_frame([box(0, 0, 1, 1)], [1]).to_crs("EPSG:5070")
-    with pytest.raises(ValueError, match="must use the same CRS"):
-        PlanEvaluator(graph, geometry=graph_geometry).add_metric(
-            PopulationPolygon("population", population_units=population)
-        ).evaluate([0])
 
 
 def test_population_polygon_base_path_uses_the_aligned_scorer_geodataframe() -> None:

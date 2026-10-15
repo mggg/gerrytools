@@ -6,12 +6,13 @@ import math
 import numbers
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeAlias, cast
 
-from geopandas import GeoDataFrame
+from geopandas import GeoDataFrame, GeoSeries
 from pyproj import CRS
 from shapely.geometry.base import BaseGeometry
 
+from ..._geodataframe import _validated_geometry_frame
 from .._types import _Dtype, _ResultShape
 from ._base import (
     _KeyedMetric,
@@ -89,8 +90,8 @@ class StateClippedConvexHullRatio(_MetricBase):
 
     Clipping removes the ordinary convex hull's area outside the state, so this score is at least
     the standard :class:`ConvexHullRatio`. Values lie in :math:`(0, 1]`. Unit and state geometry
-    must use the same projected CRS appropriate for area calculations, and the state must cover
-    every unit geometry.
+    are measured in the evaluator's projected CRS, and the state must cover every unit geometry.
+    Set ``state_crs`` to transform the boundary; otherwise it must already use the scoring CRS.
 
     This boundary-adjusted variant follows the clipped convex-hull construction discussed by Moon
     Duchin in `Political Geometry
@@ -101,6 +102,8 @@ class StateClippedConvexHullRatio(_MetricBase):
     Args:
         state_geometry (BaseGeometry): Nonempty, valid Polygon or MultiPolygon covering every
             scoring unit.
+        state_crs (Any | None, optional): CRS of the state boundary. Defaults to None, meaning
+            the boundary already uses the evaluator's projected CRS.
         result_name (str | None, optional): Result key. Defaults to
             ``"state_clipped_convex_hull_ratio"``.
 
@@ -111,8 +114,11 @@ class StateClippedConvexHullRatio(_MetricBase):
 
     _kind: ClassVar[str] = "state_clipped_convex_hull_ratio"
     state_geometry: BaseGeometry
+    state_crs: Any | None = None
 
     def __post_init__(self) -> None:
+        if self.state_crs is not None:
+            object.__setattr__(self, "state_crs", CRS.from_user_input(self.state_crs))
         state = self.state_geometry
         if not isinstance(state, BaseGeometry):
             raise TypeError("state_geometry must be a Shapely Polygon or MultiPolygon")
@@ -129,10 +135,12 @@ class StateClippedConvexHullRatio(_MetricBase):
         return _ResourceSpec(geometry=True)
 
     def _prepare(self, backend: ScoringEngine, evaluator: PlanEvaluator) -> _OutputSpec:
-        backend.add_state_clipped_convex_hull_ratio(
-            evaluator._require_geometry("StateClippedConvexHullRatio").native,
-            bytes(self.state_geometry.wkb),
-        )
+        geometry = evaluator._require_geometry("StateClippedConvexHullRatio")
+        state = self.state_geometry
+        if self.state_crs is not None:
+            frame = GeoDataFrame(geometry=[state], crs=self.state_crs)
+            state = _validated_geometry_frame(frame, crs=geometry.crs).geometry.iloc[0]
+        backend.add_state_clipped_convex_hull_ratio(geometry.native, bytes(state.wkb))
         return _OutputSpec(_ResultShape.DISTRICT, ("score",), ("float",))
 
     def _options(self) -> dict[str, object]:
@@ -164,8 +172,8 @@ class PopulationPolygon(_MetricBase):
 
     Every alternative population polygon must be covered by exactly one evaluator geometry. Weights
     must be finite and nonnegative, with positive total weight overall and within every observed
-    district. Alternative and scorer geometries must use the same projected CRS. Duplicate
-    observations contribute independently.
+    district. Alternative population geometries are transformed into the scorer's projected CRS.
+    Duplicate observations contribute independently.
 
     This statistic is resolution-dependent. A coarse polygon contributes its full population even
     if only a small sliver intersects the hull. It is not areal interpolation and must not be
@@ -177,7 +185,7 @@ class PopulationPolygon(_MetricBase):
 
     Args:
         population_col (str): Column containing nonnegative population values.
-        population_units (GeoDataFrame | None, optional): Projected GeoDataFrame containing a
+        population_units (GeoDataFrame | None, optional): GeoDataFrame with a declared CRS containing a
             finer population surface. Defaults to None, which reads ``population_col`` from the
             evaluator's aligned geometry.
         result_name (str | None, optional): Result key. Defaults to ``"population_polygon"``.
@@ -221,8 +229,6 @@ class PopulationPolygon(_MetricBase):
         if population_units.crs is None:
             raise ValueError("PopulationPolygon population_units must have a CRS")
         population_crs = CRS.from_user_input(population_units.crs)
-        if not population_crs.is_projected:
-            raise ValueError("PopulationPolygon population_units must use a projected CRS")
 
         geometry = population_units.geometry
         if geometry.isna().any():
@@ -235,7 +241,7 @@ class PopulationPolygon(_MetricBase):
             raise ValueError(
                 "PopulationPolygon geometries must contain only Polygon or MultiPolygon values"
             )
-        if (geometry.area <= 0).any():
+        if any(polygon.area <= 0 for polygon in geometry):
             raise ValueError("PopulationPolygon geometries must have positive area")
 
         weight_values = tuple(population_units[population_col])
@@ -269,10 +275,6 @@ class PopulationPolygon(_MetricBase):
                 raise ValueError("PopulationPolygon population must have a positive total")
             return geometry.native, weights
         assert self.alternative_crs is not None and self.alternative_weights is not None
-        if CRS.from_user_input(self.alternative_crs) != geometry.crs:
-            raise ValueError(
-                "PopulationPolygon population_units and evaluator geometry must use the same CRS"
-            )
         return geometry.native, list(self.alternative_weights)
 
     def _validate(self, evaluator: PlanEvaluator) -> None:
@@ -291,11 +293,15 @@ class PopulationPolygon(_MetricBase):
         if self.alternative_geometries is None:
             backend.add_population_polygon_aligned(geometry, weights)
         else:
-            backend.add_population_polygon(
-                geometry,
-                list(self.alternative_geometries),
-                weights,
-            )
+            target_crs = evaluator._require_geometry("PopulationPolygon").crs
+            polygons = list(self.alternative_geometries)
+            if CRS.from_user_input(self.alternative_crs) != target_crs:
+                population = GeoDataFrame(
+                    geometry=GeoSeries.from_wkb(polygons, crs=self.alternative_crs)
+                )
+                population = _validated_geometry_frame(population, crs=target_crs)
+                polygons = list(population.geometry.to_wkb(hex=False))
+            backend.add_population_polygon(geometry, polygons, weights)
         return _OutputSpec(_ResultShape.DISTRICT, ("score",), ("float",))
 
     def _options(self) -> dict[str, object]:
