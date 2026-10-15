@@ -229,7 +229,7 @@ class BarPlot(CategoricalDistributionPlotBase):
         uniques, counts = np.unique(vals, return_counts=True)
         # Default :g formatting can merge values beyond six significant digits.
         heights_dict = {
-            np.format_float_positional(unique_value, trim="-"): float(count)
+            np.format_float_positional(float(unique_value), trim="-"): float(count)
             for unique_value, count in zip(uniques, counts, strict=True)
         }
         self._add_bar_set(

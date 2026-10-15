@@ -511,7 +511,7 @@ fn accepts_mixed_endian_nested_multipolygon_wkb() {
     bytes.extend_from_slice(&2_u32.to_be_bytes());
     bytes.extend_from_slice(&encoded_square(true, 3, 2));
     let mut right = encoded_square(false, 3, 2);
-    for chunk in right[13..].chunks_exact_mut(16) {
+    for chunk in right[13..].as_chunks_mut::<16>().0 {
         let x = f64::from_be_bytes(chunk[..8].try_into().unwrap()) + 2.0;
         chunk[..8].copy_from_slice(&x.to_be_bytes());
     }
