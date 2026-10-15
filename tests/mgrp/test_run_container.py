@@ -1,9 +1,13 @@
 """Docker-free tests for RunnerSession's output processing."""
 
+import errno
 import os
+import socket
+from types import SimpleNamespace
 from typing import Any, cast
 
 import docker.errors
+from docker.types.daemon import CancellableStream
 import networkx as nx
 import pytest
 from gerrychain import Graph
@@ -319,6 +323,171 @@ def test_stream_parse_error_survives_container_removal_failure():
 
     assert any("Could not stop the abandoned" in note for note in excinfo.value.__notes__)
     assert container.container is docker_container
+
+
+@pytest.mark.parametrize("missing_output", [False, True])
+def test_run_disconnected_cleanup_still_validates_and_finalizes_outputs(
+    tmp_path, monkeypatch, missing_output
+):
+    output = tmp_path / "out.jsonl"
+    output.write_text("previous\n")
+
+    def chunks():
+        if not missing_output:
+            output.write_text("fresh\n")
+        yield (b"done\n", None)
+
+    container = make_streaming_container(chunks(), config=_FakeConfig(tmp_path / "run.log", output))
+    api = cast(_FakeExecAPI, cast(Any, container.client).api)
+
+    def disconnected():
+        raise OSError(errno.ENOTCONN, "Socket is not connected")
+
+    monkeypatch.setattr(api.stream, "close", disconnected)
+
+    if missing_output:
+        with pytest.raises(RuntimeError, match="expected nonempty output"):
+            container.run(None)
+        assert output.read_text() == "previous\n"
+    else:
+        assert container.run(None) == str(output)
+        assert output.read_text() == "fresh\n"
+
+    assert not list(tmp_path.glob("*.partial*"))
+    assert not list(tmp_path.glob(".gerrytools-backup-*"))
+
+
+@pytest.mark.parametrize(
+    "cleanup_error",
+    [
+        OSError(errno.ENOTCONN, "close failed"),
+        OSError(errno.EIO, "close failed"),
+        RuntimeError("close failed"),
+    ],
+)
+@pytest.mark.parametrize("primary_failure", [False, True])
+def test_stream_cleanup_preserves_errors_and_aborts(monkeypatch, cleanup_error, primary_failure):
+    chunks = [(b"invalid\n" if primary_failure else b"{}\n", None)]
+    container = make_streaming_container(chunks)
+    api = cast(_FakeExecAPI, cast(Any, container.client).api)
+    docker_container = cast(_FakeContainer, container.container)
+    disconnected = isinstance(cleanup_error, OSError) and cleanup_error.errno == errno.ENOTCONN
+
+    def fail_close():
+        raise cleanup_error
+
+    monkeypatch.setattr(api.stream, "close", fail_close)
+
+    if primary_failure:
+        with pytest.raises(RuntimeError, match="parse container output") as caught:
+            list(container.run_iter(None))
+
+        assert docker_container.removed
+        notes = getattr(caught.value, "__notes__", [])
+        assert any("close failed" in note for note in notes) == (not disconnected)
+    elif not disconnected:
+        with pytest.raises(type(cleanup_error)) as caught:
+            list(container.run_iter(None))
+
+        assert caught.value is cleanup_error
+    else:
+        assert list(container.run_iter(None)) == [({}, None)]
+
+
+def test_disconnected_docker_stream_releases_socket_and_response(monkeypatch):
+    container = make_streaming_container([])
+    api = cast(_FakeExecAPI, cast(Any, container.client).api)
+
+    with socket.socket() as sock:
+        with sock.makefile("rb") as socket_file:
+            response = SimpleNamespace(
+                raw=SimpleNamespace(closed=False, _fp=SimpleNamespace(fp=socket_file)),
+                close=socket_file.close,
+            )
+            stream = CancellableStream(iter([(b"{}\n", None)]), cast(Any, response))
+            monkeypatch.setattr(api, "stream", stream)
+
+            assert list(container.run_iter(None)) == [({}, None)]
+            assert sock.fileno() == -1
+            assert socket_file.closed
+
+
+@pytest.mark.parametrize("layout", ["raw_sock", "raw_private_sock", "direct", "changed"])
+def test_docker_cleanup_handles_socket_layouts_and_always_closes_response(monkeypatch, layout):
+    closed = []
+    response_socket = SimpleNamespace(close=lambda: closed.append("socket"))
+    socket_files = {
+        "raw_sock": SimpleNamespace(raw=SimpleNamespace(sock=response_socket)),
+        "raw_private_sock": SimpleNamespace(raw=SimpleNamespace(_sock=response_socket)),
+        "direct": SimpleNamespace(_sock=response_socket),
+        "changed": SimpleNamespace(),
+    }
+    response = SimpleNamespace(
+        raw=SimpleNamespace(_fp=SimpleNamespace(fp=socket_files[layout])),
+        close=lambda: closed.append("response"),
+    )
+    stream = CancellableStream(iter([]), cast(Any, response))
+
+    def disconnected():
+        raise OSError(errno.ENOTCONN, "Socket is not connected")
+
+    monkeypatch.setattr(stream, "close", disconnected)
+
+    if layout == "changed":
+        with pytest.raises(RuntimeError, match="socket layout has changed"):
+            RunnerSession._close_exec_stream(stream)
+
+        assert closed == ["response"]
+    else:
+        RunnerSession._close_exec_stream(stream)
+        assert closed == ["socket", "response"]
+
+
+def test_docker_cleanup_reports_missing_response_only_when_workaround_is_needed(monkeypatch):
+    stream = CancellableStream(iter([]), cast(Any, None))
+    monkeypatch.delattr(stream, "_response")
+    monkeypatch.setattr(stream, "close", lambda: None)
+
+    RunnerSession._close_exec_stream(stream)
+
+    def disconnected():
+        raise OSError(errno.ENOTCONN, "Socket is not connected")
+
+    monkeypatch.setattr(stream, "close", disconnected)
+
+    with pytest.raises(RuntimeError, match="response is unavailable"):
+        RunnerSession._close_exec_stream(stream)
+
+
+def test_docker_socket_close_failure_still_closes_response_and_aborts(monkeypatch):
+    container = make_streaming_container([(b"invalid\n", None)])
+    api = cast(_FakeExecAPI, cast(Any, container.client).api)
+    docker_container = cast(_FakeContainer, container.container)
+    closed = []
+
+    def fail_socket_close():
+        raise OSError(errno.EIO, "socket close failed")
+
+    response = SimpleNamespace(
+        raw=SimpleNamespace(
+            _fp=SimpleNamespace(fp=SimpleNamespace(_sock=SimpleNamespace(close=fail_socket_close)))
+        ),
+        close=lambda: closed.append("response"),
+    )
+    stream = CancellableStream(api.stream, cast(Any, response))
+
+    def disconnected():
+        raise OSError(errno.ENOTCONN, "Socket is not connected")
+
+    monkeypatch.setattr(stream, "close", disconnected)
+    monkeypatch.setattr(api, "stream", stream)
+
+    with pytest.raises(RuntimeError, match="parse container output") as caught:
+        list(container.run_iter(None))
+
+    assert closed == ["response"]
+    assert docker_container.removed
+    assert any("socket close failed" in note for note in caught.value.__notes__)
 
 
 # ==================================
