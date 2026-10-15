@@ -22,7 +22,7 @@ from gerrychain import Graph, Partition
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_DOCKER_IMAGE = "mgggdev/replicate:v2.0.1@sha256:fe03dd8c70e72e15d50410317892c32a6b04e1d254d0a4af6f16b4a10d14768f"
+DEFAULT_DOCKER_IMAGE = "mgggdev/replicate:v2.0.2@sha256:fe03dd8c70e72e15d50410317892c32a6b04e1d254d0a4af6f16b4a10d14768f"
 
 BINARY_WRITERS = ("pcompress", "ben", "bendl")
 """Writers whose output cannot be decoded from a console stream."""
