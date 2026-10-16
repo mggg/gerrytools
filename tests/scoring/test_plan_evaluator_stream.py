@@ -1624,6 +1624,46 @@ def test_evaluate_stream_update_replaces_only_matching_scores(tmp_path: Path) ->
     assert run._metric_metadata["district_totals"].subkeys == ("population",)
 
 
+@pytest.mark.parametrize("existing_counts", [None, (1, 2)])
+def test_evaluate_stream_update_refreshes_uniqueness_counts(
+    tmp_path: Path, existing_counts: tuple[int, int] | None
+) -> None:
+    source = tmp_path / "plans.ben"
+    output = tmp_path / "scores"
+    write_source(source, "ben", "standard")
+    graph, _ = grid_resources()
+    evaluator = PlanEvaluator(graph).add_metric(CutEdges())
+    evaluator.evaluate_stream(source, output)
+    if existing_counts is not None:
+        manifest = json.loads(run_manifest(output).read_text())
+        manifest["summary"]["unique_plans"] = existing_counts[0]
+        manifest["summary"]["unique_districts"] = existing_counts[1]
+        run_manifest(output).write_text(json.dumps(manifest))
+
+    run = evaluator.evaluate_stream(source, output, update=True, track_uniqueness=True)
+
+    expected = EvaluationSummary(samples=2, accepted=2, unique_plans=2, unique_districts=4)
+    assert run.summary == expected
+    assert EnsembleEvalResult.open(output).summary == expected
+
+
+@pytest.mark.parametrize("track_uniqueness", [False, True])
+def test_evaluate_stream_update_preserves_uniqueness_without_recounting(
+    tmp_path: Path, track_uniqueness: bool
+) -> None:
+    source = tmp_path / "plans.ben"
+    output = tmp_path / "scores"
+    write_source(source, "ben", "standard")
+    graph, _ = grid_resources()
+    evaluator = PlanEvaluator(graph).add_metric(CutEdges())
+    original = evaluator.evaluate_stream(source, output, track_uniqueness=track_uniqueness)
+
+    run = evaluator.evaluate_stream(source, output, update=True)
+
+    assert run.summary == original.summary
+    assert EnsembleEvalResult.open(output).summary == original.summary
+
+
 def test_evaluate_stream_rolls_back_tables_when_manifest_publication_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

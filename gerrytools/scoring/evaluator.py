@@ -1098,6 +1098,10 @@ def _merge_ensemble_result(
             installed.append(destination)
 
         existing_manifest["metrics"] = merged
+        if staged_result.summary.unique_plans is not None:
+            summary = cast("dict[str, object]", existing_manifest["summary"])
+            summary["unique_plans"] = staged_result.summary.unique_plans
+            summary["unique_districts"] = staged_result.summary.unique_districts
         _write_run_manifest(output, existing_manifest)
     except BaseException:
         for destination in reversed(installed):

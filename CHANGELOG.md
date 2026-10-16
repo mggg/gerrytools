@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Updating streamed scores now saves recomputed uniqueness counts and preserves existing counts
+  when uniqueness tracking is disabled.
+
 - MGRP runs no longer fail on macOS when Docker stream cleanup encounters an already disconnected
   socket. Cleanup releases the socket and preserves other execution errors.
 
