@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- PlanEvaluator and single-plan scoring functions accept GerryChain graphs backed by NetworkX
+  or RustworkX, including frozen partition graphs, while preserving original node identifiers.
+
 - Release workflow publishes automatically numbered TestPyPI candidates and verifies their source
   commit before rebuilding a final release for PyPI.
 

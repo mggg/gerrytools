@@ -5,9 +5,11 @@ from __future__ import annotations
 from collections.abc import Hashable, Iterable
 from typing import Any, TypeAlias, TypeVar, cast, overload
 
+import gerrychain
 import networkx as nx
 from geopandas import GeoDataFrame
 from gerrychain import Partition
+from gerrychain.graph import FrozenGraph
 from pandas import DataFrame, Series
 
 from ..evaluator import (
@@ -16,12 +18,11 @@ from ..evaluator import (
     _assignment_mapping,
     _is_missing,
     _partition_assignment,
-    _partition_graph,
     _result_name,
 )
 from ..metrics import Metric
 
-SinglePlanSource: TypeAlias = Partition | nx.Graph | GeoDataFrame
+SinglePlanSource: TypeAlias = Partition | nx.Graph | gerrychain.Graph | FrozenGraph | GeoDataFrame
 
 
 SinglePlanResult: TypeAlias = float | int | Series | DataFrame
@@ -104,13 +105,13 @@ def _evaluate(
         if geometry is None and (node_id_column is not None or target_crs is not None):
             raise ValueError("node_id_column and target_crs require geometry")
         evaluator = PlanEvaluator(
-            _partition_graph(source),
+            source.graph,
             geometry=geometry,
             node_id_column=node_id_column,
             target_crs=target_crs,
         )
         plan: Assignment = _partition_assignment(source)
-    elif isinstance(source, nx.Graph):
+    elif isinstance(source, (nx.Graph, gerrychain.Graph, FrozenGraph)):
         if assignment is None:
             raise TypeError("a graph source requires an assignment")
         if isinstance(assignment, str):

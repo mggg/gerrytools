@@ -13,12 +13,13 @@ from types import MappingProxyType
 from typing import Any, Literal, TypeAlias, cast
 from weakref import WeakSet
 
+import gerrychain
 import networkx as nx
 import numpy as np
 import pandas as pd
 from geopandas import GeoDataFrame
-from gerrychain import Graph as GerryGraph
 from gerrychain import Partition
+from gerrychain.graph import FrozenGraph
 from pyproj import CRS
 from tqdm.auto import tqdm
 
@@ -131,14 +132,16 @@ class _ResourceCandidate:
 class PlanEvaluator:
     """Prepare graph and geometry resources once, then evaluate plans with engine kernels.
 
-    Graph structure is captured lazily, while metric columns are snapshotted when first required.
-    Assignments must follow construction-time node order when supplied as sequences; mappings are
-    reordered by node identifier. Arbitrary hashable district labels are mapped densely for Rust
-    and restored in the result.
+    NetworkX inputs are read lazily; RustworkX-backed GerryChain inputs are copied at construction.
+    Metric columns are prepared when first required. Sequence assignments follow construction-time
+    node order; mappings are reordered by node identifier. Arbitrary hashable district labels are
+    mapped densely for Rust and restored in the result.
 
     Args:
-        graph (nx.Graph): An undirected, simple NetworkX-compatible graph containing metric
-            attributes.
+        graph (nx.Graph | gerrychain.Graph | FrozenGraph): An undirected, simple NetworkX or
+            GerryChain graph containing metric attributes. RustworkX-backed GerryChain graphs
+            are copied once using original node identifiers, in internal node-index order.
+            Assignments and geometry identifiers use those original labels.
         geometry (GeoDataFrame | None, optional): GeoDataFrame with exactly one row per graph node.
             The whole aligned frame is authoritative for ordinary node and region columns, except
             that its active geometry column is reserved for geometry-backed metrics. Defaults to
@@ -155,12 +158,13 @@ class PlanEvaluator:
 
     def __init__(
         self,
-        graph: nx.Graph,
+        graph: nx.Graph | gerrychain.Graph | FrozenGraph,
         *,
         geometry: GeoDataFrame | None = None,
         node_id_column: str | None = None,
         target_crs: Any | None = None,
     ) -> None:
+        graph = _normalize_graph(graph)
         if graph.is_directed():
             raise ValueError("graph must be undirected")
         if graph.is_multigraph():
@@ -181,7 +185,7 @@ class PlanEvaluator:
         self._graph = graph
         self._geometry_source: _GeometrySource | None = None
         self._edge_labels: frozenset[frozenset[Hashable]] | None = None
-        self._verified_partition_graphs: WeakSet[GerryGraph] = WeakSet()
+        self._verified_partition_graphs: WeakSet[gerrychain.Graph] = WeakSet()
         self._metrics: list[tuple[str, _MetricBase]] = []
         self._resources: _PreparedResources | None = None
         self._preparing: _ResourceCandidate | None = None
@@ -1218,27 +1222,37 @@ def _node_order_json(node_order: tuple[Hashable, ...]) -> str | None:
         return None
 
 
-def _partition_graph(partition: Partition) -> nx.Graph:
-    """Reconstruct a NetworkX graph under a partition's original node identifiers."""
-    source = partition.graph.graph
+def _normalize_graph(source: nx.Graph | gerrychain.Graph | FrozenGraph) -> nx.Graph:
+    """Normalize scoring graphs without losing original labels or parallel edges."""
+    if isinstance(source, FrozenGraph):
+        source = source.graph
+    if isinstance(source, nx.Graph):
+        return source
+    if not isinstance(source, gerrychain.Graph):
+        raise TypeError("graph must be a NetworkX or GerryChain graph")
+    if source.is_nx_graph():
+        return source.get_nx_graph()
+
     graph = nx.Graph()
     internal_nodes = []
     for internal in source.node_indices:
         if not isinstance(internal, numbers.Integral):
-            raise ValueError("partition graph must use assignment-vector node identifiers")
+            raise ValueError("GerryChain graph must use integer internal node identifiers")
         internal_nodes.append(int(internal))
     for internal in sorted(internal_nodes):
         original = source.original_nx_node_id_for_internal_node_id(internal)
+        if original in graph:
+            raise ValueError("GerryChain graph original node identifiers must be unique")
         data = dict(source.node_data(internal))
         data.pop("__networkx_node__", None)
         graph.add_node(original, **data)
     for edge in source.edge_indices:
         left, right = source.get_edge_from_edge_id(edge)
-        graph.add_edge(
-            source.original_nx_node_id_for_internal_node_id(left),
-            source.original_nx_node_id_for_internal_node_id(right),
-            **dict(source.edge_data(edge)),
-        )
+        left = source.original_nx_node_id_for_internal_node_id(left)
+        right = source.original_nx_node_id_for_internal_node_id(right)
+        if graph.has_edge(left, right):
+            raise ValueError("graph must be simple, not a multigraph")
+        graph.add_edge(left, right, **dict(source.edge_data(edge)))
     return graph
 
 

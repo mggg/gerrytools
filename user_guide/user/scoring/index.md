@@ -78,3 +78,21 @@ from their declared CRS into the evaluator's scoring CRS. For a bare Shapely sta
 `StateClippedConvexHullRatio(boundary, state_crs=units.crs)` (or pass `state_crs` to the single-plan
 function). Without `state_crs`, the boundary must already use the final scoring CRS, as before.
 Caller-owned GeoDataFrames and geometries are not modified.
+
+## GerryChain graph inputs
+
+`PlanEvaluator` and the single-plan scoring functions accept NetworkX graphs, GerryChain
+`Graph` objects backed by NetworkX or RustworkX, and frozen graphs such as `partition.graph`.
+You can pass a GerryChain graph directly without converting it yourself.
+
+Assignments supplied as mappings and geometry identifiers use the original node labels, including
+string and tuple labels. Sequence assignments follow NetworkX node iteration order for
+NetworkX-backed inputs, or increasing internal node-index order for RustworkX-backed inputs.
+A RustworkX subgraph retains its original labels even when GerryChain renumbers its internal nodes.
+Use a mapping when the ordering is uncertain.
+
+RustworkX-backed inputs are converted once at evaluator construction, preserving node and edge
+attributes in copied dictionaries. Replacing attribute values later does not change the evaluator.
+NetworkX-backed inputs retain the existing lazy resource preparation behavior. All inputs must
+remain simple and undirected, without self-loops. Passing a graph alone does not infer its geometry;
+continue to supply `geometry=` for geometry-backed scores.

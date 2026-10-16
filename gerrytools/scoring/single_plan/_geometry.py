@@ -5,9 +5,11 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+import gerrychain
 import networkx as nx
 from geopandas import GeoDataFrame
 from gerrychain import Partition
+from gerrychain.graph import FrozenGraph
 from pandas import DataFrame, Series
 from shapely.geometry.base import BaseGeometry
 
@@ -29,7 +31,7 @@ from ._base import GeoAssignment, SinglePlanSource, _columns, _evaluate, _expect
 
 
 def cut_edges(
-    source: Partition | nx.Graph,
+    source: Partition | nx.Graph | gerrychain.Graph | FrozenGraph,
     assignment: Assignment | None = None,
     *,
     weight_attr: str | None = None,
@@ -37,7 +39,8 @@ def cut_edges(
     """Count or weight cut edges in one partition or graph assignment.
 
     Args:
-        source (Partition | nx.Graph): Partition or graph providing the plan topology.
+        source (Partition | nx.Graph | gerrychain.Graph | FrozenGraph): Partition or graph providing
+            the plan topology.
         assignment (Assignment | None): Graph assignment mapping or node-ordered sequence. Omit
             for a Partition, which supplies its own assignment.
         weight_attr (str | None): Optional numeric edge attribute to sum over cut edges. When
@@ -413,7 +416,7 @@ def region_pieces(
 
 
 def region_parts(
-    source: Partition | nx.Graph,
+    source: Partition | nx.Graph | gerrychain.Graph | FrozenGraph,
     assignment: Assignment | None = None,
     *,
     region_attrs: str | Iterable[str],
@@ -423,7 +426,8 @@ def region_parts(
     """Count connected fixed-region and district parts in one partition or graph assignment.
 
     Args:
-        source (Partition | nx.Graph): Partition or graph providing the plan topology.
+        source (Partition | nx.Graph | gerrychain.Graph | FrozenGraph): Partition or graph providing
+            the plan topology.
         assignment (Assignment | None): Graph assignment mapping or node-ordered sequence. Omit
             for a Partition, which supplies its own assignment.
         region_attrs (str | Iterable[str]): One fixed-region column, or several to score together.

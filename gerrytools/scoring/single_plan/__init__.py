@@ -99,7 +99,7 @@ def tally(
     """Sum one or more unit columns by district for a single plan.
 
     Args:
-        source (SinglePlanSource): GerryChain Partition, NetworkX graph, or authoritative
+        source (SinglePlanSource): GerryChain Partition, NetworkX or GerryChain graph, or authoritative
             GeoDataFrame.
         assignment (GeoAssignment | None, optional): Graph assignment mapping or node-ordered
             sequence, or a GeoDataFrame assignment column, mapping, or row-ordered sequence.
@@ -146,7 +146,7 @@ def eguia(
     wins for neither party. See :class:`Eguia` for the full definition and input contract.
 
     Args:
-        source (SinglePlanSource): GerryChain Partition, NetworkX graph, or authoritative
+        source (SinglePlanSource): GerryChain Partition, NetworkX or GerryChain graph, or authoritative
             GeoDataFrame.
         assignment (GeoAssignment | None, optional): Graph assignment mapping or node-ordered
             sequence, or a GeoDataFrame assignment column, mapping, or row-ordered sequence.
