@@ -48,7 +48,7 @@ scoring guide <../user/scoring/bendl>` for a complete example and the physical f
    :imported-members:
    :undoc-members:
    :show-inheritance:
-   :exclude-members: CentroidTravelTime, FerryBuildSummary, PairwiseTravelTime, TravelTimeArtifact, TravelTimeBuildReport, TravelTimeBuildResult, TravelTimeScorer, TravelTimeTable, build_osm_drive_graph, build_travel_time_table, build_travel_time_table_from_pbf, census_representative_points, centroid_travel_time, load_travel_time_table, pairwise_travel_time, save_travel_time_table, snap_units_to_graph
+   :exclude-members: CentroidTravelTime, FerryBuildSummary, PairwiseTravelTime, SpeedRepairSummary, TravelTimeArtifact, TravelTimeBuildReport, TravelTimeBuildResult, TravelTimeScorer, TravelTimeTable, build_osm_drive_graph, build_travel_time_table, build_travel_time_table_from_pbf, census_representative_points, centroid_travel_time, load_travel_time_table, pairwise_travel_time, save_travel_time_table, snap_units_to_graph
 
 Array formulas
 --------------

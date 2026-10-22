@@ -222,6 +222,7 @@ result = gs.build_travel_time_table_from_pbf(
     points,
     "kansas-latest.osm.pbf",
     id_column="GEOID20",
+    unit_polygons=units,
     output_path="ks_vtd2020_travel_times.npz",
     report_path="ks_vtd2020_travel_times.report.json",
     # Optional directed audit retaining both route directions:
@@ -241,7 +242,12 @@ Equivalent stepwise form:
 ```python
 points = gs.census_representative_points(units, id_column="GEOID20")
 graph, ferry = gs.build_osm_drive_graph("kansas-latest.osm.pbf")
-unit_to_node, snap_distances = gs.snap_units_to_graph(graph, points, id_column="GEOID20")
+unit_to_node, snap_distances = gs.snap_units_to_graph(
+    graph,
+    points,
+    id_column="GEOID20",
+    unit_polygons=units,
+)
 result = gs.build_travel_time_table(
     graph,
     unit_to_node,
@@ -250,9 +256,14 @@ result = gs.build_travel_time_table(
 )
 ```
 
-`build_travel_time_table_from_pbf(...)` accepts only a Point GeoDataFrame. It does
-not inspect polygons, calculate centroids, or repair boundaries. Users without
-Census internal-point columns must supply their own representative points.
+`build_travel_time_table_from_pbf(...)` requires a Point GeoDataFrame and accepts
+an optional polygon GeoDataFrame with matching unit IDs. With polygons supplied,
+the builder chooses the contained retained-network node nearest the representative
+point. If no retained node lies inside a unit, it chooses the node nearest any
+exterior ring; polygon holes are excluded from this fallback. Reported snap
+distances remain representative-point-to-node distances. The builder does not
+calculate centroids or repair boundaries. Users without Census internal-point
+columns must supply their own representative points.
 
 Vehicle-ferry inclusion is conservative. A ferry way must affirmatively permit
 `motor_vehicle`, `motorcar`, or `vehicle`, or carry a drivable `ferry=*` road
@@ -263,6 +274,13 @@ island in the principal network. Filtering occurs only in memory and does not
 modify the source PBF. A state-only PBF constrains routes to roads in that extract;
 use a broader PBF when routes that leave and re-enter the state must be represented.
 
+Road speeds are prepared with OSMnx and a configurable
+``fallback_speed_kph`` (48 kph by default). If an edge still has a non-positive
+or non-finite speed, the builder keeps the edge, assigns that documented
+fallback, and recomputes its travel time. Missing or invalid edge lengths remain
+an error rather than being silently dropped. The build report's ``speed_repair``
+section records the number of inspected and repaired edges and the fallback used.
+
 The build report records ferry counts, SCC filter counts, snap-distance
 statistics, directional asymmetry, and final connectivity. The builder warns when
 the connectivity filter removes road nodes or edges. Applicability means the
@@ -270,6 +288,13 @@ selected snapped nodes are mutually reachable; it does **not** prove that every
 representative point was geographically near its snapped node. Inspect
 `result.report.mean_snap_distance_m`, `result.report.max_snap_distance_m`, and
 `result.snap_distances_m` before trusting a table.
+
+For road-network review, pass ``include_component_audit=True`` to
+``build_osm_drive_graph``. The returned retained graph then stores a compact
+GeoDataFrame of removed edge geometry and selected OSM attributes at
+``graph.graph["removed_component_edges"]``. This option does not alter the
+retained graph or travel times, but it is disabled by default because preserving
+discarded-edge evidence increases memory use on large extracts.
 
 If snapped nodes remain disconnected, `result.table` is `None`, the report status
 is `not_applicable`, and no scoring artifact is written. The optional directed
@@ -283,14 +308,15 @@ build.
 
 ### Limitations
 
-- Nearest-node snapping is an approximation of unit-to-unit drive time.
+- Node snapping is an approximation of unit-to-unit drive time. Polygon-aware
+  snapping should be used when trustworthy unit boundaries are available.
 - A road segment may cross a small unit without containing an OSM graph node; this
   is especially relevant for Census blocks. Edge-based snapping may be preferable
   for very small units, but is not included in this version.
 - Largest-SCC filtering can cause island or secondary-component points to snap far
   away onto the retained network. Review snap distances carefully.
-- GerryTools does not repair polygon boundaries in this builder because the public
-  path consumes points, not polygons.
+- GerryTools validates but does not repair polygon boundaries. Source-boundary
+  repair is a separate, reviewable data-preparation decision.
 
 See the {doc}`scoring API <../../api/scoring>` for full signatures under
 `gerrytools.scoring.travel_time`.

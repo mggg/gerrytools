@@ -89,6 +89,7 @@ from .single_plan import (
 )
 from .travel_time import (
     CENTROID_WEIGHT_MODES,
+    DEFAULT_FALLBACK_SPEED_KPH,
     DEFAULT_FERRY_SPEED_KPH,
     PAIRWISE_WEIGHT_MODES,
     CentroidTravelTime,
@@ -96,6 +97,7 @@ from .travel_time import (
     FerryBuildSummary,
     PairwiseTravelTime,
     PairwiseWeightMode,
+    SpeedRepairSummary,
     TravelTimeArtifact,
     TravelTimeBuildReport,
     TravelTimeBuildResult,
@@ -110,6 +112,7 @@ from .travel_time import (
     load_travel_time_table,
     pairwise_travel_time,
     pairwise_trip_weight,
+    repair_nonpositive_edge_speeds,
     save_travel_time_table,
     snap_units_to_graph,
 )
@@ -129,6 +132,7 @@ __all__ = [
     "Eguia",
     "EnsembleEvalResult",
     "EvaluationMemoryError",
+    "DEFAULT_FALLBACK_SPEED_KPH",
     "DEFAULT_FERRY_SPEED_KPH",
     "MaxAbsolutePopulationDeviation",
     "MaxPopulationDeviation",
@@ -179,6 +183,7 @@ __all__ = [
     "CentroidWeightMode",
     "FerryBuildSummary",
     "PairwiseWeightMode",
+    "SpeedRepairSummary",
     "TravelTimeArtifact",
     "TravelTimeBuildReport",
     "TravelTimeBuildResult",
@@ -191,6 +196,7 @@ __all__ = [
     "load_travel_time_table",
     "pairwise_trip_weight",
     "pairwise_travel_time",
+    "repair_nonpositive_edge_speeds",
     "save_travel_time_table",
     "snap_units_to_graph",
     "centroid_travel_time",

@@ -22,13 +22,15 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
-from shapely.geometry import LineString, MultiLineString, Point
+from shapely import STRtree
+from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 from shapely.ops import linemerge
 
 from .od_table import TravelTimeTable, UnitId
 from .table_io import save_travel_time_table
 
 DEFAULT_FERRY_SPEED_KPH = 20.0
+DEFAULT_FALLBACK_SPEED_KPH = 48.0
 BuildStatus = Literal["applicable", "not_applicable"]
 
 _ACCESS_ALLOWED = frozenset({"yes", "designated", "permissive", "official", "destination"})
@@ -71,6 +73,20 @@ class FerryBuildSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class SpeedRepairSummary:
+    """Counts of edges whose free-flow speed or travel time needed repair.
+
+    Repairs replace non-positive or non-finite ``speed_kph`` values with a
+    documented fallback and recompute ``travel_time``. Edges are never dropped.
+    """
+
+    inspected: int = 0
+    repaired_speed: int = 0
+    repaired_travel_time: int = 0
+    fallback_speed_kph: float = DEFAULT_FALLBACK_SPEED_KPH
+
+
+@dataclass(frozen=True, slots=True)
 class TravelTimeBuildReport:
     """Validation and provenance summary for one table build."""
 
@@ -86,6 +102,7 @@ class TravelTimeBuildReport:
     mean_snap_distance_m: float
     max_snap_distance_m: float
     ferry: FerryBuildSummary = field(default_factory=FerryBuildSummary)
+    speed_repair: SpeedRepairSummary = field(default_factory=SpeedRepairSummary)
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -112,6 +129,12 @@ class TravelTimeBuildReport:
                 "skipped_geometry": self.ferry.skipped_geometry,
                 "osm_duration": self.ferry.osm_duration,
                 "estimated_duration": self.ferry.estimated_duration,
+            },
+            "speed_repair": {
+                "inspected": self.speed_repair.inspected,
+                "repaired_speed": self.speed_repair.repaired_speed,
+                "repaired_travel_time": self.speed_repair.repaired_travel_time,
+                "fallback_speed_kph": self.speed_repair.fallback_speed_kph,
             },
             "metadata": dict(self.metadata),
         }
@@ -262,6 +285,102 @@ def _weak_component_count(graph: nx.Graph) -> int:
     return nx.number_connected_components(graph)
 
 
+def _edge_geometry(
+    graph: nx.MultiDiGraph, u: Hashable, v: Hashable, data: Mapping[str, Any]
+) -> LineString:
+    """Return an edge geometry, constructing one from endpoint coordinates."""
+    geometry = data.get("geometry")
+    if isinstance(geometry, LineString) and not geometry.is_empty:
+        return geometry
+    if isinstance(geometry, MultiLineString):
+        merged = linemerge(geometry)
+        if isinstance(merged, LineString) and not merged.is_empty:
+            return merged
+    return LineString(
+        [
+            (float(graph.nodes[u]["x"]), float(graph.nodes[u]["y"])),
+            (float(graph.nodes[v]["x"]), float(graph.nodes[v]["y"])),
+        ]
+    )
+
+
+def _retain_principal_strong_component(
+    graph: nx.MultiDiGraph,
+    *,
+    include_component_audit: bool = False,
+) -> tuple[dict[str, int | str], gpd.GeoDataFrame | None]:
+    """Retain the largest SCC and optionally capture removed edge evidence."""
+    original_node_count = graph.number_of_nodes()
+    original_edge_count = graph.number_of_edges()
+    principal_nodes: set[Hashable] = set()
+    strong_component_count = 0
+    for component in nx.strongly_connected_components(graph):
+        strong_component_count += 1
+        if len(component) > len(principal_nodes):
+            principal_nodes = component
+    if not principal_nodes:
+        raise ValueError("No strongly connected driving component found")
+
+    removed_edges: gpd.GeoDataFrame | None = None
+    if include_component_audit:
+        records: list[dict[str, Any]] = []
+        for u, v, key, data in graph.edges(keys=True, data=True):
+            if u in principal_nodes and v in principal_nodes:
+                continue
+            records.append(
+                {
+                    "u": u,
+                    "v": v,
+                    "key": key,
+                    "highway": data.get("highway"),
+                    "name": data.get("name"),
+                    "route": data.get("route"),
+                    "access": data.get("access"),
+                    "motor_vehicle": data.get("motor_vehicle"),
+                    "speed_kph": data.get("speed_kph"),
+                    "speed_imputed": bool(data.get("speed_imputed", False)),
+                    "travel_time": data.get("travel_time"),
+                    "length": data.get("length"),
+                    "geometry": _edge_geometry(graph, u, v, data),
+                }
+            )
+        columns = [
+            "u",
+            "v",
+            "key",
+            "highway",
+            "name",
+            "route",
+            "access",
+            "motor_vehicle",
+            "speed_kph",
+            "speed_imputed",
+            "travel_time",
+            "length",
+            "geometry",
+        ]
+        removed_edges = gpd.GeoDataFrame(
+            records,
+            columns=columns,
+            geometry="geometry",
+            crs=graph.graph.get("crs"),
+        )
+
+    removed_nodes = [node for node in graph if node not in principal_nodes]
+    graph.remove_nodes_from(removed_nodes)
+    connectivity_filter: dict[str, int | str] = {
+        "method": "largest_strongly_connected_component",
+        "original_strong_component_count": strong_component_count,
+        "original_node_count": original_node_count,
+        "original_edge_count": original_edge_count,
+        "retained_node_count": graph.number_of_nodes(),
+        "retained_edge_count": graph.number_of_edges(),
+        "removed_node_count": original_node_count - graph.number_of_nodes(),
+        "removed_edge_count": original_edge_count - graph.number_of_edges(),
+    }
+    return connectivity_filter, removed_edges
+
+
 def add_vehicle_ferries(
     graph: nx.MultiDiGraph,
     ferry_features: gpd.GeoDataFrame | None,
@@ -359,17 +478,120 @@ def add_vehicle_ferries(
     )
 
 
+def repair_nonpositive_edge_speeds(
+    graph: nx.MultiDiGraph,
+    *,
+    fallback_speed_kph: float = DEFAULT_FALLBACK_SPEED_KPH,
+) -> SpeedRepairSummary:
+    """Replace non-positive/non-finite speeds and recompute affected travel times.
+
+    OSMnx sets ``travel_time = length_km / (speed_kph / 3600)``. A cleaned OSM
+    ``maxspeed`` of ``0`` therefore yields ``travel_time = inf``, which later
+    fails directed routing. This keeps every edge, imputes a documented fallback
+    speed, and records how many edges were touched.
+    """
+    if not np.isfinite(fallback_speed_kph) or fallback_speed_kph <= 0:
+        raise ValueError("fallback_speed_kph must be finite and positive")
+
+    inspected = 0
+    repaired_speed = 0
+    repaired_travel_time = 0
+    remaining_invalid = 0
+    for _, _, _, data in graph.edges(keys=True, data=True):
+        inspected += 1
+        speed = data.get("speed_kph")
+        try:
+            speed_value = float(speed) if speed is not None else math.nan
+        except (TypeError, ValueError):
+            speed_value = math.nan
+        if not np.isfinite(speed_value) or speed_value <= 0:
+            data["speed_kph"] = float(fallback_speed_kph)
+            data["speed_imputed"] = True
+            data["speed_imputation_reason"] = "nonpositive_or_nonfinite_speed_kph"
+            repaired_speed += 1
+            speed_value = float(fallback_speed_kph)
+
+        length = data.get("length")
+        try:
+            length_value = float(length) if length is not None else math.nan
+        except (TypeError, ValueError):
+            length_value = math.nan
+        travel_time = data.get("travel_time")
+        try:
+            travel_value = float(travel_time) if travel_time is not None else math.nan
+        except (TypeError, ValueError):
+            travel_value = math.nan
+        if np.isfinite(length_value) and (
+            not np.isfinite(travel_value) or travel_value < 0 or data.get("speed_imputed")
+        ):
+            data["travel_time"] = float(length_value) / (speed_value * 1000.0 / 3600.0)
+            repaired_travel_time += 1
+        try:
+            travel_value = float(data.get("travel_time"))
+        except (TypeError, ValueError):
+            travel_value = math.nan
+        if not np.isfinite(travel_value) or travel_value < 0:
+            remaining_invalid += 1
+    if remaining_invalid:
+        raise ValueError(
+            f"{remaining_invalid} road edge(s) still have invalid travel_time after "
+            f"imputing fallback_speed_kph={fallback_speed_kph}. Edges were not dropped; "
+            "inspect length/speed attributes before retrying."
+        )
+
+    summary = SpeedRepairSummary(
+        inspected=inspected,
+        repaired_speed=repaired_speed,
+        repaired_travel_time=repaired_travel_time,
+        fallback_speed_kph=float(fallback_speed_kph),
+    )
+    graph.graph["speed_repair"] = {
+        "inspected": summary.inspected,
+        "repaired_speed": summary.repaired_speed,
+        "repaired_travel_time": summary.repaired_travel_time,
+        "fallback_speed_kph": summary.fallback_speed_kph,
+        "policy": "impute_fallback_speed_keep_edge",
+    }
+    return summary
+
+
+def _open_pyrosm_reader(source: Path, OSM: Any) -> Any:
+    """Open a PBF reader, preferring ``keep_metadata=False`` when supported.
+
+    Some state extracts (notably Connecticut under pyrosm 0.17 in-memory) fail in
+    ``convert_to_arrays_and_drop_empty`` when metadata integer fields are
+    ``None``. Dropping metadata does not change highway topology used for
+    routing. ``engine='out_of_core'`` is not used here because this builder still
+    requires ``get_network(nodes=True)``, which that engine rejects.
+    """
+    try:
+        return OSM(str(source), keep_metadata=False)
+    except TypeError as exc:
+        message = str(exc)
+        if "keep_metadata" not in message or not any(
+            phrase in message
+            for phrase in ("unexpected keyword", "invalid keyword", "keyword argument")
+        ):
+            raise
+        return OSM(str(source))
+
+
 def build_osm_drive_graph(
     pbf_path: str | Path,
     *,
     ferry_speed_kph: float = DEFAULT_FERRY_SPEED_KPH,
+    fallback_speed_kph: float = DEFAULT_FALLBACK_SPEED_KPH,
+    include_component_audit: bool = False,
 ) -> tuple[nx.MultiDiGraph, FerryBuildSummary]:
     """Build the principal mutually routable driving graph from an OSM PBF.
 
     All OSM driving components are retained until eligible vehicle ferries have
     been added. The returned graph is then restricted to its largest strongly
     connected component so that representative points cannot snap to isolated
-    road fragments or directionally inaccessible components.
+    road fragments or directionally inaccessible components. When
+    ``include_component_audit`` is true, a geometry-and-attribute table for the
+    removed edges is stored at ``graph.graph["removed_component_edges"]`` for
+    diagnostics. Normal builds avoid that additional memory.
     """
     source = Path(pbf_path)
     if not source.is_file():
@@ -381,8 +603,18 @@ def build_osm_drive_graph(
     except ImportError as exc:  # pragma: no cover - optional dependency
         raise ImportError("Install gerrytools[travel-time] to build tables from OSM PBFs") from exc
 
-    osm = OSM(str(source))
-    nodes, edges = osm.get_network(network_type="driving", nodes=True)
+    osm = _open_pyrosm_reader(source, OSM)
+    try:
+        nodes, edges = osm.get_network(network_type="driving", nodes=True)
+    except TypeError as exc:
+        raise RuntimeError(
+            f"pyrosm failed while parsing the driving network from {source}: {exc}. "
+            "This matches a known in-memory parser failure on some extracts "
+            "(e.g. Connecticut) when integer metadata fields are None. "
+            "The builder already opens the reader with keep_metadata=False when "
+            "supported. Do not switch to engine='out_of_core' without changing "
+            "graph construction: that engine rejects get_network(nodes=True)."
+        ) from exc
     if nodes is None or edges is None or len(nodes) == 0 or len(edges) == 0:
         raise ValueError(f"No drivable roads found in {source}")
     graph = OSM.to_graph(
@@ -393,8 +625,10 @@ def build_osm_drive_graph(
         retain_all=True,
         osmnx_compatible=True,
     )
-    graph = ox.routing.add_edge_speeds(graph)
+    del nodes, edges
+    graph = ox.routing.add_edge_speeds(graph, fallback=float(fallback_speed_kph))
     graph = ox.routing.add_edge_travel_times(graph)
+    speed_repair = repair_nonpositive_edge_speeds(graph, fallback_speed_kph=fallback_speed_kph)
     graph = ox.project_graph(graph)
 
     ferry_tags = [
@@ -418,37 +652,30 @@ def build_osm_drive_graph(
     )
     summary = add_vehicle_ferries(graph, ferries, ferry_speed_kph=ferry_speed_kph)
 
-    original_node_count = graph.number_of_nodes()
-    original_edge_count = graph.number_of_edges()
-    principal_nodes: set[Hashable] = set()
-    strong_component_count = 0
-    for component in nx.strongly_connected_components(graph):
-        strong_component_count += 1
-        if len(component) > len(principal_nodes):
-            principal_nodes = component
-    if not principal_nodes:
-        raise ValueError(f"No strongly connected driving component found in {source}")
-
-    removed_nodes = [node for node in graph if node not in principal_nodes]
-    graph.remove_nodes_from(removed_nodes)
-    connectivity_filter = {
-        "method": "largest_strongly_connected_component",
-        "original_strong_component_count": strong_component_count,
-        "original_node_count": original_node_count,
-        "original_edge_count": original_edge_count,
-        "retained_node_count": graph.number_of_nodes(),
-        "retained_edge_count": graph.number_of_edges(),
-        "removed_node_count": original_node_count - graph.number_of_nodes(),
-        "removed_edge_count": original_edge_count - graph.number_of_edges(),
-    }
+    connectivity_filter, removed_component_edges = _retain_principal_strong_component(
+        graph,
+        include_component_audit=include_component_audit,
+    )
     graph.graph["source_pbf"] = str(source.resolve())
     graph.graph["ferry_speed_kph"] = float(ferry_speed_kph)
+    graph.graph["fallback_speed_kph"] = float(fallback_speed_kph)
     graph.graph["connectivity_filter"] = connectivity_filter
+    if removed_component_edges is not None:
+        graph.graph["removed_component_edges"] = removed_component_edges
+    graph.graph["speed_repair"] = {
+        "inspected": speed_repair.inspected,
+        "repaired_speed": speed_repair.repaired_speed,
+        "repaired_travel_time": speed_repair.repaired_travel_time,
+        "fallback_speed_kph": speed_repair.fallback_speed_kph,
+        "policy": "impute_fallback_speed_keep_edge",
+    }
     if connectivity_filter["removed_node_count"]:
         warnings.warn(
             "The principal-road connectivity filter removed "
-            f"{connectivity_filter['removed_node_count']} of {original_node_count} road nodes "
-            f"and {connectivity_filter['removed_edge_count']} of {original_edge_count} edges. "
+            f"{connectivity_filter['removed_node_count']} of "
+            f"{connectivity_filter['original_node_count']} road nodes and "
+            f"{connectivity_filter['removed_edge_count']} of "
+            f"{connectivity_filter['original_edge_count']} edges. "
             "Eligible vehicle ferries were added before this filter. Inspect snap distances "
             "for islands or other geographies whose representative points may have snapped "
             "onto the retained component from far away.",
@@ -463,12 +690,21 @@ def snap_units_to_graph(
     unit_points: gpd.GeoDataFrame,
     *,
     id_column: str,
+    unit_polygons: gpd.GeoDataFrame | None = None,
 ) -> tuple[dict[UnitId, Hashable], dict[UnitId, float]]:
-    """Snap representative points to nearest graph nodes and report distances.
+    """Snap representative points to connected graph nodes and report distances.
 
     Points may use any declared CRS; they are projected to the road-graph CRS
     before snapping. The graph from :func:`build_osm_drive_graph` is already
     restricted to its principal strongly connected component.
+
+    With no ``unit_polygons``, each point is snapped to its nearest graph node.
+    When polygons are supplied, a unit first uses the contained graph node
+    nearest its representative point. If the unit contains no graph node, it
+    instead uses the graph node nearest any exterior ring of the unit. Interior
+    rings (polygon holes) are deliberately excluded from that fallback. Returned
+    distances always measure representative-point-to-node distance, regardless
+    of which selection rule was used.
     """
     if id_column not in unit_points.columns:
         raise KeyError(f"Unit ID column not found: {id_column!r}")
@@ -489,6 +725,16 @@ def snap_units_to_graph(
     if not np.isfinite(xs).all() or not np.isfinite(ys).all():
         raise ValueError("unit_points coordinates must be finite")
 
+    if unit_polygons is not None:
+        return _snap_units_with_polygons(
+            graph,
+            ids,
+            xs,
+            ys,
+            unit_polygons,
+            id_column=id_column,
+        )
+
     try:
         ox = importlib.import_module("osmnx")
     except ImportError as exc:  # pragma: no cover - optional dependency
@@ -504,6 +750,104 @@ def snap_units_to_graph(
     if not np.isfinite(distance_values).all():
         raise ValueError("one or more units could not be snapped to a finite graph distance")
     return dict(zip(ids, nodes)), dict(zip(ids, distance_values.tolist()))
+
+
+def _exterior_boundary(geometry: Polygon | MultiPolygon) -> LineString | MultiLineString:
+    """Return only a polygon's exterior rings, including every multipart piece."""
+    if isinstance(geometry, Polygon):
+        return LineString(geometry.exterior.coords)
+    return MultiLineString([LineString(part.exterior.coords) for part in geometry.geoms])
+
+
+def _snap_units_with_polygons(
+    graph: nx.MultiDiGraph,
+    ids: list[UnitId],
+    anchor_xs: np.ndarray,
+    anchor_ys: np.ndarray,
+    unit_polygons: gpd.GeoDataFrame,
+    *,
+    id_column: str,
+) -> tuple[dict[UnitId, Hashable], dict[UnitId, float]]:
+    """Apply inside-first node snapping with an exterior-boundary fallback."""
+    if not isinstance(unit_polygons, gpd.GeoDataFrame):
+        raise TypeError("unit_polygons must be a GeoDataFrame")
+    if id_column not in unit_polygons.columns:
+        raise KeyError(f"Unit ID column not found in unit_polygons: {id_column!r}")
+    if unit_polygons.crs is None:
+        raise ValueError("unit_polygons must declare a CRS")
+    polygon_ids = unit_polygons[id_column].to_list()
+    if (
+        len(polygon_ids) == 0
+        or len(set(polygon_ids)) != len(polygon_ids)
+        or bool(pd.isna(polygon_ids).any())
+    ):
+        raise ValueError("unit_polygons must contain unique, non-missing IDs and at least one row")
+    if set(polygon_ids) != set(ids):
+        raise ValueError("unit_points and unit_polygons must contain exactly the same unit IDs")
+
+    projected = unit_polygons.to_crs(graph.graph["crs"]).set_index(id_column)
+    valid_polygons = projected.geometry.map(
+        lambda geometry: (
+            isinstance(geometry, (Polygon, MultiPolygon))
+            and not geometry.is_empty
+            and geometry.is_valid
+        )
+    )
+    if not bool(valid_polygons.all()):
+        raise ValueError(
+            "unit_polygons geometry must contain valid, nonempty Polygon or MultiPolygon values"
+        )
+
+    node_ids = list(graph.nodes)
+    if not node_ids:
+        raise ValueError("road graph must contain at least one node")
+    node_xs = np.array([graph.nodes[node].get("x") for node in node_ids], dtype=float)
+    node_ys = np.array([graph.nodes[node].get("y") for node in node_ids], dtype=float)
+    if not np.isfinite(node_xs).all() or not np.isfinite(node_ys).all():
+        raise ValueError("road graph node coordinates must be finite")
+    node_points = gpd.points_from_xy(node_xs, node_ys)
+    tree = STRtree(node_points)
+
+    unit_to_node: dict[UnitId, Hashable] = {}
+    anchor_distances: dict[UnitId, float] = {}
+    fallback_ids: list[UnitId] = []
+    for unit_id, anchor_x, anchor_y in zip(ids, anchor_xs, anchor_ys):
+        polygon = cast(Polygon | MultiPolygon, projected.loc[unit_id].geometry)
+        contained = np.asarray(tree.query(polygon, predicate="intersects"), dtype=int)
+        candidates = contained
+        if candidates.size == 0:
+            fallback_ids.append(unit_id)
+            nearest, _ = tree.query_nearest(
+                _exterior_boundary(polygon),
+                all_matches=True,
+                return_distance=True,
+            )
+            candidates = np.atleast_1d(nearest).astype(int)
+
+        squared_anchor_distances = (node_xs[candidates] - anchor_x) ** 2 + (
+            node_ys[candidates] - anchor_y
+        ) ** 2
+        minimum_distance = float(squared_anchor_distances.min())
+        tied = candidates[
+            np.isclose(squared_anchor_distances, minimum_distance, rtol=0.0, atol=1e-12)
+        ]
+        chosen_index = min(tied.tolist(), key=lambda index: repr(node_ids[index]))
+        distance = math.hypot(node_xs[chosen_index] - anchor_x, node_ys[chosen_index] - anchor_y)
+        if not math.isfinite(distance):
+            raise ValueError("one or more units could not be snapped to a finite graph distance")
+        unit_to_node[unit_id] = node_ids[chosen_index]
+        anchor_distances[unit_id] = float(distance)
+
+    if fallback_ids:
+        preview = fallback_ids[:5]
+        warnings.warn(
+            f"{len(fallback_ids)} unit(s) contain no road node in the principal strongly "
+            "connected component and used the nearest exterior-boundary fallback; "
+            f"examples={preview!r}.",
+            UserWarning,
+            stacklevel=2,
+        )
+    return unit_to_node, anchor_distances
 
 
 def _json_unit_ids(unit_ids: Sequence[UnitId]) -> list[str | int]:
@@ -616,12 +960,25 @@ def _save_directed_audit(
         )
 
 
+def _speed_repair_from_graph(graph: nx.Graph) -> SpeedRepairSummary:
+    payload = graph.graph.get("speed_repair")
+    if not isinstance(payload, Mapping):
+        return SpeedRepairSummary()
+    return SpeedRepairSummary(
+        inspected=int(payload.get("inspected", 0)),
+        repaired_speed=int(payload.get("repaired_speed", 0)),
+        repaired_travel_time=int(payload.get("repaired_travel_time", 0)),
+        fallback_speed_kph=float(payload.get("fallback_speed_kph", DEFAULT_FALLBACK_SPEED_KPH)),
+    )
+
+
 def build_travel_time_table(
     graph: nx.Graph,
     unit_to_node: Mapping[UnitId, Hashable],
     *,
     snap_distances_m: Mapping[UnitId, float] | None = None,
     ferry: FerryBuildSummary | None = None,
+    speed_repair: SpeedRepairSummary | None = None,
     metadata: Mapping[str, Any] | None = None,
     batch_size: int = 32,
     keep_directed: bool = False,
@@ -645,6 +1002,15 @@ def build_travel_time_table(
     if snap_values.size and not np.isfinite(snap_values).all():
         raise ValueError("snap_distances_m must contain only finite values")
     build_metadata = dict(metadata or {})
+    repair_summary = speed_repair or _speed_repair_from_graph(graph)
+    if repair_summary.repaired_speed or repair_summary.repaired_travel_time:
+        build_metadata["speed_repair"] = {
+            "inspected": repair_summary.inspected,
+            "repaired_speed": repair_summary.repaired_speed,
+            "repaired_travel_time": repair_summary.repaired_travel_time,
+            "fallback_speed_kph": repair_summary.fallback_speed_kph,
+            "policy": "impute_fallback_speed_keep_edge",
+        }
     report = TravelTimeBuildReport(
         status="applicable" if applicable else "not_applicable",
         unit_count=len(unit_ids),
@@ -658,6 +1024,7 @@ def build_travel_time_table(
         mean_snap_distance_m=float(np.mean(snap_values)) if snap_values.size else 0.0,
         max_snap_distance_m=float(np.max(snap_values)) if snap_values.size else 0.0,
         ferry=ferry or FerryBuildSummary(),
+        speed_repair=repair_summary,
         metadata=build_metadata,
     )
 
@@ -689,7 +1056,9 @@ def build_travel_time_table_from_pbf(
     pbf_path: str | Path,
     *,
     id_column: str,
+    unit_polygons: gpd.GeoDataFrame | None = None,
     ferry_speed_kph: float = DEFAULT_FERRY_SPEED_KPH,
+    fallback_speed_kph: float = DEFAULT_FALLBACK_SPEED_KPH,
     batch_size: int = 32,
     keep_directed: bool = False,
     output_path: str | Path | None = None,
@@ -700,16 +1069,22 @@ def build_travel_time_table_from_pbf(
     """Build a complete table from representative points and a local OSM PBF.
 
     ``unit_points`` must be a nonempty GeoDataFrame of Point geometries with a
-    declared CRS and unique ``id_column`` values. This helper does not inspect
-    polygons, calculate centroids, or repair geometry.
+    declared CRS and unique ``id_column`` values. Optional ``unit_polygons``
+    enables inside-first snapping with the nearest exterior-boundary fallback.
+    This helper does not calculate centroids or repair geometry.
     """
     if not isinstance(unit_points, gpd.GeoDataFrame):
         raise TypeError("unit_points must be a GeoDataFrame of Point geometries")
-    graph, ferry = build_osm_drive_graph(pbf_path, ferry_speed_kph=ferry_speed_kph)
+    graph, ferry = build_osm_drive_graph(
+        pbf_path,
+        ferry_speed_kph=ferry_speed_kph,
+        fallback_speed_kph=fallback_speed_kph,
+    )
     unit_to_node, snap_distances = snap_units_to_graph(
         graph,
         unit_points,
         id_column=id_column,
+        unit_polygons=unit_polygons,
     )
     provenance = dict(metadata or {})
     provenance.update(
@@ -720,14 +1095,27 @@ def build_travel_time_table_from_pbf(
                 "crs": str(unit_points.crs),
             },
             "snapping": {
-                "method": "nearest_drive_graph_node",
+                "method": (
+                    "inside_nearest_anchor_else_nearest_exterior_boundary"
+                    if unit_polygons is not None
+                    else "nearest_drive_graph_node"
+                ),
                 "road_network": "principal_strong_component",
+                **(
+                    {"fallback_boundary": "exterior_rings_only"}
+                    if unit_polygons is not None
+                    else {}
+                ),
             },
             "road_graph_filter": dict(graph.graph.get("connectivity_filter", {})),
             "ferry_missing_duration_speed_kph": float(ferry_speed_kph),
+            "fallback_speed_kph": float(fallback_speed_kph),
             "symmetrization": "mean_of_directions",
             "measure": (
-                "Travel time between the connected road-network nodes nearest "
+                "Travel time between connected road-network nodes selected by the "
+                "documented polygon-aware snapping policy."
+                if unit_polygons is not None
+                else "Travel time between the connected road-network nodes nearest "
                 "the supplied representative points."
             ),
         }
@@ -737,6 +1125,7 @@ def build_travel_time_table_from_pbf(
         unit_to_node,
         snap_distances_m=snap_distances,
         ferry=ferry,
+        speed_repair=_speed_repair_from_graph(graph),
         metadata=provenance,
         batch_size=batch_size,
         keep_directed=keep_directed,

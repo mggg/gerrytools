@@ -29,14 +29,17 @@ from .api import (
     pairwise_travel_time,
 )
 from .builder import (
+    DEFAULT_FALLBACK_SPEED_KPH,
     DEFAULT_FERRY_SPEED_KPH,
     FerryBuildSummary,
+    SpeedRepairSummary,
     TravelTimeBuildReport,
     TravelTimeBuildResult,
     build_osm_drive_graph,
     build_travel_time_table,
     build_travel_time_table_from_pbf,
     census_representative_points,
+    repair_nonpositive_edge_speeds,
     snap_units_to_graph,
 )
 from .centroid import choose_centroid
@@ -60,12 +63,14 @@ from .weights import (
 __all__ = [
     "CENTROID_WEIGHT_MODES",
     "PAIRWISE_WEIGHT_MODES",
+    "DEFAULT_FALLBACK_SPEED_KPH",
     "DEFAULT_FERRY_SPEED_KPH",
     "CentroidTravelTime",
     "DistrictTravelScores",
     "FerryBuildSummary",
     "PairwiseTravelTime",
     "PlanTravelScores",
+    "SpeedRepairSummary",
     "TravelTimeScorer",
     "TravelTimeArtifact",
     "TravelTimeBuildReport",
@@ -82,6 +87,7 @@ __all__ = [
     "load_travel_time_table",
     "pairwise_travel_time",
     "plan_aggregate",
+    "repair_nonpositive_edge_speeds",
     "score_district",
     "score_plan",
     "save_travel_time_table",

@@ -23,6 +23,7 @@ from gerrytools.scoring.travel_time import (
     build_travel_time_table_from_pbf,
     census_representative_points,
     load_travel_time_table,
+    repair_nonpositive_edge_speeds,
     snap_units_to_graph,
 )
 from gerrytools.scoring.travel_time.builder import (
@@ -162,6 +163,70 @@ def test_compute_directed_travel_times_rejects_bad_edges(bad_weight):
         graph.add_edge(1, 2, travel_time=bad_weight)
     with pytest.raises(ValueError):
         compute_directed_travel_times(graph, {"a": 1, "b": 2})
+
+
+def test_repair_nonpositive_edge_speeds_imputes_zero_speed_and_keeps_edge():
+    graph = nx.MultiDiGraph()
+    graph.add_edge(1, 2, length=1000.0, speed_kph=0.0, travel_time=float("inf"))
+    graph.add_edge(2, 1, length=1000.0, speed_kph=50.0, travel_time=72.0)
+    summary = repair_nonpositive_edge_speeds(graph, fallback_speed_kph=48.0)
+    assert summary.repaired_speed == 1
+    assert summary.repaired_travel_time == 1
+    assert summary.inspected == 2
+    assert graph[1][2][0]["speed_kph"] == 48.0
+    assert graph[1][2][0]["speed_imputed"] is True
+    assert np.isfinite(graph[1][2][0]["travel_time"])
+    assert graph[1][2][0]["travel_time"] == pytest.approx(75.0)
+    assert set(graph.edges()) == {(1, 2), (2, 1)}
+    directed = compute_directed_travel_times(graph, {"a": 1, "b": 2})
+    assert np.isfinite(directed).all()
+    assert graph.graph["speed_repair"]["policy"] == "impute_fallback_speed_keep_edge"
+
+
+def test_repair_nonpositive_edge_speeds_raises_when_length_missing():
+    graph = nx.MultiDiGraph()
+    graph.add_edge(1, 2, speed_kph=0.0, travel_time=float("inf"))
+    with pytest.raises(ValueError, match="still have invalid travel_time"):
+        repair_nonpositive_edge_speeds(graph)
+
+
+def test_component_audit_captures_removed_edges_without_retaining_nodes():
+    graph = nx.MultiDiGraph(crs="EPSG:3857")
+    for node, x in [(1, 0.0), (2, 10.0), (10, 100.0), (11, 110.0)]:
+        graph.add_node(node, x=x, y=0.0)
+    graph.add_edge(1, 2, highway="primary", travel_time=1.0, length=10.0)
+    graph.add_edge(2, 1, highway="primary", travel_time=1.0, length=10.0)
+    graph.add_edge(10, 11, highway="service", travel_time=2.0, length=10.0)
+    graph.add_edge(11, 10, highway="service", travel_time=2.0, length=10.0)
+
+    summary, removed = builder_module._retain_principal_strong_component(
+        graph, include_component_audit=True
+    )
+
+    assert set(graph) == {1, 2}
+    assert summary["removed_node_count"] == 2
+    assert summary["removed_edge_count"] == 2
+    assert removed is not None
+    assert len(removed) == 2
+    assert set(removed["highway"]) == {"service"}
+    assert removed.crs.to_epsg() == 3857
+    assert removed.geometry.length.to_list() == pytest.approx([10.0, 10.0])
+
+
+def test_component_audit_returns_empty_frame_when_nothing_removed():
+    graph = nx.MultiDiGraph(crs="EPSG:3857")
+    graph.add_node(1, x=0.0, y=0.0)
+    graph.add_node(2, x=10.0, y=0.0)
+    graph.add_edge(1, 2, travel_time=1.0, length=10.0)
+    graph.add_edge(2, 1, travel_time=1.0, length=10.0)
+
+    _, removed = builder_module._retain_principal_strong_component(
+        graph, include_component_audit=True
+    )
+
+    assert removed is not None
+    assert removed.empty
+    assert removed.crs.to_epsg() == 3857
 
 
 def test_build_travel_time_table_writes_validated_artifacts(tmp_path: Path):
@@ -382,6 +447,80 @@ def test_snap_units_to_graph_returns_nodes_and_distances(monkeypatch: pytest.Mon
     assert distances == {"a": 0.0, "b": 0.0}
 
 
+def test_polygon_snapping_prefers_inside_node_then_exterior_boundary():
+    graph = nx.MultiDiGraph(crs="EPSG:3857")
+    graph.add_node("left", x=21.0, y=5.0)
+    graph.add_node("right", x=41.0, y=5.0)
+    graph.add_node("inside-far", x=2.0, y=5.0)
+    graph.add_node("inside-near", x=8.0, y=5.0)
+    points = gpd.GeoDataFrame(
+        {"id": ["inside", "fallback"]},
+        geometry=[Point(9.0, 5.0), Point(30.1, 5.0)],
+        crs="EPSG:3857",
+    )
+    polygons = gpd.GeoDataFrame(
+        {"id": ["inside", "fallback"]},
+        geometry=[
+            Polygon([(0, 0), (10, 0), (10, 10), (0, 10)]),
+            Polygon([(30, 0), (40, 0), (40, 10), (30, 10)]),
+        ],
+        crs="EPSG:3857",
+    )
+
+    with pytest.warns(UserWarning, match="exterior-boundary fallback"):
+        unit_to_node, distances = snap_units_to_graph(
+            graph,
+            points,
+            id_column="id",
+            unit_polygons=polygons,
+        )
+
+    assert unit_to_node == {"inside": "inside-near", "fallback": "right"}
+    assert distances == pytest.approx({"inside": 1.0, "fallback": 10.9})
+
+
+def test_polygon_fallback_ignores_interior_hole_boundaries():
+    graph = nx.MultiDiGraph(crs="EPSG:3857")
+    graph.add_node("in-hole", x=5.0, y=5.0)
+    graph.add_node("outside-exterior", x=11.0, y=5.0)
+    points = gpd.GeoDataFrame({"id": ["a"]}, geometry=[Point(5.0, 5.0)], crs="EPSG:3857")
+    polygon = Polygon(
+        [(0, 0), (10, 0), (10, 10), (0, 10)],
+        holes=[[(4, 4), (6, 4), (6, 6), (4, 6)]],
+    )
+    polygons = gpd.GeoDataFrame({"id": ["a"]}, geometry=[polygon], crs="EPSG:3857")
+
+    with pytest.warns(UserWarning, match="exterior-boundary fallback"):
+        unit_to_node, distances = snap_units_to_graph(
+            graph,
+            points,
+            id_column="id",
+            unit_polygons=polygons,
+        )
+
+    assert unit_to_node == {"a": "outside-exterior"}
+    assert distances == {"a": 6.0}
+
+
+def test_polygon_snapping_requires_matching_unit_ids():
+    graph = nx.MultiDiGraph(crs="EPSG:3857")
+    graph.add_node(1, x=0.0, y=0.0)
+    points = gpd.GeoDataFrame({"id": ["a"]}, geometry=[Point(0, 0)], crs="EPSG:3857")
+    polygons = gpd.GeoDataFrame(
+        {"id": ["b"]},
+        geometry=[Polygon([(0, 0), (1, 0), (0, 1)])],
+        crs="EPSG:3857",
+    )
+
+    with pytest.raises(ValueError, match="exactly the same unit IDs"):
+        snap_units_to_graph(
+            graph,
+            points,
+            id_column="id",
+            unit_polygons=polygons,
+        )
+
+
 @pytest.mark.parametrize(
     ("graph", "points", "id_column", "message"),
     [
@@ -459,8 +598,9 @@ def test_build_osm_drive_graph_orchestrates_pyrosm_and_osmnx(
     calls: dict[str, object] = {}
 
     class FakeOSM:
-        def __init__(self, path):
+        def __init__(self, path, **kwargs):
             calls["path"] = path
+            calls["osm_kwargs"] = kwargs
 
         def get_network(self, **kwargs):
             calls["network"] = kwargs
@@ -470,12 +610,12 @@ def test_build_osm_drive_graph_orchestrates_pyrosm_and_osmnx(
         def to_graph(nodes, edges, **kwargs):
             calls["to_graph"] = kwargs
             graph = nx.MultiDiGraph(crs="EPSG:4326")
-            graph.add_edge(1, 2, length=10.0)
-            graph.add_edge(2, 1, length=10.0)
-            graph.add_edge(2, 3, length=10.0)
-            graph.add_edge(3, 2, length=10.0)
-            graph.add_edge(10, 11, length=10.0)
-            graph.add_edge(11, 10, length=10.0)
+            graph.add_edge(1, 2, length=10.0, speed_kph=50.0)
+            graph.add_edge(2, 1, length=10.0, speed_kph=50.0)
+            graph.add_edge(2, 3, length=10.0, speed_kph=50.0)
+            graph.add_edge(3, 2, length=10.0, speed_kph=50.0)
+            graph.add_edge(10, 11, length=10.0, speed_kph=50.0)
+            graph.add_edge(11, 10, length=10.0, speed_kph=50.0)
             return graph
 
         def get_data_by_custom_criteria(self, **kwargs):
@@ -486,13 +626,17 @@ def test_build_osm_drive_graph_orchestrates_pyrosm_and_osmnx(
         graph.graph["crs"] = "EPSG:3857"
         return graph
 
+    def add_edge_speeds(graph, **kwargs):
+        calls["add_edge_speeds"] = kwargs
+        return graph
+
     def add_edge_travel_times(graph):
         for _, _, data in graph.edges(data=True):
             data["travel_time"] = 1.0
         return graph
 
     routing = SimpleNamespace(
-        add_edge_speeds=lambda graph: graph,
+        add_edge_speeds=add_edge_speeds,
         add_edge_travel_times=add_edge_travel_times,
     )
     monkeypatch.setitem(sys.modules, "pyrosm", SimpleNamespace(OSM=FakeOSM))
@@ -516,9 +660,62 @@ def test_build_osm_drive_graph_orchestrates_pyrosm_and_osmnx(
         "removed_edge_count": 2,
     }
     assert summary == FerryBuildSummary()
+    assert calls["osm_kwargs"] == {"keep_metadata": False}
+    assert calls["add_edge_speeds"] == {"fallback": 48.0}
     assert calls["network"] == {"network_type": "driving", "nodes": True}
     assert cast(dict, calls["to_graph"])["retain_all"] is True
     assert cast(dict, calls["ferries"])["keep_relations"] is False
+    assert graph.graph["speed_repair"]["repaired_speed"] == 0
+
+
+def test_build_osm_drive_graph_wraps_pyrosm_none_type_parser_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    pbf = tmp_path / "connecticut.osm.pbf"
+    pbf.write_bytes(b"fixture")
+
+    class BrokenOSM:
+        def __init__(self, path, **kwargs):
+            self.path = path
+
+        def get_network(self, **kwargs):
+            raise TypeError(
+                "int() argument must be a string, a bytes-like object or a real number, not 'NoneType'"
+            )
+
+    monkeypatch.setitem(sys.modules, "pyrosm", SimpleNamespace(OSM=BrokenOSM))
+    monkeypatch.setitem(sys.modules, "osmnx", SimpleNamespace())
+    with pytest.raises(RuntimeError, match="keep_metadata=False"):
+        build_osm_drive_graph(pbf)
+
+
+def test_open_pyrosm_reader_falls_back_only_for_unsupported_keyword(tmp_path: Path):
+    pbf = tmp_path / "roads.osm.pbf"
+    pbf.write_bytes(b"fixture")
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    class LegacyOSM:
+        def __init__(self, path, **kwargs):
+            calls.append((path, kwargs))
+            if kwargs:
+                raise TypeError("unexpected keyword argument 'keep_metadata'")
+
+    reader = builder_module._open_pyrosm_reader(pbf, LegacyOSM)
+
+    assert isinstance(reader, LegacyOSM)
+    assert calls == [(str(pbf), {"keep_metadata": False}), (str(pbf), {})]
+
+
+def test_open_pyrosm_reader_does_not_mask_internal_type_error(tmp_path: Path):
+    pbf = tmp_path / "roads.osm.pbf"
+    pbf.write_bytes(b"fixture")
+
+    class BrokenOSM:
+        def __init__(self, path, **kwargs):
+            raise TypeError("internal constructor failure")
+
+    with pytest.raises(TypeError, match="internal constructor failure"):
+        builder_module._open_pyrosm_reader(pbf, BrokenOSM)
 
 
 def test_build_osm_drive_graph_rejects_missing_or_empty_source(
@@ -531,7 +728,7 @@ def test_build_osm_drive_graph_rejects_missing_or_empty_source(
     pbf.write_bytes(b"fixture")
 
     class EmptyOSM:
-        def __init__(self, path):
+        def __init__(self, path, **kwargs):
             pass
 
         def get_network(self, **kwargs):
@@ -558,12 +755,14 @@ def test_build_travel_time_table_from_pbf_forwards_inputs_and_provenance(
     captured: dict[str, object] = {}
 
     monkeypatch.setattr(
-        builder_module, "build_osm_drive_graph", lambda path, ferry_speed_kph: (graph, ferry)
+        builder_module,
+        "build_osm_drive_graph",
+        lambda path, ferry_speed_kph=20.0, fallback_speed_kph=48.0: (graph, ferry),
     )
     monkeypatch.setattr(
         builder_module,
         "snap_units_to_graph",
-        lambda graph, points, *, id_column: ({"a": 1}, {"a": 12.0}),
+        lambda graph, points, *, id_column, unit_polygons: ({"a": 1}, {"a": 12.0}),
     )
 
     def fake_build(graph_arg, unit_to_node, **kwargs):

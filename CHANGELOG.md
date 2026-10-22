@@ -25,6 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ``INTPTLAT20`` / ``INTPTLON20``), adds eligible vehicle ferries, retains the largest strongly
   connected driving component, and reports snap-distance diagnostics. These scores are not part
   of the compiled `PlanEvaluator` engine.
+- Travel-time builder speed repair: non-positive / non-finite edge speeds are imputed with a
+  documented fallback (default 48 kph), travel times are recomputed, and
+  ``SpeedRepairSummary`` counts are surfaced on the build report. Edges are never dropped.
+  Pyrosm readers prefer ``keep_metadata=False`` when supported to avoid known NoneType metadata
+  parse failures on some state extracts.
+- ``build_osm_drive_graph(..., include_component_audit=True)`` can retain a compact
+  GeoDataFrame of road edges removed by the largest-strong-component filter for visual
+  diagnostics. The default remains off so scoring builds do not pay the additional memory cost.
+- Optional polygon-aware snapping prefers retained road nodes inside each unit and, when none
+  exists, falls back to the node nearest an exterior unit boundary while excluding polygon holes.
 
 ## [2.0.1] - 2026-08-05
 
