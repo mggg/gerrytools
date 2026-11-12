@@ -58,3 +58,14 @@ axis unless an individual function documents another contract.
 .. automodule:: gerrytools.scoring.formulas
    :members:
    :exclude-members: TurnoutModel
+
+Travel-time artifacts and OSM builder
+-------------------------------------
+
+The district scoring functions are exported from :mod:`gerrytools.scoring`. The focused namespace
+also contains the validated table, artifact, snapping-provenance, and optional builder APIs.
+
+.. automodule:: gerrytools.scoring.travel_time
+   :members:
+   :imported-members:
+   :exclude-members: CentroidWeightMode, PairwiseWeightMode, TravelTimeTable, centroid_travel_time, pairwise_travel_time, travel_time_scores

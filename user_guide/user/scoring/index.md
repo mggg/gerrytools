@@ -41,6 +41,13 @@ Inspect assignments, save Parquet scores, compare runs, and extend an existing s
 Use GerryTools metrics as updaters or evaluate selected partitions after a run.
 :::
 
+:::{grid-item-card} Travel-time scoring
+:link: travel_time
+:link-type: doc
+
+Score district travel times from a precomputed statewide table.
+:::
+
 ::::
 
 The {doc}`scoring API <../../api/scoring>` contains the complete signatures, formulas, result
@@ -55,4 +62,5 @@ Convenience Functions <convenience_functions>
 PlanEvaluator <plan_evaluator>
 Scoring BENDL files <bendl>
 Working with GerryChain <basic>
+Travel-time scoring <travel_time>
 ```

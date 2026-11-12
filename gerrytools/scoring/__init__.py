@@ -87,11 +87,20 @@ from .single_plan import (
     tally,
     tally_by_region,
 )
+from .travel_time import (
+    CentroidWeightMode,
+    PairwiseWeightMode,
+    TravelTimeTable,
+    centroid_travel_time,
+    pairwise_travel_time,
+    travel_time_scores,
+)
 
 __all__ = [
     "Assignment",
     "AggregateSeats",
     "CompetitiveContests",
+    "CentroidWeightMode",
     "ConvexHullRatio",
     "CutEdges",
     "DemographicShares",
@@ -116,6 +125,7 @@ __all__ = [
     "PartisanGini",
     "PartyDistricts",
     "PartyWinsByDistrict",
+    "PairwiseWeightMode",
     "PlanEvaluator",
     "PlanEvalResult",
     "PolsbyPopper",
@@ -134,8 +144,10 @@ __all__ = [
     "Tally",
     "TallyByRegion",
     "TurnoutModel",
+    "TravelTimeTable",
     "aggregate_seats",
     "competitive_contests",
+    "centroid_travel_time",
     "convex_hull_ratio",
     "cut_edges",
     "demographic_shares",
@@ -157,6 +169,7 @@ __all__ = [
     "partisan_gini",
     "party_districts",
     "party_wins_by_district",
+    "pairwise_travel_time",
     "polsby_popper",
     "population_deviations",
     "population_polygon",
@@ -172,4 +185,5 @@ __all__ = [
     "swing_districts",
     "tally",
     "tally_by_region",
+    "travel_time_scores",
 ]
