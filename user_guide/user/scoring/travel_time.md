@@ -49,6 +49,7 @@ weighted mean and maximum are both zero. A singleton district has no pairwise tr
 The public functions accept the same plan sources as other single-plan GerryTools functions: a
 GerryChain `Partition`, a NetworkX graph plus assignment, or a GeoDataFrame plus assignment.
 
+<!-- docs-test: skip -- requires a caller-supplied plan and table -->
 ```python
 from gerrytools.scoring import pairwise_travel_time
 
