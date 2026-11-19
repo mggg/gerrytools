@@ -89,7 +89,7 @@ jobs:
           cargo clippy --manifest-path rust/Cargo.toml
           --all-targets --all-features -- -D warnings
       - run: cargo test --manifest-path rust/Cargo.toml --locked --all-features
-      - run: cargo install cargo-llvm-cov --version 0.8.4 --locked
+      - run: cargo install cargo-llvm-cov --version 0.8.6 --locked
       - run: >-
           cargo llvm-cov --manifest-path rust/Cargo.toml --locked
           --fail-under-lines 85

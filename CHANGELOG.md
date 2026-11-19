@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- District-level pairwise and centroid travel-time scoring for GerryChain partitions, NetworkX
+  graph assignments, and GeoDataFrame assignments.
+
 ### Fixed
 
 - MGRP runs no longer fail on macOS when Docker stream cleanup encounters an already disconnected
