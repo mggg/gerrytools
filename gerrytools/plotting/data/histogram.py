@@ -717,7 +717,7 @@ class Histogram(GerryPlotBase):
             visited_indexes = set()
             placement_edges = bin_edges if pointlist.centered else display_edges
             for i, val in enumerate(pointlist.values):
-                bin_idx = np.searchsorted(placement_edges, val, side="right") - 1
+                bin_idx = int(np.searchsorted(placement_edges, val, side="right")) - 1
                 if val == placement_edges[-1]:
                     bin_idx -= 1
                 in_range = 0 <= bin_idx < len(max_heights)
