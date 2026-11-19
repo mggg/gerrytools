@@ -31,7 +31,7 @@ def _diff_metrics(a: Image.Image, b: Image.Image) -> dict[str, float]:
         return {"mean": 1.0, "max": 1.0}
     diff = ImageChops.difference(a, b)
     arr = np.asarray(diff).astype(np.float32) / 255.0
-    return {"mean": float(arr.mean().item()), "max": float(arr.max().item())}
+    return {"mean": float(arr.mean().item()), "max": float(np.max(arr).item())}
 
 
 def _trim_and_normalize(img: Image.Image) -> tuple[Image.Image, tuple[int, int]]:
