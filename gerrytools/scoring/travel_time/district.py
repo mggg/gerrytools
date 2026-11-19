@@ -103,7 +103,7 @@ def score_pairwise_district(
 
     return PairwiseDistrictScores(
         mean=float(weighted_times.mean()),
-        maximum=float(weighted_times.max().item()),
+        maximum=float(np.max(weighted_times).item()),
     )
 
 
