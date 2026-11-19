@@ -76,3 +76,49 @@ finite, nonnegative population for every unit.
 `TravelTimeTable` requires nonnegative symmetric travel times and a zero diagonal. Every included
 unit must reach every other included unit. A disconnected table is rejected before scoring so the
 set of included trips cannot change with the districting plan.
+
+## Save and load artifacts
+
+Save the scoring table as a compressed NPZ file:
+
+<!-- docs-test: skip -- requires a caller-supplied table -->
+```python
+from gerrytools.scoring.travel_time import save_travel_time_table
+
+save_travel_time_table(
+    "ks_vtd_travel_times.npz",
+    travel_time_table,
+    time_unit="seconds",
+    metadata={"state": "KS", "geography": "vtd2020"},
+)
+```
+
+The NPZ artifact contains the numeric matrix plus JSON strings for the unit IDs, schema version,
+time unit, and user metadata. It contains no pickled Python objects, and
+`load_travel_time_table` always opens it with pickle loading disabled. Writes use a temporary file
+and replace the destination only after the complete artifact is on disk.
+
+Snapping information is stored separately because it records how the table was built rather than
+values needed to score a plan. The conventional companion path replaces `.npz` with
+`.snaps.json`:
+
+<!-- docs-test: skip -- requires caller-supplied snapping mappings -->
+```python
+from gerrytools.scoring.travel_time import (
+    default_snapping_path,
+    save_snapping_artifact,
+)
+
+table_path = "ks_vtd_travel_times.npz"
+save_snapping_artifact(
+    default_snapping_path(table_path),
+    unit_to_node,
+    snap_distances_m,
+    metadata={"state": "KS", "geography": "vtd2020"},
+)
+```
+
+Each JSON record contains one geographic unit ID, its selected road-node ID, and the snap distance
+in meters. The schema version permits future validation and migration, while the human-readable
+format makes individual snaps easy to inspect. `load_snapping_artifact` validates unique units,
+matching fields, serializable identifiers, and finite nonnegative distances.
