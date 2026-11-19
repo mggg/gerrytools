@@ -81,6 +81,7 @@ set of included trips cannot change with the districting plan.
 
 Save the scoring table as a compressed NPZ file:
 
+<!-- docs-test: skip -- requires a caller-supplied table -->
 ```python
 from gerrytools.scoring.travel_time import save_travel_time_table
 
@@ -101,6 +102,7 @@ Snapping information is stored separately because it records how the table was b
 values needed to score a plan. The conventional companion path replaces `.npz` with
 `.snaps.json`:
 
+<!-- docs-test: skip -- requires caller-supplied snapping mappings -->
 ```python
 from gerrytools.scoring.travel_time import (
     default_snapping_path,
