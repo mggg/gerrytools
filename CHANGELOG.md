@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - District-level pairwise and centroid travel-time scoring for GerryChain partitions, NetworkX
   graph assignments, and GeoDataFrame assignments.
+- Pickle-free travel-time table persistence, versioned snapping provenance, and an optional OSM
+  builder with documented ferry, connectivity, service-road, snapping, and routing policies.
 
 ### Fixed
 

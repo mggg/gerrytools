@@ -82,6 +82,10 @@ tex = [
 mgrp = [
     "docker>=7.2.0",
 ]
+travel-time = [
+    "osmnx>=2.1.0",
+    "pyrosm>=0.9.1",
+]
 # Renders the hosted docs; an extra (not a dependency group) so Read the Docs can install it
 # via extra_requirements.
 docs = [
