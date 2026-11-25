@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-11-25
+
 ### Added
 
 - `Histogram.set_xticks_at_bin_centers()` places one x-axis tick at each displayed bin center.
@@ -453,6 +455,8 @@ rust/src        # the compiled scoring engine, built as gerrytools._scoring_engi
 - **`gerrytools.ben`:** the Docker-based `docker_manager.py` is removed; `binary-ensemble` is now
   a direct dependency.
 
-[Unreleased]: https://github.com/mggg/gerrytools/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/mggg/gerrytools/compare/v2.0.3...HEAD
+[2.0.3]: https://github.com/mggg/gerrytools/compare/v2.0.2...v2.0.3
+[2.0.2]: https://github.com/mggg/gerrytools/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/mggg/gerrytools/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/mggg/gerrytools/compare/v1.2.1...v2.0.0
