@@ -176,6 +176,7 @@ class Histogram(GerryPlotBase):
         self._show_warnings = True
         self._bins: BinsType | None = None
         self._bin_alignment = "edge"
+        self._bin_center_ticks: list[float] | None = None
         self._as_density_plot = False
         self._binwidth: float | None = None
 
@@ -204,16 +205,46 @@ class Histogram(GerryPlotBase):
 
     @deferred_axis_update
     def center_bars(self) -> None:
-        """Center histogram data on bin edges."""
+        """Center the histogram bars according to the bin specification.
+
+        With :meth:`set_bin_widths`, the first bin is centered on the minimum across all datasets.
+        Successive centers are one bin width apart. Each bin includes its left edge and excludes
+        its right edge. For example, with width 1, the values ``[1, 1.5, 2]`` give counts of
+        1 at center 1 and 2 at center 2.
+
+        With automatic bins or :meth:`set_bins`, the bars shift half a bin width to the left
+        for display. The original edges still determine the counts. The bins must have uniform
+        widths for centering or the plot raises ``ValueError`` when drawn.
+        """
         self._bin_alignment = "center"
+
+    @deferred_axis_update
+    def set_xticks_at_bin_centers(self) -> None:
+        """Place one x-axis tick at the center of each displayed bin.
+
+        Tick locations follow the bins as datasets or bin settings change. Grouped bars share
+        one tick per bin. This replaces labels tied to previous locations with the axis's own
+        formatting. Labels explicitly hidden with ``set_xticks(labels=[])`` stay hidden.
+        To label the new positions yourself, call :meth:`set_xticks` afterward with one label
+        per bin.
+        """
+        self._bin_center_ticks = []
+        if self._xaxis.tick_labels != [] or self._xaxis.tick_locations == []:
+            self._xaxis.tick_labels = None
+        self._xaxis.tick_locations = None
+        self._axes_state.reclaim_without_value(self._xaxis.unit_ticks)
+
+    def _default_x_tick_locations(self) -> list[float] | None:
+        return self._bin_center_ticks
 
     @deferred_axis_update
     def set_bins(self, bins: BinsType | None) -> None:
         """Set the bins for the histogram.
 
         Bins can be specified either as an array of bin edges, an integer number of bins,
-        or a string (e.g., 'auto') to use numpy's histogram binning strategies. The binning
-        strategies possible strategies are as follows:
+        or a string (e.g., 'auto') to use NumPy's histogram binning strategies. Adjacent edges
+        define one bin. Each bin includes its left edge, and the final bin also includes its
+        right edge. NumPy supports the following strategies.
 
         - ‘auto’: Minimum bin width between the ‘sturges’ and ‘fd’ estimators. Provides good
             all-around performance.
@@ -252,8 +283,11 @@ class Histogram(GerryPlotBase):
     def set_bin_widths(self, binwidth: float | None) -> None:
         """Set histogram bins by specifying a fixed bin width.
 
-        The histogram bins will be computed automatically based on the minimum and maximum
-        values across all histogram sets added to the figure.
+        The bins start at the minimum across all datasets. Calling :meth:`center_bars` places
+        the first bin's center at that minimum instead. In either alignment, a bin includes
+        its left edge and excludes its right edge. The final edge is above the maximum so every
+        observation falls in a bin. If the width is too small to distinguish adjacent edges at the
+        scale of the data, the plot raises ``ValueError`` when drawn.
 
         Args:
             binwidth (float | None): Desired width of each histogram bin. If None, the
@@ -531,43 +565,52 @@ class Histogram(GerryPlotBase):
 
     def _compute_bins(self) -> NDArray[np.float64]:
         """Compute histogram bins based on current settings and data."""
-        bins = self._bins
-        if bins is None and self._binwidth is None:
-            bins = "auto"
-
         all_values = np.concatenate(
             [hdata.values for hdata in chain(*self._hist_data_dict.values())]
         )
-        if bins is None and self._binwidth is not None:
-            minscore, maxscore = np.min(all_values), np.max(all_values)
-            binwidth = self._binwidth
-            n_bins = max(1, int(np.ceil((maxscore - minscore) / binwidth)))
-            bins = minscore + np.arange(n_bins + 1) * binwidth
+        bin_width = self._binwidth
+        if bin_width is None:
+            bins = "auto" if self._bins is None else self._bins
+            return np.histogram_bin_edges(all_values, bins=bins)
+
+        minimum, maximum = np.min(all_values), np.max(all_values)
+        first_edge = minimum - bin_width / 2 if self._bin_alignment == "center" else minimum
+        bin_count = max(1, int(np.ceil((maximum - first_edge) / bin_width)))
+        edges = first_edge + np.arange(bin_count + 1) * bin_width
+
+        if edges[-1] <= maximum:
+            edges = np.append(edges, first_edge + (bin_count + 1) * bin_width)
+        else:
+            # The span and the edges round separately. Keep the first edge above the maximum.
+            edges = edges[: np.searchsorted(edges, maximum, side="right") + 1]
 
         if (
-            bins is None
-        ):  # pragma: no cover - preceding logic always assigns bins; this is an unreachable guard
-            raise RuntimeError("Failed to compute histogram bins.")  # pragma: no cover
+            not np.isfinite(edges).all()
+            or not (edges[1:] > edges[:-1]).all()
+            or edges[-1] <= maximum
+        ):
+            raise ValueError("The bin width must produce distinct finite edges spanning the data.")
 
-        bins = np.histogram_bin_edges(all_values, bins=bins)
-        return bins
+        return edges
 
     def _display_edges(self, bin_edges: NDArray[np.float64]) -> NDArray[np.float64]:
         """Bin edges shifted to where bars are drawn.
 
-        Centering data on bin edges is a half-binwidth left shift of the drawn edges; binning
-        itself always uses the raw edges. Everything (bars, outlines, grouped offsets, points)
-        derives its x-positions from these display edges, so the alignment mode lives here only.
+        Fixed-width bins already incorporate their alignment when their edges are computed.
+        For other bin specifications, centering shifts the drawing by half a bin width.
         """
-        if self._bin_alignment == "center":
+        if self._bin_alignment == "center" and self._binwidth is None:
             return bin_edges - 0.5 * (bin_edges[1] - bin_edges[0])
         return bin_edges
 
-    def _draw_histograms(self, bin_edges: NDArray[np.float64]) -> NDArray[np.float64]:
+    def _draw_histograms(
+        self, bin_edges: NDArray[np.float64], display_edges: NDArray[np.float64]
+    ) -> NDArray[np.float64]:
         """Draw the histograms on the plot.
 
         Args:
             bin_edges (NDArray[np.float64]): Shared bin edges computed once per build.
+            display_edges (NDArray[np.float64]): X-coordinates of the drawn bin edges.
 
         Returns:
             NDArray[np.float64]: Per-bin maximum bar-top heights across every series (stacked tops
@@ -580,7 +623,6 @@ class Histogram(GerryPlotBase):
             raise ValueError(
                 "Cannot center histogram data on bin edges when bin widths are not uniform."
             )
-        display_edges = self._display_edges(bin_edges)
 
         for histtype, histlist in self._hist_data_dict.items():
             hist_bottoms = np.zeros(len(bin_edges) - 1)
@@ -675,7 +717,11 @@ class Histogram(GerryPlotBase):
         return max_heights
 
     def _draw_points(
-        self, bin_edges: NDArray[np.float64], max_heights: NDArray[np.float64]
+        self,
+        bin_edges: NDArray[np.float64],
+        display_edges: NDArray[np.float64],
+        bin_centers: NDArray[np.float64],
+        max_heights: NDArray[np.float64],
     ) -> None:
         """Draw the points on the histogram plot.
 
@@ -684,6 +730,8 @@ class Histogram(GerryPlotBase):
 
         Args:
             bin_edges (NDArray[np.float64]): Shared bin edges computed once per build.
+            display_edges (NDArray[np.float64]): Edges used to locate a marker at its actual x-value.
+            bin_centers (NDArray[np.float64]): Display coordinates for markers snapped to a bin.
             max_heights (NDArray[np.float64]): Per-bin maximum bar-top heights from
                 ``_draw_histograms``. Mutated in place as points stack above bars.
         """
@@ -693,9 +741,6 @@ class Histogram(GerryPlotBase):
         # same realized view.
         _recompute_data_limits(self._ax)
         self._ax.autoscale_view()
-
-        display_edges = self._display_edges(bin_edges)
-        bin_centers = (display_edges[:-1] + display_edges[1:]) / 2.0
 
         def clearance_data_units(clearance_pt: float, y_top: float) -> float:
             """Convert a point-space clearance to y-data units at ``y_top``."""
@@ -715,11 +760,14 @@ class Histogram(GerryPlotBase):
             x_positions = np.array(pointlist.values)
             y_positions = []
             visited_indexes = set()
+
             placement_edges = bin_edges if pointlist.centered else display_edges
-            for i, val in enumerate(pointlist.values):
-                bin_idx = int(np.searchsorted(placement_edges, val, side="right")) - 1
-                if val == placement_edges[-1]:
-                    bin_idx -= 1
+            bin_indices = np.searchsorted(placement_edges, pointlist.values, side="right") - 1
+            if self._binwidth is None:  # NumPy includes the last edge for these bins.
+                bin_indices[pointlist.values == placement_edges[-1]] = len(max_heights) - 1
+
+            for i, index in enumerate(bin_indices):
+                bin_idx = int(index)
                 in_range = 0 <= bin_idx < len(max_heights)
                 stack_idx = bin_idx if in_range else (-1 if bin_idx < 0 else len(max_heights))
                 height = (
@@ -768,9 +816,15 @@ class Histogram(GerryPlotBase):
         """Build the histogram plot."""
         if sum(len(lst) for lst in self._hist_data_dict.values()) == 0:
             raise ValueError("No histogram sets added yet.")
+
         bin_edges = self._compute_bins()
-        max_heights = self._draw_histograms(bin_edges)
-        self._draw_points(bin_edges, max_heights)
+        display_edges = self._display_edges(bin_edges)
+        bin_centers = display_edges[:-1] + np.diff(display_edges) / 2
+        if self._bin_center_ticks is not None:
+            self._bin_center_ticks = bin_centers.tolist()
+
+        max_heights = self._draw_histograms(bin_edges, display_edges)
+        self._draw_points(bin_edges, display_edges, bin_centers, max_heights)
 
     def _dataset_legend_handles(self) -> list[LegendHandle]:
         """Get legend handles for the histogram sets."""

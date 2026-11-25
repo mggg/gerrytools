@@ -16,6 +16,7 @@ from typing import Generic, Literal, Sequence, TypeVar
 import matplotlib
 from matplotlib.axes import Axes
 from matplotlib.text import Text
+from matplotlib.ticker import Formatter
 
 from gerrytools.colors import resolve_rgba
 from gerrytools.plotting._axes_backed import deferred_axis_update
@@ -201,6 +202,21 @@ class _TitleText(_ManagedText[TitleStyle]):
         return _title_snapshot(ax)
 
 
+class _PositionLabelFormatter(Formatter):
+    """Labels tied to fixed locations, retaining the formatter they displaced on this axis."""
+
+    def __init__(
+        self, owner: _AxisState, previous: Formatter, locations: list[float], labels: list[str]
+    ) -> None:
+        super().__init__()
+        self.owner = owner
+        self.previous = previous
+        self._labels = dict(zip(locations, labels, strict=True))
+
+    def __call__(self, x: float, pos: int | None = None) -> str:
+        return self._labels.get(x, "")
+
+
 class _AxisState:
     """One axis's managed configuration plus x/y-dispatching matplotlib accessors."""
 
@@ -227,7 +243,20 @@ class _AxisState:
         (ax.set_xticks if self.axis == "x" else ax.set_yticks)(locations)
 
     def set_ticklabels(self, ax: Axes, labels: list[str]) -> None:
-        (ax.set_xticklabels if self.axis == "x" else ax.set_yticklabels)(labels)
+        axis = ax.xaxis if self.axis == "x" else ax.yaxis
+        previous = axis.get_major_formatter()
+        if isinstance(previous, _PositionLabelFormatter) and previous.owner is self:
+            previous = previous.previous
+
+        axis.set_major_formatter(
+            _PositionLabelFormatter(self, previous, self.get_ticks(ax), labels)
+        )
+
+    def restore_tick_formatter(self, ax: Axes) -> None:
+        axis = ax.xaxis if self.axis == "x" else ax.yaxis
+        current = axis.get_major_formatter()
+        if isinstance(current, _PositionLabelFormatter) and current.owner is self:
+            axis.set_major_formatter(current.previous)
 
     def get_ticks(self, ax: Axes) -> list[float]:
         ticks = ax.get_xticks() if self.axis == "x" else ax.get_yticks()
@@ -593,10 +622,13 @@ class _AxisApiMixin(_TitleApiMixin):
             if tick_locations is None:
                 # Matplotlib will compute labels from the locator at draw time; nothing to apply.
                 return
-            if axis.axis == "x":
-                default_labels = self._default_x_tick_labels(tick_locations)
-                if default_labels is not None:
-                    axis.set_ticklabels(self._ax, list(default_labels))
+            default_labels = (
+                self._default_x_tick_labels(tick_locations) if axis.axis == "x" else None
+            )
+            if default_labels is None:
+                axis.restore_tick_formatter(self._ax)
+            else:
+                axis.set_ticklabels(self._ax, list(default_labels))
             return
         if tick_locations is None:
             tick_locations = axis.get_ticks(self._ax)

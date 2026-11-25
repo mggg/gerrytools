@@ -7,6 +7,7 @@ matplotlib.use("Agg")
 import numpy as np
 import pytest
 from matplotlib.patches import Rectangle
+from matplotlib.ticker import StrMethodFormatter
 
 from gerrytools.plotting.data.histogram import Histogram
 
@@ -55,7 +56,7 @@ class TestHistogramActualBuilds:
         h.add_dataset([1.0, 2.0, 3.0])
         h.set_bin_widths(0.5)
 
-        np.testing.assert_allclose(h._compute_bins(), [1.0, 1.5, 2.0, 2.5, 3.0])
+        np.testing.assert_allclose(h._compute_bins(), [1.0, 1.5, 2.0, 2.5, 3.0, 3.5])
 
     def test_build_with_points_above(self):
         h = Histogram()
@@ -222,6 +223,172 @@ def test_bar_heights_match_histogram_counts_and_weights(weights, expected_height
 
     bars = [patch for patch in h.ax.patches if isinstance(patch, Rectangle)]
     assert [patch.get_height() for patch in bars] == expected_heights
+
+
+@pytest.mark.parametrize(
+    ("values", "centers", "counts"),
+    [
+        ([285] * 200 + [286] * 100, [285, 286], [200, 100]),
+        ([1, 2, 3, 4, 5, 6, 6, 6, 6, 7, 7, 7], [1, 2, 3, 4, 5, 6, 7], [1, 1, 1, 1, 1, 4, 3]),
+        ([0, 0.8, 1.2], [0, 1], [1, 2]),
+        ([1, 1.5, 2], [1, 2], [1, 2]),
+        ([1, np.nextafter(1.5, 1), 1.5], [1, 2], [2, 1]),
+    ],
+    ids=[
+        "adjacent-integers",
+        "repeated-maximum",
+        "fractional-values",
+        "midpoint",
+        "maximum-on-midpoint",
+    ],
+)
+def test_fixed_width_centered_bars_count_values_within_drawn_edges(
+    values: list[float], centers: list[float], counts: list[int]
+) -> None:
+    h = Histogram()
+    h.add_dataset(values)
+    h.set_bin_widths(1)
+    h.center_bars()
+
+    bars = [patch for patch in h.ax.patches if isinstance(patch, Rectangle)]
+    assert [bar.get_x() + bar.get_width() / 2 for bar in bars] == pytest.approx(centers)
+    assert [bar.get_height() for bar in bars] == counts
+
+
+def test_centered_bin_edges_cover_maximum_after_rounding() -> None:
+    h = Histogram()
+    h.add_dataset([-10.0, -6.45])
+    h.set_bin_widths(0.1)
+    h.center_bars()
+
+    assert sum(bar.get_height() for bar in h.ax.patches if isinstance(bar, Rectangle)) == 2
+
+
+def test_midpoint_marker_uses_same_centered_bin_as_weighted_density() -> None:
+    h = Histogram()
+    h.add_dataset([1, 1.5, 2], weights=[1, 7, 2], histtype="stack")
+    h.set_bin_widths(1)
+    h.center_bars()
+    h.as_density()
+    h.add_points_above(1.5, centered_on_bin=True)
+
+    ax = h.ax
+    bars = [patch for patch in ax.patches if isinstance(patch, Rectangle)]
+    assert [bar.get_height() for bar in bars] == pytest.approx([0.1, 0.9])
+    assert ax.lines[-1].get_xdata() == pytest.approx([2])
+
+
+def test_bin_center_ticks_follow_the_displayed_bins_across_rebuilds() -> None:
+    h = Histogram()
+    h.add_dataset([285] * 200 + [286] * 100)
+    h.set_bin_widths(1)
+    h.set_xticks_at_bin_centers()
+
+    assert h.ax.get_xticks() == pytest.approx([285.5, 286.5])
+    bars = [bar for bar in h.ax.patches if isinstance(bar, Rectangle)]
+    assert [bar.get_height() for bar in bars] == [200, 100]
+
+    h.add_dataset([287])
+    h.center_bars()
+    assert h.ax.get_xticks() == pytest.approx([285, 286, 287])
+
+    h.set_xticks([286])
+    assert h.ax.get_xticks() == pytest.approx([286])
+    h.set_xticks_at_bin_centers()
+    assert h.ax.get_xticks() == pytest.approx([285, 286, 287])
+
+
+def test_explicit_edges_keep_maximum_and_place_ticks_at_group_centers() -> None:
+    h = Histogram()
+    h.set_bins([0, 1, 3])
+    h.add_dataset([0, 1, 3], histtype="grouped")
+    h.add_dataset([0.5], histtype="grouped")
+    h.set_xticks_at_bin_centers()
+
+    ax = h.ax
+    assert ax.get_xticks() == pytest.approx([0.5, 2])
+    assert [bar.get_height() for bar in ax.patches if isinstance(bar, Rectangle)] == [1, 2, 1, 0]
+
+
+def test_bin_center_ticks_discard_drawn_labels_and_follow_new_bins() -> None:
+    h = Histogram()
+    h.add_dataset([1, 2, 3])
+    h.set_bin_widths(1)
+    ax = h.ax
+    formatter = StrMethodFormatter("{x:.1f}")
+    ax.xaxis.set_major_formatter(formatter)
+    h.set_xticks([1, 2, 3], labels=["a", "b", "c"])
+    assert [label.get_text() for label in h.ax.get_xticklabels()] == ["a", "b", "c"]
+
+    h.set_xticks_at_bin_centers()
+    assert h.ax.xaxis.get_major_formatter() is formatter
+    assert [label.get_text() for label in ax.get_xticklabels()] == ["1.5", "2.5", "3.5"]
+
+    h.add_dataset([5])
+    assert [label.get_text() for label in h.ax.get_xticklabels()] == [
+        "1.5",
+        "2.5",
+        "3.5",
+        "4.5",
+        "5.5",
+    ]
+
+
+def test_bin_center_ticks_preserve_explicitly_hidden_labels() -> None:
+    h = Histogram()
+    h.add_dataset([1, 2])
+    h.set_bin_widths(1)
+    h.set_xticks(labels=[])
+    h.set_xticks_at_bin_centers()
+
+    assert h.ax.get_xticks() == pytest.approx([1.5, 2.5])
+    assert h.ax.get_xticklabels() == []
+
+
+def test_bin_center_ticks_keep_a_newer_external_formatter() -> None:
+    h = Histogram()
+    h.add_dataset([1, 2])
+    h.set_bin_widths(1)
+    h.set_xticks([1, 2], labels=["a", "b"])
+    ax = h.ax
+
+    formatter = StrMethodFormatter("{x:.1f} units")
+    ax.xaxis.set_major_formatter(formatter)
+    h.set_xticks_at_bin_centers()
+
+    assert h.ax.xaxis.get_major_formatter() is formatter
+    assert [label.get_text() for label in ax.get_xticklabels()] == ["1.5 units", "2.5 units"]
+
+
+@pytest.mark.parametrize(
+    ("values", "width", "centered"),
+    [([0.3, 0.9], 0.1, False), ([0.0, 1.95], 0.3, True)],
+    ids=["edge-aligned", "centered"],
+)
+def test_bins_stop_at_first_edge_above_maximum(
+    values: list[float], width: float, centered: bool
+) -> None:
+    h = Histogram()
+    h.add_dataset(values, weights=[1, 0])
+    h.set_bin_widths(width)
+    if centered:
+        h.center_bars()
+    h.set_xticks_at_bin_centers()
+
+    ax = h.ax
+    bars = [bar for bar in ax.patches if isinstance(bar, Rectangle)]
+    last_bar = bars[-1]
+    assert last_bar.get_x() <= max(values) < last_bar.get_x() + last_bar.get_width()
+    assert ax.get_xticks()[-1] == pytest.approx(last_bar.get_x() + last_bar.get_width() / 2)
+
+
+def test_fixed_width_rejects_indistinguishable_edges() -> None:
+    h = Histogram()
+    h.add_dataset([1e16])
+    h.set_bin_widths(0.1)
+
+    with pytest.raises(ValueError, match="distinct finite edges"):
+        _ = h.ax
 
 
 class TestGroupedCenteredBinAlignment:

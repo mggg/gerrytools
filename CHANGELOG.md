@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `Histogram.set_xticks_at_bin_centers()` places one x-axis tick at each displayed bin center.
+  The ticks follow changes to the data and bin settings. Switching to bin centers discards
+  labels tied to the previous locations and preserves explicitly hidden labels.
+
+### Fixed
+
+- Fixed-width histogram bins now include their left edge and exclude their right edge in both
+  alignments. The bins stop at the first edge above the maximum. With `center_bars()`, the first
+  bin is centered on the minimum, and values on a shared edge fall in the bin to its right.
+
 ## [2.0.2] - 2026-10-15
 
 ### Added
